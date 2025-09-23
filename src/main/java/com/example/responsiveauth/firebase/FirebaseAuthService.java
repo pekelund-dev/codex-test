@@ -16,12 +16,16 @@ import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
 import com.google.firebase.auth.UserRecord.CreateRequest;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -32,11 +36,13 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.util.ClassUtils;
 
 @Service
 public class FirebaseAuthService {
@@ -49,6 +55,11 @@ public class FirebaseAuthService {
         "com.google.auth.mtls.CertificateSourceUnavailableException";
     private static final String CERTIFICATE_SOURCE_UNAVAILABLE_EXCEPTION_INTERNAL_NAME =
         CERTIFICATE_SOURCE_UNAVAILABLE_EXCEPTION.replace('.', '/');
+    private static final String FIREBASE_USER_DETAILS_CLASS_NAME =
+        "com.example.responsiveauth.firebase.FirebaseUserDetails";
+    private static final Constructor<? extends DisplayNameUserDetails> FIREBASE_USER_DETAILS_CONSTRUCTOR =
+        resolveFirebaseUserDetailsConstructor();
+    private static final AtomicBoolean missingFirebaseUserDetailsLogged = new AtomicBoolean();
 
     private final FirebaseProperties properties;
     private final FirebaseAuth firebaseAuth;
@@ -116,7 +127,7 @@ public class FirebaseAuthService {
         return enabled;
     }
 
-    public FirebaseUserDetails registerUser(RegistrationForm registrationForm) {
+    public DisplayNameUserDetails registerUser(RegistrationForm registrationForm) {
         ensureEnabled();
         String normalizedEmail = normalizeEmail(registrationForm.getEmail());
         CreateRequest request = new CreateRequest()
@@ -132,7 +143,7 @@ public class FirebaseAuthService {
         }
     }
 
-    public FirebaseUserDetails authenticate(String email, String password) {
+    public DisplayNameUserDetails authenticate(String email, String password) {
         ensureEnabled();
         FirebaseSignInResponse response = signInWithPassword(email, password);
         try {
@@ -143,7 +154,7 @@ public class FirebaseAuthService {
         }
     }
 
-    private FirebaseUserDetails toUserDetails(UserRecord userRecord) {
+    private DisplayNameUserDetails toUserDetails(UserRecord userRecord) {
         String displayName = userRecord.getDisplayName();
         if (!StringUtils.hasText(displayName)) {
             displayName = userRecord.getEmail();
@@ -153,7 +164,123 @@ public class FirebaseAuthService {
             : "ROLE_USER";
         Collection<SimpleGrantedAuthority> authorities =
             List.of(new SimpleGrantedAuthority(defaultRole));
-        return new FirebaseUserDetails(userRecord.getUid(), userRecord.getEmail(), displayName, authorities);
+        DisplayNameUserDetails userDetails = instantiateFirebaseUserDetails(
+            userRecord, displayName, authorities);
+        if (userDetails != null) {
+            return userDetails;
+        }
+        return new SimpleFirebaseUserDetails(
+            userRecord.getUid(), userRecord.getEmail(), displayName, authorities);
+    }
+
+    private DisplayNameUserDetails instantiateFirebaseUserDetails(UserRecord userRecord,
+                                                                  String displayName,
+                                                                  Collection<SimpleGrantedAuthority> authorities) {
+        Constructor<? extends DisplayNameUserDetails> constructor = FIREBASE_USER_DETAILS_CONSTRUCTOR;
+        if (constructor == null) {
+            logMissingFirebaseUserDetails();
+            return null;
+        }
+        try {
+            return constructor.newInstance(userRecord.getUid(), userRecord.getEmail(), displayName, authorities);
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException ex) {
+            log.debug("Failed to instantiate FirebaseUserDetails via reflection; falling back to default implementation.", ex);
+            return null;
+        }
+    }
+
+    private static Constructor<? extends DisplayNameUserDetails> resolveFirebaseUserDetailsConstructor() {
+        try {
+            Class<?> detailsClass = ClassUtils.forName(
+                FIREBASE_USER_DETAILS_CLASS_NAME, FirebaseAuthService.class.getClassLoader());
+            if (!DisplayNameUserDetails.class.isAssignableFrom(detailsClass)) {
+                log.debug("FirebaseUserDetails does not implement DisplayNameUserDetails; using fallback implementation.");
+                return null;
+            }
+            @SuppressWarnings("unchecked")
+            Constructor<? extends DisplayNameUserDetails> constructor =
+                (Constructor<? extends DisplayNameUserDetails>) detailsClass.getConstructor(
+                    String.class, String.class, String.class, Collection.class);
+            return constructor;
+        } catch (ClassNotFoundException ex) {
+            log.debug("FirebaseUserDetails class is not present on the classpath.");
+            return null;
+        } catch (NoSuchMethodException | SecurityException ex) {
+            log.warn("FirebaseUserDetails is present but is missing the expected constructor. Using fallback implementation instead.");
+            return null;
+        } catch (LinkageError ex) {
+            log.debug("Unable to load FirebaseUserDetails due to linkage error. Using fallback implementation.", ex);
+            return null;
+        }
+    }
+
+    private void logMissingFirebaseUserDetails() {
+        if (missingFirebaseUserDetailsLogged.compareAndSet(false, true)) {
+            log.warn("FirebaseUserDetails class is unavailable. Firebase authentication will continue with a basic user details representation.");
+        }
+    }
+
+    private static final class SimpleFirebaseUserDetails implements DisplayNameUserDetails {
+
+        private final String uid;
+        private final String email;
+        private final String displayName;
+        private final Collection<? extends GrantedAuthority> authorities;
+
+        private SimpleFirebaseUserDetails(String uid,
+                                          String email,
+                                          String displayName,
+                                          Collection<? extends GrantedAuthority> authorities) {
+            this.uid = uid;
+            this.email = email;
+            this.displayName = displayName;
+            this.authorities = authorities == null ? Collections.emptyList() : authorities;
+        }
+
+        @Override
+        public String getUid() {
+            return uid;
+        }
+
+        @Override
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        @Override
+        public Collection<? extends GrantedAuthority> getAuthorities() {
+            return authorities;
+        }
+
+        @Override
+        public String getPassword() {
+            return null;
+        }
+
+        @Override
+        public String getUsername() {
+            return email;
+        }
+
+        @Override
+        public boolean isAccountNonExpired() {
+            return true;
+        }
+
+        @Override
+        public boolean isAccountNonLocked() {
+            return true;
+        }
+
+        @Override
+        public boolean isCredentialsNonExpired() {
+            return true;
+        }
+
+        @Override
+        public boolean isEnabled() {
+            return true;
+        }
     }
 
     private void persistUserProfile(UserRecord userRecord, RegistrationForm registrationForm) {

@@ -3,9 +3,8 @@ package com.example.responsiveauth.firebase;
 import java.util.Collection;
 import java.util.Collections;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 
-public class FirebaseUserDetails implements UserDetails {
+public class FirebaseUserDetails implements DisplayNameUserDetails {
 
     private final String uid;
     private final String email;
@@ -20,10 +19,12 @@ public class FirebaseUserDetails implements UserDetails {
         this.authorities = authorities == null ? Collections.emptyList() : authorities;
     }
 
+    @Override
     public String getUid() {
         return uid;
     }
 
+    @Override
     public String getDisplayName() {
         return displayName;
     }

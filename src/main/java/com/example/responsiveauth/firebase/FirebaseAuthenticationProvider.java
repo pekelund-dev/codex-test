@@ -33,7 +33,7 @@ public class FirebaseAuthenticationProvider implements AuthenticationProvider {
 
         String password = credentials.toString();
         try {
-            FirebaseUserDetails userDetails = firebaseAuthService.authenticate(email, password);
+            DisplayNameUserDetails userDetails = firebaseAuthService.authenticate(email, password);
             return UsernamePasswordAuthenticationToken.authenticated(
                 userDetails, authentication.getCredentials(), userDetails.getAuthorities());
         } catch (BadCredentialsException ex) {
