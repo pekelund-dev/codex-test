@@ -1,32 +1,32 @@
-package com.example.responsiveauth.firebase;
+package com.example.responsiveauth.firestore;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "firebase")
-public class FirebaseProperties {
+@ConfigurationProperties(prefix = "firestore")
+public class FirestoreProperties {
 
     /**
-     * Flag indicating whether Firebase integration is enabled.
+     * Flag indicating whether Firestore integration is enabled.
      */
     private boolean enabled;
 
     /**
-     * Path or resource descriptor to the Firebase service account credentials file.
+     * Path or resource descriptor to the service account credentials file.
      */
     private String credentials;
 
     /**
-     * Web API key used for Firebase Identity Toolkit requests.
+     * Optional Google Cloud project identifier.
      */
-    private String apiKey;
+    private String projectId;
 
     /**
-     * Firestore collection used to persist user profile documents.
+     * Firestore collection used to persist user documents.
      */
     private String usersCollection = "users";
 
     /**
-     * Default application role granted to Firebase authenticated users.
+     * Default role granted to newly registered users.
      */
     private String defaultRole = "ROLE_USER";
 
@@ -46,12 +46,12 @@ public class FirebaseProperties {
         this.credentials = credentials;
     }
 
-    public String getApiKey() {
-        return apiKey;
+    public String getProjectId() {
+        return projectId;
     }
 
-    public void setApiKey(String apiKey) {
-        this.apiKey = apiKey;
+    public void setProjectId(String projectId) {
+        this.projectId = projectId;
     }
 
     public String getUsersCollection() {

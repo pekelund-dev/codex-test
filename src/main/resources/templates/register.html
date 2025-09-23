@@ -11,14 +11,14 @@
                 <div class="card-body p-4">
                     <h1 class="h3 fw-bold mb-3 text-center">Create your account</h1>
                     <p class="text-muted text-center">Set up your credentials to access the dashboard and personalized features.</p>
-                    <div th:if="${!firebaseConfigured}" class="alert alert-warning" role="alert">
-                        Registration is currently disabled. Configure Firebase credentials to enable sign ups.
+                    <div th:if="${!registrationEnabled}" class="alert alert-warning" role="alert">
+                        Registration is currently disabled. Configure Firestore credentials to enable sign ups.
                     </div>
                     <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger" role="alert">
                         <p class="mb-0" th:each="error : ${#fields.globalErrors()}" th:text="${error}">An error occurred.</p>
                     </div>
                     <form th:action="@{/register}" th:object="${registrationForm}" method="post" class="needs-validation" novalidate>
-                        <fieldset th:attr="disabled=${!firebaseConfigured}">
+                        <fieldset th:attr="disabled=${!registrationEnabled}">
                             <div class="mb-3">
                                 <label for="fullName" class="form-label">Full name</label>
                                 <input type="text" class="form-control" id="fullName" th:field="*{fullName}" required>
@@ -35,7 +35,7 @@
                             </div>
                             <div class="mb-3">
                                 <label for="password" class="form-label">Password</label>
-                                <input type="password" class="form-control" id="password" th:field="*{password}" minlength="8" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$" required>
+                                <input type="password" class="form-control" id="password" th:field="*{password}" minlength="8" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d]).{8,}$" required>
                                 <div class="form-text">Use at least 8 characters, including uppercase, lowercase, numbers, and special characters.</div>
                                 <div class="invalid-feedback" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">
                                     Please enter a password with at least 8 characters, including uppercase, lowercase, numbers, and special characters.

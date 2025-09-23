@@ -1,7 +1,7 @@
 package com.example.responsiveauth.web;
 
-import com.example.responsiveauth.firebase.FirebaseAuthService;
-import com.example.responsiveauth.firebase.FirebaseRegistrationException;
+import com.example.responsiveauth.firestore.FirestoreUserService;
+import com.example.responsiveauth.firestore.UserRegistrationException;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 @Controller
 public class AuthController {
 
-    private final FirebaseAuthService firebaseAuthService;
+    private final FirestoreUserService firestoreUserService;
 
-    public AuthController(FirebaseAuthService firebaseAuthService) {
-        this.firebaseAuthService = firebaseAuthService;
+    public AuthController(FirestoreUserService firestoreUserService) {
+        this.firestoreUserService = firestoreUserService;
     }
 
     @GetMapping("/register")
@@ -25,7 +25,7 @@ public class AuthController {
             model.addAttribute("registrationForm", new RegistrationForm());
         }
         model.addAttribute("pageTitle", "Create account");
-        model.addAttribute("firebaseConfigured", firebaseAuthService.isEnabled());
+        model.addAttribute("registrationEnabled", firestoreUserService.isEnabled());
         return "register";
     }
 
@@ -34,11 +34,11 @@ public class AuthController {
                            BindingResult bindingResult,
                            Model model) {
         model.addAttribute("pageTitle", "Create account");
-        model.addAttribute("firebaseConfigured", firebaseAuthService.isEnabled());
+        model.addAttribute("registrationEnabled", firestoreUserService.isEnabled());
 
-        if (!firebaseAuthService.isEnabled()) {
-            bindingResult.reject("firebaseNotConfigured",
-                "Registration is currently unavailable because Firebase is not configured.");
+        if (!firestoreUserService.isEnabled()) {
+            bindingResult.reject("registrationDisabled",
+                "Registration is currently unavailable because Firestore is not configured.");
         }
 
         if (!form.getPassword().equals(form.getConfirmPassword())) {
@@ -50,8 +50,8 @@ public class AuthController {
         }
 
         try {
-            firebaseAuthService.registerUser(form);
-        } catch (FirebaseRegistrationException ex) {
+            firestoreUserService.registerUser(form);
+        } catch (UserRegistrationException ex) {
             bindingResult.reject("registrationFailed", ex.getMessage());
             return "register";
         } catch (IllegalStateException ex) {

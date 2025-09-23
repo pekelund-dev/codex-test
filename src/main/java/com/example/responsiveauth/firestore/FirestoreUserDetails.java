@@ -1,27 +1,32 @@
-package com.example.responsiveauth.firebase;
+package com.example.responsiveauth.firestore;
 
 import java.util.Collection;
 import java.util.Collections;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-public class FirebaseUserDetails implements UserDetails {
+public class FirestoreUserDetails implements UserDetails {
 
-    private final String uid;
+    private final String id;
     private final String email;
     private final String displayName;
+    private final String passwordHash;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public FirebaseUserDetails(String uid, String email, String displayName,
-                               Collection<? extends GrantedAuthority> authorities) {
-        this.uid = uid;
+    public FirestoreUserDetails(String id,
+                                String email,
+                                String displayName,
+                                String passwordHash,
+                                Collection<? extends GrantedAuthority> authorities) {
+        this.id = id;
         this.email = email;
         this.displayName = displayName;
+        this.passwordHash = passwordHash;
         this.authorities = authorities == null ? Collections.emptyList() : authorities;
     }
 
-    public String getUid() {
-        return uid;
+    public String getId() {
+        return id;
     }
 
     public String getDisplayName() {
@@ -35,7 +40,7 @@ public class FirebaseUserDetails implements UserDetails {
 
     @Override
     public String getPassword() {
-        return null;
+        return passwordHash;
     }
 
     @Override
