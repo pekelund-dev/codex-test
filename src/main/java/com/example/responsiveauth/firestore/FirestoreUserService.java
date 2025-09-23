@@ -160,8 +160,13 @@ public class FirestoreUserService implements UserDetailsService {
     }
 
     private boolean userExists(String normalizedEmail) throws ExecutionException, InterruptedException {
-        DocumentSnapshot snapshot = findUserByEmail(normalizedEmail);
-        return snapshot != null && snapshot.exists();
+        CollectionReference collection = firestore.collection(properties.getUsersCollection());
+        ApiFuture<QuerySnapshot> queryFuture = collection
+            .whereEqualTo("email", normalizedEmail)
+            .limit(1)
+            .get();
+        QuerySnapshot querySnapshot = queryFuture.get();
+        return querySnapshot != null && !querySnapshot.isEmpty();
     }
 
     private DocumentSnapshot findUserByEmail(String normalizedEmail)
