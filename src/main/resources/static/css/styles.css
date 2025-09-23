@@ -1,0 +1,74 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f8fafc;
+}
+
+.navbar-brand {
+    letter-spacing: 0.5px;
+}
+
+.nav-link.active {
+    font-weight: 600;
+}
+
+.user-avatar,
+.user-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.25);
+    color: #0d6efd;
+}
+
+.user-avatar-lg,
+.user-badge-lg {
+    width: 96px;
+    height: 96px;
+    font-size: 1.75rem;
+}
+
+.user-badge {
+    text-transform: uppercase;
+}
+
+.splash-screen {
+    position: fixed;
+    inset: 0;
+    background: rgba(248, 250, 252, 0.98);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1055;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.splash-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.card {
+    border-radius: 1rem;
+}
+
+.btn-primary {
+    box-shadow: 0 0.5rem 1rem rgba(13, 110, 253, 0.25);
+}
+
+footer {
+    background-color: #f1f5f9;
+}
+
+@media (max-width: 767.98px) {
+    .user-avatar,
+    .user-badge {
+        width: 32px;
+        height: 32px;
+        font-size: 0.875rem;
+    }
+}

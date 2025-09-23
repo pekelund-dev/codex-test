@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle}">About</title>
+</head>
+<body>
+<section>
+    <div class="row justify-content-center py-4">
+        <div class="col-lg-10 col-xl-8">
+            <h1 class="fw-bold mb-4">About this starter</h1>
+            <p class="lead text-muted">This Spring Boot application demonstrates a modern responsive UI coupled with Spring Security.</p>
+            <div class="row g-4 mt-2">
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h2 class="h5 fw-semibold">Technology stack</h2>
+                            <ul class="list-unstyled mt-3 mb-0 text-muted">
+                                <li class="mb-2">Spring Boot, Spring MVC, and Thymeleaf</li>
+                                <li class="mb-2">Spring Security with OAuth2 client support</li>
+                                <li class="mb-2">Bootstrap 5 for responsive components</li>
+                                <li>Maven with Java 21 for modern language features</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h2 class="h5 fw-semibold">Next steps</h2>
+                            <p class="text-muted">Extend the starter with your business logic, connect to a database, or integrate additional OAuth2 providers.</p>
+                            <a class="btn btn-primary" th:href="@{/dashboard}">Preview authenticated page</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>
