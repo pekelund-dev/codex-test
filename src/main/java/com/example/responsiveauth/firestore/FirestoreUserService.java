@@ -208,8 +208,8 @@ public class FirestoreUserService implements UserDetailsService {
         }
 
         List<String> filteredRoles = roles.stream()
-            .map(role -> role != null ? role.trim() : null)
             .filter(StringUtils::hasText)
+            .map(String::trim)
             .toList();
 
         if (filteredRoles.isEmpty()) {
