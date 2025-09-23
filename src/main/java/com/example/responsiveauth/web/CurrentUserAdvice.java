@@ -1,5 +1,6 @@
 package com.example.responsiveauth.web;
 
+import com.example.responsiveauth.firebase.FirebaseUserDetails;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -28,6 +29,8 @@ public class CurrentUserAdvice {
                 displayName = (String) oAuth2User.getAttributes().getOrDefault("email", authentication.getName());
             }
             imageUrl = (String) oAuth2User.getAttributes().getOrDefault("picture", null);
+        } else if (principal instanceof FirebaseUserDetails firebaseUserDetails) {
+            displayName = firebaseUserDetails.getDisplayName();
         } else if (principal instanceof UserDetails userDetails) {
             displayName = userDetails.getUsername();
         }

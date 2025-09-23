@@ -1,5 +1,8 @@
 package com.example.responsiveauth.config;
 
+import com.example.responsiveauth.firebase.FirebaseAuthService;
+import com.example.responsiveauth.firebase.FirebaseAuthenticationProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -15,6 +18,15 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
+    private final FirebaseAuthService firebaseAuthService;
+    private final FirebaseAuthenticationProvider firebaseAuthenticationProvider;
+
+    public SecurityConfig(FirebaseAuthService firebaseAuthService,
+                          FirebaseAuthenticationProvider firebaseAuthenticationProvider) {
+        this.firebaseAuthService = firebaseAuthService;
+        this.firebaseAuthenticationProvider = firebaseAuthenticationProvider;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -24,6 +36,7 @@ public class SecurityConfig {
                     "/home",
                     "/about",
                     "/login",
+                    "/register",
                     "/css/**",
                     "/js/**",
                     "/images/**",
@@ -36,6 +49,7 @@ public class SecurityConfig {
             )
             .formLogin(form -> form
                 .loginPage("/login")
+                .usernameParameter("email")
                 .permitAll()
             )
             .oauth2Login(oauth -> oauth
@@ -46,10 +60,16 @@ public class SecurityConfig {
                 .permitAll()
             )
             .csrf(Customizer.withDefaults());
+
+        if (firebaseAuthService.isEnabled()) {
+            http.authenticationProvider(firebaseAuthenticationProvider);
+        }
+
         return http.build();
     }
 
     @Bean
+    @ConditionalOnProperty(value = "firebase.enabled", havingValue = "false", matchIfMissing = true)
     public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
         UserDetails user = User.builder()
             .username("jane")

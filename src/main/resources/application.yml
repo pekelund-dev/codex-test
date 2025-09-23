@@ -19,3 +19,9 @@ server:
   error:
     whitelabel:
       enabled: false
+firebase:
+  enabled: ${FIREBASE_ENABLED:false}
+  credentials: ${FIREBASE_CREDENTIALS:}
+  api-key: ${FIREBASE_API_KEY:}
+  users-collection: ${FIREBASE_USERS_COLLECTION:users}
+  default-role: ${FIREBASE_DEFAULT_ROLE:ROLE_USER}
