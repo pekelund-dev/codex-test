@@ -26,7 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.core.NestedExceptionUtils;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -48,6 +47,8 @@ public class FirebaseAuthService {
 
     private static final String CERTIFICATE_SOURCE_UNAVAILABLE_EXCEPTION =
         "com.google.auth.mtls.CertificateSourceUnavailableException";
+    private static final String CERTIFICATE_SOURCE_UNAVAILABLE_EXCEPTION_INTERNAL_NAME =
+        CERTIFICATE_SOURCE_UNAVAILABLE_EXCEPTION.replace('.', '/');
 
     private final FirebaseProperties properties;
     private final FirebaseAuth firebaseAuth;
@@ -83,11 +84,10 @@ public class FirebaseAuthService {
         try {
             return firestoreProvider.getIfAvailable();
         } catch (BeansException ex) {
-            Throwable rootCause = NestedExceptionUtils.getMostSpecificCause(ex);
-            if (isCertificateSourceUnavailable(rootCause)) {
+            if (isCertificateSourceUnavailable(ex)) {
                 log.error("Failed to initialize Firestore because a Google Cloud mTLS client certificate could not be located. "
-                        + "Unset GOOGLE_API_USE_CLIENT_CERTIFICATE or configure a valid client certificate to enable Firestore integration.",
-                    rootCause);
+                        + "Unset GOOGLE_API_USE_CLIENT_CERTIFICATE or configure a valid client certificate to enable Firestore integration.");
+                log.debug("Firestore initialization failed due to a missing Google Cloud mTLS class", ex);
             } else {
                 log.error("Failed to initialize Firestore from the Firebase configuration", ex);
             }
@@ -95,9 +95,21 @@ public class FirebaseAuthService {
         }
     }
 
-    private boolean isCertificateSourceUnavailable(Throwable rootCause) {
-        return rootCause != null
-            && CERTIFICATE_SOURCE_UNAVAILABLE_EXCEPTION.equals(rootCause.getClass().getName());
+    private boolean isCertificateSourceUnavailable(Throwable throwable) {
+        Throwable candidate = throwable;
+        while (candidate != null) {
+            if (CERTIFICATE_SOURCE_UNAVAILABLE_EXCEPTION.equals(candidate.getClass().getName())) {
+                return true;
+            }
+            String message = candidate.getMessage();
+            if (message != null
+                && (message.contains(CERTIFICATE_SOURCE_UNAVAILABLE_EXCEPTION)
+                    || message.contains(CERTIFICATE_SOURCE_UNAVAILABLE_EXCEPTION_INTERNAL_NAME))) {
+                return true;
+            }
+            candidate = candidate.getCause();
+        }
+        return false;
     }
 
     public boolean isEnabled() {
