@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle}">Dashboard</title>
+</head>
+<body>
+<section>
+    <div class="row py-4">
+        <div class="col-lg-8">
+            <h1 class="fw-bold mb-3">Welcome back, <span th:text="${userProfile.displayName}">User</span>!</h1>
+            <p class="text-muted">This secure area is only visible to authenticated users. Use it as a launchpad for personalized content.</p>
+            <div class="row g-4 mt-1">
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h2 class="h6 fw-semibold text-uppercase text-primary">Account summary</h2>
+                            <ul class="list-unstyled mt-3 mb-0 text-muted">
+                                <li><span class="fw-semibold">Username:</span> <span th:text="${principalName}">jane</span></li>
+                                <li><span class="fw-semibold">Display name:</span> <span th:text="${userProfile.displayName}">Jane Doe</span></li>
+                                <li><span class="fw-semibold">Initials:</span> <span th:text="${userProfile.initials}">JD</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h2 class="h6 fw-semibold text-uppercase text-primary">Next actions</h2>
+                            <p class="text-muted">Hook in your application's services, show analytics, or connect external APIs.</p>
+                            <div class="d-grid gap-2">
+                                <a class="btn btn-primary" href="https://spring.io/projects/spring-security" target="_blank" rel="noopener">Learn about Spring Security</a>
+                                <a class="btn btn-outline-primary" href="https://spring.io/guides" target="_blank" rel="noopener">Explore Spring guides</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <div class="d-flex justify-content-center mb-3">
+                        <img th:if="${userProfile.imageUrl != null}" th:src="${userProfile.imageUrl}" alt="Profile picture"
+                             class="user-avatar user-avatar-lg">
+                        <div th:if="${userProfile.imageUrl == null}" class="user-badge user-badge-lg" th:text="${userProfile.initials}">JD</div>
+                    </div>
+                    <h2 class="h5 fw-semibold" th:text="${userProfile.displayName}">Jane Doe</h2>
+                    <p class="text-muted mb-0">You're authenticated and ready to build.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

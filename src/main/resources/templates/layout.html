@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout (pageTitle, content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${pageTitle}">Responsive Auth App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+</head>
+<body class="d-flex flex-column min-vh-100">
+<div id="splash-screen" class="splash-screen">
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 fw-semibold text-primary">Starting responsive experience...</p>
+    </div>
+</div>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold" th:href="@{/}">ResponsiveAuth</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" th:classappend="${#httpServletRequest.requestURI == '/home' or #httpServletRequest.requestURI == '/'} ? ' active'"
+                                       th:href="@{/}">Home</a></li>
+                <li class="nav-item"><a class="nav-link" th:classappend="${#httpServletRequest.requestURI == '/about'} ? ' active'"
+                                       th:href="@{/about}">About</a></li>
+                <li class="nav-item" th:if="${userProfile.authenticated}"><a class="nav-link"
+                                          th:classappend="${#httpServletRequest.requestURI == '/dashboard'} ? ' active'"
+                                          th:href="@{/dashboard}">Dashboard</a></li>
+            </ul>
+            <div class="d-flex align-items-center gap-3 ms-lg-auto">
+                <div th:if="${userProfile.authenticated}" class="d-flex align-items-center gap-2 text-white">
+                    <img th:if="${userProfile.imageUrl != null}" th:src="${userProfile.imageUrl}" alt="Profile picture"
+                         class="user-avatar">
+                    <div th:if="${userProfile.imageUrl == null}" class="user-badge" th:text="${userProfile.initials}">U</div>
+                    <span class="fw-semibold" th:text="${userProfile.displayName}">Jane Doe</span>
+                    <form th:action="@{/logout}" method="post">
+                        <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
+                    </form>
+                </div>
+                <div th:if="${!userProfile.authenticated}" class="d-flex gap-2">
+                    <a class="btn btn-outline-light btn-sm" th:href="@{/login}">Sign in</a>
+                    <a class="btn btn-light btn-sm" th:href="@{/oauth2/authorization/google}">Sign in with Google</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+<main class="flex-fill">
+    <div class="container py-4" th:replace="${content}"></div>
+</main>
+<footer class="bg-light text-center py-3 mt-auto border-top">
+    <small class="text-muted">&copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}"></span> ResponsiveAuth. All rights reserved.</small>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-HoA2QHnwLgwSdaFGfc1RpHwcx9IwaP42CikI6jneih/7nToYtL6vhfVqlhK/SXG1" crossorigin="anonymous"></script>
+<script>
+    window.addEventListener('load', function () {
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+            splash.classList.add('hidden');
+            setTimeout(() => splash.remove(), 600);
+        }
+    });
+</script>
+</body>
+</html>
