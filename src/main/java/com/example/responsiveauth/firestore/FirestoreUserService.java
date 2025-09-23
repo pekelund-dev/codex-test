@@ -119,7 +119,10 @@ public class FirestoreUserService implements UserDetailsService {
         if (enabled) {
             try {
                 DocumentSnapshot documentSnapshot = findUserByEmail(normalizedEmail);
-                if (documentSnapshot == null || !documentSnapshot.exists()) {
+                if (documentSnapshot == null) {
+                    throw new UsernameNotFoundException("No user found with email " + normalizedEmail);
+                }
+                if (!documentSnapshot.exists()) {
                     throw new UsernameNotFoundException("No user found with email " + normalizedEmail);
                 }
 
@@ -156,7 +159,10 @@ public class FirestoreUserService implements UserDetailsService {
 
     private boolean userExists(String normalizedEmail) throws ExecutionException, InterruptedException {
         DocumentSnapshot snapshot = findUserByEmail(normalizedEmail);
-        return snapshot != null && snapshot.exists();
+        if (snapshot == null) {
+            return false;
+        }
+        return snapshot.exists();
     }
 
     private DocumentSnapshot findUserByEmail(String normalizedEmail)
@@ -174,7 +180,7 @@ public class FirestoreUserService implements UserDetailsService {
     }
 
     private Collection<SimpleGrantedAuthority> defaultAuthorities() {
-        return authoritiesFromRoles(List.of(defaultRole()));
+        return List.of(new SimpleGrantedAuthority(defaultRole()));
     }
 
     private List<String> readRoleNames(DocumentSnapshot documentSnapshot) {
@@ -193,12 +199,21 @@ public class FirestoreUserService implements UserDetailsService {
     }
 
     private Collection<SimpleGrantedAuthority> authoritiesFromRoles(List<String> roles) {
-        if (roles == null || roles.isEmpty()) {
+        if (roles == null) {
             return defaultAuthorities();
         }
-        return roles.stream()
+
+        List<String> filteredRoles = roles.stream()
             .filter(StringUtils::hasText)
             .map(String::trim)
+            .filter(StringUtils::hasText)
+            .toList();
+
+        if (filteredRoles.isEmpty()) {
+            return defaultAuthorities();
+        }
+
+        return filteredRoles.stream()
             .map(this::ensureRolePrefix)
             .map(SimpleGrantedAuthority::new)
             .toList();
