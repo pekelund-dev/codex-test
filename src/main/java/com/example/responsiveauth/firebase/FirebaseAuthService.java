@@ -17,6 +17,7 @@ import com.google.firebase.auth.UserRecord.CreateRequest;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -111,7 +112,7 @@ public class FirebaseAuthService {
             ? properties.getDefaultRole()
             : "ROLE_USER";
         Collection<SimpleGrantedAuthority> authorities =
-            java.util.List.of(new SimpleGrantedAuthority(defaultRole));
+            List.of(new SimpleGrantedAuthority(defaultRole));
         return new FirebaseUserDetails(userRecord.getUid(), userRecord.getEmail(), displayName, authorities);
     }
 
