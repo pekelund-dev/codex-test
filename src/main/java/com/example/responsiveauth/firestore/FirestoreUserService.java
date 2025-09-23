@@ -194,7 +194,7 @@ public class FirestoreUserService implements UserDetailsService {
 
     private Collection<SimpleGrantedAuthority> authoritiesFromRoles(List<String> roles) {
         if (roles == null || roles.isEmpty()) {
-            return List.of(new SimpleGrantedAuthority(defaultRole()));
+            return defaultAuthorities();
         }
         return roles.stream()
             .filter(StringUtils::hasText)
@@ -263,7 +263,8 @@ public class FirestoreUserService implements UserDetailsService {
 
         if (!userAdded) {
             log.warn("No fallback user accounts could be created. "
-                + "Ensure each configured user defines both a username and password.");
+                + "Ensure at least one configured user provides non-empty credentials; "
+                + "see prior warnings for skipped entries.");
         }
 
         return inMemoryManager;
