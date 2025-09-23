@@ -35,7 +35,7 @@
                             </div>
                             <div class="mb-3">
                                 <label for="password" class="form-label">Password</label>
-                                <input type="password" class="form-control" id="password" th:field="*{password}" minlength="8" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d]).{8,}$" required>
+                                <input type="password" class="form-control" id="password" th:field="*{password}" minlength="8" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$" required>
                                 <div class="form-text">Use at least 8 characters, including uppercase, lowercase, numbers, and special characters.</div>
                                 <div class="invalid-feedback" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">
                                     Please enter a password with at least 8 characters, including uppercase, lowercase, numbers, and special characters.
