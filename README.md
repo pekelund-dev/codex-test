@@ -66,16 +66,25 @@ Follow these steps to allow the application to persist users and profiles in Fir
 
 5. **Restart the application** so that the new configuration is picked up. Visit `/register` to create your first user and then sign in with the same email address on the `/login` page.
 
-### Default credentials
+### Fallback credentials
 
-Two sample users remain configured in-memory as a convenience while Firestore integration is disabled:
+When Firestore integration is disabled the application falls back to an in-memory user store, but no accounts are created automatically. Configure explicit credentials for local testing by defining `firestore.fallback-users` entries in `application.yml` (or through environment variables):
 
-| Username | Password | Roles       |
-|----------|----------|-------------|
-| `jane`   | `password` | `ROLE_USER` |
-| `admin`  | `password` | `ROLE_USER`, `ROLE_ADMIN` |
+```yaml
+firestore:
+  fallback-users:
+    - username: ${FIRESTORE_FALLBACK_ADMIN_USERNAME:}
+      password: ${FIRESTORE_FALLBACK_ADMIN_PASSWORD:}
+      roles:
+        - ROLE_ADMIN
+        - ROLE_USER
+    - username: ${FIRESTORE_FALLBACK_USER_USERNAME:}
+      password: ${FIRESTORE_FALLBACK_USER_PASSWORD:}
+      roles:
+        - ROLE_USER
+```
 
-Set `FIRESTORE_ENABLED=true` (and supply the credentials described above) to disable these fallback accounts and rely exclusively on Firestore-backed authentication.
+Each configured password is encoded with the active `PasswordEncoder` on startup, so store only plaintext secrets in development configuration files and provide them securely through environment variables in production.
 
 ### OAuth 2.0 login
 

@@ -227,16 +227,45 @@ public class FirestoreUserService implements UserDetailsService {
     }
 
     private UserDetailsService createFallbackUserDetailsService(PasswordEncoder passwordEncoder) {
-        UserDetails user = User.builder()
-            .username("jane")
-            .password(passwordEncoder.encode("password"))
-            .roles("USER")
-            .build();
-        UserDetails admin = User.builder()
-            .username("admin")
-            .password(passwordEncoder.encode("password"))
-            .roles("USER", "ADMIN")
-            .build();
-        return new InMemoryUserDetailsManager(user, admin);
+        List<FirestoreProperties.FallbackUser> configuredFallbackUsers = properties.getFallbackUsers();
+        if (configuredFallbackUsers == null || configuredFallbackUsers.isEmpty()) {
+            log.info("Firestore integration is disabled and no fallback users are configured. "
+                + "Configure 'firestore.fallback-users' to enable in-memory credentials.");
+            return new InMemoryUserDetailsManager();
+        }
+
+        InMemoryUserDetailsManager inMemoryManager = new InMemoryUserDetailsManager();
+        boolean userAdded = false;
+
+        for (FirestoreProperties.FallbackUser fallbackUser : configuredFallbackUsers) {
+            if (fallbackUser == null) {
+                continue;
+            }
+
+            String username = fallbackUser.getUsername();
+            String password = fallbackUser.getPassword();
+
+            if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
+                log.warn("Skipping fallback user because username or password is empty.");
+                continue;
+            }
+
+            List<String> roles = fallbackUser.getRoles();
+            Collection<SimpleGrantedAuthority> authorities =
+                (roles == null || roles.isEmpty()) ? defaultAuthorities() : authoritiesFromRoles(roles);
+
+            inMemoryManager.createUser(User.withUsername(username)
+                .password(passwordEncoder.encode(password))
+                .authorities(authorities)
+                .build());
+            userAdded = true;
+        }
+
+        if (!userAdded) {
+            log.warn("No fallback user accounts could be created. "
+                + "Ensure each configured user defines both a username and password.");
+        }
+
+        return inMemoryManager;
     }
 }
