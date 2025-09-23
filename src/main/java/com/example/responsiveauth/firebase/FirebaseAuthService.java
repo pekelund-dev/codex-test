@@ -211,6 +211,6 @@ public class FirebaseAuthService {
         return email != null ? email.trim().toLowerCase() : null;
     }
 
-    private record FirebaseSignInResponse(String localId, String idToken, String refreshToken) {
+    private static record FirebaseSignInResponse(String localId, String idToken, String refreshToken) {
     }
 }
