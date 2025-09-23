@@ -8,6 +8,7 @@ import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QuerySnapshot;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -129,8 +130,7 @@ public class FirestoreUserService implements UserDetailsService {
                 }
 
                 String fullName = documentSnapshot.getString("fullName");
-                @SuppressWarnings("unchecked")
-                List<String> roles = (List<String>) documentSnapshot.get("roles");
+                List<String> roles = readRoleNames(documentSnapshot);
                 Collection<SimpleGrantedAuthority> authorities = authoritiesFromRoles(roles);
 
                 return new FirestoreUserDetails(
@@ -175,6 +175,21 @@ public class FirestoreUserService implements UserDetailsService {
 
     private Collection<SimpleGrantedAuthority> defaultAuthorities() {
         return authoritiesFromRoles(List.of(defaultRole()));
+    }
+
+    private List<String> readRoleNames(DocumentSnapshot documentSnapshot) {
+        List<?> storedRoles = documentSnapshot.get("roles", List.class);
+        if (storedRoles == null || storedRoles.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> roles = new ArrayList<>(storedRoles.size());
+        for (Object role : storedRoles) {
+            if (role != null) {
+                roles.add(role.toString());
+            }
+        }
+        return roles;
     }
 
     private Collection<SimpleGrantedAuthority> authoritiesFromRoles(List<String> roles) {
