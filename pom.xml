@@ -28,7 +28,6 @@
 	</scm>
         <properties>
                 <java.version>21</java.version>
-                <firebase-admin.version>9.4.1</firebase-admin.version>
                 <google-cloud-firestore.version>3.33.0</google-cloud-firestore.version>
         </properties>
         <dependencies>
@@ -55,11 +54,6 @@
                 <dependency>
                         <groupId>org.thymeleaf.extras</groupId>
                         <artifactId>thymeleaf-extras-springsecurity6</artifactId>
-                </dependency>
-                <dependency>
-                        <groupId>com.google.firebase</groupId>
-                        <artifactId>firebase-admin</artifactId>
-                        <version>${firebase-admin.version}</version>
                 </dependency>
                 <dependency>
                         <groupId>com.google.cloud</groupId>
