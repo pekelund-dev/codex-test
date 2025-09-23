@@ -1,5 +1,7 @@
 package com.example.responsiveauth.web;
 
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -32,6 +34,21 @@ public class CurrentUserAdvice {
 
         String initials = deriveInitials(displayName);
         return new UserProfile(true, displayName, initials, imageUrl);
+    }
+
+    @ModelAttribute("currentRequestUri")
+    public String currentRequestUri(HttpServletRequest request) {
+        if (request == null) {
+            return "";
+        }
+
+        Object forwarded = request.getAttribute(RequestDispatcher.FORWARD_REQUEST_URI);
+        if (forwarded instanceof String forwardedUri && !forwardedUri.isBlank()) {
+            return forwardedUri;
+        }
+
+        String requestUri = request.getRequestURI();
+        return requestUri != null ? requestUri : "";
     }
 
     private String deriveInitials(String displayName) {
