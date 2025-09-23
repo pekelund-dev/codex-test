@@ -28,14 +28,22 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarContent">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link" th:classappend="${#httpServletRequest.requestURI == '/home' or #httpServletRequest.requestURI == '/'} ? ' active'"
-                                       th:href="@{/}">Home</a></li>
-                <li class="nav-item"><a class="nav-link" th:classappend="${#httpServletRequest.requestURI == '/about'} ? ' active'"
-                                       th:href="@{/about}">About</a></li>
-                <li class="nav-item" th:if="${userProfile.authenticated}"><a class="nav-link"
-                                          th:classappend="${#httpServletRequest.requestURI == '/dashboard'} ? ' active'"
-                                          th:href="@{/dashboard}">Dashboard</a></li>
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0" th:with="currentUri=${#httpServletRequest.requestURI}">
+                <li class="nav-item">
+                    <a class="nav-link"
+                       th:classappend="${currentUri == '/home' or currentUri == '/'} ? ' active'"
+                       th:href="@{/}">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link"
+                       th:classappend="${currentUri == '/about'} ? ' active'"
+                       th:href="@{/about}">About</a>
+                </li>
+                <li class="nav-item" th:if="${userProfile.authenticated}">
+                    <a class="nav-link"
+                       th:classappend="${currentUri == '/dashboard'} ? ' active'"
+                       th:href="@{/dashboard}">Dashboard</a>
+                </li>
             </ul>
             <div class="d-flex align-items-center gap-3 ms-lg-auto">
                 <div th:if="${userProfile.authenticated}" class="d-flex align-items-center gap-2 text-white">
