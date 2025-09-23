@@ -4,7 +4,6 @@ import com.example.responsiveauth.web.RegistrationForm;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.core.ApiFuture;
-import com.google.auth.mtls.CertificateSourceUnavailableException;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
@@ -47,6 +46,9 @@ public class FirebaseAuthService {
     private static final String SIGN_IN_ENDPOINT =
         "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=";
 
+    private static final String CERTIFICATE_SOURCE_UNAVAILABLE_EXCEPTION =
+        "com.google.auth.mtls.CertificateSourceUnavailableException";
+
     private final FirebaseProperties properties;
     private final FirebaseAuth firebaseAuth;
     private final Firestore firestore;
@@ -82,7 +84,7 @@ public class FirebaseAuthService {
             return firestoreProvider.getIfAvailable();
         } catch (BeansException ex) {
             Throwable rootCause = NestedExceptionUtils.getMostSpecificCause(ex);
-            if (rootCause instanceof CertificateSourceUnavailableException) {
+            if (isCertificateSourceUnavailable(rootCause)) {
                 log.error("Failed to initialize Firestore because a Google Cloud mTLS client certificate could not be located. "
                         + "Unset GOOGLE_API_USE_CLIENT_CERTIFICATE or configure a valid client certificate to enable Firestore integration.",
                     rootCause);
@@ -91,6 +93,11 @@ public class FirebaseAuthService {
             }
             return null;
         }
+    }
+
+    private boolean isCertificateSourceUnavailable(Throwable rootCause) {
+        return rootCause != null
+            && CERTIFICATE_SOURCE_UNAVAILABLE_EXCEPTION.equals(rootCause.getClass().getName());
     }
 
     public boolean isEnabled() {
