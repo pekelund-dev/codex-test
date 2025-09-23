@@ -29,6 +29,7 @@
         <properties>
                 <java.version>21</java.version>
                 <firebase-admin.version>9.4.1</firebase-admin.version>
+                <google-cloud-firestore.version>3.19.5</google-cloud-firestore.version>
         </properties>
         <dependencies>
                 <dependency>
@@ -59,6 +60,11 @@
                         <groupId>com.google.firebase</groupId>
                         <artifactId>firebase-admin</artifactId>
                         <version>${firebase-admin.version}</version>
+                </dependency>
+                <dependency>
+                        <groupId>com.google.cloud</groupId>
+                        <artifactId>google-cloud-firestore</artifactId>
+                        <version>${google-cloud-firestore.version}</version>
                 </dependency>
 
                 <dependency>
