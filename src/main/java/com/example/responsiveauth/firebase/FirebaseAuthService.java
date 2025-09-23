@@ -4,6 +4,7 @@ import com.example.responsiveauth.web.RegistrationForm;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.core.ApiFuture;
+import com.google.auth.mtls.CertificateSourceUnavailableException;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
@@ -24,6 +25,9 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -52,16 +56,16 @@ public class FirebaseAuthService {
 
     public FirebaseAuthService(FirebaseProperties properties,
                                Optional<FirebaseApp> firebaseApp,
-                               Optional<Firestore> firestore,
+                               ObjectProvider<Firestore> firestoreProvider,
                                RestTemplate restTemplate) {
         this.properties = properties;
         this.firebaseAuth = firebaseApp.map(FirebaseAuth::getInstance).orElse(null);
-        this.firestore = firestore.orElse(null);
+        this.firestore = initializeFirestore(firestoreProvider);
         this.restTemplate = restTemplate;
         this.objectMapper = new ObjectMapper();
         this.enabled = properties.isEnabled()
             && firebaseApp.isPresent()
-            && firestore.isPresent()
+            && this.firestore != null
             && StringUtils.hasText(properties.getApiKey());
 
         if (!this.enabled) {
@@ -70,6 +74,22 @@ public class FirebaseAuthService {
             } else {
                 log.info("Firebase integration is disabled. Set firebase.enabled=true to activate it.");
             }
+        }
+    }
+
+    private Firestore initializeFirestore(ObjectProvider<Firestore> firestoreProvider) {
+        try {
+            return firestoreProvider.getIfAvailable();
+        } catch (BeansException ex) {
+            Throwable rootCause = NestedExceptionUtils.getMostSpecificCause(ex);
+            if (rootCause instanceof CertificateSourceUnavailableException) {
+                log.error("Failed to initialize Firestore because a Google Cloud mTLS client certificate could not be located. "
+                        + "Unset GOOGLE_API_USE_CLIENT_CERTIFICATE or configure a valid client certificate to enable Firestore integration.",
+                    rootCause);
+            } else {
+                log.error("Failed to initialize Firestore from the Firebase configuration", ex);
+            }
+            return null;
         }
     }
 
