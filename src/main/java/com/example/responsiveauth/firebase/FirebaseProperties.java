@@ -25,6 +25,11 @@ public class FirebaseProperties {
      */
     private String usersCollection = "users";
 
+    /**
+     * Default application role granted to Firebase authenticated users.
+     */
+    private String defaultRole = "ROLE_USER";
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -55,5 +60,13 @@ public class FirebaseProperties {
 
     public void setUsersCollection(String usersCollection) {
         this.usersCollection = usersCollection;
+    }
+
+    public String getDefaultRole() {
+        return defaultRole;
+    }
+
+    public void setDefaultRole(String defaultRole) {
+        this.defaultRole = defaultRole;
     }
 }

@@ -65,6 +65,8 @@ Follow these steps to provision Firebase services and wire them into the applica
    export FIREBASE_API_KEY=your-firebase-web-api-key
    # Optional: customise the Firestore collection used to store user profiles (defaults to "users")
    export FIREBASE_USERS_COLLECTION=users
+   # Optional: override the default Spring Security role assigned to Firebase users (defaults to "ROLE_USER")
+   export FIREBASE_DEFAULT_ROLE=ROLE_USER
    ```
 
    - The `FIREBASE_CREDENTIALS` value accepts any Spring `Resource` location, so you can also use `classpath:` if you manage credentials through a secrets manager.

@@ -1,5 +1,6 @@
 package com.example.responsiveauth.firebase;
 
+import com.example.responsiveauth.web.RegistrationForm;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.core.ApiFuture;
@@ -76,8 +77,9 @@ public class FirebaseAuthService {
 
     public FirebaseUserDetails registerUser(RegistrationForm registrationForm) {
         ensureEnabled();
+        String normalizedEmail = normalizeEmail(registrationForm.getEmail());
         CreateRequest request = new CreateRequest()
-            .setEmail(registrationForm.getEmail().trim().toLowerCase())
+            .setEmail(normalizedEmail)
             .setPassword(registrationForm.getPassword())
             .setDisplayName(registrationForm.getFullName().trim());
         try {
@@ -105,8 +107,11 @@ public class FirebaseAuthService {
         if (!StringUtils.hasText(displayName)) {
             displayName = userRecord.getEmail();
         }
+        String defaultRole = StringUtils.hasText(properties.getDefaultRole())
+            ? properties.getDefaultRole()
+            : "ROLE_USER";
         Collection<SimpleGrantedAuthority> authorities =
-            java.util.List.of(new SimpleGrantedAuthority("ROLE_USER"));
+            java.util.List.of(new SimpleGrantedAuthority(defaultRole));
         return new FirebaseUserDetails(userRecord.getUid(), userRecord.getEmail(), displayName, authorities);
     }
 
@@ -124,6 +129,7 @@ public class FirebaseAuthService {
         try {
             writeFuture.get();
         } catch (InterruptedException ex) {
+            log.warn("Thread was interrupted while persisting user profile for uid={}", userRecord.getUid(), ex);
             Thread.currentThread().interrupt();
             throw new FirebaseRegistrationException("Registration was interrupted", ex);
         } catch (ExecutionException ex) {
@@ -152,8 +158,9 @@ public class FirebaseAuthService {
         }
 
         String url = SIGN_IN_ENDPOINT + apiKey;
+        String normalizedEmail = normalizeEmail(email);
         Map<String, Object> payload = new HashMap<>();
-        payload.put("email", email);
+        payload.put("email", normalizedEmail);
         payload.put("password", password);
         payload.put("returnSecureToken", true);
 
@@ -197,6 +204,10 @@ public class FirebaseAuthService {
         if (!enabled) {
             throw new IllegalStateException("Firebase integration is not configured. Set firebase.enabled=true and provide credentials.");
         }
+    }
+
+    private static String normalizeEmail(String email) {
+        return email != null ? email.trim().toLowerCase() : null;
     }
 
     private record FirebaseSignInResponse(String localId, String idToken, String refreshToken) {
