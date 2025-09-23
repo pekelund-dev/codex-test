@@ -8,6 +8,7 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
+import com.google.firebase.ErrorCode;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.AuthErrorCode;
 import com.google.firebase.auth.FirebaseAuth;
@@ -141,14 +142,28 @@ public class FirebaseAuthService {
     private FirebaseRegistrationException mapRegistrationException(FirebaseAuthException ex) {
         AuthErrorCode errorCode = ex.getAuthErrorCode();
         if (errorCode != null) {
-            return switch (errorCode) {
-                case EMAIL_ALREADY_EXISTS -> new FirebaseRegistrationException(
-                    "An account with this email address already exists.", ex);
-                case INVALID_PASSWORD -> new FirebaseRegistrationException(
-                    "The provided password is invalid.", ex);
-                default -> new FirebaseRegistrationException("Failed to register user: " + errorCode.name(), ex);
-            };
+            String message;
+            switch (errorCode) {
+                case EMAIL_ALREADY_EXISTS:
+                    message = "An account with this email address already exists.";
+                    break;
+                case PHONE_NUMBER_ALREADY_EXISTS:
+                    message = "An account with this phone number already exists.";
+                    break;
+                case UID_ALREADY_EXISTS:
+                    message = "The provided user identifier is already in use.";
+                    break;
+                default:
+                    message = "Failed to register user: " + errorCode.name();
+                    break;
+            }
+            return new FirebaseRegistrationException(message, ex);
         }
+
+        if (ex.getErrorCode() == ErrorCode.INVALID_ARGUMENT) {
+            return new FirebaseRegistrationException("The provided registration data is invalid.", ex);
+        }
+
         return new FirebaseRegistrationException("Failed to register user", ex);
     }
 
