@@ -120,10 +120,12 @@ public class FirestoreUserService implements UserDetailsService {
             try {
                 DocumentSnapshot documentSnapshot = findUserByEmail(normalizedEmail);
                 if (documentSnapshot == null) {
-                    throw new UsernameNotFoundException("No user found with email " + normalizedEmail);
+                    throw new UsernameNotFoundException(
+                        "No user document returned for email " + normalizedEmail);
                 }
                 if (!documentSnapshot.exists()) {
-                    throw new UsernameNotFoundException("No user found with email " + normalizedEmail);
+                    throw new UsernameNotFoundException(
+                        "No user document exists in Firestore for email " + normalizedEmail);
                 }
 
                 String passwordHash = documentSnapshot.getString("passwordHash");
@@ -159,10 +161,7 @@ public class FirestoreUserService implements UserDetailsService {
 
     private boolean userExists(String normalizedEmail) throws ExecutionException, InterruptedException {
         DocumentSnapshot snapshot = findUserByEmail(normalizedEmail);
-        if (snapshot == null) {
-            return false;
-        }
-        return snapshot.exists();
+        return snapshot != null && snapshot.exists();
     }
 
     private DocumentSnapshot findUserByEmail(String normalizedEmail)
@@ -204,8 +203,7 @@ public class FirestoreUserService implements UserDetailsService {
         }
 
         List<String> filteredRoles = roles.stream()
-            .filter(StringUtils::hasText)
-            .map(String::trim)
+            .map(role -> role != null ? role.trim() : null)
             .filter(StringUtils::hasText)
             .toList();
 
