@@ -249,7 +249,7 @@ public class FirestoreUserService implements UserDetailsService {
         if (configuredFallbackUsers == null || configuredFallbackUsers.isEmpty()) {
             log.info("Firestore integration is disabled and no fallback users are configured. "
                 + "Configure 'firestore.fallback-users' to enable in-memory credentials.");
-            return username -> { throw new UsernameNotFoundException("No fallback users configured."); };
+            return username -> throw new UsernameNotFoundException("No fallback users configured.");
         }
 
         InMemoryUserDetailsManager inMemoryManager = new InMemoryUserDetailsManager();
