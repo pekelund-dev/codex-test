@@ -22,7 +22,8 @@
             </div>
 
             <div class="card shadow-sm border-0">
-                <div class="card-body p-4">
+                <div class="card-body p-4"
+                     th:with="systemZoneId=${T(java.time.ZoneId).systemDefault()}, timestampZoned=${timestamp != null ? timestamp.atZone(systemZoneId) : null}">
                     <p class="mb-3" th:if="${path}">
                         <span class="text-muted">Requested path:</span>
                         <span class="fw-semibold" th:text="${path}">/receipts</span>
@@ -31,8 +32,7 @@
                         <span th:text="${message}">An unexpected error occurred.</span>
                     </div>
                     <div class="alert alert-light border text-start" role="alert"
-                         th:if="${error} or ${status} or ${timestamp}"
-                         th:with="timestampZoned=${timestamp != null ? timestamp.atZone(T(java.time.ZoneId).systemDefault()) : null}">
+                         th:if="${error} or ${status} or ${timestamp}">
                         <dl class="row mb-0 small">
                             <dt class="col-sm-4 text-muted">Status code</dt>
                             <dd class="col-sm-8 fw-semibold text-dark" th:text="${status} ?: '—'">500</dd>
@@ -40,7 +40,7 @@
                             <dd class="col-sm-8 text-dark" th:text="${error} ?: 'Unexpected error'">Internal Server Error</dd>
                             <dt class="col-sm-4 text-muted" th:if="${timestampZoned}">Timestamp</dt>
                             <dd class="col-sm-8 text-dark" th:if="${timestampZoned}"
-                                th:text="${#temporals.format(timestampZoned, 'yyyy-MM-dd HH:mm:ss')}">2025-01-01 12:00:00</dd>
+                                th:text="${#temporals.format(timestampZoned, 'yyyy-MM-dd HH:mm:ss z')}">2025-01-01 12:00:00 UTC</dd>
                         </dl>
                     </div>
                 </div>
@@ -48,7 +48,7 @@
 
             <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mt-4">
                 <a class="btn btn-primary" th:href="@{/}">Return home</a>
-                <a class="btn btn-outline-primary" href="#" onclick="window.history.back(); return false;">Go back</a>
+                <button type="button" class="btn btn-outline-primary" data-action="go-back">Go back</button>
             </div>
             <p class="text-muted small text-center mt-3 mb-0">
                 If the problem continues, please try again later or contact support with the details above.
@@ -56,5 +56,19 @@
         </div>
     </div>
 </section>
+<script th:inline="javascript">
+/*<![CDATA[*/
+    const goBackButton = document.querySelector('[data-action="go-back"]');
+    if (goBackButton) {
+        goBackButton.addEventListener('click', () => {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = /*[[${#urls.relative(@{/})}]]*/ '/';
+            }
+        });
+    }
+/*]]>*/
+</script>
 </body>
 </html>
