@@ -64,6 +64,37 @@ footer {
     background-color: #f1f5f9;
 }
 
+.upload-dropzone {
+    border: 2px dashed rgba(13, 110, 253, 0.35);
+    border-radius: 1rem;
+    background-color: rgba(13, 110, 253, 0.05);
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.upload-dropzone.is-dragover {
+    border-style: solid;
+    background-color: rgba(13, 110, 253, 0.12);
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+.dropzone-icon {
+    font-size: 2.75rem;
+}
+
+.receipt-upload .list-group-item {
+    border-left: 0;
+    border-right: 0;
+}
+
+.receipt-upload .list-group-item:first-child {
+    border-top: 0;
+}
+
+.receipt-upload .list-group-item:last-child {
+    border-bottom: 0;
+}
+
 @media (max-width: 767.98px) {
     .user-avatar,
     .user-badge {
