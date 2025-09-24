@@ -189,17 +189,25 @@ public class FirestoreUserService implements UserDetailsService {
 
     private List<String> readRoleNames(DocumentSnapshot documentSnapshot) {
         Object storedRolesValue = documentSnapshot.get("roles");
-        if (!(storedRolesValue instanceof List<?> storedRoles) || storedRoles.isEmpty()) {
+        if (!(storedRolesValue instanceof List<?>)) {
             return List.of();
         }
 
-        List<String> roles = new ArrayList<>(storedRoles.size());
+        List<?> storedRoles = (List<?>) storedRolesValue;
+        if (storedRoles.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> roleNames = new ArrayList<>(storedRoles.size());
         for (Object role : storedRoles) {
-            if (role != null) {
-                roles.add(role.toString());
+            if (role instanceof String roleName) {
+                roleNames.add(roleName);
+            } else if (role != null) {
+                log.warn("Ignoring non-string role value {} stored for user", role);
             }
         }
-        return roles;
+
+        return roleNames.isEmpty() ? List.of() : List.copyOf(roleNames);
     }
 
     private Collection<SimpleGrantedAuthority> authoritiesFromRoles(List<String> roles) {
