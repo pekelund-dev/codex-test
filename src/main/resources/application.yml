@@ -25,3 +25,8 @@ firestore:
   project-id: ${FIRESTORE_PROJECT_ID:}
   users-collection: ${FIRESTORE_USERS_COLLECTION:users}
   default-role: ${FIRESTORE_DEFAULT_ROLE:ROLE_USER}
+gcs:
+  enabled: ${GCS_ENABLED:false}
+  credentials: ${GCS_CREDENTIALS:}
+  project-id: ${GCS_PROJECT_ID:}
+  bucket: ${GCS_BUCKET:}
