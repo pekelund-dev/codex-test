@@ -9,6 +9,6 @@ public interface ReceiptStorageService {
 
     List<ReceiptFile> listReceipts();
 
-    void uploadFiles(List<MultipartFile> files);
+    void uploadFiles(List<MultipartFile> files, ReceiptOwner owner);
 }
 

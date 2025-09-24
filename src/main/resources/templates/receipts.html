@@ -99,6 +99,7 @@
                     <tr>
                         <th scope="col">File name</th>
                         <th scope="col" class="text-end">Size</th>
+                        <th scope="col">Uploaded by</th>
                         <th scope="col">Last updated</th>
                         <th scope="col">Content type</th>
                     </tr>
@@ -109,6 +110,7 @@
                             <span class="fw-semibold" th:text="${file.name()}">receipt.pdf</span>
                         </td>
                         <td class="text-end" th:text="${file.formattedSize()}">24.5 KB</td>
+                        <td th:text="${file.ownerDisplayName()}">—</td>
                         <td th:text="${file.updated() != null ? #temporals.format(file.updated(), 'yyyy-MM-dd HH:mm:ss') : '—'}">2024-01-01 10:30:00</td>
                         <td th:text="${file.contentType() != null ? file.contentType() : '—'}">application/pdf</td>
                     </tr>

@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
@@ -56,9 +57,10 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
                 if (blob.isDirectory()) {
                     continue;
                 }
+                ReceiptOwner owner = ReceiptOwner.fromMetadata(blob.getMetadata());
                 files.add(new ReceiptFile(blob.getName(), blob.getSize(),
                     blob.getUpdateTime() != null ? Instant.ofEpochMilli(blob.getUpdateTime()) : null,
-                    blob.getContentType()));
+                    blob.getContentType(), owner));
             }
             files.sort((left, right) -> {
                 Instant leftUpdated = left.updated();
@@ -81,7 +83,7 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
     }
 
     @Override
-    public void uploadFiles(List<MultipartFile> files) {
+    public void uploadFiles(List<MultipartFile> files, ReceiptOwner owner) {
         for (MultipartFile file : files) {
             if (file == null || file.isEmpty()) {
                 continue;
@@ -89,9 +91,13 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
 
             String originalFilename = file.getOriginalFilename();
             String objectName = buildObjectName(originalFilename);
-            BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(properties.getBucket(), objectName))
-                .setContentType(file.getContentType())
-                .build();
+            BlobInfo.Builder blobInfoBuilder = BlobInfo.newBuilder(BlobId.of(properties.getBucket(), objectName))
+                .setContentType(file.getContentType());
+            Map<String, String> metadata = owner != null && owner.hasValues() ? owner.toMetadata() : Map.of();
+            if (!metadata.isEmpty()) {
+                blobInfoBuilder.setMetadata(metadata);
+            }
+            BlobInfo blobInfo = blobInfoBuilder.build();
 
             try (InputStream inputStream = file.getInputStream()) {
                 storage.createFrom(blobInfo, inputStream);

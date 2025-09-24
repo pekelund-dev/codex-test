@@ -23,7 +23,7 @@ public class DisabledReceiptStorageService implements ReceiptStorageService {
     }
 
     @Override
-    public void uploadFiles(List<MultipartFile> files) {
+    public void uploadFiles(List<MultipartFile> files, ReceiptOwner owner) {
         throw new ReceiptStorageException("Google Cloud Storage integration is disabled");
     }
 }
