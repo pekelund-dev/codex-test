@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:with="computedTitle=${status} != null ? 'Error ' + status : 'Error'"
+      th:replace="~{layout :: layout(${computedTitle}, ~{::section})}">
+<head>
+    <title th:text="${computedTitle}">Error</title>
+</head>
+<body>
+<section class="py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+            <div class="text-center mb-4">
+                <div class="display-4 fw-bold text-primary" th:text="${status} ?: 'Error'">500</div>
+                <h1 class="h3 fw-semibold mt-3"
+                    th:text="${status} == 404 ? 'Page not found' : 'Something went wrong'">Something went wrong</h1>
+                <p class="text-muted mb-0" th:if="${status} == 404">
+                    We could not find the page you requested. It may have been moved or no longer exists.
+                </p>
+                <p class="text-muted mb-0" th:unless="${status} == 404">
+                    We ran into an unexpected issue while processing your request. Please try again in a moment.
+                </p>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <p class="mb-3" th:if="${path}">
+                        <span class="text-muted">Requested path:</span>
+                        <span class="fw-semibold" th:text="${path}">/receipts</span>
+                    </p>
+                    <div class="alert alert-warning" role="alert" th:if="${message}">
+                        <span th:text="${message}">An unexpected error occurred.</span>
+                    </div>
+                    <div class="alert alert-light border text-start" role="alert"
+                         th:if="${error} or ${status} or ${timestamp}">
+                        <dl class="row mb-0 small">
+                            <dt class="col-sm-4 text-muted">Status code</dt>
+                            <dd class="col-sm-8 fw-semibold text-dark" th:text="${status} ?: '—'">500</dd>
+                            <dt class="col-sm-4 text-muted">Error</dt>
+                            <dd class="col-sm-8 text-dark" th:text="${error} ?: 'Unexpected error'">Internal Server Error</dd>
+                            <dt class="col-sm-4 text-muted" th:if="${timestamp}">Timestamp</dt>
+                            <dd class="col-sm-8 text-dark" th:if="${timestamp}"
+                                th:text="${#temporals.format(timestamp, 'yyyy-MM-dd HH:mm:ss')}">2025-01-01 12:00:00</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mt-4">
+                <a class="btn btn-primary" th:href="@{/}">Return home</a>
+                <a class="btn btn-outline-primary" href="#" onclick="window.history.back(); return false;">Go back</a>
+            </div>
+            <p class="text-muted small text-center mt-3 mb-0">
+                If the problem continues, please try again later or contact support with the details above.
+            </p>
+        </div>
+    </div>
+</section>
+</body>
+</html>
