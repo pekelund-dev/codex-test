@@ -8,7 +8,7 @@
                 <version>3.4.9</version>
                 <relativePath/> <!-- lookup parent from repository -->
         </parent>
-	<groupId>com.example</groupId>
+	<groupId>dev.pekelund</groupId>
 	<artifactId>responsive-auth-app</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>ResponsiveAuthApp</name>

@@ -1,4 +1,4 @@
-package com.example.responsiveauth.web;
+package dev.pekelund.responsiveauth.web;
 
 import java.security.Principal;
 

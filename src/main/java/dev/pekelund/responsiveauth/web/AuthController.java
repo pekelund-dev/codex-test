@@ -1,7 +1,7 @@
-package com.example.responsiveauth.web;
+package dev.pekelund.responsiveauth.web;
 
-import com.example.responsiveauth.firestore.FirestoreUserService;
-import com.example.responsiveauth.firestore.UserRegistrationException;
+import dev.pekelund.responsiveauth.firestore.FirestoreUserService;
+import dev.pekelund.responsiveauth.firestore.UserRegistrationException;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;

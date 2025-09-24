@@ -1,4 +1,4 @@
-package com.example.responsiveauth;
+package dev.pekelund.responsiveauth;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

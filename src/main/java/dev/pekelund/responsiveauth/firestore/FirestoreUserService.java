@@ -1,6 +1,6 @@
-package com.example.responsiveauth.firestore;
+package dev.pekelund.responsiveauth.firestore;
 
-import com.example.responsiveauth.web.RegistrationForm;
+import dev.pekelund.responsiveauth.web.RegistrationForm;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;

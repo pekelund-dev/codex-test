@@ -1,4 +1,4 @@
-package com.example.responsiveauth.firestore;
+package dev.pekelund.responsiveauth.firestore;
 
 public class UserRegistrationException extends RuntimeException {
 
