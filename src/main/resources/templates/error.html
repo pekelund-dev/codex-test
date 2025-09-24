@@ -61,11 +61,13 @@
     const goBackButton = document.querySelector('[data-action="go-back"]');
     if (goBackButton) {
         goBackButton.addEventListener('click', () => {
-            if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                window.location.href = /*[[${#urls.relative(@{/})}]]*/ '/';
-            }
+            window.history.back();
+            // Fallback: if still on the page after 500ms, redirect to home
+            setTimeout(() => {
+                if (document.visibilityState === 'visible') {
+                    window.location.href = /*[[${#urls.relative(@{/})}]]*/ '/';
+                }
+            }, 500);
         });
     }
 /*]]>*/
