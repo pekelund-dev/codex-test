@@ -13,6 +13,7 @@
 
     const MAX_FILES = 10;
     const DEFAULT_HINT = `You can add up to ${MAX_FILES} files per upload.`;
+    const FALLBACK_UPLOAD_BUTTON_TEXT = 'Upload receipt files';
     const originalButtonText = uploadButton.textContent;
 
     let selectedFiles = [];
@@ -40,17 +41,9 @@
             }
         }
 
-        if (typeof ClipboardEvent !== 'undefined') {
-            try {
-                const clipboardEvent = new ClipboardEvent('paste');
-                if (clipboardEvent.clipboardData) {
-                    return clipboardEvent.clipboardData;
-                }
-            } catch (error) {
-                // Ignore failures when ClipboardEvent cannot be constructed.
-            }
-        }
-
+        // No safe or semantically correct fallback for DataTransfer exists.
+        // ClipboardEvent is not used as a fallback because it is semantically different
+        // and may lead to confusing or unreliable behavior.
         return null;
     }
 
@@ -185,11 +178,21 @@
                 if (!response.ok) {
                     throw new Error('Upload failed');
                 }
-                const redirectUrl = response.redirected ? response.url : form.getAttribute('action');
-                window.location.href = redirectUrl || window.location.href;
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    const locationHeader = response.headers.get('Location');
+                    if (locationHeader) {
+                        window.location.href = locationHeader;
+                    } else {
+                        // No redirect destination provided; restore the button so the user can continue.
+                        uploadButton.disabled = false;
+                        uploadButton.textContent = originalButtonText || FALLBACK_UPLOAD_BUTTON_TEXT;
+                    }
+                }
             }).catch(() => {
                 uploadButton.disabled = false;
-                uploadButton.textContent = originalButtonText || 'Upload receipt files';
+                uploadButton.textContent = originalButtonText || FALLBACK_UPLOAD_BUTTON_TEXT;
                 updateHint('Upload failed. Please try again.');
             });
         });
