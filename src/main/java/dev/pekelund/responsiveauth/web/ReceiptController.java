@@ -1,14 +1,21 @@
 package dev.pekelund.responsiveauth.web;
 
+import dev.pekelund.responsiveauth.firestore.FirestoreUserDetails;
 import dev.pekelund.responsiveauth.storage.ReceiptFile;
+import dev.pekelund.responsiveauth.storage.ReceiptOwner;
 import dev.pekelund.responsiveauth.storage.ReceiptStorageException;
 import dev.pekelund.responsiveauth.storage.ReceiptStorageService;
 import java.util.Collections;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -51,7 +58,8 @@ public class ReceiptController {
     @PostMapping("/receipts/upload")
     public String uploadReceipts(
         @RequestParam(value = "files", required = false) List<MultipartFile> files,
-        RedirectAttributes redirectAttributes
+        RedirectAttributes redirectAttributes,
+        Authentication authentication
     ) {
         if (!receiptStorageService.isEnabled()) {
             redirectAttributes.addFlashAttribute("errorMessage",
@@ -72,8 +80,10 @@ public class ReceiptController {
             return "redirect:/receipts";
         }
 
+        ReceiptOwner owner = resolveReceiptOwner(authentication);
+
         try {
-            receiptStorageService.uploadFiles(sanitizedFiles);
+            receiptStorageService.uploadFiles(sanitizedFiles, owner);
             int count = sanitizedFiles.size();
             redirectAttributes.addFlashAttribute("successMessage",
                 "%d file%s uploaded successfully.".formatted(count, count == 1 ? "" : "s"));
@@ -83,6 +93,54 @@ public class ReceiptController {
         }
 
         return "redirect:/receipts";
+    }
+
+    private ReceiptOwner resolveReceiptOwner(Authentication authentication) {
+        if (authentication == null
+            || !authentication.isAuthenticated()
+            || authentication instanceof AnonymousAuthenticationToken) {
+            return null;
+        }
+
+        String identifier = authentication.getName();
+        String displayName = null;
+        String email = null;
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof FirestoreUserDetails firestoreUserDetails) {
+            identifier = firestoreUserDetails.getId();
+            displayName = firestoreUserDetails.getDisplayName();
+            email = firestoreUserDetails.getUsername();
+        } else if (principal instanceof OAuth2User oAuth2User) {
+            displayName = readAttribute(oAuth2User, "name");
+            email = readAttribute(oAuth2User, "email");
+            String subject = readAttribute(oAuth2User, "sub");
+            identifier = StringUtils.hasText(subject) ? subject : oAuth2User.getName();
+            if (!StringUtils.hasText(displayName)) {
+                displayName = StringUtils.hasText(email) ? email : authentication.getName();
+            }
+        } else if (principal instanceof UserDetails userDetails) {
+            identifier = userDetails.getUsername();
+            displayName = userDetails.getUsername();
+            email = userDetails.getUsername();
+        } else if (principal instanceof String stringPrincipal) {
+            displayName = stringPrincipal;
+        }
+
+        if (!StringUtils.hasText(identifier)) {
+            identifier = authentication.getName();
+        }
+
+        ReceiptOwner owner = new ReceiptOwner(identifier, displayName, email);
+        return owner.hasValues() ? owner : null;
+    }
+
+    private String readAttribute(OAuth2User oAuth2User, String attributeName) {
+        Object value = oAuth2User.getAttributes().get(attributeName);
+        if (value instanceof String stringValue && StringUtils.hasText(stringValue)) {
+            return stringValue;
+        }
+        return null;
     }
 }
 
