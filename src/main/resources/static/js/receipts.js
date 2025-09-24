@@ -110,7 +110,9 @@
             return;
         }
 
-        const incomingFiles = Array.from(newFiles).filter((file) => file && file.size >= 0);
+        const incomingFiles = Array.from(newFiles).filter(
+            (file) => file && Number.isFinite(file.size)
+        );
         if (incomingFiles.length === 0) {
             return;
         }
@@ -178,17 +180,14 @@
                 if (!response.ok) {
                     throw new Error('Upload failed');
                 }
-                if (response.redirected) {
-                    window.location.href = response.url;
+
+                const redirectUrl = response.url || response.headers.get('Location');
+                if (redirectUrl) {
+                    window.location.href = redirectUrl;
                 } else {
-                    const locationHeader = response.headers.get('Location');
-                    if (locationHeader) {
-                        window.location.href = locationHeader;
-                    } else {
-                        // No redirect destination provided; restore the button so the user can continue.
-                        uploadButton.disabled = false;
-                        uploadButton.textContent = originalButtonText || FALLBACK_UPLOAD_BUTTON_TEXT;
-                    }
+                    // No redirect destination provided; restore the button so the user can continue.
+                    uploadButton.disabled = false;
+                    uploadButton.textContent = originalButtonText || FALLBACK_UPLOAD_BUTTON_TEXT;
                 }
             }).catch(() => {
                 uploadButton.disabled = false;
