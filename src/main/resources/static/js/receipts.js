@@ -134,7 +134,10 @@
 
     fileInput.addEventListener('change', (event) => {
         handleFiles(event.target.files);
-        event.target.value = '';
+
+        if (!supportsFileAssignment) {
+            event.target.value = '';
+        }
     });
 
     ['dragenter', 'dragover'].forEach((type) => {
