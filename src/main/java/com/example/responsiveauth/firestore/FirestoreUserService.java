@@ -188,8 +188,8 @@ public class FirestoreUserService implements UserDetailsService {
     }
 
     private List<String> readRoleNames(DocumentSnapshot documentSnapshot) {
-        List<?> storedRoles = documentSnapshot.get("roles", List.class);
-        if (storedRoles == null || storedRoles.isEmpty()) {
+        Object storedRolesValue = documentSnapshot.get("roles");
+        if (!(storedRolesValue instanceof List<?> storedRoles) || storedRoles.isEmpty()) {
             return List.of();
         }
 
