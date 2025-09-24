@@ -207,7 +207,7 @@ public class FirestoreUserService implements UserDetailsService {
             }
         }
 
-        return roleNames.isEmpty() ? List.of() : List.copyOf(roleNames);
+        return roleNames.isEmpty() ? List.of() : roleNames;
     }
 
     private Collection<SimpleGrantedAuthority> authoritiesFromRoles(List<String> roles) {
