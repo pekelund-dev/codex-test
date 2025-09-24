@@ -1,4 +1,4 @@
-package com.example.responsiveauth.web;
+package dev.pekelund.responsiveauth.web;
 
 public record UserProfile(boolean authenticated, String displayName, String initials, String imageUrl) {
 

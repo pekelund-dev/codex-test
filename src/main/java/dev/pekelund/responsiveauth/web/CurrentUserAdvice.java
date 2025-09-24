@@ -1,6 +1,6 @@
-package com.example.responsiveauth.web;
+package dev.pekelund.responsiveauth.web;
 
-import com.example.responsiveauth.firestore.FirestoreUserDetails;
+import dev.pekelund.responsiveauth.firestore.FirestoreUserDetails;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;

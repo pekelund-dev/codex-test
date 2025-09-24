@@ -1,4 +1,4 @@
-package com.example.responsiveauth;
+package dev.pekelund.responsiveauth;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
