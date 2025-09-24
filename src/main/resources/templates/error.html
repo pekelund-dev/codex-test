@@ -31,15 +31,16 @@
                         <span th:text="${message}">An unexpected error occurred.</span>
                     </div>
                     <div class="alert alert-light border text-start" role="alert"
-                         th:if="${error} or ${status} or ${timestamp}">
+                         th:if="${error} or ${status} or ${timestamp}"
+                         th:with="timestampZoned=${timestamp != null ? timestamp.atZone(T(java.time.ZoneId).systemDefault()) : null}">
                         <dl class="row mb-0 small">
                             <dt class="col-sm-4 text-muted">Status code</dt>
                             <dd class="col-sm-8 fw-semibold text-dark" th:text="${status} ?: '—'">500</dd>
                             <dt class="col-sm-4 text-muted">Error</dt>
                             <dd class="col-sm-8 text-dark" th:text="${error} ?: 'Unexpected error'">Internal Server Error</dd>
-                            <dt class="col-sm-4 text-muted" th:if="${timestamp}">Timestamp</dt>
-                            <dd class="col-sm-8 text-dark" th:if="${timestamp}"
-                                th:text="${#temporals.format(timestamp, 'yyyy-MM-dd HH:mm:ss')}">2025-01-01 12:00:00</dd>
+                            <dt class="col-sm-4 text-muted" th:if="${timestampZoned}">Timestamp</dt>
+                            <dd class="col-sm-8 text-dark" th:if="${timestampZoned}"
+                                th:text="${#temporals.format(timestampZoned, 'yyyy-MM-dd HH:mm:ss')}">2025-01-01 12:00:00</dd>
                         </dl>
                     </div>
                 </div>
