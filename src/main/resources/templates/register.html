@@ -15,6 +15,7 @@
                         Registration is currently disabled. Configure Firestore credentials to enable sign ups.
                     </div>
                     <form th:action="@{/register}" th:object="${registrationForm}" method="post" class="needs-validation" novalidate>
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
                         <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger" role="alert">
                             <p class="mb-0" th:each="error : ${#fields.globalErrors()}" th:text="${error}">An error occurred.</p>
                         </div>
