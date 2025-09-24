@@ -5,12 +5,18 @@
     const selectedList = document.getElementById('selected-files');
     const uploadButton = document.getElementById('upload-button');
     const hint = document.getElementById('file-limit-hint');
+    const form = dropzone?.closest('form');
 
     if (!dropzone || !fileInput || !selectedList || !uploadButton) {
         return;
     }
 
     const MAX_FILES = 10;
+    const DEFAULT_HINT = `You can add up to ${MAX_FILES} files per upload.`;
+    const FALLBACK_UPLOAD_BUTTON_TEXT = 'Upload receipt files';
+    const originalButtonText = uploadButton.textContent;
+
+    let selectedFiles = [];
 
     function formatBytes(bytes) {
         if (!bytes || bytes <= 0) {
@@ -26,25 +32,54 @@
         return `${size.toFixed(1)} ${units[unit]}`;
     }
 
-    function rebuildFileList(files) {
-        const dataTransfer = new DataTransfer();
-        files.forEach((file) => dataTransfer.items.add(file));
-        fileInput.files = dataTransfer.files;
+    function buildTransfer() {
+        if (typeof DataTransfer !== 'undefined') {
+            try {
+                return new DataTransfer();
+            } catch (error) {
+                // Some browsers (for example Safari < 16.4) expose DataTransfer but do not allow constructing it.
+            }
+        }
+
+        // No safe or semantically correct fallback for DataTransfer exists.
+        // ClipboardEvent is not used as a fallback because it is semantically different
+        // and may lead to confusing or unreliable behavior.
+        return null;
+    }
+
+    const supportsFileAssignment = buildTransfer() !== null;
+
+    function syncFileInput() {
+        if (!supportsFileAssignment) {
+            return false;
+        }
+
+        const transfer = buildTransfer();
+        if (!transfer) {
+            return false;
+        }
+
+        selectedFiles.forEach((file) => transfer.items.add(file));
+        fileInput.files = transfer.files;
+        return true;
+    }
+
+    function updateHint(message) {
+        if (hint) {
+            hint.textContent = message;
+        }
     }
 
     function refreshSelectedFiles() {
-        const files = Array.from(fileInput.files);
         selectedList.innerHTML = '';
 
-        if (files.length === 0) {
+        if (selectedFiles.length === 0) {
             uploadButton.disabled = true;
-            if (hint) {
-                hint.textContent = `You can add up to ${MAX_FILES} files per upload.`;
-            }
+            updateHint(DEFAULT_HINT);
             return;
         }
 
-        files.forEach((file, index) => {
+        selectedFiles.forEach((file, index) => {
             const item = document.createElement('li');
             item.className = 'list-group-item d-flex justify-content-between align-items-center';
 
@@ -57,8 +92,8 @@
             removeButton.className = 'btn btn-link text-danger p-0 small';
             removeButton.textContent = 'Remove';
             removeButton.addEventListener('click', () => {
-                files.splice(index, 1);
-                rebuildFileList(files);
+                selectedFiles = selectedFiles.filter((_, itemIndex) => itemIndex !== index);
+                syncFileInput();
                 refreshSelectedFiles();
             });
 
@@ -67,9 +102,7 @@
         });
 
         uploadButton.disabled = false;
-        if (hint) {
-            hint.textContent = `${files.length} file${files.length === 1 ? '' : 's'} ready for upload.`;
-        }
+        updateHint(`${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'} ready for upload.`);
     }
 
     function handleFiles(newFiles) {
@@ -77,17 +110,21 @@
             return;
         }
 
-        const currentFiles = Array.from(fileInput.files);
-        const merged = currentFiles.concat(Array.from(newFiles));
-
-        if (merged.length > MAX_FILES) {
-            merged.splice(MAX_FILES);
-            if (hint) {
-                hint.textContent = `Only the first ${MAX_FILES} files were added.`;
-            }
+        const incomingFiles = Array.from(newFiles).filter(
+            (file) => file && Number.isFinite(file.size)
+        );
+        if (incomingFiles.length === 0) {
+            return;
         }
 
-        rebuildFileList(merged);
+        let combined = selectedFiles.concat(incomingFiles);
+        if (combined.length > MAX_FILES) {
+            combined = combined.slice(0, MAX_FILES);
+            updateHint(`Only the first ${MAX_FILES} files were added.`);
+        }
+
+        selectedFiles = combined;
+        syncFileInput();
         refreshSelectedFiles();
     }
 
@@ -95,7 +132,7 @@
 
     fileInput.addEventListener('change', (event) => {
         handleFiles(event.target.files);
-        fileInput.value = '';
+        event.target.value = '';
     });
 
     ['dragenter', 'dragover'].forEach((type) => {
@@ -117,5 +154,49 @@
             handleFiles(event.dataTransfer.files);
         }
     });
+
+    if (form && !supportsFileAssignment) {
+        form.addEventListener('submit', (event) => {
+            if (selectedFiles.length === 0) {
+                updateHint('Please choose at least one file to upload.');
+                event.preventDefault();
+                return;
+            }
+
+            event.preventDefault();
+
+            const formData = new FormData(form);
+            formData.delete('files');
+            selectedFiles.forEach((file) => formData.append('files', file));
+
+            uploadButton.disabled = true;
+            uploadButton.textContent = 'Uploading…';
+
+            fetch(form.action, {
+                method: form.method || 'POST',
+                body: formData,
+                credentials: 'same-origin',
+            }).then((response) => {
+                if (!response.ok) {
+                    throw new Error('Upload failed');
+                }
+
+                const redirectUrl = response.url || response.headers.get('Location');
+                if (redirectUrl) {
+                    window.location.href = redirectUrl;
+                } else {
+                    // No redirect destination provided; restore the button so the user can continue.
+                    uploadButton.disabled = false;
+                    uploadButton.textContent = originalButtonText || FALLBACK_UPLOAD_BUTTON_TEXT;
+                }
+            }).catch(() => {
+                uploadButton.disabled = false;
+                uploadButton.textContent = originalButtonText || FALLBACK_UPLOAD_BUTTON_TEXT;
+                updateHint('Upload failed. Please try again.');
+            });
+        });
+    }
+
+    refreshSelectedFiles();
 })();
 
