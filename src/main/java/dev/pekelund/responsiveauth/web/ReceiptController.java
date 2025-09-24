@@ -34,12 +34,13 @@ public class ReceiptController {
     }
 
     @GetMapping("/receipts")
-    public String receipts(Model model) {
+    public String receipts(Model model, Authentication authentication) {
         model.addAttribute("pageTitle", "Receipts");
         model.addAttribute("storageEnabled", receiptStorageService.isEnabled());
 
         List<ReceiptFile> receiptFiles = Collections.emptyList();
         String listingError = null;
+        ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
 
         if (receiptStorageService.isEnabled()) {
             try {
@@ -48,6 +49,14 @@ public class ReceiptController {
                 listingError = ex.getMessage();
                 LOGGER.warn("Failed to list receipt files", ex);
             }
+        }
+
+        if (currentOwner == null) {
+            receiptFiles = List.of();
+        } else {
+            receiptFiles = receiptFiles.stream()
+                .filter(file -> isOwnedByCurrentUser(file.owner(), currentOwner))
+                .toList();
         }
 
         model.addAttribute("files", receiptFiles);
@@ -141,6 +150,40 @@ public class ReceiptController {
             return stringValue;
         }
         return null;
+    }
+
+    private boolean isOwnedByCurrentUser(ReceiptOwner fileOwner, ReceiptOwner currentOwner) {
+        if (fileOwner == null || currentOwner == null) {
+            return false;
+        }
+
+        if (hasMatchingId(fileOwner, currentOwner)) {
+            return true;
+        }
+
+        if (hasMatchingEmail(fileOwner, currentOwner)) {
+            return true;
+        }
+
+        return hasMatchingDisplayName(fileOwner, currentOwner);
+    }
+
+    private boolean hasMatchingId(ReceiptOwner fileOwner, ReceiptOwner currentOwner) {
+        return StringUtils.hasText(fileOwner.id())
+            && StringUtils.hasText(currentOwner.id())
+            && fileOwner.id().equals(currentOwner.id());
+    }
+
+    private boolean hasMatchingEmail(ReceiptOwner fileOwner, ReceiptOwner currentOwner) {
+        return StringUtils.hasText(fileOwner.email())
+            && StringUtils.hasText(currentOwner.email())
+            && fileOwner.email().equalsIgnoreCase(currentOwner.email());
+    }
+
+    private boolean hasMatchingDisplayName(ReceiptOwner fileOwner, ReceiptOwner currentOwner) {
+        return StringUtils.hasText(fileOwner.displayName())
+            && StringUtils.hasText(currentOwner.displayName())
+            && fileOwner.displayName().equalsIgnoreCase(currentOwner.displayName());
     }
 }
 
