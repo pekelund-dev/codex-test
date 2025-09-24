@@ -23,7 +23,7 @@
 
             <div class="card shadow-sm border-0">
                 <div class="card-body p-4"
-                     th:with="systemZoneId=${T(java.time.ZoneId).systemDefault()}, timestampZoned=${timestamp != null ? timestamp.atZone(systemZoneId) : null}">
+                     th:with="systemZoneId=${T(java.time.ZoneId).systemDefault()}, timestampZoned=${timestamp != null ? timestamp.toInstant().atZone(systemZoneId) : null}">
                     <p class="mb-3" th:if="${path}">
                         <span class="text-muted">Requested path:</span>
                         <span class="fw-semibold" th:text="${path}">/receipts</span>
