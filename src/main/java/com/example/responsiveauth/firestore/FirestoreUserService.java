@@ -18,12 +18,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.InMemoryUserDetailsManager;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -249,7 +249,9 @@ public class FirestoreUserService implements UserDetailsService {
         if (configuredFallbackUsers == null || configuredFallbackUsers.isEmpty()) {
             log.info("Firestore integration is disabled and no fallback users are configured. "
                 + "Configure 'firestore.fallback-users' to enable in-memory credentials.");
-            return username -> throw new UsernameNotFoundException("No fallback users configured.");
+            return username -> {
+                throw new UsernameNotFoundException("No fallback users configured.");
+            };
         }
 
         InMemoryUserDetailsManager inMemoryManager = new InMemoryUserDetailsManager();
