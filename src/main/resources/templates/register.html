@@ -14,10 +14,10 @@
                     <div th:if="${!registrationEnabled}" class="alert alert-warning" role="alert">
                         Registration is currently disabled. Configure Firestore credentials to enable sign ups.
                     </div>
-                    <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger" role="alert">
-                        <p class="mb-0" th:each="error : ${#fields.globalErrors()}" th:text="${error}">An error occurred.</p>
-                    </div>
                     <form th:action="@{/register}" th:object="${registrationForm}" method="post" class="needs-validation" novalidate>
+                        <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger" role="alert">
+                            <p class="mb-0" th:each="error : ${#fields.globalErrors()}" th:text="${error}">An error occurred.</p>
+                        </div>
                         <fieldset th:attr="disabled=${!registrationEnabled}">
                             <div class="mb-3">
                                 <label for="fullName" class="form-label">Full name</label>
