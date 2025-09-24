@@ -5,7 +5,7 @@
     const selectedList = document.getElementById('selected-files');
     const uploadButton = document.getElementById('upload-button');
     const hint = document.getElementById('file-limit-hint');
-    const form = dropzone?.closest('form');
+    const form = dropzone ? dropzone.closest('form') : null;
 
     if (!dropzone || !fileInput || !selectedList || !uploadButton) {
         return;
@@ -128,7 +128,9 @@
         refreshSelectedFiles();
     }
 
-    triggerButton?.addEventListener('click', () => fileInput.click());
+    if (triggerButton) {
+        triggerButton.addEventListener('click', () => fileInput.click());
+    }
 
     fileInput.addEventListener('change', (event) => {
         handleFiles(event.target.files);
@@ -150,7 +152,7 @@
     });
 
     dropzone.addEventListener('drop', (event) => {
-        if (event.dataTransfer?.files) {
+        if (event.dataTransfer && event.dataTransfer.files) {
             handleFiles(event.dataTransfer.files);
         }
     });
