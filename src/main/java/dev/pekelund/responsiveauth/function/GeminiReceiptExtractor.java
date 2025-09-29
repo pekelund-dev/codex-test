@@ -18,7 +18,8 @@ public class GeminiReceiptExtractor {
     /**
      * Gemini text parts have an 8 KiB limit (8192 characters). We chunk the base64 payload
      * into 8000-character segments to stay comfortably below that ceiling while keeping the
-     * chunks easy to process and reassemble.
+     * chunks easy to process. Chunks are concatenated with newline separators; there is no
+     * reassembly logic.
      */
     private static final int CHUNK_SIZE = 8_000;
 
@@ -100,6 +101,8 @@ public class GeminiReceiptExtractor {
         if (encodedPdf.length() <= CHUNK_SIZE) {
             return encodedPdf;
         }
+        // CHUNK_SIZE - 1 (=7999) provides the round-up behaviour needed to compute the number
+        // of CHUNK_SIZE (8000-character) segments required for the payload length.
         int numChunks = (encodedPdf.length() + CHUNK_SIZE - 1) / CHUNK_SIZE;
         StringBuilder builder = new StringBuilder(encodedPdf.length() + numChunks);
         int index = 0;

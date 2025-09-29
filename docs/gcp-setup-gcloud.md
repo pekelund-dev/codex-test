@@ -153,8 +153,10 @@ gcloud functions deploy "${FUNCTION_NAME}" \
 
    ```bash
 # Upload a PDF and include owner metadata
+# Ensure you have a sample PDF available (for example, download https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+# and rename it to receipt.pdf, or supply the path to a PDF you already have).
 OBJECT=receipts/sample.pdf
-gsutil cp receipt.pdf "${BUCKET}/${OBJECT}"
+gsutil cp path/to/your/receipt.pdf "${BUCKET}/${OBJECT}"
 gsutil setmeta \
   -h "x-goog-meta-receipt.owner.id=USER_ID" \
   -h "x-goog-meta-receipt.owner.displayName=Jane Doe" \
