@@ -15,6 +15,12 @@ import org.springframework.ai.chat.model.ChatModel;
 public class GeminiReceiptExtractor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GeminiReceiptExtractor.class);
+    /**
+     * Gemini text parts have an 8 KiB limit (8192 characters). We chunk the base64 payload
+     * into 8000-character segments to stay comfortably below that ceiling while keeping the
+     * chunks easy to process and reassemble.
+     */
+    private static final int CHUNK_SIZE = 8_000;
 
     private final ChatModel chatModel;
     private final ObjectMapper objectMapper;
@@ -91,14 +97,14 @@ public class GeminiReceiptExtractor {
     }
 
     private String chunkText(String encodedPdf) {
-        if (encodedPdf.length() <= 8000) {
+        if (encodedPdf.length() <= CHUNK_SIZE) {
             return encodedPdf;
         }
-        int numChunks = (encodedPdf.length() + 7999) / 8000;
+        int numChunks = (encodedPdf.length() + CHUNK_SIZE - 1) / CHUNK_SIZE;
         StringBuilder builder = new StringBuilder(encodedPdf.length() + numChunks);
         int index = 0;
         while (index < encodedPdf.length()) {
-            int nextIndex = Math.min(index + 8000, encodedPdf.length());
+            int nextIndex = Math.min(index + CHUNK_SIZE, encodedPdf.length());
             builder.append(encodedPdf, index, nextIndex).append('\n');
             index = nextIndex;
         }
