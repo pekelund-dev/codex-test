@@ -28,6 +28,11 @@ public class FirestoreProperties {
     private String usersCollection = "users";
 
     /**
+     * Firestore collection used to persist extracted receipt data.
+     */
+    private String receiptsCollection = "receiptExtractions";
+
+    /**
      * Default role granted to newly registered users.
      */
     private String defaultRole = "ROLE_USER";
@@ -67,6 +72,14 @@ public class FirestoreProperties {
 
     public void setUsersCollection(String usersCollection) {
         this.usersCollection = usersCollection;
+    }
+
+    public String getReceiptsCollection() {
+        return receiptsCollection;
+    }
+
+    public void setReceiptsCollection(String receiptsCollection) {
+        this.receiptsCollection = receiptsCollection;
     }
 
     public String getDefaultRole() {
