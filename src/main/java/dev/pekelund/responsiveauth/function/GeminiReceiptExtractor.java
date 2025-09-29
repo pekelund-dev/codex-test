@@ -94,7 +94,8 @@ public class GeminiReceiptExtractor {
         if (encodedPdf.length() <= 8000) {
             return encodedPdf;
         }
-        StringBuilder builder = new StringBuilder(encodedPdf.length() + encodedPdf.length() / 8000);
+        int numChunks = (encodedPdf.length() + 7999) / 8000;
+        StringBuilder builder = new StringBuilder(encodedPdf.length() + numChunks);
         int index = 0;
         while (index < encodedPdf.length()) {
             int nextIndex = Math.min(index + 8000, encodedPdf.length());

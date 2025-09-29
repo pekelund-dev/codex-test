@@ -46,7 +46,7 @@ public class ReceiptParsingHandler {
         String objectName = storageObjectData.getName();
 
         if (!StringUtils.hasText(bucket) || !StringUtils.hasText(objectName)) {
-            LOGGER.warn("Storage event missing bucket (%s) or object name (%s)", bucket, objectName);
+            LOGGER.warn("Storage event missing bucket ({}) or object name ({})", bucket, objectName);
             return;
         }
 
