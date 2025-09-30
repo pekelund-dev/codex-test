@@ -6,14 +6,14 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FirestoreOptions;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
-import com.google.events.cloud.storage.v1.StorageObjectData;
+import com.google.cloud.vertexai.VertexAI;
 import io.cloudevents.CloudEvent;
 import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.vertexai.gemini.VertexAiGeminiApi;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatModel;
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 
 /**
  * Cloud Function entry point for receipt parsing.
@@ -45,12 +45,12 @@ public class ReceiptProcessingFunction implements CloudEventsFunction {
             return;
         }
         byte[] payload = cloudEvent.getData().toBytes();
-        StorageObjectData storageObjectData = parseStorageObject(payload);
-        handler.handle(storageObjectData);
+        StorageObjectEvent storageObjectEvent = parseStorageObject(payload);
+        handler.handle(storageObjectEvent);
     }
 
-    private StorageObjectData parseStorageObject(byte[] payload) throws IOException {
-        return objectMapper.readValue(payload, StorageObjectData.class);
+    private StorageObjectEvent parseStorageObject(byte[] payload) throws IOException {
+        return objectMapper.readValue(payload, StorageObjectEvent.class);
     }
 
     private static RuntimeComponents initializeRuntime() {
@@ -60,8 +60,14 @@ public class ReceiptProcessingFunction implements CloudEventsFunction {
         Storage storage = StorageOptions.getDefaultInstance().getService();
         Firestore firestore = FirestoreOptions.getDefaultInstance().getService();
 
-        VertexAiGeminiApi api = new VertexAiGeminiApi(settings.vertexProjectId(), settings.vertexLocation(), settings.vertexModel());
-        ChatModel chatModel = new VertexAiGeminiChatModel(api);
+        VertexAI vertexAI = new VertexAI(settings.vertexProjectId(), settings.vertexLocation());
+        VertexAiGeminiChatOptions defaultOptions = VertexAiGeminiChatOptions.builder()
+            .model(settings.vertexModel())
+            .build();
+        ChatModel chatModel = VertexAiGeminiChatModel.builder()
+            .vertexAI(vertexAI)
+            .defaultOptions(defaultOptions)
+            .build();
         GeminiReceiptExtractor extractor = new GeminiReceiptExtractor(chatModel, mapper);
         ReceiptExtractionRepository repository = new ReceiptExtractionRepository(firestore, settings.receiptsCollection());
         ReceiptParsingHandler handler = new ReceiptParsingHandler(storage, repository, extractor);

@@ -3,7 +3,6 @@ package dev.pekelund.responsiveauth.function;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
-import com.google.events.cloud.storage.v1.StorageObjectData;
 import dev.pekelund.responsiveauth.storage.ReceiptOwner;
 import java.time.Instant;
 import java.util.HashMap;
@@ -36,14 +35,14 @@ public class ReceiptParsingHandler {
         this.extractor = extractor;
     }
 
-    public void handle(StorageObjectData storageObjectData) {
-        if (storageObjectData == null) {
+    public void handle(StorageObjectEvent storageObjectEvent) {
+        if (storageObjectEvent == null) {
             LOGGER.warn("Received null storage event data");
             return;
         }
 
-        String bucket = storageObjectData.getBucket();
-        String objectName = storageObjectData.getName();
+        String bucket = storageObjectEvent.getBucket();
+        String objectName = storageObjectEvent.getName();
 
         if (!StringUtils.hasText(bucket) || !StringUtils.hasText(objectName)) {
             LOGGER.warn("Storage event missing bucket ({}) or object name ({})", bucket, objectName);
