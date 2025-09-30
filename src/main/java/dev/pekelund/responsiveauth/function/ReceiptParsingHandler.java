@@ -67,7 +67,7 @@ public class ReceiptParsingHandler {
             if (!isPdf(blob)) {
                 String message = "Only PDF receipts are processed";
                 repository.markStatus(bucket, objectName, owner, ReceiptProcessingStatus.SKIPPED, message);
-                updateProcessingMetadata(blob, ReceiptProcessingStatus.SKIPPED, message);
+                blob = updateProcessingMetadata(blob, ReceiptProcessingStatus.SKIPPED, message);
                 return;
             }
 
@@ -91,8 +91,11 @@ public class ReceiptParsingHandler {
 
     private boolean isPdf(Blob blob) {
         String contentType = blob.getContentType();
-        if (StringUtils.hasText(contentType) && contentType.toLowerCase(Locale.US).contains("pdf")) {
-            return true;
+        if (StringUtils.hasText(contentType)) {
+            String normalized = contentType.toLowerCase(Locale.US);
+            if (normalized.equals("application/pdf") || normalized.startsWith("application/pdf")) {
+                return true;
+            }
         }
         String name = blob.getName();
         return name != null && name.toLowerCase(Locale.US).endsWith(".pdf");

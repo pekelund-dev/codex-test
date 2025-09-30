@@ -101,8 +101,8 @@ public class GeminiReceiptExtractor {
         if (encodedPdf.length() <= CHUNK_SIZE) {
             return encodedPdf;
         }
-        // CHUNK_SIZE - 1 (=7999) provides the round-up behavior needed to compute the number
-        // of CHUNK_SIZE (8000-character) segments required for the payload length.
+        // Using (encodedPdf.length() + CHUNK_SIZE - 1) / CHUNK_SIZE rounds up to ensure all
+        // payload characters are included in CHUNK_SIZE (8000-character) segments.
         int numChunks = (encodedPdf.length() + CHUNK_SIZE - 1) / CHUNK_SIZE;
         StringBuilder builder = new StringBuilder(encodedPdf.length() + numChunks);
         int index = 0;
