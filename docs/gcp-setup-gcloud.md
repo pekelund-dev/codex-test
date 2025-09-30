@@ -12,14 +12,14 @@ Enable the core services once per project:
 
 ```bash
 gcloud services enable \
-  cloudfunctions.googleapis.com \
-  cloudbuild.googleapis.com \
-  artifactregistry.googleapis.com \
-  eventarc.googleapis.com \
-  pubsub.googleapis.com \
-  aiplatform.googleapis.com \
-  storage.googleapis.com \
-  firestore.googleapis.com
+    cloudfunctions.googleapis.com \
+    cloudbuild.googleapis.com \
+    artifactregistry.googleapis.com \
+    eventarc.googleapis.com \
+    pubsub.googleapis.com \
+    aiplatform.googleapis.com \
+    storage.googleapis.com \
+    firestore.googleapis.com
 ```
 
 ## Configure Firestore via gcloud
@@ -34,7 +34,7 @@ gcloud projects create responsive-auth-app --set-as-default
 2. **Create the Firestore database**
 
    ```bash
-REGION=us-central # choose the region closest to your users
+REGION=us-central1 # choose the region closest to your users
 gcloud firestore databases create --location="${REGION}" --type=firestore-native
    ```
 
