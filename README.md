@@ -14,6 +14,27 @@ ResponsiveAuthApp is a Spring Boot starter application showcasing a responsive w
 
 ## Getting started
 
+### Quick Setup with Environment Script
+
+For the fastest setup, use the provided environment script that configures all necessary Google Cloud settings:
+
+```bash
+# Source the environment setup script
+source setup-env.sh
+
+# Start the application
+./mvnw spring-boot:run
+```
+
+The `setup-env.sh` script automatically configures:
+- Google Cloud authentication
+- Firestore database connection
+- Google Cloud Storage bucket access
+- OAuth2 credentials
+- Cloud Function environment variables
+
+### Manual Setup
+
 1. Ensure you have Java 21 available in your environment.
 2. Configure optional Google OAuth 2.0 credentials by exporting the variables before running the app:
 
@@ -54,12 +75,32 @@ After completing either path, restart the application and visit <http://localhos
 
 ### Receipt parsing Cloud Function (Vertex AI Gemini)
 
-The `ReceiptProcessingFunction` module processes finalized uploads from the receipts bucket, extracts structured data with Gemini, and stores the result in Firestore. Select the deployment style you prefer:
+The `ReceiptProcessingFunction` module processes finalized uploads from the receipts bucket, extracts structured data with Gemini, and stores the result in Firestore. 
+
+#### Quick Deployment
+
+Use the automated deployment script for a streamlined setup:
+
+```bash
+# Deploy the Cloud Function with all required configurations
+./deploy-cloud-function.sh
+```
+
+This script automatically:
+- Enables all required Google Cloud APIs
+- Creates and configures service accounts with proper IAM roles
+- Detects the correct region for your Cloud Storage bucket
+- Builds and deploys the function with optimal settings
+- Provides comprehensive error handling and troubleshooting
+
+#### Manual Deployment
+
+Select the deployment style you prefer:
 
 - [Deploy the function with the gcloud CLI](docs/gcp-setup-gcloud.md#deploy-the-receipt-processing-function)
 - [Deploy the function with the Cloud Console](docs/gcp-setup-cloud-console.md#deploy-the-receipt-processing-function)
 
-Both documents describe prerequisites, metadata expectations, status updates, and verification steps for the Gemini-powered pipeline.
+Both documents describe prerequisites, metadata expectations, status updates, verification steps, and comprehensive troubleshooting guides for the Gemini-powered pipeline.
 
 ### Fallback credentials
 

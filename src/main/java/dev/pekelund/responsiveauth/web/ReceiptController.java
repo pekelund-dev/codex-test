@@ -7,8 +7,10 @@ import dev.pekelund.responsiveauth.storage.ReceiptStorageException;
 import dev.pekelund.responsiveauth.storage.ReceiptStorageService;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -27,24 +29,24 @@ public class ReceiptController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptController.class);
 
-    private final ReceiptStorageService receiptStorageService;
+    private final Optional<ReceiptStorageService> receiptStorageService;
 
-    public ReceiptController(ReceiptStorageService receiptStorageService) {
-        this.receiptStorageService = receiptStorageService;
+    public ReceiptController(@Autowired(required = false) ReceiptStorageService receiptStorageService) {
+        this.receiptStorageService = Optional.ofNullable(receiptStorageService);
     }
 
     @GetMapping("/receipts")
     public String receipts(Model model, Authentication authentication) {
         model.addAttribute("pageTitle", "Receipts");
-        model.addAttribute("storageEnabled", receiptStorageService.isEnabled());
+        model.addAttribute("storageEnabled", receiptStorageService.isPresent() && receiptStorageService.get().isEnabled());
 
         List<ReceiptFile> receiptFiles = Collections.emptyList();
         String listingError = null;
         ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
 
-        if (receiptStorageService.isEnabled()) {
+        if (receiptStorageService.isPresent() && receiptStorageService.get().isEnabled()) {
             try {
-                receiptFiles = receiptStorageService.listReceipts();
+                receiptFiles = receiptStorageService.get().listReceipts();
             } catch (ReceiptStorageException ex) {
                 listingError = ex.getMessage();
                 LOGGER.warn("Failed to list receipt files", ex);
@@ -70,7 +72,7 @@ public class ReceiptController {
         RedirectAttributes redirectAttributes,
         Authentication authentication
     ) {
-        if (!receiptStorageService.isEnabled()) {
+        if (receiptStorageService.isEmpty() || !receiptStorageService.get().isEnabled()) {
             redirectAttributes.addFlashAttribute("errorMessage",
                 "Receipt uploads are disabled. Configure Google Cloud Storage to enable this feature.");
             return "redirect:/receipts";
@@ -92,7 +94,7 @@ public class ReceiptController {
         ReceiptOwner owner = resolveReceiptOwner(authentication);
 
         try {
-            receiptStorageService.uploadFiles(sanitizedFiles, owner);
+            receiptStorageService.get().uploadFiles(sanitizedFiles, owner);
             int count = sanitizedFiles.size();
             redirectAttributes.addFlashAttribute("successMessage",
                 "%d file%s uploaded successfully.".formatted(count, count == 1 ? "" : "s"));

@@ -107,10 +107,80 @@ gcloud services enable \
 
 ## Deploy the receipt-processing function
 
+### Prerequisites
+
+Before deploying the Cloud Function, ensure you have the proper Maven configuration in your `pom.xml`:
+
+```xml
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.13.0</version>
+            <configuration>
+                <source>21</source>
+                <target>21</target>
+            </configuration>
+        </plugin>
+        <plugin>
+            <groupId>com.google.cloud.functions</groupId>
+            <artifactId>function-maven-plugin</artifactId>
+            <version>0.10.1</version>
+            <configuration>
+                <functionTarget>dev.pekelund.responsiveauth.function.ReceiptProcessingFunction</functionTarget>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
+
+<profiles>
+    <profile>
+        <id>cloud-function</id>
+        <build>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.3.0</version>
+                    <configuration>
+                        <archive>
+                            <manifest>
+                                <addClasspath>true</addClasspath>
+                                <mainClass>dev.pekelund.responsiveauth.function.ReceiptProcessingFunction</mainClass>
+                            </manifest>
+                        </archive>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
+</profiles>
+```
+
+### Enable Required Google Cloud APIs
+
+Before deployment, ensure all required APIs are enabled:
+
+```bash
+gcloud services enable cloudfunctions.googleapis.com \
+  cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com \
+  run.googleapis.com \
+  aiplatform.googleapis.com \
+  eventarc.googleapis.com
+```
+
 1. **Package the code**
 
+    Use the cloud-function Maven profile for proper packaging:
+
     ```bash
-    ./mvnw -DskipTests package
+    ./mvnw clean package -DskipTests -Pcloud-function
     ```
 
 2. **Create a runtime service account**
@@ -131,12 +201,42 @@ gcloud services enable \
     gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
       --member="serviceAccount:${FUNCTION_SA}" \
       --role="roles/aiplatform.user"
+
+    # Required for Eventarc triggers
+    gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+      --member="serviceAccount:${FUNCTION_SA}" \
+      --role="roles/eventarc.eventReceiver"
     ```
 
-3. **Deploy the Cloud Function (2nd gen)**
+3. **Configure Eventarc Service Agent (if not already done)**
 
     ```bash
-    REGION=us-central1
+    # Get your project number
+    PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format="value(projectNumber)")
+    
+    # Grant required roles to Eventarc service agent
+    gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+      --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com" \
+      --role="roles/eventarc.serviceAgent"
+
+    gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+      --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com" \
+      --role="roles/run.invoker"
+    ```
+
+4. **Deploy the Cloud Function (2nd gen)**
+
+    **Important**: The function must be deployed in the same region as your Cloud Storage bucket. Check your bucket region first:
+
+    ```bash
+    gcloud storage buckets describe "${BUCKET}" --format="value(location)"
+    ```
+
+    Then deploy with the correct region:
+
+    ```bash
+    # Use the same region as your bucket (e.g., us-east1)
+    REGION=us-east1  # Replace with your bucket's region
     FUNCTION_NAME=receiptProcessingFunction
     gcloud functions deploy "${FUNCTION_NAME}" \
       --gen2 \
@@ -146,7 +246,7 @@ gcloud services enable \
       --source=. \
       --service-account="${FUNCTION_SA}" \
       --trigger-bucket=$(basename "${BUCKET}") \
-      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-1.5-pro,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions
+      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions
     ```
 
 4. **Verify the lifecycle**
@@ -166,5 +266,116 @@ gcloud services enable \
     # Stream function logs
     gcloud functions logs read "${FUNCTION_NAME}" --region="${REGION}" --gen2
     ```
+
+## Troubleshooting Cloud Function Deployment
+
+### Understanding Code Upload and Build Process
+
+When you run `gcloud functions deploy`, the following process occurs:
+
+1. **Source Upload**: Your entire project directory (excluding `.gcloudignore` files) is packaged and uploaded to Google Cloud Storage
+2. **Cloud Build**: Google Cloud Build downloads the source code and initiates the build process  
+3. **Buildpack Processing**: The Java buildpack runs Maven in the cloud environment to compile and package your application
+4. **Container Creation**: A container image is created and stored in Google Cloud's Artifact Registry
+5. **Function Deployment**: The container is deployed as a Cloud Function with the specified triggers
+
+**Important**: Your local `target/` directory is not directly used - Google Cloud rebuilds everything from source code in the cloud environment.
+
+### Common Issues and Solutions
+
+### Common Issues and Solutions
+
+#### 1. "class not found" Error
+**Error**: `Build failed with status: FAILURE and message: build succeeded but did not produce the class "dev.pekelund.responsiveauth.function.ReceiptProcessingFunction"`
+
+**Root Cause**: Cloud Functions buildpack runs `javap -classpath target/[jar]:target/dependency/*` but finds classes in different locations than expected.
+
+**Solutions**:
+
+1. **Automatic Profile Activation (Recommended)**: The `cloud-function` profile is now active by default in `pom.xml`:
+   ```xml
+   <profile>
+       <id>cloud-function</id>
+       <activation>
+           <activeByDefault>true</activeByDefault>
+       </activation>
+   ```
+   This ensures the buildpack always creates the correct JAR structure.
+
+2. **Manual Profile Usage**: If you need to override the default:
+   ```bash
+   # Use cloud-function profile explicitly
+   ./mvnw clean package -DskipTests -Pcloud-function
+   
+   # Disable cloud-function profile for Spring Boot packaging
+   ./mvnw clean package -DskipTests -P \!cloud-function
+   ```
+
+3. **Verify the correct structure is created**:
+   ```bash
+   # Check function class is in JAR root (not BOOT-INF/classes/)
+   jar tf target/responsive-auth-app-0.0.1-SNAPSHOT.jar | grep ReceiptProcessingFunction
+   
+   # Check dependencies are in target/dependency/
+   ls target/dependency/ | head -5
+   
+   # Test the same command the buildpack uses
+   javap -classpath target/responsive-auth-app-0.0.1-SNAPSHOT.jar:target/dependency/* dev.pekelund.responsiveauth.function.ReceiptProcessingFunction
+   ```
+
+#### 2. Region Mismatch Error
+**Error**: Function deployment fails with trigger validation errors
+
+**Solution**: Ensure the function is deployed in the same region as your Cloud Storage bucket:
+```bash
+# Check bucket region
+gcloud storage buckets describe gs://your-bucket-name --format="value(location)"
+# Use the same region for function deployment
+```
+
+#### 3. Permission Denied Errors
+**Error**: `Permission denied while using the Eventarc Service Agent` or `Permission "eventarc.events.receiveEvent" denied`
+
+**Solution**: Grant required permissions to service accounts:
+```bash
+# For Eventarc Service Agent
+PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format="value(projectNumber)")
+gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+  --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com" \
+  --role="roles/eventarc.serviceAgent"
+
+# For Function Service Account
+gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+  --member="serviceAccount:receipt-parser@$(gcloud config get-value project).iam.gserviceaccount.com" \
+  --role="roles/eventarc.eventReceiver"
+```
+
+#### 4. API Not Enabled Errors
+**Error**: `API [...] not enabled on project`
+
+**Solution**: Enable all required APIs before deployment:
+```bash
+gcloud services enable cloudfunctions.googleapis.com \
+  cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com \
+  run.googleapis.com \
+  aiplatform.googleapis.com \
+  eventarc.googleapis.com
+```
+
+#### 5. Environment Variable Issues
+**Error**: Function runs but fails to connect to services
+
+**Solution**: Verify environment variables are set correctly in the deployment command:
+- `VERTEX_AI_PROJECT_ID`: Should match your current project
+- `VERTEX_AI_LOCATION`: Should match your function deployment region
+- `VERTEX_AI_GEMINI_MODEL`: Use `gemini-2.0-flash`
+- `RECEIPT_FIRESTORE_COLLECTION`: Use `receiptExtractions`
+
+### Monitoring and Debugging
+
+1. **View build logs**: The deployment command provides a Cloud Build logs URL
+2. **Stream function logs**: Use `gcloud functions logs read FUNCTION_NAME --region=REGION --gen2`
+3. **Check function status**: Use `gcloud functions describe FUNCTION_NAME --region=REGION --gen2`
 
 The Firestore document created for the receipt mirrors the storage status fields (`RECEIVED`, `PARSING`, `COMPLETED`, `FAILED`, or `SKIPPED`) and stores Gemini's structured JSON in the `data` field. Consult the [Cloud Console setup](gcp-setup-cloud-console.md#deploy-the-receipt-processing-function) guide for screenshots and UI navigation paths.
