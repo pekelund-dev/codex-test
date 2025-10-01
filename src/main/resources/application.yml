@@ -15,6 +15,9 @@ spring:
         provider:
           google:
             issuer-uri: https://accounts.google.com
+  cloud:
+    function:
+      definition: receiptProcessingFunction
   ai:
     vertex:
       ai:

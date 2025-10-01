@@ -105,13 +105,13 @@ gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
     --runtime=java21 \
     --region="$REGION" \
     --source=. \
-    --entry-point=dev.pekelund.responsiveauth.function.ReceiptProcessingFunction \
+    --entry-point=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
     --memory=1Gi \
     --timeout=300s \
     --max-instances=10 \
     --service-account="$FUNCTION_SA" \
     --trigger-bucket="$GCS_BUCKET" \
-    --set-env-vars="VERTEX_AI_PROJECT_ID=$EXPECTED_PROJECT,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions"
+    --set-env-vars="VERTEX_AI_PROJECT_ID=$EXPECTED_PROJECT,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction"
 
 if [ $? -ne 0 ]; then
     echo "❌ Cloud Function deployment failed. Please check the error messages above."

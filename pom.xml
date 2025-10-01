@@ -33,6 +33,7 @@
                 <google-cloud-vertexai.version>1.9.0</google-cloud-vertexai.version>
                 <google-cloud-functions-framework.version>1.1.0</google-cloud-functions-framework.version>
                 <spring-ai.version>1.0.2</spring-ai.version>
+                <spring-cloud-function.version>4.1.2</spring-cloud-function.version>
         </properties>
         <dependencyManagement>
                 <dependencies>
@@ -101,6 +102,18 @@
                 </dependency>
 
                 <dependency>
+                        <groupId>org.springframework.cloud</groupId>
+                        <artifactId>spring-cloud-function-context</artifactId>
+                        <version>${spring-cloud-function.version}</version>
+                </dependency>
+
+                <dependency>
+                        <groupId>org.springframework.cloud</groupId>
+                        <artifactId>spring-cloud-function-adapter-gcp</artifactId>
+                        <version>${spring-cloud-function.version}</version>
+                </dependency>
+
+                <dependency>
                         <groupId>org.springframework.boot</groupId>
                         <artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
@@ -131,9 +144,9 @@
 				<groupId>com.google.cloud.functions</groupId>
 				<artifactId>function-maven-plugin</artifactId>
 				<version>0.10.1</version>
-				<configuration>
-					<functionTarget>dev.pekelund.responsiveauth.function.ReceiptProcessingFunction</functionTarget>
-				</configuration>
+                                <configuration>
+                                        <functionTarget>org.springframework.cloud.function.adapter.gcp.GcfJarLauncher</functionTarget>
+                                </configuration>
 			</plugin>
 		</plugins>
 	</build>
