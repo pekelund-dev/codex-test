@@ -35,10 +35,13 @@ public class GeminiReceiptExtractor {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
         this.chatOptions = chatOptions;
+        LOGGER.info("constructing GeminiReceiptExtractor");
     }
 
     public ReceiptExtractionResult extract(byte[] pdfBytes, String fileName) {
+        LOGGER.info("extract called with pdfBytes length: {}, fileName: {}", pdfBytes != null ? pdfBytes.length : null, fileName);
         if (pdfBytes == null || pdfBytes.length == 0) {
+            LOGGER.info("null och length == 0");
             throw new ReceiptParsingException("Cannot extract receipt data from an empty file");
         }
 
