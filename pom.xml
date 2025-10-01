@@ -102,6 +102,12 @@
                 </dependency>
 
                 <dependency>
+                        <groupId>com.google.cloud</groupId>
+                        <artifactId>google-cloud-logging-logback</artifactId>
+                        <version>0.132.0-alpha</version>
+                </dependency>
+
+                <dependency>
                         <groupId>org.springframework.cloud</groupId>
                         <artifactId>spring-cloud-function-context</artifactId>
                         <version>${spring-cloud-function.version}</version>
