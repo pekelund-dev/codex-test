@@ -15,24 +15,6 @@ spring:
         provider:
           google:
             issuer-uri: https://accounts.google.com
-server:
-  error:
-    whitelabel:
-      enabled: false
-firestore:
-  enabled: ${FIRESTORE_ENABLED:false}
-  credentials: ${FIRESTORE_CREDENTIALS:}
-  project-id: ${FIRESTORE_PROJECT_ID:}
-  users-collection: ${FIRESTORE_USERS_COLLECTION:users}
-  default-role: ${FIRESTORE_DEFAULT_ROLE:ROLE_USER}
-gcs:
-  enabled: ${GCS_ENABLED:false}
-  credentials: ${GCS_CREDENTIALS:}
-  project-id: ${GCS_PROJECT_ID:}
-  bucket: ${GCS_BUCKET:}
-
-# Spring AI Vertex AI Gemini Configuration (ChatGPT recommendation)
-spring:
   ai:
     vertex:
       ai:
@@ -42,6 +24,21 @@ spring:
           chat:
             options:
               model: ${VERTEX_AI_GEMINI_MODEL:gemini-2.0-flash}
-  application:
-    name: ResponsiveAuthApp
-  security:
+
+server:
+  error:
+    whitelabel:
+      enabled: false
+
+firestore:
+  enabled: ${FIRESTORE_ENABLED:false}
+  credentials: ${FIRESTORE_CREDENTIALS:}
+  project-id: ${FIRESTORE_PROJECT_ID:}
+  users-collection: ${FIRESTORE_USERS_COLLECTION:users}
+  default-role: ${FIRESTORE_DEFAULT_ROLE:ROLE_USER}
+
+gcs:
+  enabled: ${GCS_ENABLED:false}
+  credentials: ${GCS_CREDENTIALS:}
+  project-id: ${GCS_PROJECT_ID:}
+  bucket: ${GCS_BUCKET:}

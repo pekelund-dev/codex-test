@@ -8,6 +8,8 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import io.cloudevents.CloudEvent;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
@@ -60,12 +62,9 @@ public class ReceiptProcessingFunction implements CloudEventsFunction {
         
         // Create Spring context to get auto-configured ChatModel
         SpringApplication app = new SpringApplication(FunctionApplication.class);
-        app.setDefaultProperties(java.util.Map.of(
-            "spring.main.web-application-type", "none",
-            "logging.level.root", "WARN"
-        ));
+        app.setDefaultProperties(buildDefaultSpringProperties());
         ConfigurableApplicationContext context = app.run();
-        
+
         ChatModel chatModel = context.getBean(ChatModel.class);
         System.out.println("DEBUG: ChatModel auto-configured successfully: " + chatModel.getClass().getSimpleName());
         
@@ -83,6 +82,23 @@ public class ReceiptProcessingFunction implements CloudEventsFunction {
         ObjectMapper mapper = new ObjectMapper();
         mapper.findAndRegisterModules();
         return mapper;
+    }
+
+    private static Map<String, Object> buildDefaultSpringProperties() {
+        Map<String, String> env = System.getenv();
+        Map<String, Object> defaults = new HashMap<>();
+        defaults.put("spring.main.web-application-type", "none");
+        defaults.put("logging.level.root", "WARN");
+        defaults.put("spring.ai.vertex.ai.gemini.project-id",
+            env.getOrDefault("VERTEX_AI_PROJECT_ID", "codex-test-473008"));
+        defaults.put("spring.ai.vertex.ai.gemini.location",
+            env.getOrDefault("VERTEX_AI_LOCATION", "us-east1"));
+        defaults.put("spring.ai.vertex.ai.gemini.chat.options.model",
+            env.getOrDefault("VERTEX_AI_GEMINI_MODEL", "gemini-2.0-flash"));
+
+        System.out.println("DEBUG: Vertex AI Gemini model set to "
+            + defaults.get("spring.ai.vertex.ai.gemini.chat.options.model"));
+        return defaults;
     }
 
     record RuntimeComponents(ReceiptParsingHandler handler, ObjectMapper objectMapper, ConfigurableApplicationContext context) { }
