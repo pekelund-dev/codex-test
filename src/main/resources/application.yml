@@ -29,6 +29,12 @@ spring:
             options:
               model: ${VERTEX_AI_GEMINI_MODEL:gemini-2.0-flash}
 
+logging:
+  level:
+    root: INFO
+    dev.pekelund.responsiveauth.function: INFO
+    org.springframework.ai: INFO
+
 server:
   error:
     whitelabel:
