@@ -26,16 +26,19 @@ public class ReceiptParsingHandler {
 
     private final Storage storage;
     private final ReceiptExtractionRepository repository;
-    private final GeminiReceiptExtractor extractor;
+    private final AIReceiptExtractor extractor;
 
     public ReceiptParsingHandler(Storage storage, ReceiptExtractionRepository repository,
-        GeminiReceiptExtractor extractor) {
+        AIReceiptExtractor extractor) {
         this.storage = storage;
         this.repository = repository;
         this.extractor = extractor;
+        LOGGER.info("Constructing ReceiptParsingHandler with storage {}, repository {}, extractor instance id {}",
+            storage.getClass().getName(), repository.getClass().getName(), System.identityHashCode(extractor));
     }
 
     public void handle(StorageObjectEvent storageObjectEvent) {
+        LOGGER.info("ReceiptParsingHandler invoked with event {}", storageObjectEvent);
         if (storageObjectEvent == null) {
             LOGGER.warn("Received null storage event data");
             return;
@@ -43,6 +46,9 @@ public class ReceiptParsingHandler {
 
         String bucket = storageObjectEvent.getBucket();
         String objectName = storageObjectEvent.getName();
+
+        LOGGER.info("ReceiptParsingHandler processing object gs://{}/{} with extractor instance id {}", bucket, objectName,
+            System.identityHashCode(extractor));
 
         if (!StringUtils.hasText(bucket) || !StringUtils.hasText(objectName)) {
             LOGGER.warn("Storage event missing bucket ({}) or object name ({})", bucket, objectName);
@@ -75,6 +81,7 @@ public class ReceiptParsingHandler {
 
             repository.saveExtraction(bucket, objectName, owner, extractionResult, "Receipt parsing completed");
             updateProcessingMetadata(blob, ReceiptProcessingStatus.COMPLETED, "Receipt parsing completed");
+            LOGGER.info("ReceiptParsingHandler successfully completed extraction for gs://{}/{}", bucket, objectName);
         } catch (ReceiptParsingException ex) {
             LOGGER.error("Receipt parsing failed for gs://{}/{}", bucket, objectName, ex);
             repository.markFailure(bucket, objectName, owner, "Receipt parsing failed", ex);

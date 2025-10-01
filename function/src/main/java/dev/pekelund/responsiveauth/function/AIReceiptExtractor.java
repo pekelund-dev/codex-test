@@ -7,14 +7,18 @@ import java.util.Base64;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 
 /**
  * Invokes Gemini through Spring AI to extract structured data from receipt documents.
  */
-public class GeminiReceiptExtractor {
+public class AIReceiptExtractor {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GeminiReceiptExtractor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AIReceiptExtractor.class);
     /**
      * Gemini text parts have an 8 KiB limit (8192 characters). We chunk the base64 payload
      * into 8000-character segments to stay comfortably below that ceiling while keeping the
@@ -25,21 +29,45 @@ public class GeminiReceiptExtractor {
 
     private final ChatModel chatModel;
     private final ObjectMapper objectMapper;
+    private final VertexAiGeminiChatOptions chatOptions;
 
-    public GeminiReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper) {
+    public AIReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper, VertexAiGeminiChatOptions chatOptions) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
+        this.chatOptions = chatOptions;
+        LOGGER.info("constructing AIReceiptExtractor");
     }
 
     public ReceiptExtractionResult extract(byte[] pdfBytes, String fileName) {
+        LOGGER.info("extract called with pdfBytes length: {}, fileName: {}", pdfBytes != null ? pdfBytes.length : null, fileName);
         if (pdfBytes == null || pdfBytes.length == 0) {
+            LOGGER.info("null and length == 0");
             throw new ReceiptParsingException("Cannot extract receipt data from an empty file");
         }
 
         String encoded = Base64.getEncoder().encodeToString(pdfBytes);
         String prompt = buildPrompt(encoded, fileName);
 
-        String response = chatModel.call(prompt);
+        LOGGER.info("AIReceiptExtractor invoking model '{}' with prompt length {} characters (base64 payload {} characters)",
+            chatOptions.getModel(), prompt.length(), encoded.length());
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("AIReceiptExtractor chat options instance id {} - {}", System.identityHashCode(chatOptions),
+                chatOptions);
+            LOGGER.debug("AIReceiptExtractor chat model implementation: {}", chatModel.getClass().getName());
+        }
+
+        Prompt request = new Prompt(new UserMessage(prompt), chatOptions);
+        ChatResponse chatResponse = chatModel.call(request);
+        if (chatResponse == null || chatResponse.getResult() == null) {
+            throw new ReceiptParsingException("Gemini returned an empty response");
+        }
+
+        var generation = chatResponse.getResult();
+        if (generation.getOutput() == null) {
+            throw new ReceiptParsingException("Gemini returned an empty response");
+        }
+
+        String response = generation.getOutput().getText();
         if (response == null) {
             throw new ReceiptParsingException("Gemini returned an empty response");
         }

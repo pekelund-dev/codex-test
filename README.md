@@ -16,14 +16,15 @@ ResponsiveAuthApp is a Spring Boot starter application showcasing a responsive w
 
 ### Quick Setup with Environment Script
 
-For the fastest setup, use the provided environment script that configures all necessary Google Cloud settings:
+For the fastest setup, use the provided environment script that configures all necessary Google Cloud settings and then run the
+web module directly:
 
 ```bash
 # Source the environment setup script
 source setup-env.sh
 
 # Start the application
-./mvnw spring-boot:run
+./mvnw -pl web -am spring-boot:run
 ```
 
 The `setup-env.sh` script automatically configures:
@@ -47,10 +48,10 @@ The `setup-env.sh` script automatically configures:
 4. (Optional) Configure Google Cloud Storage to enable the receipts upload page (see
    [Google Cloud Storage configuration](#google-cloud-storage-configuration)).
 
-5. Build and run the application:
+5. Build and run the web application module:
 
    ```bash
-   ./mvnw spring-boot:run
+   ./mvnw -pl web -am spring-boot:run
    ```
 
 6. Navigate to <http://localhost:8080> to explore the experience.
@@ -75,7 +76,7 @@ After completing either path, restart the application and visit <http://localhos
 
 ### Receipt parsing Cloud Function (Vertex AI Gemini)
 
-The `ReceiptProcessingFunction` module processes finalized uploads from the receipts bucket, extracts structured data with Gemini, and stores the result in Firestore. 
+The `function` module processes finalized uploads from the receipts bucket, extracts structured data with Gemini, and stores the result in Firestore. The `web` module hosts the interactive UI, while shared storage components live in the `core` module.
 
 #### Quick Deployment
 
@@ -104,7 +105,7 @@ Both documents describe prerequisites, metadata expectations, status updates, ve
 
 ### Fallback credentials
 
-When Firestore integration is disabled the application falls back to an in-memory user store, but no accounts are created automatically. Configure explicit credentials for local testing by defining `firestore.fallback-users` entries in `application.yml` (or through environment variables):
+When Firestore integration is disabled the application falls back to an in-memory user store, but no accounts are created automatically. Configure explicit credentials for local testing by defining `firestore.fallback-users` entries in `web/src/main/resources/application.yml` (or through environment variables):
 
 ```yaml
 firestore:
@@ -128,10 +129,9 @@ To enable Google sign-in, create OAuth credentials in the Google Cloud Console a
 
 ## Project structure
 
-- `src/main/java` – Spring Boot application, configuration, and MVC controllers.
-- `src/main/resources/templates` – Thymeleaf templates using a reusable layout.
-- `src/main/resources/static` – Custom CSS and JavaScript for avatars, splash screen, and feature pages such as receipts.
-- `src/test/java` – Sample test bootstrapped by Spring Initializr.
+- `core` – Shared storage services and configuration reused by both the web and function modules.
+- `web` – Spring MVC application with security, Firestore integration, templates, and static assets.
+- `function` – Cloud Function implementation that processes receipts with Gemini and persists the output.
 
 ## License
 

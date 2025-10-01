@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: receipt-processing-function
+  main:
+    web-application-type: none
+  cloud:
+    function:
+      definition: receiptProcessingFunction
+      scan:
+        enabled: false
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: ${VERTEX_AI_PROJECT_ID:codex-test-473008}
+          location: ${VERTEX_AI_LOCATION:us-east1}
+          model: ${VERTEX_AI_GEMINI_MODEL:gemini-2.0-flash}
+          chat:
+            options:
+              model: ${VERTEX_AI_GEMINI_MODEL:gemini-2.0-flash}
+
+logging:
+  level:
+    root: INFO
+    dev.pekelund.responsiveauth.function: INFO
+    org.springframework.ai: INFO

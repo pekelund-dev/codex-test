@@ -36,6 +36,13 @@ echo "✅ Bucket $GCS_BUCKET is in region: $BUCKET_REGION"
 REGION=$(echo $BUCKET_REGION | tr '[:upper:]' '[:lower:]')
 echo "📍 Using region $REGION for function deployment"
 
+if [ -z "${VERTEX_AI_LOCATION:-}" ]; then
+    VERTEX_AI_LOCATION="$REGION"
+    echo "ℹ️  Defaulting Vertex AI location to $VERTEX_AI_LOCATION to match the deployment region"
+else
+    echo "📍 Using Vertex AI location $VERTEX_AI_LOCATION"
+fi
+
 # Enable required APIs
 echo "🔧 Enabling required Google Cloud APIs..."
 gcloud services enable \
@@ -88,30 +95,33 @@ echo "✅ IAM permissions configured"
 
 # Ensure Firestore database exists
 echo "🗄️  Setting up Firestore..."
-FIRESTORE_EXISTS=$(gcloud firestore databases list --format="value(name)" --filter="name ~ 'projects/$EXPECTED_PROJECT/databases/(default)'" 2>/dev/null | wc -l)
-
-if [ "$FIRESTORE_EXISTS" -eq 0 ]; then
+if gcloud firestore databases describe --database="(default)" --format="value(name)" >/dev/null 2>&1; then
+    echo "✅ Firestore database already exists"
+else
     echo "Creating Firestore database..."
     gcloud firestore databases create --location=$REGION --type=firestore-native
-else
-    echo "✅ Firestore database already exists"
 fi
 
-# Build and deploy the function
-echo "🏗️  Building and deploying Cloud Function..."
+# Build and stage the function artifact so the deployment always uses the latest sources
+echo "🛠️  Building function module..."
+./mvnw -q -pl function -am -DskipTests clean package
+
+# Deploy the Cloud Function using the full multi-module source
+echo "🏗️  Deploying Cloud Function..."
 
 gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
     --gen2 \
     --runtime=java21 \
     --region="$REGION" \
     --source=. \
-    --entry-point=dev.pekelund.responsiveauth.function.ReceiptProcessingFunction \
+    --entry-point=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
     --memory=1Gi \
     --timeout=300s \
     --max-instances=10 \
     --service-account="$FUNCTION_SA" \
     --trigger-bucket="$GCS_BUCKET" \
-    --set-env-vars="VERTEX_AI_PROJECT_ID=$EXPECTED_PROJECT,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions"
+    --set-build-env-vars="MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests package" \
+    --set-env-vars="VERTEX_AI_PROJECT_ID=$EXPECTED_PROJECT,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction"
 
 if [ $? -ne 0 ]; then
     echo "❌ Cloud Function deployment failed. Please check the error messages above."
@@ -120,11 +130,27 @@ fi
 
 # Allow unauthenticated invocations for Eventarc triggers
 echo "🔓 Configuring Cloud Run service for unauthenticated invocations..."
-gcloud run services add-iam-policy-binding "$CLOUD_FUNCTION_NAME" \
+RUN_SERVICE_RESOURCE=$(gcloud functions describe "$CLOUD_FUNCTION_NAME" \
+    --gen2 \
     --region="$REGION" \
-    --member="allUsers" \
-    --role="roles/run.invoker" \
-    --quiet
+    --format="value(serviceConfig.service)" 2>/dev/null || true)
+
+if [ -z "$RUN_SERVICE_RESOURCE" ]; then
+    RUN_SERVICE_NAME=$(echo "$CLOUD_FUNCTION_NAME" | tr '[:upper:]' '[:lower:]')
+else
+    RUN_SERVICE_NAME="${RUN_SERVICE_RESOURCE##*/}"
+fi
+
+if gcloud run services describe "$RUN_SERVICE_NAME" --region="$REGION" --quiet >/dev/null 2>&1; then
+    gcloud run services add-iam-policy-binding "$RUN_SERVICE_NAME" \
+        --region="$REGION" \
+        --member="allUsers" \
+        --role="roles/run.invoker" \
+        --quiet
+else
+    echo "⚠️  Unable to configure unauthenticated access for Cloud Run service '$RUN_SERVICE_NAME'."
+    echo "    The service may not expose an HTTP endpoint (e.g., event-triggered Cloud Function)."
+fi
 
 echo "🎉 Cloud Function deployed successfully!"
 
@@ -144,3 +170,6 @@ echo ""
 echo "🧪 To test the function:"
 echo "  Upload a PDF file to gs://$GCS_BUCKET/receipts/"
 echo "  gsutil cp your-receipt.pdf gs://$GCS_BUCKET/receipts/"
+echo ""
+echo "🗂️  Sample receipt PDFs for local testing are available in function/src/test/resources/dev/pekelund/responsiveauth/files/"
+echo "  (e.g., 'ICA Kvantum Malmborgs Caroli 2025-08-26.pdf', 'ICA Supermarket Hansa 2025-08-20.pdf')"
