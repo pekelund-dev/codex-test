@@ -96,30 +96,24 @@ else
 fi
 
 # Build and stage the function artifact so the deployment always uses the latest sources
-echo "🛠️  Building function artifact..."
-./mvnw -q -DskipTests clean package
-./mvnw -q -DskipTests function:stage
+echo "🛠️  Building function module..."
+./mvnw -q -pl function -am -DskipTests clean package
 
-if [ ! -d "target/deploy" ]; then
-    echo "❌ Maven staging directory target/deploy not found."
-    echo "   Ensure the function-maven-plugin is configured correctly."
-    exit 1
-fi
-
-# Deploy the staged artifact
+# Deploy the Cloud Function using the full multi-module source
 echo "🏗️  Deploying Cloud Function..."
 
 gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
     --gen2 \
     --runtime=java21 \
     --region="$REGION" \
-    --source=target/deploy \
+    --source=. \
     --entry-point=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
     --memory=1Gi \
     --timeout=300s \
     --max-instances=10 \
     --service-account="$FUNCTION_SA" \
     --trigger-bucket="$GCS_BUCKET" \
+    --set-build-env-vars="MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests package" \
     --set-env-vars="VERTEX_AI_PROJECT_ID=$EXPECTED_PROJECT,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction"
 
 if [ $? -ne 0 ]; then
@@ -170,5 +164,5 @@ echo "🧪 To test the function:"
 echo "  Upload a PDF file to gs://$GCS_BUCKET/receipts/"
 echo "  gsutil cp your-receipt.pdf gs://$GCS_BUCKET/receipts/"
 echo ""
-echo "🗂️  Sample receipt PDFs for local testing are available in src/test/java/dev/pekelund/responsiveauth/files/"
+echo "🗂️  Sample receipt PDFs for local testing are available in function/src/test/resources/dev/pekelund/responsiveauth/files/"
 echo "  (e.g., 'ICA Kvantum Malmborgs Caroli 2025-08-26.pdf', 'ICA Supermarket Hansa 2025-08-20.pdf')"

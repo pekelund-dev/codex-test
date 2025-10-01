@@ -3,5 +3,5 @@ name = "GOOGLE_FUNCTION_TARGET"
 value = "dev.pekelund.responsiveauth.function.ReceiptProcessingFunction"
 
 [[build.env]]
-name = "MAVEN_PROFILE"
-value = "cloud-function"
+name = "MAVEN_BUILD_ARGUMENTS"
+value = "-pl function -am -DskipTests package"

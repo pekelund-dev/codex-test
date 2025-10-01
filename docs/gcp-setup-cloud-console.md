@@ -70,7 +70,7 @@ Use this guide if you prefer configuring Resp     - `VERTEX_AI_LOCATION` — def
 
 1. **Review prerequisites**
    - Ensure the following APIs are enabled in your project: Cloud Functions, Cloud Build, Artifact Registry, Eventarc, Pub/Sub, Vertex AI, Cloud Storage, and Firestore.
-   - Build the project locally (`./mvnw -DskipTests package`) to verify dependencies before deployment.
+   - Build the Cloud Function module locally (`./mvnw -pl function -am -DskipTests package`) to verify dependencies before deployment.
 
 2. **Create or reuse a runtime service account**
    - In **IAM & Admin → Service Accounts**, create `receipt-parser` (or reuse an existing service account).
@@ -86,12 +86,12 @@ Use this guide if you prefer configuring Resp     - `VERTEX_AI_LOCATION` — def
      - **Region**: the same region as your bucket and Firestore database.
      - **Trigger**: **Cloud Storage** with the **Finalized/Created** event and select your receipts bucket.
      - **Runtime**: Java 21.
-     - **Entry point**: `dev.pekelund.responsiveauth.function.ReceiptProcessingFunction`.
+     - **Entry point**: `org.springframework.cloud.function.adapter.gcp.GcfJarLauncher`.
      - **Service account**: the `receipt-parser` account created earlier.
    - Expand **Runtime, build, connections and security settings → Environment variables** and define:
      - `VERTEX_AI_PROJECT_ID` — defaults to the function project if omitted.
      - `VERTEX_AI_LOCATION` — Vertex AI region that offers Gemini (for example `us-central1`).
-     - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-1.5-pro`.
+     - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
      - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
    - Upload the source from your local machine or connect the repository, then click **Deploy**.
 

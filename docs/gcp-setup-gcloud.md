@@ -138,28 +138,7 @@ Before deploying the Cloud Function, ensure you have the proper Maven configurat
     </plugins>
 </build>
 
-<profiles>
-    <profile>
-        <id>cloud-function</id>
-        <build>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.3.0</version>
-                    <configuration>
-                        <archive>
-                            <manifest>
-                                <addClasspath>true</addClasspath>
-                                <mainClass>dev.pekelund.responsiveauth.function.ReceiptProcessingFunction</mainClass>
-                            </manifest>
-                        </archive>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </build>
-    </profile>
-</profiles>
+<!-- Function module inherits the parent POM and does not need extra profiles -->
 ```
 
 ### Enable Required Google Cloud APIs
@@ -177,10 +156,10 @@ gcloud services enable cloudfunctions.googleapis.com \
 
 1. **Package the code**
 
-    Use the cloud-function Maven profile for proper packaging:
+    Build only the Cloud Function module (which also compiles its shared dependencies) to verify the sources locally:
 
     ```bash
-    ./mvnw clean package -DskipTests -Pcloud-function
+    ./mvnw -pl function -am clean package -DskipTests
     ```
 
 2. **Create a runtime service account**
@@ -242,8 +221,9 @@ gcloud services enable cloudfunctions.googleapis.com \
       --gen2 \
       --region="${REGION}" \
       --runtime=java21 \
-      --entry-point=dev.pekelund.responsiveauth.function.ReceiptProcessingFunction \
+      --entry-point=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
       --source=. \
+      --set-build-env-vars=MAVEN_BUILD_ARGUMENTS="-pl function -am -DskipTests package" \
       --service-account="${FUNCTION_SA}" \
       --trigger-bucket=$(basename "${BUCKET}") \
       --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions
@@ -292,35 +272,20 @@ When you run `gcloud functions deploy`, the following process occurs:
 
 **Solutions**:
 
-1. **Automatic Profile Activation (Recommended)**: The `cloud-function` profile is now active by default in `pom.xml`:
-   ```xml
-   <profile>
-       <id>cloud-function</id>
-       <activation>
-           <activeByDefault>true</activeByDefault>
-       </activation>
-   ```
-   This ensures the buildpack always creates the correct JAR structure.
+1. **Match the Cloud Build arguments**: Set `MAVEN_BUILD_ARGUMENTS="-pl function -am -DskipTests package"` when deploying (for example with `--set-build-env-vars` or via `project.toml`). This ensures the buildpack compiles the multi-module project and produces the Cloud Function JAR under `function/target`.
 
-2. **Manual Profile Usage**: If you need to override the default:
+2. **Verify the correct structure is created locally**:
    ```bash
-   # Use cloud-function profile explicitly
-   ./mvnw clean package -DskipTests -Pcloud-function
-   
-   # Disable cloud-function profile for Spring Boot packaging
-   ./mvnw clean package -DskipTests -P \!cloud-function
-   ```
+   ./mvnw -pl function -am clean package -DskipTests
 
-3. **Verify the correct structure is created**:
-   ```bash
-   # Check function class is in JAR root (not BOOT-INF/classes/)
-   jar tf target/responsive-auth-app-0.0.1-SNAPSHOT.jar | grep ReceiptProcessingFunction
-   
-   # Check dependencies are in target/dependency/
-   ls target/dependency/ | head -5
-   
+   # Check function class is in the compiled JAR
+   jar tf function/target/responsive-auth-function-0.0.1-SNAPSHOT.jar | grep ReceiptProcessingFunction
+
+   # Check dependencies are in function/target/dependency/
+   ls function/target/dependency/ | head -5
+
    # Test the same command the buildpack uses
-   javap -classpath target/responsive-auth-app-0.0.1-SNAPSHOT.jar:target/dependency/* dev.pekelund.responsiveauth.function.ReceiptProcessingFunction
+   javap -classpath function/target/responsive-auth-function-0.0.1-SNAPSHOT.jar:function/target/dependency/* dev.pekelund.responsiveauth.function.ReceiptProcessingFunction
    ```
 
 #### 2. Region Mismatch Error
