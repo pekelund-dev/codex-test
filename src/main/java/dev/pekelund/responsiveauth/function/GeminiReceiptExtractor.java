@@ -40,6 +40,14 @@ public class GeminiReceiptExtractor {
 
     public ReceiptExtractionResult extract(byte[] pdfBytes, String fileName) {
         LOGGER.info("extract called with pdfBytes length: {}, fileName: {}", pdfBytes != null ? pdfBytes.length : null, fileName);
+        boolean diagnosticFailureEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("GEMINI_DIAGNOSTIC_FAIL", "true"));
+        if (diagnosticFailureEnabled) {
+            LOGGER.error(
+                "Diagnostic exception enabled via GEMINI_DIAGNOSTIC_FAIL environment variable - failing extract for file '{}' using model '{}'",
+                fileName, chatOptions.getModel());
+            throw new ReceiptParsingException("Diagnostic failure: GeminiReceiptExtractor extract invoked for file '" + fileName
+                + "' using model '" + chatOptions.getModel() + "'" + " (GEMINI_DIAGNOSTIC_FAIL=true)");
+        }
         if (pdfBytes == null || pdfBytes.length == 0) {
             LOGGER.info("null och length == 0");
             throw new ReceiptParsingException("Cannot extract receipt data from an empty file");
