@@ -36,6 +36,13 @@ echo "✅ Bucket $GCS_BUCKET is in region: $BUCKET_REGION"
 REGION=$(echo $BUCKET_REGION | tr '[:upper:]' '[:lower:]')
 echo "📍 Using region $REGION for function deployment"
 
+if [ -z "${VERTEX_AI_LOCATION:-}" ]; then
+    VERTEX_AI_LOCATION="$REGION"
+    echo "ℹ️  Defaulting Vertex AI location to $VERTEX_AI_LOCATION to match the deployment region"
+else
+    echo "📍 Using Vertex AI location $VERTEX_AI_LOCATION"
+fi
+
 # Enable required APIs
 echo "🔧 Enabling required Google Cloud APIs..."
 gcloud services enable \

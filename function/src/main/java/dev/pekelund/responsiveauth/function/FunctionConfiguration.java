@@ -39,7 +39,7 @@ public class FunctionConfiguration {
             throw new IllegalStateException("Vertex AI project id must be configured (spring.ai.vertex.ai.gemini.project-id)");
         }
 
-        String location = environment.getProperty("spring.ai.vertex.ai.gemini.location", "us-central1");
+        String location = environment.getProperty("spring.ai.vertex.ai.gemini.location", "us-east1");
         LOGGER.info("Initializing Vertex AI client - project: {}, location: {}", projectId, location);
         VertexAI vertexAI = new VertexAI(projectId, location);
         LOGGER.info("Vertex AI client created (instance id {})", System.identityHashCode(vertexAI));

@@ -49,7 +49,7 @@ public class AIReceiptExtractor {
                 + "' using model '" + chatOptions.getModel() + "'" + " (GEMINI_DIAGNOSTIC_FAIL=true)");
         }
         if (pdfBytes == null || pdfBytes.length == 0) {
-            LOGGER.info("null och length == 0");
+            LOGGER.info("null and length == 0");
             throw new ReceiptParsingException("Cannot extract receipt data from an empty file");
         }
 

@@ -1,8 +1,13 @@
 # Google Cloud setup with the Cloud Console
 
-Use this guide if you prefer configuring Resp     - `VERTEX_AI_LOCATION` — defaults to `us-central1`.
-     - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
-     - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.iveAuthApp resources through the Google Cloud Console UI. A command-line alternative is documented in the [gcloud CLI guide](gcp-setup-gcloud.md) and both are referenced from the main [README](../README.md).
+Use this guide if you prefer configuring ResponsiveAuthApp resources through the Google Cloud Console UI. A command-line alternative is documented in the [gcloud CLI guide](gcp-setup-gcloud.md) and both are referenced from the main [README](../README.md).
+
+### Default environment variables
+
+- `VERTEX_AI_PROJECT_ID` — defaults to the Cloud Function project ID.
+- `VERTEX_AI_LOCATION` — defaults to `us-east1`.
+- `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
+- `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
 
 ## Firestore configuration in the Console
 
@@ -90,7 +95,7 @@ Use this guide if you prefer configuring Resp     - `VERTEX_AI_LOCATION` — def
      - **Service account**: the `receipt-parser` account created earlier.
    - Expand **Runtime, build, connections and security settings → Environment variables** and define:
      - `VERTEX_AI_PROJECT_ID` — defaults to the function project if omitted.
-     - `VERTEX_AI_LOCATION` — Vertex AI region that offers Gemini (for example `us-central1`).
+     - `VERTEX_AI_LOCATION` — Vertex AI region that offers Gemini (for example `us-east1` or `us-central1`).
      - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
      - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
    - Upload the source from your local machine or connect the repository, then click **Deploy**.

@@ -34,7 +34,7 @@ gcloud services enable \
 2. **Create the Firestore database**
 
     ```bash
-    REGION=us-central1 # choose the region closest to your users
+    REGION=us-east1 # choose the region closest to your users (for example, us-east1 or us-central1)
     gcloud firestore databases create --location="${REGION}" --type=firestore-native
     ```
 
@@ -214,7 +214,7 @@ gcloud services enable cloudfunctions.googleapis.com \
     Then deploy with the correct region:
 
     ```bash
-    # Use the same region as your bucket (e.g., us-east1)
+    # Use the same region as your bucket (for example, us-east1 or us-central1)
     REGION=us-east1  # Replace with your bucket's region
     FUNCTION_NAME=receiptProcessingFunction
     gcloud functions deploy "${FUNCTION_NAME}" \
