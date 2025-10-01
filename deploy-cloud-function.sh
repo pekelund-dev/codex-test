@@ -14,6 +14,8 @@ source setup-env.sh
 # Check if we're in the correct project
 CURRENT_PROJECT=$(gcloud config get-value project)
 EXPECTED_PROJECT="codex-test-473008"
+FUNCTION_SA=${FUNCTION_SA:-"receipt-parser@${EXPECTED_PROJECT}.iam.gserviceaccount.com"}
+echo "👤 Using service account: $FUNCTION_SA"
 
 if [ "$CURRENT_PROJECT" != "$EXPECTED_PROJECT" ]; then
     echo "⚠️  Switching to project: $EXPECTED_PROJECT"
