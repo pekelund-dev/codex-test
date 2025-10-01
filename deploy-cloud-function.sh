@@ -95,14 +95,25 @@ else
     gcloud firestore databases create --location=$REGION --type=firestore-native
 fi
 
-# Build and deploy the function
-echo "🏗️  Building and deploying Cloud Function..."
+# Build and stage the function artifact so the deployment always uses the latest sources
+echo "🛠️  Building function artifact..."
+./mvnw -q -DskipTests clean package
+./mvnw -q -DskipTests function:stage
+
+if [ ! -d "target/deploy" ]; then
+    echo "❌ Maven staging directory target/deploy not found."
+    echo "   Ensure the function-maven-plugin is configured correctly."
+    exit 1
+fi
+
+# Deploy the staged artifact
+echo "🏗️  Deploying Cloud Function..."
 
 gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
     --gen2 \
     --runtime=java21 \
     --region="$REGION" \
-    --source=. \
+    --source=target/deploy \
     --entry-point=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
     --memory=1Gi \
     --timeout=300s \
