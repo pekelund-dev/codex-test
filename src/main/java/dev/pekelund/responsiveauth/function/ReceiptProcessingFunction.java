@@ -6,12 +6,10 @@ import java.io.IOException;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 /**
  * Cloud Function entry point for receipt parsing.
  */
-@Component("receiptProcessingFunction")
 public class ReceiptProcessingFunction implements Consumer<CloudEvent> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptProcessingFunction.class);

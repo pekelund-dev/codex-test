@@ -6,7 +6,9 @@ import com.google.cloud.firestore.FirestoreOptions;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.vertexai.VertexAI;
+import io.cloudevents.CloudEvent;
 import io.micrometer.observation.ObservationRegistry;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
@@ -121,5 +123,13 @@ public class FunctionConfiguration {
     public ReceiptParsingHandler receiptParsingHandler(Storage storage, ReceiptExtractionRepository receiptExtractionRepository,
         AIReceiptExtractor aiReceiptExtractor) {
         return new ReceiptParsingHandler(storage, receiptExtractionRepository, aiReceiptExtractor);
+    }
+
+    @Bean("receiptProcessingFunction")
+    public Consumer<CloudEvent> receiptProcessingFunction(ObjectMapper objectMapper, ReceiptParsingHandler handler) {
+        ReceiptProcessingFunction function = new ReceiptProcessingFunction(objectMapper, handler);
+        LOGGER.info("Exposing receiptProcessingFunction bean backed by ReceiptProcessingFunction instance id {}",
+            System.identityHashCode(function));
+        return function;
     }
 }

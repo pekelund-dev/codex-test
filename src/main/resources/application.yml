@@ -1,4 +1,6 @@
 spring:
+  main:
+    web-application-type: none
   application:
     name: ResponsiveAuthApp
   security:
@@ -18,6 +20,8 @@ spring:
   cloud:
     function:
       definition: receiptProcessingFunction
+      scan:
+        enabled: false
   ai:
     vertex:
       ai:
