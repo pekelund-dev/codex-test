@@ -13,8 +13,10 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.Environment;
 
 /**
  * Cloud Function entry point for receipt parsing.
@@ -64,14 +66,18 @@ public class ReceiptProcessingFunction implements CloudEventsFunction {
         SpringApplication app = new SpringApplication(FunctionApplication.class);
         app.setDefaultProperties(buildDefaultSpringProperties());
         ConfigurableApplicationContext context = app.run();
+        Environment environment = context.getEnvironment();
+
+        VertexAiGeminiChatOptions chatOptions = buildChatOptions(environment);
 
         ChatModel chatModel = context.getBean(ChatModel.class);
         System.out.println("DEBUG: ChatModel auto-configured successfully: " + chatModel.getClass().getSimpleName());
+        System.out.println("DEBUG: Vertex AI Gemini chat model resolved to " + chatOptions.getModel());
         
         Storage storage = StorageOptions.getDefaultInstance().getService();
         Firestore firestore = FirestoreOptions.getDefaultInstance().getService();
 
-        GeminiReceiptExtractor extractor = new GeminiReceiptExtractor(chatModel, mapper);
+        GeminiReceiptExtractor extractor = new GeminiReceiptExtractor(chatModel, mapper, chatOptions);
         ReceiptExtractionRepository repository = new ReceiptExtractionRepository(firestore, settings.receiptsCollection());
         ReceiptParsingHandler handler = new ReceiptParsingHandler(storage, repository, extractor);
 
@@ -99,6 +105,13 @@ public class ReceiptProcessingFunction implements CloudEventsFunction {
         System.out.println("DEBUG: Vertex AI Gemini model set to "
             + defaults.get("spring.ai.vertex.ai.gemini.chat.options.model"));
         return defaults;
+    }
+
+    private static VertexAiGeminiChatOptions buildChatOptions(Environment environment) {
+        String modelName = environment.getProperty("spring.ai.vertex.ai.gemini.chat.options.model", "gemini-2.0-flash");
+        return VertexAiGeminiChatOptions.builder()
+            .model(modelName)
+            .build();
     }
 
     record RuntimeComponents(ReceiptParsingHandler handler, ObjectMapper objectMapper, ConfigurableApplicationContext context) { }

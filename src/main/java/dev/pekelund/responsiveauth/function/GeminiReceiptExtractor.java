@@ -7,7 +7,11 @@ import java.util.Base64;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 
 /**
  * Invokes Gemini through Spring AI to extract structured data from receipt documents.
@@ -25,10 +29,12 @@ public class GeminiReceiptExtractor {
 
     private final ChatModel chatModel;
     private final ObjectMapper objectMapper;
+    private final VertexAiGeminiChatOptions chatOptions;
 
-    public GeminiReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper) {
+    public GeminiReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper, VertexAiGeminiChatOptions chatOptions) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
+        this.chatOptions = chatOptions;
     }
 
     public ReceiptExtractionResult extract(byte[] pdfBytes, String fileName) {
@@ -39,7 +45,18 @@ public class GeminiReceiptExtractor {
         String encoded = Base64.getEncoder().encodeToString(pdfBytes);
         String prompt = buildPrompt(encoded, fileName);
 
-        String response = chatModel.call(prompt);
+        Prompt request = new Prompt(new UserMessage(prompt), chatOptions);
+        ChatResponse chatResponse = chatModel.call(request);
+        if (chatResponse == null || chatResponse.getResult() == null) {
+            throw new ReceiptParsingException("Gemini returned an empty response");
+        }
+
+        var generation = chatResponse.getResult();
+        if (generation.getOutput() == null) {
+            throw new ReceiptParsingException("Gemini returned an empty response");
+        }
+
+        String response = generation.getOutput().getText();
         if (response == null) {
             throw new ReceiptParsingException("Gemini returned an empty response");
         }
