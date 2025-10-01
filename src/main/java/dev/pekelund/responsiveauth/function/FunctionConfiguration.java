@@ -27,7 +27,9 @@ public class FunctionConfiguration {
 
     @Bean
     public VertexAiGeminiChatOptions receiptGeminiChatOptions(Environment environment) {
-        String modelName = environment.getProperty("spring.ai.vertex.ai.gemini.chat.options.model", "gemini-2.0-flash");
+        String modelName = environment.getProperty(
+            "spring.ai.vertex.ai.gemini.model",
+            environment.getProperty("spring.ai.vertex.ai.gemini.chat.options.model", "gemini-2.0-flash"));
         LOGGER.info("Configured Vertex AI Gemini chat model: {}", modelName);
         return VertexAiGeminiChatOptions.builder()
             .model(modelName)
