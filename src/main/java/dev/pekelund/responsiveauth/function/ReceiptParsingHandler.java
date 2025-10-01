@@ -26,10 +26,10 @@ public class ReceiptParsingHandler {
 
     private final Storage storage;
     private final ReceiptExtractionRepository repository;
-    private final GeminiReceiptExtractor extractor;
+    private final AIReceiptExtractor extractor;
 
     public ReceiptParsingHandler(Storage storage, ReceiptExtractionRepository repository,
-        GeminiReceiptExtractor extractor) {
+        AIReceiptExtractor extractor) {
         this.storage = storage;
         this.repository = repository;
         this.extractor = extractor;

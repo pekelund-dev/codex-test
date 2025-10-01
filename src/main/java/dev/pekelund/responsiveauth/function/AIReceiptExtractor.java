@@ -16,9 +16,9 @@ import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 /**
  * Invokes Gemini through Spring AI to extract structured data from receipt documents.
  */
-public class GeminiReceiptExtractor {
+public class AIReceiptExtractor {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GeminiReceiptExtractor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AIReceiptExtractor.class);
     /**
      * Gemini text parts have an 8 KiB limit (8192 characters). We chunk the base64 payload
      * into 8000-character segments to stay comfortably below that ceiling while keeping the
@@ -31,11 +31,11 @@ public class GeminiReceiptExtractor {
     private final ObjectMapper objectMapper;
     private final VertexAiGeminiChatOptions chatOptions;
 
-    public GeminiReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper, VertexAiGeminiChatOptions chatOptions) {
+    public AIReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper, VertexAiGeminiChatOptions chatOptions) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
         this.chatOptions = chatOptions;
-        LOGGER.info("constructing GeminiReceiptExtractor");
+        LOGGER.info("constructing AIReceiptExtractor");
     }
 
     public ReceiptExtractionResult extract(byte[] pdfBytes, String fileName) {
@@ -45,7 +45,7 @@ public class GeminiReceiptExtractor {
             LOGGER.error(
                 "Diagnostic exception enabled via GEMINI_DIAGNOSTIC_FAIL environment variable - failing extract for file '{}' using model '{}'",
                 fileName, chatOptions.getModel());
-            throw new ReceiptParsingException("Diagnostic failure: GeminiReceiptExtractor extract invoked for file '" + fileName
+            throw new ReceiptParsingException("Diagnostic failure: AIReceiptExtractor extract invoked for file '" + fileName
                 + "' using model '" + chatOptions.getModel() + "'" + " (GEMINI_DIAGNOSTIC_FAIL=true)");
         }
         if (pdfBytes == null || pdfBytes.length == 0) {
@@ -56,12 +56,12 @@ public class GeminiReceiptExtractor {
         String encoded = Base64.getEncoder().encodeToString(pdfBytes);
         String prompt = buildPrompt(encoded, fileName);
 
-        LOGGER.info("GeminiReceiptExtractor invoking model '{}' with prompt length {} characters (base64 payload {} characters)",
+        LOGGER.info("AIReceiptExtractor invoking model '{}' with prompt length {} characters (base64 payload {} characters)",
             chatOptions.getModel(), prompt.length(), encoded.length());
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("GeminiReceiptExtractor chat options instance id {} - {}", System.identityHashCode(chatOptions),
+            LOGGER.debug("AIReceiptExtractor chat options instance id {} - {}", System.identityHashCode(chatOptions),
                 chatOptions);
-            LOGGER.debug("GeminiReceiptExtractor chat model implementation: {}", chatModel.getClass().getName());
+            LOGGER.debug("AIReceiptExtractor chat model implementation: {}", chatModel.getClass().getName());
         }
 
         Prompt request = new Prompt(new UserMessage(prompt), chatOptions);

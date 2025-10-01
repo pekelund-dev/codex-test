@@ -91,9 +91,9 @@ public class FunctionConfiguration {
     }
 
     @Bean
-    public GeminiReceiptExtractor geminiReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper,
+    public AIReceiptExtractor aiReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper,
         VertexAiGeminiChatOptions receiptGeminiChatOptions) {
-        return new GeminiReceiptExtractor(chatModel, objectMapper, receiptGeminiChatOptions);
+        return new AIReceiptExtractor(chatModel, objectMapper, receiptGeminiChatOptions);
     }
 
     @Bean
@@ -119,7 +119,7 @@ public class FunctionConfiguration {
 
     @Bean
     public ReceiptParsingHandler receiptParsingHandler(Storage storage, ReceiptExtractionRepository receiptExtractionRepository,
-        GeminiReceiptExtractor geminiReceiptExtractor) {
-        return new ReceiptParsingHandler(storage, receiptExtractionRepository, geminiReceiptExtractor);
+        AIReceiptExtractor aiReceiptExtractor) {
+        return new ReceiptParsingHandler(storage, receiptExtractionRepository, aiReceiptExtractor);
     }
 }
