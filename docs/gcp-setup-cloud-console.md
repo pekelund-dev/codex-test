@@ -1,6 +1,8 @@
 # Google Cloud setup with the Cloud Console
 
-Use this guide if you prefer configuring ResponsiveAuthApp resources through the Google Cloud Console UI. A command-line alternative is documented in the [gcloud CLI guide](gcp-setup-gcloud.md) and both are referenced from the main [README](../README.md).
+Use this guide if you prefer configuring Resp     - `VERTEX_AI_LOCATION` — defaults to `us-central1`.
+     - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
+     - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.iveAuthApp resources through the Google Cloud Console UI. A command-line alternative is documented in the [gcloud CLI guide](gcp-setup-gcloud.md) and both are referenced from the main [README](../README.md).
 
 ## Firestore configuration in the Console
 

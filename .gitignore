@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Google Cloud Service Account Keys ###
+*.json
+!package*.json
+!tsconfig*.json
+setup-env.sh

@@ -6,14 +6,13 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FirestoreOptions;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
-import com.google.events.cloud.storage.v1.StorageObjectData;
 import io.cloudevents.CloudEvent;
 import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.vertexai.gemini.VertexAiGeminiApi;
-import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatModel;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 
 /**
  * Cloud Function entry point for receipt parsing.
@@ -45,28 +44,39 @@ public class ReceiptProcessingFunction implements CloudEventsFunction {
             return;
         }
         byte[] payload = cloudEvent.getData().toBytes();
-        StorageObjectData storageObjectData = parseStorageObject(payload);
-        handler.handle(storageObjectData);
+        StorageObjectEvent storageObjectEvent = parseStorageObject(payload);
+        handler.handle(storageObjectEvent);
     }
 
-    private StorageObjectData parseStorageObject(byte[] payload) throws IOException {
-        return objectMapper.readValue(payload, StorageObjectData.class);
+    private StorageObjectEvent parseStorageObject(byte[] payload) throws IOException {
+        return objectMapper.readValue(payload, StorageObjectEvent.class);
     }
 
     private static RuntimeComponents initializeRuntime() {
         ReceiptProcessingSettings settings = ReceiptProcessingSettings.fromEnvironment();
         ObjectMapper mapper = createObjectMapper();
 
+        System.out.println("DEBUG: Starting Spring context for ChatModel auto-configuration");
+        
+        // Create Spring context to get auto-configured ChatModel
+        SpringApplication app = new SpringApplication(FunctionApplication.class);
+        app.setDefaultProperties(java.util.Map.of(
+            "spring.main.web-application-type", "none",
+            "logging.level.root", "WARN"
+        ));
+        ConfigurableApplicationContext context = app.run();
+        
+        ChatModel chatModel = context.getBean(ChatModel.class);
+        System.out.println("DEBUG: ChatModel auto-configured successfully: " + chatModel.getClass().getSimpleName());
+        
         Storage storage = StorageOptions.getDefaultInstance().getService();
         Firestore firestore = FirestoreOptions.getDefaultInstance().getService();
 
-        VertexAiGeminiApi api = new VertexAiGeminiApi(settings.vertexProjectId(), settings.vertexLocation(), settings.vertexModel());
-        ChatModel chatModel = new VertexAiGeminiChatModel(api);
         GeminiReceiptExtractor extractor = new GeminiReceiptExtractor(chatModel, mapper);
         ReceiptExtractionRepository repository = new ReceiptExtractionRepository(firestore, settings.receiptsCollection());
         ReceiptParsingHandler handler = new ReceiptParsingHandler(storage, repository, extractor);
 
-        return new RuntimeComponents(handler, mapper);
+        return new RuntimeComponents(handler, mapper, context);
     }
 
     private static ObjectMapper createObjectMapper() {
@@ -75,5 +85,5 @@ public class ReceiptProcessingFunction implements CloudEventsFunction {
         return mapper;
     }
 
-    record RuntimeComponents(ReceiptParsingHandler handler, ObjectMapper objectMapper) { }
+    record RuntimeComponents(ReceiptParsingHandler handler, ObjectMapper objectMapper, ConfigurableApplicationContext context) { }
 }
