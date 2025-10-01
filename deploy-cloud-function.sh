@@ -88,13 +88,11 @@ echo "✅ IAM permissions configured"
 
 # Ensure Firestore database exists
 echo "🗄️  Setting up Firestore..."
-FIRESTORE_EXISTS=$(gcloud firestore databases list --format="value(name)" --filter="name ~ 'projects/$EXPECTED_PROJECT/databases/(default)'" 2>/dev/null | wc -l)
-
-if [ "$FIRESTORE_EXISTS" -eq 0 ]; then
+if gcloud firestore databases describe --database="(default)" --format="value(name)" >/dev/null 2>&1; then
+    echo "✅ Firestore database already exists"
+else
     echo "Creating Firestore database..."
     gcloud firestore databases create --location=$REGION --type=firestore-native
-else
-    echo "✅ Firestore database already exists"
 fi
 
 # Build and deploy the function
