@@ -118,11 +118,27 @@ fi
 
 # Allow unauthenticated invocations for Eventarc triggers
 echo "🔓 Configuring Cloud Run service for unauthenticated invocations..."
-gcloud run services add-iam-policy-binding "$CLOUD_FUNCTION_NAME" \
+RUN_SERVICE_RESOURCE=$(gcloud functions describe "$CLOUD_FUNCTION_NAME" \
+    --gen2 \
     --region="$REGION" \
-    --member="allUsers" \
-    --role="roles/run.invoker" \
-    --quiet
+    --format="value(serviceConfig.service)" 2>/dev/null || true)
+
+if [ -z "$RUN_SERVICE_RESOURCE" ]; then
+    RUN_SERVICE_NAME=$(echo "$CLOUD_FUNCTION_NAME" | tr '[:upper:]' '[:lower:]')
+else
+    RUN_SERVICE_NAME="${RUN_SERVICE_RESOURCE##*/}"
+fi
+
+if gcloud run services describe "$RUN_SERVICE_NAME" --region="$REGION" --quiet >/dev/null 2>&1; then
+    gcloud run services add-iam-policy-binding "$RUN_SERVICE_NAME" \
+        --region="$REGION" \
+        --member="allUsers" \
+        --role="roles/run.invoker" \
+        --quiet
+else
+    echo "⚠️  Unable to configure unauthenticated access for Cloud Run service '$RUN_SERVICE_NAME'."
+    echo "    The service may not expose an HTTP endpoint (e.g., event-triggered Cloud Function)."
+fi
 
 echo "🎉 Cloud Function deployed successfully!"
 
