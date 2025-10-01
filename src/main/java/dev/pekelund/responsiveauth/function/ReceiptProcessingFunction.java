@@ -22,10 +22,13 @@ public class ReceiptProcessingFunction implements Consumer<CloudEvent> {
     public ReceiptProcessingFunction(ObjectMapper objectMapper, ReceiptParsingHandler handler) {
         this.objectMapper = objectMapper;
         this.handler = handler;
+        LOGGER.info("Constructing ReceiptProcessingFunction with ObjectMapper {} and handler instance id {}",
+            objectMapper.getClass().getName(), System.identityHashCode(handler));
     }
 
     @Override
     public void accept(CloudEvent cloudEvent) {
+        LOGGER.info("ReceiptProcessingFunction.accept invoked with CloudEvent id {}", cloudEvent != null ? cloudEvent.getId() : null);
         if (cloudEvent == null) {
             LOGGER.warn("Received null CloudEvent");
             return;
@@ -38,6 +41,9 @@ public class ReceiptProcessingFunction implements Consumer<CloudEvent> {
         }
         byte[] payload = cloudEvent.getData().toBytes();
         StorageObjectEvent storageObjectEvent = parseStorageObject(payload);
+        LOGGER.info("ReceiptProcessingFunction delegating to handler {} for bucket {} object {}",
+            System.identityHashCode(handler), storageObjectEvent != null ? storageObjectEvent.getBucket() : null,
+            storageObjectEvent != null ? storageObjectEvent.getName() : null);
         handler.handle(storageObjectEvent);
     }
 

@@ -33,9 +33,12 @@ public class ReceiptParsingHandler {
         this.storage = storage;
         this.repository = repository;
         this.extractor = extractor;
+        LOGGER.info("Constructing ReceiptParsingHandler with storage {}, repository {}, extractor instance id {}",
+            storage.getClass().getName(), repository.getClass().getName(), System.identityHashCode(extractor));
     }
 
     public void handle(StorageObjectEvent storageObjectEvent) {
+        LOGGER.info("ReceiptParsingHandler invoked with event {}", storageObjectEvent);
         if (storageObjectEvent == null) {
             LOGGER.warn("Received null storage event data");
             return;
