@@ -23,7 +23,7 @@ spring:
       ai:
         gemini:
           project-id: ${VERTEX_AI_PROJECT_ID:codex-test-473008}
-          location: ${VERTEX_AI_LOCATION:us-east1}
+          location: ${VERTEX_AI_LOCATION:us-central1}
           model: ${VERTEX_AI_GEMINI_MODEL:gemini-2.0-flash}
           chat:
             options:

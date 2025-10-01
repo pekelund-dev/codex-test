@@ -22,11 +22,25 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
 import org.springframework.retry.support.RetryTemplate;
+import org.springframework.util.StringUtils;
 
 @Configuration
 public class FunctionConfiguration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FunctionConfiguration.class);
+
+    @Bean(destroyMethod = "close")
+    @Primary
+    public VertexAI vertexAI(Environment environment) {
+        String projectId = environment.getProperty("spring.ai.vertex.ai.gemini.project-id");
+        if (!StringUtils.hasText(projectId)) {
+            throw new IllegalStateException("Vertex AI project id must be configured (spring.ai.vertex.ai.gemini.project-id)");
+        }
+
+        String location = environment.getProperty("spring.ai.vertex.ai.gemini.location", "us-central1");
+        LOGGER.info("Initializing Vertex AI client - project: {}, location: {}", projectId, location);
+        return new VertexAI(projectId, location);
+    }
 
     @Bean
     public ObjectMapper objectMapper() {
