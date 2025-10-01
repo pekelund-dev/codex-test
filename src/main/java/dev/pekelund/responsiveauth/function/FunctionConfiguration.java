@@ -39,7 +39,9 @@ public class FunctionConfiguration {
 
         String location = environment.getProperty("spring.ai.vertex.ai.gemini.location", "us-central1");
         LOGGER.info("Initializing Vertex AI client - project: {}, location: {}", projectId, location);
-        return new VertexAI(projectId, location);
+        VertexAI vertexAI = new VertexAI(projectId, location);
+        LOGGER.info("Vertex AI client created (instance id {})", System.identityHashCode(vertexAI));
+        return vertexAI;
     }
 
     @Bean
@@ -84,6 +86,7 @@ public class FunctionConfiguration {
         VertexAiGeminiChatModel chatModel = new VertexAiGeminiChatModel(vertexAI, receiptGeminiChatOptions,
             resolvedToolCallingManager, resolvedRetryTemplate, resolvedObservationRegistry, resolvedEligibilityPredicate);
         LOGGER.info("Vertex AI Gemini ChatModel default options: {}", chatModel.getDefaultOptions());
+        LOGGER.info("Vertex AI Gemini ChatModel instance id {}", System.identityHashCode(chatModel));
         return chatModel;
     }
 

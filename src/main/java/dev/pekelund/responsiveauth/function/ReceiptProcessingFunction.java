@@ -30,6 +30,8 @@ public class ReceiptProcessingFunction implements Consumer<CloudEvent> {
             LOGGER.warn("Received null CloudEvent");
             return;
         }
+        LOGGER.info("ReceiptProcessingFunction triggered - id: {}, type: {}, subject: {}, source: {}",
+            cloudEvent.getId(), cloudEvent.getType(), cloudEvent.getSubject(), cloudEvent.getSource());
         if (cloudEvent.getData() == null) {
             LOGGER.warn("CloudEvent did not contain any data");
             return;

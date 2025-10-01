@@ -44,6 +44,9 @@ public class ReceiptParsingHandler {
         String bucket = storageObjectEvent.getBucket();
         String objectName = storageObjectEvent.getName();
 
+        LOGGER.info("ReceiptParsingHandler processing object gs://{}/{} with extractor instance id {}", bucket, objectName,
+            System.identityHashCode(extractor));
+
         if (!StringUtils.hasText(bucket) || !StringUtils.hasText(objectName)) {
             LOGGER.warn("Storage event missing bucket ({}) or object name ({})", bucket, objectName);
             return;
@@ -75,6 +78,7 @@ public class ReceiptParsingHandler {
 
             repository.saveExtraction(bucket, objectName, owner, extractionResult, "Receipt parsing completed");
             updateProcessingMetadata(blob, ReceiptProcessingStatus.COMPLETED, "Receipt parsing completed");
+            LOGGER.info("ReceiptParsingHandler successfully completed extraction for gs://{}/{}", bucket, objectName);
         } catch (ReceiptParsingException ex) {
             LOGGER.error("Receipt parsing failed for gs://{}/{}", bucket, objectName, ex);
             repository.markFailure(bucket, objectName, owner, "Receipt parsing failed", ex);

@@ -45,6 +45,14 @@ public class GeminiReceiptExtractor {
         String encoded = Base64.getEncoder().encodeToString(pdfBytes);
         String prompt = buildPrompt(encoded, fileName);
 
+        LOGGER.info("GeminiReceiptExtractor invoking model '{}' with prompt length {} characters (base64 payload {} characters)",
+            chatOptions.getModel(), prompt.length(), encoded.length());
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("GeminiReceiptExtractor chat options instance id {} - {}", System.identityHashCode(chatOptions),
+                chatOptions);
+            LOGGER.debug("GeminiReceiptExtractor chat model implementation: {}", chatModel.getClass().getName());
+        }
+
         Prompt request = new Prompt(new UserMessage(prompt), chatOptions);
         ChatResponse chatResponse = chatModel.call(request);
         if (chatResponse == null || chatResponse.getResult() == null) {
