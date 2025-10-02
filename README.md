@@ -134,6 +134,8 @@ When you only need to validate how the legacy PDF parser interprets a document, 
 boots the legacy extractor, so no Firestore, Cloud Storage, or Vertex AI credentials are required:
 
 ```bash
+# run from the repository root so the parent pom is picked up but only the
+# function module executes
 ./mvnw -pl function -am spring-boot:run \
     -Dspring-boot.run.profiles=local-receipt-test
 ```
