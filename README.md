@@ -17,14 +17,15 @@ ResponsiveAuthApp is a Spring Boot starter application showcasing a responsive w
 ### Quick Setup with Environment Script
 
 For the fastest setup, use the provided environment script that configures all necessary Google Cloud settings and then run the
-web module directly:
+web module directly. Activate the `include-web` Maven profile whenever you build or run the web module so that it participates in
+the multi-module reactor:
 
 ```bash
 # Source the environment setup script
 source setup-env.sh
 
 # Start the application
-./mvnw -pl web -am spring-boot:run
+./mvnw -Pinclude-web -pl web -am spring-boot:run
 ```
 
 The `setup-env.sh` script automatically configures:
@@ -48,10 +49,10 @@ The `setup-env.sh` script automatically configures:
 4. (Optional) Configure Google Cloud Storage to enable the receipts upload page (see
    [Google Cloud Storage configuration](#google-cloud-storage-configuration)).
 
-5. Build and run the web application module:
+5. Build and run the web application module (remember to enable the `include-web` profile):
 
    ```bash
-   ./mvnw -pl web -am spring-boot:run
+./mvnw -Pinclude-web -pl web -am spring-boot:run
    ```
 
 6. Navigate to <http://localhost:8080> to explore the experience.
