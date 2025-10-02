@@ -5,6 +5,7 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import dev.pekelund.responsiveauth.storage.ReceiptOwner;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -78,7 +79,15 @@ public class ReceiptParsingHandler {
 
             byte[] pdfBytes = blob.getContent();
             ReceiptExtractionResult extractionResult = extractor.extract(pdfBytes, blob.getName());
-
+            int itemsCount = countItems(extractionResult);
+            int topLevelKeys = extractionResult.structuredData() != null
+                ? extractionResult.structuredData().size()
+                : 0;
+            int rawResponseLength = extractionResult.rawResponse() != null
+                ? extractionResult.rawResponse().length()
+                : 0;
+            LOGGER.info("ReceiptParsingHandler extracted {} top-level fields and {} items (raw response length {} characters) for gs://{}/{}",
+                topLevelKeys, itemsCount, rawResponseLength, bucket, objectName);
             repository.saveExtraction(bucket, objectName, owner, extractionResult, "Receipt parsing completed");
             updateProcessingMetadata(blob, ReceiptProcessingStatus.COMPLETED, "Receipt parsing completed");
             LOGGER.info("ReceiptParsingHandler successfully completed extraction for gs://{}/{}", bucket, objectName);
@@ -113,5 +122,19 @@ public class ReceiptParsingHandler {
         metadata.put(METADATA_MESSAGE, message);
         metadata.put(METADATA_UPDATED, Instant.now().toString());
         return blob.toBuilder().setMetadata(metadata).build().update();
+    }
+
+    private int countItems(ReceiptExtractionResult extractionResult) {
+        if (extractionResult == null || extractionResult.structuredData() == null) {
+            return 0;
+        }
+        Object items = extractionResult.structuredData().get("items");
+        if (items instanceof Collection<?> collection) {
+            return collection.size();
+        }
+        if (items instanceof Map<?, ?> map) {
+            return map.size();
+        }
+        return items != null ? 1 : 0;
     }
 }
