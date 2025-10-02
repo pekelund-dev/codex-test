@@ -1,5 +1,6 @@
 package dev.pekelund.responsiveauth.function.legacy;
 
+import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,14 @@ class PdfParser {
     }
 
     LegacyParsedReceipt parse(String[] pdfData) {
+        if (pdfData == null || pdfData.length == 0) {
+            LOGGER.warn("Attempting to parse empty PDF data");
+        } else {
+            LOGGER.info("Parsing PDF data with {} lines", pdfData.length);
+            int sampleSize = Math.min(5, pdfData.length);
+            LOGGER.info("PDF data sample: {}", Arrays.toString(Arrays.copyOf(pdfData, sampleSize)));
+        }
+
         ReceiptFormat format = formatDetector.detectFormat(pdfData);
         LOGGER.info("Detected receipt format: {}", format);
 

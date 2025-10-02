@@ -16,10 +16,10 @@ public class ReceiptFormatDetector {
             return ReceiptFormat.UNKNOWN;
         }
 
-        if (LOGGER.isDebugEnabled()) {
-            int sampleSize = Math.min(5, pdfData.length);
-            LOGGER.debug("Receipt header sample: {}", Arrays.toString(Arrays.copyOf(pdfData, sampleSize)));
-        }
+        LOGGER.info("Detecting receipt format for PDF data with {} lines", pdfData.length);
+
+        int sampleSize = Math.min(5, pdfData.length);
+        LOGGER.info("Receipt header sample: {}", Arrays.toString(Arrays.copyOf(pdfData, sampleSize)));
 
         for (String line : pdfData) {
             if (line.contains("Kvittonr:")) {
