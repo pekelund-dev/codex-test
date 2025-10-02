@@ -1,0 +1,7 @@
+{
+  "bucket": "your-receipts-bucket",
+  "name": "receipts/sample-receipt.pdf",
+  "metageneration": "1",
+  "timeCreated": "2024-01-01T12:00:00.000000Z",
+  "updated": "2024-01-01T12:00:00.000000Z"
+}

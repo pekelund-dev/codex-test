@@ -104,6 +104,30 @@ Select the deployment style you prefer:
 
 Both documents describe prerequisites, metadata expectations, status updates, verification steps, and comprehensive troubleshooting guides for the Gemini-powered pipeline.
 
+#### Local smoke testing
+
+You can exercise the Cloud Function without waiting for a new deployment by running it locally through the Functions Framework Maven plugin:
+
+1. Export credentials that allow the function to reach your Cloud Storage bucket, Firestore database, and Vertex AI project. At minimum you need `GOOGLE_APPLICATION_CREDENTIALS`, `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION`, `RECEIPT_FIRESTORE_PROJECT_ID`, and `RECEIPT_FIRESTORE_COLLECTION`.
+2. Start the Functions Framework on a local port:
+
+   ```bash
+   ./mvnw -pl function -am -DskipTests function:run \
+       -Drun.functions.target=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
+       -Drun.functions.port=8081
+   ```
+
+3. Upload a PDF to your receipts bucket (for example `gsutil cp test-receipt.pdf gs://your-receipts-bucket/receipts/sample-receipt.pdf`).
+4. In another terminal, send a Cloud Storage finalize event payload to the locally running function:
+
+   ```bash
+   curl -X POST -H "Content-Type: application/json" \
+     --data-binary @docs/sample-storage-event.json \
+     http://localhost:8081
+   ```
+
+Update `docs/sample-storage-event.json` with the bucket and object key you uploaded in step 3. The local instance uses the same code path as the deployed function, so Firestore documents and Gemini calls are executed exactly once the event is received.
+
 ### Fallback credentials
 
 When Firestore integration is disabled the application falls back to an in-memory user store, but no accounts are created automatically. Configure explicit credentials for local testing by defining `firestore.fallback-users` entries in `web/src/main/resources/application.yml` (or through environment variables):

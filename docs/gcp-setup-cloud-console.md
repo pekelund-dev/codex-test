@@ -7,6 +7,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 - `VERTEX_AI_PROJECT_ID` — defaults to the Cloud Function project ID.
 - `VERTEX_AI_LOCATION` — defaults to `us-east1`.
 - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
+- `RECEIPT_FIRESTORE_PROJECT_ID` — defaults to the Cloud Function project ID.
 - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
 
 ## Firestore configuration in the Console
@@ -97,6 +98,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
      - `VERTEX_AI_PROJECT_ID` — defaults to the function project if omitted.
      - `VERTEX_AI_LOCATION` — Vertex AI region that offers Gemini (for example `us-east1` or `us-central1`).
      - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
+     - `RECEIPT_FIRESTORE_PROJECT_ID` — optional override when the Firestore database lives in another project.
      - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
    - Upload the source from your local machine or connect the repository, then click **Deploy**.
 

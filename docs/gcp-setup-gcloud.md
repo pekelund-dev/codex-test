@@ -226,7 +226,7 @@ gcloud services enable cloudfunctions.googleapis.com \
       --set-build-env-vars=MAVEN_BUILD_ARGUMENTS="-pl function -am -DskipTests package" \
       --service-account="${FUNCTION_SA}" \
       --trigger-bucket=$(basename "${BUCKET}") \
-      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions
+      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=$(gcloud config get-value project),RECEIPT_FIRESTORE_COLLECTION=receiptExtractions
     ```
 
 4. **Verify the lifecycle**
@@ -335,6 +335,7 @@ gcloud services enable cloudfunctions.googleapis.com \
 - `VERTEX_AI_PROJECT_ID`: Should match your current project
 - `VERTEX_AI_LOCATION`: Should match your function deployment region
 - `VERTEX_AI_GEMINI_MODEL`: Use `gemini-2.0-flash`
+- `RECEIPT_FIRESTORE_PROJECT_ID`: Project that hosts the Firestore database storing receipt extractions (defaults to the function project)
 - `RECEIPT_FIRESTORE_COLLECTION`: Use `receiptExtractions`
 
 ### Monitoring and Debugging
