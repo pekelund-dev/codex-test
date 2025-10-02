@@ -99,6 +99,7 @@ public class FunctionConfiguration {
     }
 
     @Bean
+    @Primary
     public ReceiptDataExtractor receiptDataExtractor(LegacyPdfReceiptExtractor legacyPdfReceiptExtractor,
         AIReceiptExtractor aiReceiptExtractor, ObjectMapper objectMapper) {
         return new HybridReceiptExtractor(legacyPdfReceiptExtractor, aiReceiptExtractor, objectMapper);

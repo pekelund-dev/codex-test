@@ -66,7 +66,7 @@ public class HybridReceiptExtractor implements ReceiptDataExtractor {
             }
             Object totalAmount = generalMap.get("totalAmount");
             if (totalAmount != null) {
-                formatKnown = formatKnown || true;
+                formatKnown = true;
             }
         }
 
