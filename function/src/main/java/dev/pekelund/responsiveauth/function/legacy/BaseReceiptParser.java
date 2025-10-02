@@ -20,7 +20,15 @@ abstract class BaseReceiptParser implements ReceiptFormatParser {
         if (trimmed.isEmpty()) {
             return Optional.empty();
         }
-        String normalized = trimmed.replace(decimalSymbols.getDecimalSeparator(), '.').replace(',', '.');
+        char groupingSeparator = decimalSymbols.getGroupingSeparator();
+        char decimalSeparator = decimalSymbols.getDecimalSeparator();
+        String normalized = trimmed;
+        if (groupingSeparator != '\u0000' && groupingSeparator != decimalSeparator) {
+            normalized = normalized.replace(String.valueOf(groupingSeparator), "");
+        }
+        if (decimalSeparator != '.') {
+            normalized = normalized.replace(decimalSeparator, '.');
+        }
         try {
             return Optional.of(new BigDecimal(normalized));
         } catch (NumberFormatException ex) {
@@ -50,7 +58,11 @@ abstract class BaseReceiptParser implements ReceiptFormatParser {
         String description = matcher.group("name");
         String amountGroup = matcher.group("discountAmount");
         if (amountGroup == null && matcher.groupCount() >= 2) {
-            amountGroup = matcher.group(2);
+            try {
+                amountGroup = matcher.group(2);
+            } catch (IndexOutOfBoundsException | IllegalStateException ex) {
+                amountGroup = null;
+            }
         }
         return parseDecimal(amountGroup).map(amount -> new LegacyReceiptDiscount(description, amount));
     }
