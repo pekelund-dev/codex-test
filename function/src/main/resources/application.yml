@@ -24,3 +24,8 @@ logging:
     root: INFO
     dev.pekelund.responsiveauth.function: INFO
     org.springframework.ai: INFO
+
+app:
+  logging:
+    project-id: ${LOGGING_PROJECT_ID:${GOOGLE_CLOUD_PROJECT:${GCP_PROJECT:${VERTEX_AI_PROJECT_ID:codex-test-473008}}}}
+    log-name: ${LOGGING_LOG_NAME:${spring.cloud.function.definition:receiptProcessingFunction}}
