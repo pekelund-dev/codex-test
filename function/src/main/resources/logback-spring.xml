@@ -1,6 +1,6 @@
 <configuration>
-    <springProperty scope="context" name="projectId" source="spring.ai.vertex.ai.gemini.project-id" defaultValue=""/>
-    <springProperty scope="context" name="functionName" source="spring.cloud.function.definition" defaultValue="receiptProcessingFunction"/>
+    <springProperty scope="context" name="projectId" source="app.logging.project-id" defaultValue=""/>
+    <springProperty scope="context" name="functionName" source="app.logging.log-name" defaultValue="receiptProcessingFunction"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
