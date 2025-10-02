@@ -7,6 +7,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
@@ -20,13 +21,15 @@ public class FunctionDiagnostics implements ApplicationRunner {
     private static final Logger LOGGER = LoggerFactory.getLogger(FunctionDiagnostics.class);
 
     private final Environment environment;
-    private final VertexAiGeminiChatOptions chatOptions;
-    private final ChatModel chatModel;
+    private final ObjectProvider<VertexAiGeminiChatOptions> chatOptionsProvider;
+    private final ObjectProvider<ChatModel> chatModelProvider;
 
-    public FunctionDiagnostics(Environment environment, VertexAiGeminiChatOptions chatOptions, ChatModel chatModel) {
+    public FunctionDiagnostics(Environment environment,
+        ObjectProvider<VertexAiGeminiChatOptions> chatOptionsProvider,
+        ObjectProvider<ChatModel> chatModelProvider) {
         this.environment = environment;
-        this.chatOptions = chatOptions;
-        this.chatModel = chatModel;
+        this.chatOptionsProvider = chatOptionsProvider;
+        this.chatModelProvider = chatModelProvider;
     }
 
     @Override
@@ -39,9 +42,20 @@ public class FunctionDiagnostics implements ApplicationRunner {
             environment.getProperty("spring.ai.vertex.ai.gemini.model", "(unset)"));
         LOGGER.info("Environment override VERTEX_AI_GEMINI_MODEL={} (System.getenv)",
             System.getenv().getOrDefault("VERTEX_AI_GEMINI_MODEL", "(unset)"));
-        LOGGER.info("Resolved chat options model: {} (instance id {})", chatOptions.getModel(),
-            System.identityHashCode(chatOptions));
-        LOGGER.info("ChatModel implementation: {} - default options: {}", chatModel.getClass().getName(),
-            chatModel.getDefaultOptions());
+        VertexAiGeminiChatOptions chatOptions = chatOptionsProvider.getIfAvailable();
+        if (chatOptions != null) {
+            LOGGER.info("Resolved chat options model: {} (instance id {})", chatOptions.getModel(),
+                System.identityHashCode(chatOptions));
+        } else {
+            LOGGER.info("VertexAiGeminiChatOptions bean not available; skipping chat options diagnostics");
+        }
+
+        ChatModel chatModel = chatModelProvider.getIfAvailable();
+        if (chatModel != null) {
+            LOGGER.info("ChatModel implementation: {} - default options: {}", chatModel.getClass().getName(),
+                chatModel.getDefaultOptions());
+        } else {
+            LOGGER.info("ChatModel bean not available; skipping chat model diagnostics");
+        }
     }
 }
