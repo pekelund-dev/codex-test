@@ -7,14 +7,20 @@ import com.google.cloud.firestore.SetOptions;
 import dev.pekelund.responsiveauth.storage.ReceiptOwner;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Persists receipt extraction results and status updates in Firestore.
  */
 public class ReceiptExtractionRepository {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptExtractionRepository.class);
 
     private final Firestore firestore;
     private final String collectionName;
@@ -22,15 +28,19 @@ public class ReceiptExtractionRepository {
     public ReceiptExtractionRepository(Firestore firestore, String collectionName) {
         this.firestore = firestore;
         this.collectionName = collectionName;
+        LOGGER.info("ReceiptExtractionRepository initialized with collection '{}'", collectionName);
     }
 
     public void markStatus(String bucket, String objectName, ReceiptOwner owner,
         ReceiptProcessingStatus status, String message) {
+        LOGGER.info("Firestore status update for gs://{}/{} -> {} ({})", bucket, objectName, status, message);
         updateDocument(bucket, objectName, owner, status, message, null, null);
     }
 
     public void saveExtraction(String bucket, String objectName, ReceiptOwner owner,
         ReceiptExtractionResult extractionResult, String message) {
+        int itemCount = extractItemCount(extractionResult);
+        LOGGER.info("Persisting extraction for gs://{}/{} with {} items", bucket, objectName, itemCount);
         updateDocument(bucket, objectName, owner, ReceiptProcessingStatus.COMPLETED, message, extractionResult, null);
     }
 
@@ -45,6 +55,7 @@ public class ReceiptExtractionRepository {
 
     private void updateDocument(String bucket, String objectName, ReceiptOwner owner,
         ReceiptProcessingStatus status, String message, ReceiptExtractionResult extractionResult, String errorMessage) {
+        String documentId = buildDocumentId(bucket, objectName);
         try {
             Map<String, Object> payload = new HashMap<>();
             payload.put("bucket", bucket);
@@ -68,14 +79,39 @@ public class ReceiptExtractionRepository {
             }
 
             DocumentReference documentReference = firestore.collection(collectionName)
-                .document(buildDocumentId(bucket, objectName));
+                .document(documentId);
+            LOGGER.info("Writing payload with {} entries to Firestore document {}/{}", payload.size(), collectionName, documentId);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Firestore payload for {}/{}: {}", collectionName, documentId, payload);
+            }
             documentReference.set(payload, SetOptions.merge()).get();
+            LOGGER.info("Firestore document {}/{} successfully updated", collectionName, documentId);
         } catch (InterruptedException ex) {
+            LOGGER.error("Interrupted while writing Firestore document {}/{}", collectionName, documentId, ex);
             Thread.currentThread().interrupt();
             throw new ReceiptParsingException("Interrupted while writing receipt data to Firestore", ex);
         } catch (ExecutionException ex) {
+            LOGGER.error("ExecutionException while writing Firestore document {}/{}", collectionName, documentId, ex);
             throw new ReceiptParsingException("Failed to store receipt data in Firestore", ex);
         }
+    }
+
+    private int extractItemCount(ReceiptExtractionResult extractionResult) {
+        if (extractionResult == null || extractionResult.structuredData() == null) {
+            return 0;
+        }
+        Object items = extractionResult.structuredData().get("items");
+        if (items instanceof Collection<?> collection) {
+            return collection.size();
+        }
+        if (items instanceof Map<?, ?> map) {
+            return map.size();
+        }
+        return Optional.ofNullable(items)
+            .map(Object::toString)
+            .filter(str -> !str.isBlank())
+            .map(str -> 1)
+            .orElse(0);
     }
 
     private Map<String, Object> ownerMap(ReceiptOwner owner) {
