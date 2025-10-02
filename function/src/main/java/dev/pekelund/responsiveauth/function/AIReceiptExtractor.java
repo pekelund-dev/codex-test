@@ -1,17 +1,18 @@
 package dev.pekelund.responsiveauth.function;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 
 /**
@@ -28,14 +29,18 @@ public class AIReceiptExtractor {
      */
     private static final int CHUNK_SIZE = 8_000;
 
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<Map<String, Object>>() { };
+
     private final ChatModel chatModel;
     private final ObjectMapper objectMapper;
     private final VertexAiGeminiChatOptions chatOptions;
+    private final BeanOutputConverter<ReceiptStructuredOutput> receiptOutputConverter;
 
     public AIReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper, VertexAiGeminiChatOptions chatOptions) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
         this.chatOptions = chatOptions;
+        this.receiptOutputConverter = new BeanOutputConverter<>(ReceiptStructuredOutput.class, objectMapper);
         LOGGER.info("constructing AIReceiptExtractor");
     }
 
@@ -75,24 +80,9 @@ public class AIReceiptExtractor {
 
         LOGGER.info("Gemini raw response: {}", response);
 
-        try {
-            Map<String, Object> parsed = objectMapper.readValue(response, new TypeReference<Map<String, Object>>() { });
-            return new ReceiptExtractionResult(parsed, response);
-        } catch (JsonProcessingException ex) {
-            LOGGER.warn("Gemini response could not be parsed as JSON on first attempt", ex);
-            String extractedJson = extractJsonCandidate(response);
-            if (extractedJson != null && !extractedJson.isEmpty()) {
-                try {
-                    Map<String, Object> parsed = objectMapper.readValue(extractedJson,
-                        new TypeReference<Map<String, Object>>() { });
-                    LOGGER.info("Successfully parsed Gemini response after extracting JSON candidate");
-                    return new ReceiptExtractionResult(parsed, response);
-                } catch (JsonProcessingException secondaryEx) {
-                    LOGGER.warn("Failed to parse extracted JSON candidate", secondaryEx);
-                }
-            }
-            throw new ReceiptParsingException("Gemini returned a non-JSON response", ex);
-        }
+        ReceiptStructuredOutput structuredOutput = parseStructuredResponse(response);
+        Map<String, Object> structuredData = objectMapper.convertValue(structuredOutput, MAP_TYPE);
+        return new ReceiptExtractionResult(structuredData, response);
     }
 
     private String buildPrompt(String encodedPdf, String fileName) {
@@ -100,39 +90,10 @@ public class AIReceiptExtractor {
         StringBuilder prompt = new StringBuilder();
         prompt.append("You are an expert system that extracts data from grocery receipts.\n");
         prompt.append("The document you will receive is a PDF receipt provided as base64 data between <receipt> tags.\n");
-        prompt.append("Treat it as a receipt and extract the information into JSON with the following structure:\n");
-        prompt.append("{\n");
-        prompt.append("  \"general\": {\n");
-        prompt.append("    \"storeName\": string,\n");
-        prompt.append("    \"storeAddress\": string,\n");
-        prompt.append("    \"receiptDate\": string (ISO-8601 date or date-time),\n");
-        prompt.append("    \"totalAmount\": number,\n");
-        prompt.append("    \"currency\": string,\n");
-        prompt.append("    \"paymentMethod\": string,\n");
-        prompt.append("    \"vatAmount\": number,\n");
-        prompt.append("    \"otherFees\": string,\n");
-        prompt.append("    \"metadata\": {\n");
-        prompt.append("      \"receiptNumber\": string,\n");
-        prompt.append("      \"cashier\": string,\n");
-        prompt.append("      \"additionalNotes\": string\n");
-        prompt.append("    }\n");
-        prompt.append("  },\n");
-        prompt.append("  \"items\": [\n");
-        prompt.append("    {\n");
-        prompt.append("      \"name\": string,\n");
-        prompt.append("      \"category\": string,\n");
-        prompt.append("      \"unitPrice\": number,\n");
-        prompt.append("      \"quantity\": number,\n");
-        prompt.append("      \"quantityUnit\": string,\n");
-        prompt.append("      \"pricePerUnit\": number,\n");
-        prompt.append("      \"discount\": number,\n");
-        prompt.append("      \"totalPrice\": number\n");
-        prompt.append("    }\n");
-        prompt.append("  ],\n");
-        prompt.append("  \"rawText\": string\n");
-        prompt.append("}\n");
+        prompt.append("Treat it as a receipt and extract the information using the following structured output instructions.\n");
+        prompt.append(receiptOutputConverter.getFormat()).append('\n');
         prompt.append("If data is missing, use null values. Always return only the JSON document.\n");
-        prompt.append("Do not include code fences, explanations, or any text outside the JSON object.\n");
+        prompt.append("Do not include code fences, explanations, or any text outside the JSON object beyond what the format instructions specify.\n");
         prompt.append("File name: ").append(safeFileName).append('\n');
         prompt.append("<receipt>\n");
         prompt.append(chunkText(encodedPdf));
@@ -140,45 +101,14 @@ public class AIReceiptExtractor {
         return prompt.toString();
     }
 
-    private String extractJsonCandidate(String response) {
-        if (response == null) {
-            return null;
+    private ReceiptStructuredOutput parseStructuredResponse(String response) {
+        try {
+            return receiptOutputConverter.convert(response);
+        } catch (RuntimeException ex) {
+            throw new ReceiptParsingException(
+                "Gemini returned a response that could not be parsed into the expected structure",
+                ex);
         }
-
-        String trimmed = response.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-
-        Optional<String> fromCodeFence = extractFromCodeFence(trimmed);
-        if (fromCodeFence.isPresent()) {
-            return fromCodeFence.get();
-        }
-
-        int firstBrace = trimmed.indexOf('{');
-        int lastBrace = trimmed.lastIndexOf('}');
-        if (firstBrace >= 0 && lastBrace > firstBrace) {
-            return trimmed.substring(firstBrace, lastBrace + 1);
-        }
-
-        return null;
-    }
-
-    private Optional<String> extractFromCodeFence(String response) {
-        if (!response.startsWith("```") || response.length() <= 6) {
-            return Optional.empty();
-        }
-
-        int closingFenceIndex = response.indexOf("```", 3);
-        if (closingFenceIndex <= 0) {
-            return Optional.empty();
-        }
-
-        String insideFence = response.substring(3, closingFenceIndex).trim();
-        if (insideFence.regionMatches(true, 0, "json", 0, 4)) {
-            insideFence = insideFence.substring(4).trim();
-        }
-        return Optional.of(insideFence);
     }
 
     private String chunkText(String encodedPdf) {
@@ -198,3 +128,30 @@ public class AIReceiptExtractor {
         return builder.toString();
     }
 }
+
+record ReceiptStructuredOutput(ReceiptGeneral general, List<ReceiptItem> items, String rawText) { }
+
+record ReceiptGeneral(
+    String storeName,
+    String storeAddress,
+    String receiptDate,
+    BigDecimal totalAmount,
+    String currency,
+    String paymentMethod,
+    BigDecimal vatAmount,
+    String otherFees,
+    ReceiptMetadata metadata
+) { }
+
+record ReceiptMetadata(String receiptNumber, String cashier, String additionalNotes) { }
+
+record ReceiptItem(
+    String name,
+    String category,
+    BigDecimal unitPrice,
+    BigDecimal quantity,
+    String quantityUnit,
+    BigDecimal pricePerUnit,
+    BigDecimal discount,
+    BigDecimal totalPrice
+) { }
