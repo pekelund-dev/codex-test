@@ -36,6 +36,4 @@ build/
 *.json
 !package*.json
 !tsconfig*.json
-# Local developers may override environment configuration in their own copy
-# of setup-env.sh. The repository now provides a default template that can be
-# customized per environment, so do not ignore the file.
+setup-env.sh
