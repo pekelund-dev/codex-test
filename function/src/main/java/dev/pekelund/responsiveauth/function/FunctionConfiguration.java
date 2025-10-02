@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.util.StringUtils;
+import dev.pekelund.responsiveauth.function.legacy.LegacyPdfReceiptExtractor;
 
 @Configuration
 public class FunctionConfiguration {
@@ -98,6 +99,13 @@ public class FunctionConfiguration {
     }
 
     @Bean
+    @Primary
+    public ReceiptDataExtractor receiptDataExtractor(LegacyPdfReceiptExtractor legacyPdfReceiptExtractor,
+        AIReceiptExtractor aiReceiptExtractor, ObjectMapper objectMapper) {
+        return new HybridReceiptExtractor(legacyPdfReceiptExtractor, aiReceiptExtractor, objectMapper);
+    }
+
+    @Bean
     public Firestore firestore(ReceiptProcessingSettings receiptProcessingSettings) {
         FirestoreOptions.Builder optionsBuilder = FirestoreOptions.getDefaultInstance().toBuilder();
         if (StringUtils.hasText(receiptProcessingSettings.projectId())) {
@@ -127,8 +135,8 @@ public class FunctionConfiguration {
 
     @Bean
     public ReceiptParsingHandler receiptParsingHandler(Storage storage, ReceiptExtractionRepository receiptExtractionRepository,
-        AIReceiptExtractor aiReceiptExtractor) {
-        return new ReceiptParsingHandler(storage, receiptExtractionRepository, aiReceiptExtractor);
+        ReceiptDataExtractor receiptDataExtractor) {
+        return new ReceiptParsingHandler(storage, receiptExtractionRepository, receiptDataExtractor);
     }
 
     @Bean("receiptProcessingFunction")

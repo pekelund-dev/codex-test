@@ -1,4 +1,4 @@
-package dev.pekelund.pklnd.utils.pdf;
+package dev.pekelund.responsiveauth.function.legacy;
 
 public enum ReceiptFormat {
     STANDARD,
