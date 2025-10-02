@@ -21,12 +21,14 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.util.StringUtils;
 import dev.pekelund.responsiveauth.function.legacy.LegacyPdfReceiptExtractor;
 
 @Configuration
+@Profile("!local-receipt-test")
 public class FunctionConfiguration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FunctionConfiguration.class);

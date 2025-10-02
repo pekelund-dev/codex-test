@@ -128,6 +128,27 @@ You can exercise the Cloud Function without waiting for a new deployment by runn
 
 Update `docs/sample-storage-event.json` with the bucket and object key you uploaded in step 3. The local instance uses the same code path as the deployed function, so Firestore documents and Gemini calls are executed exactly once the event is received.
 
+#### Local parsing test server (no cloud dependencies)
+
+When you only need to validate how the legacy PDF parser interprets a document, start the lightweight test server profile. It only
+boots the legacy extractor, so no Firestore, Cloud Storage, or Vertex AI credentials are required:
+
+```bash
+./mvnw -pl function -am spring-boot:run \
+    -Dspring-boot.run.profiles=local-receipt-test
+```
+
+Once the server reports that Tomcat started on port 8080, submit a PDF for parsing with `curl` (replace the sample file with your
+own receipt as needed):
+
+```bash
+curl -F "file=@test-receipt.pdf" http://localhost:8080/local-receipts/parse | jq
+```
+
+The response contains the structured data map emitted by the legacy parser along with the raw JSON string that mirrors what the
+cloud function would store. Errors such as unsupported file formats are returned with HTTP status `422` and a JSON payload with an
+`error` message. Stop the server with `Ctrl+C` when you are finished.
+
 ### Fallback credentials
 
 When Firestore integration is disabled the application falls back to an in-memory user store, but no accounts are created automatically. Configure explicit credentials for local testing by defining `firestore.fallback-users` entries in `web/src/main/resources/application.yml` (or through environment variables):
