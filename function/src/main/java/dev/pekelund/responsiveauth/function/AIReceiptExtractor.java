@@ -81,9 +81,37 @@ public class AIReceiptExtractor implements ReceiptDataExtractor {
 
         LOGGER.info("Gemini raw response: {}", response);
 
-        ReceiptStructuredOutput structuredOutput = parseStructuredResponse(response);
+        String sanitised = sanitiseResponse(response);
+        if (!sanitised.equals(response)) {
+            LOGGER.info("Sanitised Gemini response differs from raw output; sanitised value: {}", sanitised);
+        }
+
+        ReceiptStructuredOutput structuredOutput = parseStructuredResponse(sanitised);
         Map<String, Object> structuredData = objectMapper.convertValue(structuredOutput, MAP_TYPE);
         return new ReceiptExtractionResult(structuredData, response);
+    }
+
+    private String sanitiseResponse(String response) {
+        String trimmed = response.trim();
+        if (trimmed.startsWith("```") && trimmed.endsWith("```")) {
+            LOGGER.info("Removing Markdown code fences from Gemini response");
+            int firstBreak = trimmed.indexOf('\n');
+            if (firstBreak > 0) {
+                String language = trimmed.substring(3, firstBreak).trim();
+                LOGGER.info("Gemini response declared fenced language '{}'", language);
+                trimmed = trimmed.substring(firstBreak + 1, trimmed.length() - 3).trim();
+            } else {
+                trimmed = trimmed.substring(3, trimmed.length() - 3).trim();
+            }
+        }
+        if (trimmed.startsWith("`") && trimmed.endsWith("`")) {
+            LOGGER.info("Removing single backtick fences from Gemini response");
+            trimmed = trimmed.substring(1, trimmed.length() - 1).trim();
+        }
+        if (!trimmed.equals(response)) {
+            LOGGER.info("Response trimmed from {} to {} characters during sanitisation", response.length(), trimmed.length());
+        }
+        return trimmed;
     }
 
     private String buildPrompt(String encodedPdf, String fileName) {
@@ -104,12 +132,22 @@ public class AIReceiptExtractor implements ReceiptDataExtractor {
 
     private ReceiptStructuredOutput parseStructuredResponse(String response) {
         try {
+            LOGGER.info("Parsing Gemini response with Spring AI output converter {}", receiptOutputConverter.getClass().getName());
             return receiptOutputConverter.convert(response);
         } catch (RuntimeException ex) {
+            LOGGER.error("Failed to parse Gemini response. Payload begins with: {}", preview(response));
             throw new ReceiptParsingException(
                 "Gemini returned a response that could not be parsed into the expected structure",
                 ex);
         }
+    }
+
+    private String preview(String response) {
+        if (response == null) {
+            return "<null>";
+        }
+        int max = Math.min(response.length(), 256);
+        return response.substring(0, max);
     }
 
     private String chunkText(String encodedPdf) {

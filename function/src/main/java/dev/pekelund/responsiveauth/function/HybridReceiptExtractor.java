@@ -26,10 +26,13 @@ public class HybridReceiptExtractor implements ReceiptDataExtractor {
 
     @Override
     public ReceiptExtractionResult extract(byte[] pdfBytes, String fileName) {
+        LOGGER.info("Hybrid extractor starting for file {}", fileName);
         ReceiptExtractionResult legacyResult = null;
         try {
             legacyResult = legacyExtractor.extract(pdfBytes, fileName);
-            if (isUsable(legacyResult)) {
+            LOGGER.info("Legacy parser returned structured data keys: {}", legacyResult != null
+                && legacyResult.structuredData() != null ? legacyResult.structuredData().keySet() : null);
+            if (isUsable(legacyResult, fileName)) {
                 LOGGER.info("Using legacy PDF parser result for file {}", fileName);
                 return legacyResult;
             }
@@ -53,8 +56,9 @@ public class HybridReceiptExtractor implements ReceiptDataExtractor {
         return new ReceiptExtractionResult(combined, rawResponse);
     }
 
-    private boolean isUsable(ReceiptExtractionResult result) {
+    private boolean isUsable(ReceiptExtractionResult result, String fileName) {
         if (result == null || result.structuredData() == null) {
+            LOGGER.info("Legacy parser unusable for file {} because result or structured data was null", fileName);
             return false;
         }
         Object general = result.structuredData().get("general");
@@ -63,15 +67,24 @@ public class HybridReceiptExtractor implements ReceiptDataExtractor {
             Object format = generalMap.get("format");
             if (format instanceof String formatString) {
                 formatKnown = !"UNKNOWN".equalsIgnoreCase(formatString);
+                LOGGER.info("Legacy parser format for file {} is '{}' (known = {})", fileName, formatString, formatKnown);
             }
             Object totalAmount = generalMap.get("totalAmount");
             if (totalAmount != null) {
                 formatKnown = true;
+                LOGGER.info("Legacy parser detected total amount {} for file {}", totalAmount, fileName);
             }
+        } else {
+            LOGGER.info("Legacy parser general section missing or not a map for file {}", fileName);
         }
 
         Object items = result.structuredData().get("items");
         boolean hasItems = items instanceof List<?> list && !list.isEmpty();
+        if (!hasItems) {
+            LOGGER.info("Legacy parser produced no items for file {}", fileName);
+        } else {
+            LOGGER.info("Legacy parser produced {} items for file {}", ((List<?>) items).size(), fileName);
+        }
         return formatKnown && hasItems;
     }
 
