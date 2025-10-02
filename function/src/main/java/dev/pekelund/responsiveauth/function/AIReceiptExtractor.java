@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -72,11 +73,24 @@ public class AIReceiptExtractor {
             throw new ReceiptParsingException("Gemini returned an empty response");
         }
 
+        LOGGER.info("Gemini raw response: {}", response);
+
         try {
             Map<String, Object> parsed = objectMapper.readValue(response, new TypeReference<Map<String, Object>>() { });
             return new ReceiptExtractionResult(parsed, response);
         } catch (JsonProcessingException ex) {
-            LOGGER.debug("Gemini response could not be parsed as JSON: {}", response);
+            LOGGER.warn("Gemini response could not be parsed as JSON on first attempt", ex);
+            String extractedJson = extractJsonCandidate(response);
+            if (extractedJson != null && !extractedJson.isEmpty()) {
+                try {
+                    Map<String, Object> parsed = objectMapper.readValue(extractedJson,
+                        new TypeReference<Map<String, Object>>() { });
+                    LOGGER.info("Successfully parsed Gemini response after extracting JSON candidate");
+                    return new ReceiptExtractionResult(parsed, response);
+                } catch (JsonProcessingException secondaryEx) {
+                    LOGGER.warn("Failed to parse extracted JSON candidate", secondaryEx);
+                }
+            }
             throw new ReceiptParsingException("Gemini returned a non-JSON response", ex);
         }
     }
@@ -118,11 +132,53 @@ public class AIReceiptExtractor {
         prompt.append("  \"rawText\": string\n");
         prompt.append("}\n");
         prompt.append("If data is missing, use null values. Always return only the JSON document.\n");
+        prompt.append("Do not include code fences, explanations, or any text outside the JSON object.\n");
         prompt.append("File name: ").append(safeFileName).append('\n');
         prompt.append("<receipt>\n");
         prompt.append(chunkText(encodedPdf));
         prompt.append("\n</receipt>");
         return prompt.toString();
+    }
+
+    private String extractJsonCandidate(String response) {
+        if (response == null) {
+            return null;
+        }
+
+        String trimmed = response.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+
+        Optional<String> fromCodeFence = extractFromCodeFence(trimmed);
+        if (fromCodeFence.isPresent()) {
+            return fromCodeFence.get();
+        }
+
+        int firstBrace = trimmed.indexOf('{');
+        int lastBrace = trimmed.lastIndexOf('}');
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+            return trimmed.substring(firstBrace, lastBrace + 1);
+        }
+
+        return null;
+    }
+
+    private Optional<String> extractFromCodeFence(String response) {
+        if (!response.startsWith("```") || response.length() <= 6) {
+            return Optional.empty();
+        }
+
+        int closingFenceIndex = response.indexOf("```", 3);
+        if (closingFenceIndex <= 0) {
+            return Optional.empty();
+        }
+
+        String insideFence = response.substring(3, closingFenceIndex).trim();
+        if (insideFence.regionMatches(true, 0, "json", 0, 4)) {
+            insideFence = insideFence.substring(4).trim();
+        }
+        return Optional.of(insideFence);
     }
 
     private String chunkText(String encodedPdf) {
