@@ -6,7 +6,6 @@ import com.google.cloud.firestore.FirestoreOptions;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.vertexai.VertexAI;
-import io.cloudevents.CloudEvent;
 import io.micrometer.observation.ObservationRegistry;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
@@ -126,7 +125,7 @@ public class FunctionConfiguration {
     }
 
     @Bean("receiptProcessingFunction")
-    public Consumer<CloudEvent> receiptProcessingFunction(ObjectMapper objectMapper, ReceiptParsingHandler handler) {
+    public Consumer<String> receiptProcessingFunction(ObjectMapper objectMapper, ReceiptParsingHandler handler) {
         ReceiptProcessingFunction function = new ReceiptProcessingFunction(objectMapper, handler);
         LOGGER.info("Exposing receiptProcessingFunction bean backed by ReceiptProcessingFunction instance id {}",
             System.identityHashCode(function));
