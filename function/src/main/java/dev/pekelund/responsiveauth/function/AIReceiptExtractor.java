@@ -18,7 +18,7 @@ import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 /**
  * Invokes Gemini through Spring AI to extract structured data from receipt documents.
  */
-public class AIReceiptExtractor {
+public class AIReceiptExtractor implements ReceiptDataExtractor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AIReceiptExtractor.class);
     /**
@@ -44,6 +44,7 @@ public class AIReceiptExtractor {
         LOGGER.info("constructing AIReceiptExtractor");
     }
 
+    @Override
     public ReceiptExtractionResult extract(byte[] pdfBytes, String fileName) {
         LOGGER.info("extract called with pdfBytes length: {}, fileName: {}", pdfBytes != null ? pdfBytes.length : null, fileName);
         if (pdfBytes == null || pdfBytes.length == 0) {
