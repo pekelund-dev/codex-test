@@ -94,6 +94,7 @@
                         <configuration>
                             <outputDirectory>${project.build.directory}/dependency</outputDirectory>
                             <includeScope>runtime</includeScope>
+                            <includeReactor>true</includeReactor>
                         </configuration>
                     </execution>
                 </executions>
