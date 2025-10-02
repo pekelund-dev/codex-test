@@ -131,7 +131,7 @@ gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
     --max-instances=10 \
     --service-account="$FUNCTION_SA" \
     --trigger-bucket="$GCS_BUCKET" \
-    --set-build-env-vars="MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests package" \
+    --set-build-env-vars="MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests -Dmdep.skip=true package" \
     --set-env-vars="VERTEX_AI_PROJECT_ID=$EXPECTED_PROJECT,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction"
 
 if [ $? -ne 0 ]; then

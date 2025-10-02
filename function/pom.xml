@@ -68,6 +68,10 @@
         </dependency>
     </dependencies>
 
+    <properties>
+        <mdep.skip.copy-dependencies>false</mdep.skip.copy-dependencies>
+    </properties>
+
     <build>
         <plugins>
             <plugin>
@@ -94,7 +98,7 @@
                         <configuration>
                             <outputDirectory>${project.build.directory}/dependency</outputDirectory>
                             <includeScope>runtime</includeScope>
-                            <includeReactor>true</includeReactor>
+                            <skip>${mdep.skip.copy-dependencies}</skip>
                         </configuration>
                     </execution>
                 </executions>
