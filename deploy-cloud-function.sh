@@ -11,6 +11,14 @@ echo "🚀 Starting Cloud Function deployment..."
 # Source environment variables
 source setup-env.sh
 
+# Ensure CLOUD_FUNCTION_NAME is always set to a sensible default
+: "${CLOUD_FUNCTION_NAME:=receiptProcessingFunction}"
+
+if [ -z "$CLOUD_FUNCTION_NAME" ]; then
+    echo "❌ CLOUD_FUNCTION_NAME must be set before deploying."
+    exit 1
+fi
+
 # Check if we're in the correct project
 CURRENT_PROJECT=$(gcloud config get-value project)
 EXPECTED_PROJECT="codex-test-473008"
@@ -110,6 +118,7 @@ echo "🛠️  Building function module..."
 
 # Deploy the Cloud Function using the full multi-module source
 echo "🏗️  Deploying Cloud Function..."
+echo "🧾 Cloud Function name: $CLOUD_FUNCTION_NAME"
 
 gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
     --gen2 \
