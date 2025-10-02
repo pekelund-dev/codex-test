@@ -23,6 +23,7 @@ fi
 CURRENT_PROJECT=$(gcloud config get-value project)
 EXPECTED_PROJECT="codex-test-473008"
 FUNCTION_SA=${FUNCTION_SA:-"receipt-parser@${EXPECTED_PROJECT}.iam.gserviceaccount.com"}
+: "${RECEIPT_FIRESTORE_PROJECT_ID:=$EXPECTED_PROJECT}"
 echo "👤 Using service account: $FUNCTION_SA"
 
 if [ "$CURRENT_PROJECT" != "$EXPECTED_PROJECT" ]; then
@@ -52,6 +53,8 @@ if [ -z "${VERTEX_AI_LOCATION:-}" ]; then
 else
     echo "📍 Using Vertex AI location $VERTEX_AI_LOCATION"
 fi
+
+FUNCTION_ENV_VARS="VERTEX_AI_PROJECT_ID=$EXPECTED_PROJECT,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=$RECEIPT_FIRESTORE_PROJECT_ID,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction"
 
 # Enable required APIs
 echo "🔧 Enabling required Google Cloud APIs..."
@@ -132,7 +135,7 @@ gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
     --service-account="$FUNCTION_SA" \
     --trigger-bucket="$GCS_BUCKET" \
     --set-build-env-vars="MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests -Dmdep.skip=true package" \
-    --set-env-vars="VERTEX_AI_PROJECT_ID=$EXPECTED_PROJECT,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction"
+    --set-env-vars="$FUNCTION_ENV_VARS"
 
 if [ $? -ne 0 ]; then
     echo "❌ Cloud Function deployment failed. Please check the error messages above."

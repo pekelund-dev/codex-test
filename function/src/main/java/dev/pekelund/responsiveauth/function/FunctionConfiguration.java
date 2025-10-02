@@ -98,8 +98,15 @@ public class FunctionConfiguration {
     }
 
     @Bean
-    public Firestore firestore() {
-        return FirestoreOptions.getDefaultInstance().getService();
+    public Firestore firestore(ReceiptProcessingSettings receiptProcessingSettings) {
+        FirestoreOptions.Builder optionsBuilder = FirestoreOptions.getDefaultInstance().toBuilder();
+        if (StringUtils.hasText(receiptProcessingSettings.projectId())) {
+            optionsBuilder.setProjectId(receiptProcessingSettings.projectId());
+        }
+        Firestore firestore = optionsBuilder.build().getService();
+        LOGGER.info("Initialized Firestore client for project '{}' (target collection '{}')",
+            firestore.getOptions().getProjectId(), receiptProcessingSettings.receiptsCollection());
+        return firestore;
     }
 
     @Bean
