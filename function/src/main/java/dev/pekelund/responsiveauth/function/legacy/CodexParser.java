@@ -9,12 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
-
-@Component
-@Order(0)
-class CodexParser implements ReceiptFormatParser {
+public class CodexParser implements ReceiptFormatParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CodexParser.class);
 

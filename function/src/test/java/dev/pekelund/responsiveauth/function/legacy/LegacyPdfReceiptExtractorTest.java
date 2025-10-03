@@ -29,7 +29,7 @@ class LegacyPdfReceiptExtractorTest {
         objectMapper.findAndRegisterModules();
         ReceiptFormatDetector detector = new ReceiptFormatDetector();
         PdfParser pdfParser = new PdfParser(
-            List.of(new StandardFormatParser(), new CodexParser(), new NewFormatParser()),
+            List.of(new StandardFormatParser(), new NewFormatParser()),
             detector);
         extractor = new LegacyPdfReceiptExtractor(pdfParser, objectMapper);
     }

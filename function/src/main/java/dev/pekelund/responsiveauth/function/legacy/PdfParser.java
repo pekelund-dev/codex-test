@@ -7,14 +7,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
-class PdfParser {
+public class PdfParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PdfParser.class);
 
     private final List<ReceiptFormatParser> formatParsers;
     private final ReceiptFormatDetector formatDetector;
 
-    PdfParser(List<ReceiptFormatParser> formatParsers, ReceiptFormatDetector formatDetector) {
+    public PdfParser(List<ReceiptFormatParser> formatParsers, ReceiptFormatDetector formatDetector) {
         this.formatParsers = formatParsers;
         this.formatDetector = formatDetector;
     }
