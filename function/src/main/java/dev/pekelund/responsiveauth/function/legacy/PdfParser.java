@@ -23,13 +23,13 @@ public class PdfParser {
         if (pdfData == null || pdfData.length == 0) {
             LOGGER.warn("Attempting to parse empty PDF data");
         } else {
-            LOGGER.info("Parsing PDF data with {} lines", pdfData.length);
+            LOGGER.debug("Parsing PDF data with {} lines", pdfData.length);
             int sampleSize = Math.min(5, pdfData.length);
-            LOGGER.info("PDF data sample: {}", Arrays.toString(Arrays.copyOf(pdfData, sampleSize)));
+            LOGGER.debug("PDF data sample: {}", Arrays.toString(Arrays.copyOf(pdfData, sampleSize)));
         }
 
         ReceiptFormat format = formatDetector.detectFormat(pdfData);
-        LOGGER.info("Detected receipt format: {}", format);
+        LOGGER.debug("Detected receipt format: {}", format);
 
         for (ReceiptFormatParser parser : formatParsers) {
             if (parser.supportsFormat(format)) {
