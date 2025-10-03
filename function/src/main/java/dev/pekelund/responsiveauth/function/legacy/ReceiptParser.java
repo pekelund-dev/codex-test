@@ -12,9 +12,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
-class NewFormatParser extends BaseReceiptParser {
+public class ReceiptParser extends BaseReceiptParser {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(NewFormatParser.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptParser.class);
 
     private static final Pattern ITEM_PATTERN = Pattern.compile(
         "(?<name>.+?) (?<eanCode>\\d{8,13}) (?<unitPrice>\\d+[.,]\\d{2}) (?<quantity>\\d+(?:[.,]\\d+)?\\s(?:st|kg)) (?<totalPrice>\\d+[.,]\\d{2})");
@@ -76,7 +76,7 @@ class NewFormatParser extends BaseReceiptParser {
 
         List<LegacyReceiptVat> vats = extractVatLines(pdfData, itemsEndIndex + 1);
 
-        LOGGER.info("Parsed NEW_FORMAT receipt - store: {}, date: {}, total: {}, items: {}, vat lines: {}", store,
+        LOGGER.debug("Parsed NEW_FORMAT receipt - store: {}, date: {}, total: {}, items: {}, vat lines: {}", store,
             receiptDate, totalAmount, items.size(), vats.size());
         return new LegacyParsedReceipt(format, store, receiptDate, totalAmount, items, vats, List.of(), errors);
     }
