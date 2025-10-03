@@ -79,6 +79,10 @@ public class LegacyPdfReceiptExtractor implements ReceiptDataExtractor {
             .map(this::mapVat)
             .collect(Collectors.toCollection(ArrayList::new));
 
+        List<Map<String, Object>> generalDiscounts = parsedReceipt.generalDiscounts().stream()
+            .map(this::mapDiscount)
+            .collect(Collectors.toCollection(ArrayList::new));
+
         List<Map<String, Object>> errors = parsedReceipt.errors().stream()
             .map(error -> Map.<String, Object>of(
                 "lineNumber", error.lineNumber(),
@@ -90,6 +94,7 @@ public class LegacyPdfReceiptExtractor implements ReceiptDataExtractor {
         structuredData.put("general", general);
         structuredData.put("items", items);
         structuredData.put("vats", vats);
+        structuredData.put("generalDiscounts", generalDiscounts);
         structuredData.put("errors", errors);
         structuredData.put("rawText", String.join("\n", pdfData));
         structuredData.put("source", SOURCE);
@@ -104,9 +109,7 @@ public class LegacyPdfReceiptExtractor implements ReceiptDataExtractor {
         mapped.put("quantity", item.getQuantity());
         mapped.put("totalPrice", item.getTotalPrice());
         List<Map<String, Object>> discounts = item.getDiscounts().stream()
-            .map(discount -> Map.<String, Object>of(
-                "description", discount.description(),
-                "amount", discount.amount()))
+            .map(this::mapDiscount)
             .collect(Collectors.toCollection(ArrayList::new));
         mapped.put("discounts", discounts);
         return mapped;
@@ -118,6 +121,13 @@ public class LegacyPdfReceiptExtractor implements ReceiptDataExtractor {
         mapped.put("taxAmount", vat.taxAmount());
         mapped.put("netAmount", vat.netAmount());
         mapped.put("grossAmount", vat.grossAmount());
+        return mapped;
+    }
+
+    private Map<String, Object> mapDiscount(LegacyReceiptDiscount discount) {
+        Map<String, Object> mapped = new LinkedHashMap<>();
+        mapped.put("description", discount.description());
+        mapped.put("amount", discount.amount());
         return mapped;
     }
 

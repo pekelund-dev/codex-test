@@ -11,11 +11,13 @@ public record LegacyParsedReceipt(
     BigDecimal totalAmount,
     List<LegacyReceiptItem> items,
     List<LegacyReceiptVat> vats,
+    List<LegacyReceiptDiscount> generalDiscounts,
     List<LegacyReceiptError> errors
 ) {
     public LegacyParsedReceipt {
         items = items == null ? List.of() : List.copyOf(items);
         vats = vats == null ? List.of() : List.copyOf(vats);
+        generalDiscounts = generalDiscounts == null ? List.of() : List.copyOf(generalDiscounts);
         errors = errors == null ? List.of() : List.copyOf(errors);
     }
 }
