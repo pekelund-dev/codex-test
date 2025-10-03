@@ -7,14 +7,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
-class PdfParser {
+public class PdfParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PdfParser.class);
 
     private final List<ReceiptFormatParser> formatParsers;
     private final ReceiptFormatDetector formatDetector;
 
-    PdfParser(List<ReceiptFormatParser> formatParsers, ReceiptFormatDetector formatDetector) {
+    public PdfParser(List<ReceiptFormatParser> formatParsers, ReceiptFormatDetector formatDetector) {
         this.formatParsers = formatParsers;
         this.formatDetector = formatDetector;
     }
@@ -42,6 +42,6 @@ class PdfParser {
             format == ReceiptFormat.UNKNOWN
                 ? "Unable to determine receipt format"
                 : "No parser registered for format " + format);
-        return new LegacyParsedReceipt(format, null, null, null, List.of(), List.of(error));
+        return new LegacyParsedReceipt(format, null, null, null, List.of(), List.of(), List.of(error));
     }
 }

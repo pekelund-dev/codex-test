@@ -17,9 +17,12 @@ class StandardFormatParser extends BaseReceiptParser {
     private static final Logger LOGGER = LoggerFactory.getLogger(StandardFormatParser.class);
 
     private static final Pattern ITEM_PATTERN = Pattern.compile(
-        "(?<name>.+?)\\s(?<eanCode>\\d{8,13})\\s(?<unitPrice>\\d+\\.\\d{2})\\s(?<quantity>\\d+(?:\\.\\d+)?\\s(?:st|kg))\\s(?<totalPrice>\\d+\\.\\d{2})");
-    private static final Pattern DISCOUNT_PATTERN = Pattern.compile("(?<name>.+?)\\s-\\s(?<discountAmount>\\d+\\.\\d{2})");
+        "(?<name>.+?)\\s(?<eanCode>\\d{8,13})\\s(?<unitPrice>\\d+[.,]\\d{2})\\s(?<quantity>\\d+(?:[.,]\\d+)?\\s(?:st|kg))\\s(?<totalPrice>\\d+[.,]\\d{2})");
+    private static final Pattern DISCOUNT_PATTERN = Pattern.compile("(?<name>.+?)\\s-\\s(?<discountAmount>\\d+[.,]\\d{2})");
     private static final Pattern DATE_LINE_PATTERN = Pattern.compile("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2} AID:.+");
+    private static final Pattern VAT_LINE_PATTERN = Pattern.compile(
+        "(?:Moms\\s*)?(?<rate>\\d+(?:[.,]\\d+)?)%?\\s+(?<tax>\\d+[.,]\\d{2})\\s+(?<net>\\d+[.,]\\d{2})\\s+(?<gross>\\d+[.,]\\d{2})",
+        Pattern.CASE_INSENSITIVE);
 
     @Override
     public boolean supportsFormat(ReceiptFormat format) {
@@ -56,6 +59,11 @@ class StandardFormatParser extends BaseReceiptParser {
                 continue;
             }
 
+            if (trimmed.startsWith("Total") || trimmed.contains("Betalat")) {
+                parsingItems = false;
+                continue;
+            }
+
             if (!parsingItems) {
                 continue;
             }
@@ -85,9 +93,11 @@ class StandardFormatParser extends BaseReceiptParser {
             }
         }
 
-        LOGGER.info("Parsed STANDARD receipt - store: {}, date: {}, total: {}, items: {}", store, receiptDate, totalAmount,
-            items.size());
-        return new LegacyParsedReceipt(format, store, receiptDate, totalAmount, items, errors);
+        List<LegacyReceiptVat> vats = extractVatLines(pdfData);
+
+        LOGGER.info("Parsed STANDARD receipt - store: {}, date: {}, total: {}, items: {}, vat lines: {}", store,
+            receiptDate, totalAmount, items.size(), vats.size());
+        return new LegacyParsedReceipt(format, store, receiptDate, totalAmount, items, vats, errors);
     }
 
     private Optional<BigDecimal> extractTotalAmount(String[] pdfData) {
@@ -129,5 +139,52 @@ class StandardFormatParser extends BaseReceiptParser {
         String quantity = matcher.group("quantity");
         BigDecimal totalPrice = parseDecimal(matcher.group("totalPrice")).orElse(null);
         return Optional.of(new LegacyReceiptItem(name, ean, unitPrice, quantity, totalPrice));
+    }
+
+    private List<LegacyReceiptVat> extractVatLines(String[] pdfData) {
+        List<LegacyReceiptVat> vats = new ArrayList<>();
+        if (pdfData == null) {
+            return vats;
+        }
+        boolean inVatSection = false;
+        for (String line : pdfData) {
+            if (line == null) {
+                continue;
+            }
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) {
+                if (inVatSection) {
+                    break;
+                }
+                continue;
+            }
+            if (trimmed.contains("Moms % Moms Netto Brutto")) {
+                inVatSection = true;
+                continue;
+            }
+            if (!inVatSection) {
+                continue;
+            }
+            if (isVatSectionTerminator(trimmed)) {
+                break;
+            }
+            Matcher matcher = VAT_LINE_PATTERN.matcher(trimmed);
+            if (matcher.matches()) {
+                Optional<BigDecimal> rate = parseDecimal(matcher.group("rate"));
+                Optional<BigDecimal> tax = parseDecimal(matcher.group("tax"));
+                Optional<BigDecimal> net = parseDecimal(matcher.group("net"));
+                Optional<BigDecimal> gross = parseDecimal(matcher.group("gross"));
+                vats.add(new LegacyReceiptVat(rate.orElse(null), tax.orElse(null), net.orElse(null),
+                    gross.orElse(null)));
+            } else if (trimmed.startsWith("Erhållen") || trimmed.startsWith("Avrundning")
+                || trimmed.startsWith("Kort") || trimmed.startsWith("Kontant")) {
+                break;
+            }
+        }
+        return vats;
+    }
+
+    private boolean isVatSectionTerminator(String line) {
+        return line.startsWith("Total") || line.startsWith("Summa") || line.contains("Betalat");
     }
 }

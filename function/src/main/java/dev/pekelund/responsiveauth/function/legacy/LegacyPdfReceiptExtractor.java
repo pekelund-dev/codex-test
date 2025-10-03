@@ -75,6 +75,10 @@ public class LegacyPdfReceiptExtractor implements ReceiptDataExtractor {
             .map(this::mapItem)
             .collect(Collectors.toCollection(ArrayList::new));
 
+        List<Map<String, Object>> vats = parsedReceipt.vats().stream()
+            .map(this::mapVat)
+            .collect(Collectors.toCollection(ArrayList::new));
+
         List<Map<String, Object>> errors = parsedReceipt.errors().stream()
             .map(error -> Map.<String, Object>of(
                 "lineNumber", error.lineNumber(),
@@ -85,6 +89,7 @@ public class LegacyPdfReceiptExtractor implements ReceiptDataExtractor {
         Map<String, Object> structuredData = new LinkedHashMap<>();
         structuredData.put("general", general);
         structuredData.put("items", items);
+        structuredData.put("vats", vats);
         structuredData.put("errors", errors);
         structuredData.put("rawText", String.join("\n", pdfData));
         structuredData.put("source", SOURCE);
@@ -104,6 +109,15 @@ public class LegacyPdfReceiptExtractor implements ReceiptDataExtractor {
                 "amount", discount.amount()))
             .collect(Collectors.toCollection(ArrayList::new));
         mapped.put("discounts", discounts);
+        return mapped;
+    }
+
+    private Map<String, Object> mapVat(LegacyReceiptVat vat) {
+        Map<String, Object> mapped = new LinkedHashMap<>();
+        mapped.put("rate", vat.rate());
+        mapped.put("taxAmount", vat.taxAmount());
+        mapped.put("netAmount", vat.netAmount());
+        mapped.put("grossAmount", vat.grossAmount());
         return mapped;
     }
 

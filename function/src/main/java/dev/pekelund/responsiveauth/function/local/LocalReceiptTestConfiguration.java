@@ -2,6 +2,7 @@ package dev.pekelund.responsiveauth.function.local;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.pekelund.responsiveauth.function.ReceiptDataExtractor;
+import dev.pekelund.responsiveauth.function.legacy.CodexOnlyReceiptDataExtractor;
 import dev.pekelund.responsiveauth.function.legacy.LegacyPdfReceiptExtractor;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
@@ -24,6 +25,11 @@ public class LocalReceiptTestConfiguration {
     @Primary
     public ReceiptDataExtractor receiptDataExtractor(LegacyPdfReceiptExtractor legacyPdfReceiptExtractor) {
         return legacyPdfReceiptExtractor;
+    }
+
+    @Bean(name = "codexReceiptDataExtractor")
+    public ReceiptDataExtractor codexReceiptDataExtractor(ObjectMapper objectMapper) {
+        return new CodexOnlyReceiptDataExtractor(objectMapper);
     }
 
     @Bean
