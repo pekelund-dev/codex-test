@@ -78,7 +78,7 @@ class NewFormatParser extends BaseReceiptParser {
 
         LOGGER.info("Parsed NEW_FORMAT receipt - store: {}, date: {}, total: {}, items: {}, vat lines: {}", store,
             receiptDate, totalAmount, items.size(), vats.size());
-        return new LegacyParsedReceipt(format, store, receiptDate, totalAmount, items, vats, errors);
+        return new LegacyParsedReceipt(format, store, receiptDate, totalAmount, items, vats, List.of(), errors);
     }
 
     private Optional<LocalDate> extractDate(String[] pdfData) {

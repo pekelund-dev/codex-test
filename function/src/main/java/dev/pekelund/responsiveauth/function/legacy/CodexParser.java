@@ -49,6 +49,7 @@ public class CodexParser implements ReceiptFormatParser {
 
         List<LegacyReceiptItem> items = new ArrayList<>();
         List<LegacyReceiptVat> vats = new ArrayList<>();
+        List<LegacyReceiptDiscount> generalDiscounts = new ArrayList<>();
         List<LegacyReceiptError> errors = new ArrayList<>();
 
         boolean inItems = false;
@@ -117,13 +118,7 @@ public class CodexParser implements ReceiptFormatParser {
                         && discountAmount.abs().compareTo(currentItem.getTotalPrice().abs()) <= 0) {
                         currentItem.addDiscount(new LegacyReceiptDiscount(description, discountAmount));
                     } else {
-                        items.add(new LegacyReceiptItem(
-                            description,
-                            null,
-                            discountAmount,
-                            null,
-                            discountAmount
-                        ));
+                        generalDiscounts.add(new LegacyReceiptDiscount(description, discountAmount));
                         currentItem = null;
                     }
                     continue;
@@ -151,7 +146,7 @@ public class CodexParser implements ReceiptFormatParser {
             }
         }
 
-        return new LegacyParsedReceipt(format, storeName, receiptDate, totalAmount, items, vats, errors);
+        return new LegacyParsedReceipt(format, storeName, receiptDate, totalAmount, items, vats, generalDiscounts, errors);
     }
 
     private String extractStoreName(String[] lines) {

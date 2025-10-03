@@ -97,7 +97,7 @@ class StandardFormatParser extends BaseReceiptParser {
 
         LOGGER.info("Parsed STANDARD receipt - store: {}, date: {}, total: {}, items: {}, vat lines: {}", store,
             receiptDate, totalAmount, items.size(), vats.size());
-        return new LegacyParsedReceipt(format, store, receiptDate, totalAmount, items, vats, errors);
+        return new LegacyParsedReceipt(format, store, receiptDate, totalAmount, items, vats, List.of(), errors);
     }
 
     private Optional<BigDecimal> extractTotalAmount(String[] pdfData) {

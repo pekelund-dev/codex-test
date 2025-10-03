@@ -65,6 +65,9 @@ class LegacyPdfReceiptExtractorTest {
         assertThat(items.get(1)).containsEntry("name", "Äpple");
         assertThat(items.get(1)).containsEntry("unitPrice", new BigDecimal("5.50"));
 
+        List<Map<String, Object>> generalDiscounts = getList(result.structuredData().get("generalDiscounts"));
+        assertThat(generalDiscounts).isEmpty();
+
         List<Map<String, Object>> vats = getList(result.structuredData().get("vats"));
         assertThat(vats).hasSize(1);
         assertThat(vats.get(0)).containsEntry("rate", new BigDecimal("25"));

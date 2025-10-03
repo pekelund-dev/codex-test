@@ -24,6 +24,7 @@ class CodexParserTest {
         assertThat(receipt.errors()).isEmpty();
 
         assertThat(receipt.items()).containsExactlyElementsOf(expectedItems());
+        assertThat(receipt.generalDiscounts()).containsExactlyElementsOf(expectedGeneralDiscounts());
 
         assertThat(receipt.vats()).containsExactly(
             new LegacyReceiptVat(amount("12.00"), amount("128.60"), amount("1071.46"), amount("1200.06")),
@@ -69,9 +70,12 @@ class CodexParserTest {
             item("Vetekaka 24-p", "7311800009531", "34.95", "1,00 st", "34.95"),
             item("Vispgrädde 40%", "7310867003339", "24.95", "1,00 st", "24.95"),
             item("Wok Thai Style", "7310500187150", "28.95", "1,00 st", "28.95"),
-            item("Yogh Van/blåb 2,5%", "7310867512831", "20.00", "1,00 st", "20.00"),
-            item("Familjerabatt", null, "-66.81", null, "-66.81")
+            item("Yogh Van/blåb 2,5%", "7310867512831", "20.00", "1,00 st", "20.00")
         );
+    }
+
+    private List<LegacyReceiptDiscount> expectedGeneralDiscounts() {
+        return List.of(discount("Familjerabatt", "-66.81"));
     }
 
     private LegacyReceiptItem item(
