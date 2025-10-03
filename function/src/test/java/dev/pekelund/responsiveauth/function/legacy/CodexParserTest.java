@@ -20,38 +20,84 @@ class CodexParserTest {
         assertThat(receipt.format()).isEqualTo(ReceiptFormat.NEW_FORMAT);
         assertThat(receipt.storeName()).isEqualTo("ICA Kvantum Emporia");
         assertThat(receipt.receiptDate()).isEqualTo(LocalDate.of(2025, 10, 2));
-        assertThat(receipt.totalAmount()).isEqualByComparingTo(new BigDecimal("1269.43"));
-
-        List<LegacyReceiptItem> items = receipt.items();
-        assertThat(items).hasSize(38);
-
-        LegacyReceiptItem first = items.get(0);
-        assertThat(first.getName()).isEqualTo("Broccoli filmad");
-        assertThat(first.getEanCode()).isEqualTo("7318690662952");
-        assertThat(first.getQuantity()).isEqualTo("2,00 st");
-        assertThat(first.getTotalPrice()).isEqualByComparingTo(new BigDecimal("41.90"));
-
-        LegacyReceiptItem gurka = items.stream()
-            .filter(item -> item.getName().contains("Gurka"))
-            .findFirst()
-            .orElseThrow();
-        assertThat(gurka.getDiscounts()).singleElement()
-            .satisfies(discount -> {
-                assertThat(discount.description()).isEqualTo("2 för 30:-");
-                assertThat(discount.amount()).isEqualByComparingTo(new BigDecimal("-5.90"));
-            });
-
-        LegacyReceiptItem familyDiscount = items.stream()
-            .filter(item -> item.getName().equals("Familjerabatt"))
-            .findFirst()
-            .orElseThrow();
-        assertThat(familyDiscount.getTotalPrice()).isEqualByComparingTo(new BigDecimal("-66.81"));
-
-        assertThat(receipt.vats()).hasSize(2);
-        assertThat(receipt.vats().get(0).rate()).isEqualByComparingTo(new BigDecimal("12.00"));
-        assertThat(receipt.vats().get(0).taxAmount()).isEqualByComparingTo(new BigDecimal("128.60"));
-
+        assertThat(receipt.totalAmount()).isEqualByComparingTo(amount("1269.43"));
         assertThat(receipt.errors()).isEmpty();
+
+        assertThat(receipt.items()).containsExactlyElementsOf(expectedItems());
+
+        assertThat(receipt.vats()).containsExactly(
+            new LegacyReceiptVat(amount("12.00"), amount("128.60"), amount("1071.46"), amount("1200.06")),
+            new LegacyReceiptVat(amount("25.00"), amount("13.87"), amount("55.50"), amount("69.37"))
+        );
+    }
+
+    private List<LegacyReceiptItem> expectedItems() {
+        return List.of(
+            item("Broccoli filmad", "7318690662952", "20.95", "2,00 st", "41.90"),
+            item("Eko Mellanmjö 1,5%", "7310867501583", "26.95", "2,00 st", "53.90"),
+            item("Filet Pieces", "8445290003027", "92.00", "1,00 st", "92.00"),
+            item("Fisherm salm sf", "50357116", "12.95", "1,00 st", "12.95"),
+            item("Fransk lantsalami", "2000765300000", "590.00", "1,00 st", "15.34"),
+            item("Fuet", "7350027793915", "46.95", "1,00 st", "46.95"),
+            item("GodM Äpplejuice", "7310865081650", "44.95", "2,00 st", "89.90"),
+            item("*Gurka", "2092459500000", "14.25", "2,00 st", "35.90", discount("2 för 30:-", "-5.90")),
+            item("Ingefära", "2092461200000", "34.95", "1,00 st", "2.38"),
+            item("Jamón Serrano", "7331631007667", "89.00", "1,00 st", "89.00"),
+            item("Koriander", "7350018560649", "32.95", "1,00 st", "32.95"),
+            item("Kål Vit Färsk", "2092305100000", "14.95", "1,00 st", "29.42"),
+            item("*Lime", "2092404800000", "3.17", "3,00 st", "17.85", discount("3 för 10:-", "-7.85")),
+            item("Lösviktsgodis", "2000136300000", "129.00", "1,00 st", "19.09"),
+            item("Mild Vaniljyog Pär", "7310867512282", "28.95", "1,00 st", "28.95"),
+            item("Mozzarella 21% Riv", "7311875904342", "74.95", "1,00 st", "74.95"),
+            item("Näsdukar 10p", "7318690170501", "13.95", "1,00 st", "13.95"),
+            item("Panaeng curry mild", "7311520010862", "39.95", "1,00 st", "39.95"),
+            item("Peppar Röd", "2092469700000", "4.95", "2,00 st", "9.90"),
+            item("Pizza Kit", "3392590601536", "33.95", "2,00 st", "67.90"),
+            item("Potatis fast", "2092472800000", "15.95", "1,00 st", "9.54"),
+            item("Purjolök", "2092462900000", "24.95", "1,00 st", "12.48"),
+            item("*Ravioli Tomat/Mozz", "8001665700030", "26.12", "1,00 st", "50.95", discount("Rana generell 5 kr", "-5.00")),
+            item("Rosor", "5708870101029", "59.00", "1,00 st", "59.00"),
+            item("*Smör normalsaltat", "7310865005168", "52.25", "1,00 st", "74.95", discount("55:- Max 1", "-19.95")),
+            item("Snabbmakaroner", "7310130003554", "24.95", "1,00 st", "24.95"),
+            item("Stillahavsspätta", "5700001859786", "35.95", "2,00 st", "71.90"),
+            item("Svartrökt skinka", "2000752300000", "240.00", "1,00 st", "30.24"),
+            item("Sweet chili sauce", "8850058004657", "34.95", "1,00 st", "34.95"),
+            item("Teriyaki Sauce", "7311310035341", "47.95", "1,00 st", "47.95"),
+            item("*Tomat Piccolini", "7318690013563", "19.00", "1,00 st", "35.95", discount("Scanning 20:- Max 1", "-15.95")),
+            item("*Tortelloni Svamp", "8001665128698", "30.87", "1,00 st", "50.95", discount("2 för 65:-", "-36.90")),
+            item("*Vanilj jordgubbsås", "8711327462076", "0.00", "1,00 st", "15.95", discount("GLASS", "-15.95")),
+            item("Vetekaka 24-p", "7311800009531", "34.95", "1,00 st", "34.95"),
+            item("Vispgrädde 40%", "7310867003339", "24.95", "1,00 st", "24.95"),
+            item("Wok Thai Style", "7310500187150", "28.95", "1,00 st", "28.95"),
+            item("Yogh Van/blåb 2,5%", "7310867512831", "20.00", "1,00 st", "20.00"),
+            item("Familjerabatt", null, "-66.81", null, "-66.81")
+        );
+    }
+
+    private LegacyReceiptItem item(
+        String name,
+        String ean,
+        String unitPrice,
+        String quantity,
+        String totalPrice,
+        LegacyReceiptDiscount... discounts
+    ) {
+        return new LegacyReceiptItem(
+            name,
+            ean,
+            unitPrice == null ? null : amount(unitPrice),
+            quantity,
+            totalPrice == null ? null : amount(totalPrice),
+            discounts.length == 0 ? List.of() : List.of(discounts)
+        );
+    }
+
+    private LegacyReceiptDiscount discount(String description, String amount) {
+        return new LegacyReceiptDiscount(description, amount(amount));
+    }
+
+    private BigDecimal amount(String value) {
+        return new BigDecimal(value);
     }
 
     private static final String RECEIPT_TEXT = String.join("\n",
