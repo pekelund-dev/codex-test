@@ -5,21 +5,21 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public final class LegacyReceiptItem {
+public record LegacyReceiptItem(
+    String name,
+    String eanCode,
+    BigDecimal unitPrice,
+    String quantity,
+    BigDecimal totalPrice,
+    List<LegacyReceiptDiscount> discounts
+) {
 
-    private final String name;
-    private final String eanCode;
-    private final BigDecimal unitPrice;
-    private final String quantity;
-    private final BigDecimal totalPrice;
-    private final List<LegacyReceiptDiscount> discounts = new ArrayList<>();
+    public LegacyReceiptItem {
+        discounts = discounts == null ? new ArrayList<>() : new ArrayList<>(discounts);
+    }
 
     public LegacyReceiptItem(String name, String eanCode, BigDecimal unitPrice, String quantity, BigDecimal totalPrice) {
-        this.name = name;
-        this.eanCode = eanCode;
-        this.unitPrice = unitPrice;
-        this.quantity = quantity;
-        this.totalPrice = totalPrice;
+        this(name, eanCode, unitPrice, quantity, totalPrice, new ArrayList<>());
     }
 
     public String getName() {
@@ -43,12 +43,17 @@ public final class LegacyReceiptItem {
     }
 
     public List<LegacyReceiptDiscount> getDiscounts() {
-        return Collections.unmodifiableList(discounts);
+        return Collections.unmodifiableList(this.discounts);
+    }
+
+    @Override
+    public List<LegacyReceiptDiscount> discounts() {
+        return getDiscounts();
     }
 
     public void addDiscount(LegacyReceiptDiscount discount) {
         if (discount != null) {
-            discounts.add(discount);
+            this.discounts.add(discount);
         }
     }
 }

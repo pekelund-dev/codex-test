@@ -40,10 +40,11 @@ class LegacyPdfReceiptExtractorTest {
             2024-09-30 12:34 AID:123456
             Kvittonr: 123456789
             Beskrivning Art. nr. Pris Mängd Summa(SEK)
-            Banan 7318690081055 10.00 1 st 10.00
-            Äpple 7318690081062 5.00 2 st 10.00
+            Banan 7318690081055 10,00 1 st 10,00
+            Äpple 7318690081062 5,50 2 st 11,00
             Moms % Moms Netto Brutto
-            Total 20.00
+            25 4,20 16,80 21,00
+            Total 21,00
             """);
 
         ReceiptExtractionResult result = extractor.extract(pdfBytes, "sample.pdf");
@@ -52,13 +53,20 @@ class LegacyPdfReceiptExtractorTest {
         Map<String, Object> general = getMap(result.structuredData().get("general"));
         assertThat(general.get("format")).isEqualTo("STANDARD");
         assertThat(new BigDecimal(general.get("totalAmount").toString()))
-            .isEqualByComparingTo(new BigDecimal("20.00"));
+            .isEqualByComparingTo(new BigDecimal("21.00"));
         assertThat(general.get("fileName")).isEqualTo("sample.pdf");
 
         List<Map<String, Object>> items = getList(result.structuredData().get("items"));
         assertThat(items).hasSize(2);
         assertThat(items.get(0)).containsEntry("name", "Banan");
+        assertThat(items.get(0)).containsEntry("unitPrice", new BigDecimal("10.00"));
         assertThat(items.get(1)).containsEntry("name", "Äpple");
+        assertThat(items.get(1)).containsEntry("unitPrice", new BigDecimal("5.50"));
+
+        List<Map<String, Object>> vats = getList(result.structuredData().get("vats"));
+        assertThat(vats).hasSize(1);
+        assertThat(vats.get(0)).containsEntry("rate", new BigDecimal("25"));
+        assertThat(vats.get(0)).containsEntry("taxAmount", new BigDecimal("4.20"));
 
         String rawText = (String) result.structuredData().get("rawText");
         assertThat(rawText).contains("Beskrivning Art. nr. Pris Mängd Summa(SEK)");

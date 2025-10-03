@@ -1,33 +1,54 @@
 package dev.pekelund.responsiveauth.function.legacy;
 
 import java.math.BigDecimal;
-import java.text.DecimalFormatSymbols;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 abstract class BaseReceiptParser implements ReceiptFormatParser {
 
-    private static final Pattern DECIMAL_PATTERN = Pattern.compile("[-+]?\\d+[.,]?\\d*");
-    private final DecimalFormatSymbols decimalSymbols = new DecimalFormatSymbols(Locale.US);
+    private static final Pattern DECIMAL_PATTERN = Pattern.compile("[-+]?\\d+(?:[\\s.,]\\d+)*");
 
     protected Optional<BigDecimal> parseDecimal(String value) {
         if (value == null) {
             return Optional.empty();
         }
-        String trimmed = value.trim();
+        String trimmed = value.replace('\u00A0', ' ').trim();
         if (trimmed.isEmpty()) {
             return Optional.empty();
         }
-        char groupingSeparator = decimalSymbols.getGroupingSeparator();
-        char decimalSeparator = decimalSymbols.getDecimalSeparator();
-        String normalized = trimmed;
-        if (groupingSeparator != '\u0000' && groupingSeparator != decimalSeparator) {
-            normalized = normalized.replace(String.valueOf(groupingSeparator), "");
+        boolean negative = trimmed.startsWith("-");
+        boolean positive = !negative && trimmed.startsWith("+");
+        String digitsOnly = trimmed.replaceAll("[^0-9,.-]", "");
+        if (negative || positive) {
+            digitsOnly = digitsOnly.substring(1);
         }
-        if (decimalSeparator != '.') {
-            normalized = normalized.replace(decimalSeparator, '.');
+        String normalized = digitsOnly.replace(" ", "");
+        if (normalized.isEmpty()) {
+            return Optional.empty();
+        }
+        int lastComma = normalized.lastIndexOf(',');
+        if (lastComma >= 0) {
+            String integer = normalized.substring(0, lastComma).replace(",", "").replace(".", "");
+            String decimal = normalized.substring(lastComma + 1).replace(",", "").replace(".", "");
+            normalized = integer + "." + decimal;
+        } else {
+            int lastDot = normalized.lastIndexOf('.');
+            if (lastDot >= 0) {
+                String integer = normalized.substring(0, lastDot).replace(".", "");
+                String decimal = normalized.substring(lastDot + 1).replace(".", "");
+                normalized = integer + "." + decimal;
+            } else {
+                normalized = normalized.replace(",", "").replace(".", "");
+            }
+        }
+        if (normalized.isEmpty()) {
+            return Optional.empty();
+        }
+        if (negative) {
+            normalized = "-" + normalized;
+        } else if (positive) {
+            normalized = "+" + normalized;
         }
         try {
             return Optional.of(new BigDecimal(normalized));
