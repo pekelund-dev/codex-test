@@ -19,17 +19,17 @@ if [ -z "$CLOUD_FUNCTION_NAME" ]; then
     exit 1
 fi
 
-# Check if we're in the correct project
+# Check if we're in the correct project and make sure every component points to the same Firestore database
+PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project)}"
 CURRENT_PROJECT=$(gcloud config get-value project)
-EXPECTED_PROJECT="codex-test-473008"
-FUNCTION_SA=${FUNCTION_SA:-"receipt-parser@${EXPECTED_PROJECT}.iam.gserviceaccount.com"}
-: "${RECEIPT_FIRESTORE_PROJECT_ID:=$EXPECTED_PROJECT}"
-echo "👤 Using service account: $FUNCTION_SA"
-
-if [ "$CURRENT_PROJECT" != "$EXPECTED_PROJECT" ]; then
-    echo "⚠️  Switching to project: $EXPECTED_PROJECT"
-    gcloud config set project $EXPECTED_PROJECT
+if [ "$CURRENT_PROJECT" != "$PROJECT_ID" ]; then
+    echo "⚠️  Switching to project: $PROJECT_ID"
+    gcloud config set project "$PROJECT_ID"
 fi
+
+FUNCTION_SA=${FUNCTION_SA:-"receipt-parser@${PROJECT_ID}.iam.gserviceaccount.com"}
+: "${RECEIPT_FIRESTORE_PROJECT_ID:=$PROJECT_ID}"
+echo "👤 Using service account: $FUNCTION_SA"
 
 # Check bucket region
 echo "📍 Checking bucket region..."
@@ -54,7 +54,7 @@ else
     echo "📍 Using Vertex AI location $VERTEX_AI_LOCATION"
 fi
 
-FUNCTION_ENV_VARS="VERTEX_AI_PROJECT_ID=$EXPECTED_PROJECT,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=$RECEIPT_FIRESTORE_PROJECT_ID,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction"
+FUNCTION_ENV_VARS="VERTEX_AI_PROJECT_ID=$PROJECT_ID,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=$RECEIPT_FIRESTORE_PROJECT_ID,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction"
 
 # Enable required APIs
 echo "🔧 Enabling required Google Cloud APIs..."
@@ -93,13 +93,13 @@ gcloud storage buckets add-iam-policy-binding "gs://$GCS_BUCKET" \
     --quiet
 
 # Firestore permissions
-gcloud projects add-iam-policy-binding $EXPECTED_PROJECT \
+gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$FUNCTION_SA" \
     --role="roles/datastore.user" \
     --quiet
 
 # Vertex AI permissions
-gcloud projects add-iam-policy-binding $EXPECTED_PROJECT \
+gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$FUNCTION_SA" \
     --role="roles/aiplatform.user" \
     --quiet
