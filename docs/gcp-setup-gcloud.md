@@ -63,11 +63,13 @@ gcloud services enable \
 5. **Export the application environment variables**
 
     ```bash
-    export FIRESTORE_ENABLED=true
-    export FIRESTORE_CREDENTIALS=file:/home/$USER/secrets/firestore-service-account.json
-    export FIRESTORE_PROJECT_ID=$(gcloud config get-value project)
-    export FIRESTORE_USERS_COLLECTION=users             # Optional override
-    export FIRESTORE_DEFAULT_ROLE=ROLE_USER             # Optional override
+export FIRESTORE_ENABLED=true
+export FIRESTORE_CREDENTIALS=file:/home/$USER/secrets/firestore-service-account.json
+export FIRESTORE_PROJECT_ID=$(gcloud config get-value project)
+export FIRESTORE_USERS_COLLECTION=users             # Optional override
+export FIRESTORE_DEFAULT_ROLE=ROLE_USER             # Optional override
+# Cloud Run and the Cloud Function reuse this value so every component talks to the same database
+export RECEIPT_FIRESTORE_PROJECT_ID=${FIRESTORE_PROJECT_ID}
     ```
 
 ## Configure Cloud Storage via gcloud
@@ -226,7 +228,7 @@ gcloud services enable cloudfunctions.googleapis.com \
       --set-build-env-vars=MAVEN_BUILD_ARGUMENTS="-pl function -am -DskipTests package" \
       --service-account="${FUNCTION_SA}" \
       --trigger-bucket=$(basename "${BUCKET}") \
-      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=$(gcloud config get-value project),RECEIPT_FIRESTORE_COLLECTION=receiptExtractions
+      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=${RECEIPT_FIRESTORE_PROJECT_ID},RECEIPT_FIRESTORE_COLLECTION=receiptExtractions
     ```
 
 4. **Verify the lifecycle**
