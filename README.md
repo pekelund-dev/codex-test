@@ -63,6 +63,7 @@ Firestore stores user profiles and receipt parsing output. Choose the setup styl
 
 - [Firestore configuration with the gcloud CLI](docs/gcp-setup-gcloud.md#configure-firestore-via-gcloud)
 - [Firestore configuration with the Cloud Console](docs/gcp-setup-cloud-console.md#configure-firestore-in-the-console)
+- [Local development without Google Cloud](docs/local-development.md)
 
 Both guides walk through project creation, database provisioning, service accounts, and environment variables required by the Spring Boot application.
 

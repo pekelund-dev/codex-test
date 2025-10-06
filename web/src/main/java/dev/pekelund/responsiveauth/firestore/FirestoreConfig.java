@@ -1,6 +1,7 @@
 package dev.pekelund.responsiveauth.firestore;
 
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.NoCredentials;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FirestoreOptions;
 import java.io.IOException;
@@ -31,6 +32,18 @@ public class FirestoreConfig {
     @ConditionalOnProperty(value = "firestore.enabled", havingValue = "true")
     @ConditionalOnMissingBean
     public Firestore firestore() throws IOException {
+        FirestoreOptions.Builder builder = FirestoreOptions.newBuilder();
+
+        if (StringUtils.hasText(properties.getEmulatorHost())) {
+            Assert.isTrue(StringUtils.hasText(properties.getProjectId()),
+                "Firestore project id must be provided when using the emulator");
+
+            builder.setProjectId(properties.getProjectId())
+                .setHost(properties.getEmulatorHost())
+                .setCredentials(NoCredentials.getInstance());
+            return builder.build().getService();
+        }
+
         Assert.isTrue(StringUtils.hasText(properties.getCredentials()),
             "Firestore credentials path must be provided when firestore.enabled is true");
 
@@ -39,8 +52,7 @@ public class FirestoreConfig {
             () -> "Firestore credentials resource not found at " + properties.getCredentials());
 
         try (InputStream inputStream = resource.getInputStream()) {
-            FirestoreOptions.Builder builder = FirestoreOptions.newBuilder()
-                .setCredentials(GoogleCredentials.fromStream(inputStream));
+            builder.setCredentials(GoogleCredentials.fromStream(inputStream));
             if (StringUtils.hasText(properties.getProjectId())) {
                 builder.setProjectId(properties.getProjectId());
             }

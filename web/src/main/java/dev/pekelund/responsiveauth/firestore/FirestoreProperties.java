@@ -23,6 +23,11 @@ public class FirestoreProperties {
     private String projectId;
 
     /**
+     * Optional host:port of the Firestore emulator.
+     */
+    private String emulatorHost;
+
+    /**
      * Firestore collection used to persist user documents.
      */
     private String usersCollection = "users";
@@ -64,6 +69,14 @@ public class FirestoreProperties {
 
     public void setProjectId(String projectId) {
         this.projectId = projectId;
+    }
+
+    public String getEmulatorHost() {
+        return emulatorHost;
+    }
+
+    public void setEmulatorHost(String emulatorHost) {
+        this.emulatorHost = emulatorHost;
     }
 
     public String getUsersCollection() {

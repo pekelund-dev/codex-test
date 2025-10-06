@@ -18,8 +18,15 @@ clear && git pull && ./mvnw -pl function -am spring-boot:run \
     -Dspring-boot.run.profiles=local-receipt-test
 
 clear && curl -F "file=@test-receipt.pdf" http://localhost:8080/local-receipts/parse | jq
+
+# Local-only workflow (run the emulator in its own terminal)
+./scripts/start_firestore_emulator.sh
+
+clear && source ./scripts/source_local_env.sh && \
+    ./mvnw -Pinclude-web -pl web -am spring-boot:run
 ```
 
-These shortcuts assume that `setup-env.sh` has been sourced so that `PROJECT_ID`,
-`GCS_BUCKET`, and other required environment variables are available before the
-commands are executed.
+These shortcuts assume that the appropriate environment helper has been sourced
+(`setup-env.sh` for GCP deployments or `scripts/source_local_env.sh` for the
+emulator workflow) so that `PROJECT_ID`, `GCS_BUCKET`, and other required
+environment variables are available before the commands are executed.
