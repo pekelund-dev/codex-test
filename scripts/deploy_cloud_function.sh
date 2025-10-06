@@ -6,10 +6,21 @@
 
 set -e  # Exit on any error
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$REPO_ROOT"
+
 echo "🚀 Starting Cloud Function deployment..."
 
 # Source environment variables
-source setup-env.sh
+if [ -f "$REPO_ROOT/setup-env.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$REPO_ROOT/setup-env.sh"
+else
+    echo "❌ setup-env.sh not found in $REPO_ROOT. Please create it before running this script."
+    exit 1
+fi
 
 # Ensure CLOUD_FUNCTION_NAME is always set to a sensible default
 : "${CLOUD_FUNCTION_NAME:=receiptProcessingFunction}"

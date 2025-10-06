@@ -1,7 +1,7 @@
 # Useful Bash Commands
 
 ```bash
-clear && git pull && ./deploy-cloud-function.sh && gsutil cp ./test-receipt.pdf "gs://$GCS_BUCKET/receipts/large-test-receipt.pdf"
+clear && git pull && ./scripts/deploy_cloud_function.sh && gsutil cp ./test-receipt.pdf "gs://$GCS_BUCKET/receipts/large-test-receipt.pdf"
 
 clear && git pull && ./mvnw -pl function -am spring-boot:run \
     -Dspring-boot.run.profiles=local-receipt-test

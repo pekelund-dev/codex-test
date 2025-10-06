@@ -102,6 +102,6 @@ flowchart LR
 
 **Operational checklist**
 
-- The `scripts/deploy_cloud_run.sh` and `deploy-cloud-function.sh` scripts reuse the same environment configuration to keep the Firestore project, service accounts, and regions consistent.
+- The `scripts/deploy_cloud_run.sh` and `scripts/deploy_cloud_function.sh` scripts reuse the same environment configuration to keep the Firestore project, service accounts, and regions consistent.
 - Cloud Build can be replaced with local Docker builds if preferred—ensure the final image is pushed to a registry accessible by Cloud Run.
 - After deployment, run the domain mapping workflow so `DOMAIN` resolves to the new Cloud Run service, and verify TLS certificates are provisioned before flipping production traffic.

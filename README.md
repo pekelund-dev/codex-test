@@ -85,7 +85,7 @@ Use the automated deployment script for a streamlined setup:
 
 ```bash
 # Deploy the Cloud Function with all required configurations
-./deploy-cloud-function.sh
+./scripts/deploy_cloud_function.sh
 ```
 
 This script automatically:
