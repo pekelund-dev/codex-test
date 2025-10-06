@@ -32,6 +32,18 @@ Replace the placeholders below with your values when following the steps:
 
 ---
 
+## Automation Scripts and Idempotency Guarantees
+
+Prefer the repository scripts when you want a repeatable, idempotent rollout:
+
+- `scripts/deploy_cloud_run.sh` provisions APIs, Artifact Registry, Firestore, the runtime service account, and the Cloud Run service. It skips resource creation when assets already exist so re-running the script keeps the current state intact.
+- `scripts/deploy_cloud_function.sh` packages the function with Maven, enables every dependency, and aligns IAM permissions with the shared Firestore project. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely.
+- `scripts/teardown_gcp_resources.sh` removes the Cloud Run service, Cloud Function, IAM bindings, and optional supporting infrastructure. It tolerates partially deleted projects and only removes what is present. Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` when you also want to purge the associated identities or container registry.
+
+The rest of this document mirrors what the scripts perform under the hood if you prefer to click through the console or run individual `gcloud` commands.
+
+---
+
 ## 1. Enable Required APIs
 
 ### Console

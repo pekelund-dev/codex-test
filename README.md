@@ -95,6 +95,18 @@ This script automatically:
 - Builds and deploys the function with optimal settings
 - Provides comprehensive error handling and troubleshooting
 
+#### Teardown
+
+When you're finished testing, run the teardown helper to remove the Cloud Run service, Cloud Function, and related IAM bindings.
+The script is safe to execute multiple times; it only deletes resources that still exist.
+
+```bash
+./scripts/teardown_gcp_resources.sh
+```
+
+Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` if you also want to delete the identities or container
+registry created during deployment.
+
 #### Manual Deployment
 
 Select the deployment style you prefer:

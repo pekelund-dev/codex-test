@@ -36,23 +36,38 @@ set -x
 gcloud config set project "$PROJECT_ID"
 
 # Enable core APIs
- gcloud services enable \
+gcloud services enable \
   run.googleapis.com \
   cloudbuild.googleapis.com \
   artifactregistry.googleapis.com \
   firestore.googleapis.com \
-  secretmanager.googleapis.com
+  secretmanager.googleapis.com \
+  --quiet
 
-# Create Artifact Registry repository (ignore error if it exists)
-gcloud artifacts repositories create "$ARTIFACT_REPO" \
-  --repository-format=docker \
-  --location="$REGION" \
-  --description="Container images for Cloud Run" || true
+# Create Artifact Registry repository if it does not already exist
+if ! gcloud artifacts repositories describe "$ARTIFACT_REPO" \
+  --location="$REGION" >/dev/null 2>&1; then
+  gcloud artifacts repositories create "$ARTIFACT_REPO" \
+    --repository-format=docker \
+    --location="$REGION" \
+    --description="Container images for Cloud Run"
+else
+  echo "Artifact Registry repository ${ARTIFACT_REPO} already exists; skipping creation."
+fi
 
-# Create Firestore database if missing (ignore error when already provisioned)
-gcloud firestore databases create \
-  --region="$REGION" \
-  --type=firestore-native || true
+# Create Firestore database in the shared project if missing
+if [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
+  if ! gcloud firestore databases describe --database="(default)" \
+    --project="${SHARED_FIRESTORE_PROJECT_ID}" \
+    --format="value(name)" >/dev/null 2>&1; then
+    gcloud firestore databases create \
+      --location="$REGION" \
+      --type=firestore-native \
+      --project="${SHARED_FIRESTORE_PROJECT_ID}"
+  else
+    echo "Firestore database already exists in project ${SHARED_FIRESTORE_PROJECT_ID}; skipping creation."
+  fi
+fi
 
 # Create service account
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -100,13 +115,22 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances 10
 
 # Configure custom domain mapping
-gcloud beta run domain-mappings create \
-  --service "$SERVICE_NAME" \
-  --domain "$DOMAIN" \
-  --region "$REGION" || true
+if [[ -n "$DOMAIN" ]]; then
+  if gcloud beta run domain-mappings describe "$DOMAIN" \
+    --region "$REGION" >/dev/null 2>&1; then
+    echo "Domain mapping for ${DOMAIN} already exists; leaving it unchanged."
+  else
+    gcloud beta run domain-mappings create \
+      --service "$SERVICE_NAME" \
+      --domain "$DOMAIN" \
+      --region "$REGION"
+  fi
 
-gcloud beta run domain-mappings describe "$DOMAIN" \
-  --region "$REGION"
+  gcloud beta run domain-mappings describe "$DOMAIN" \
+    --region "$REGION"
+else
+  echo "DOMAIN not set; skipping custom domain mapping."
+fi
 
 # Display service URL and tail recent logs
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
