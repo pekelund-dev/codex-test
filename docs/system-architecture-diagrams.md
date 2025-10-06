@@ -8,33 +8,33 @@ The diagrams below illustrate how the responsive auth web application, receipt-p
 
 ```mermaid
 flowchart LR
-    subgraph Client[Client]
-        Browser[Web Browser]
+    subgraph Client["Client"]
+        Browser["Web Browser"]
     end
 
-    subgraph DNS[Porkbun DNS Zone]
-        Domain[DOMAIN (CNAME)]
+    subgraph DNS["Porkbun DNS Zone"]
+        Domain["DOMAIN (CNAME)"]
     end
 
-    subgraph CloudRun[Google Cloud Project \n(PROJECT_ID)]
-        WebApp[Cloud Run Service \nSERVICE_NAME]
-        Secrets[Secret Manager (optional secrets)]
+    subgraph CloudRun["Google Cloud Project\n(PROJECT_ID)"]
+        WebApp["Cloud Run Service\nSERVICE_NAME"]
+        Secrets["Secret Manager (optional secrets)"]
     end
 
-    subgraph SharedFirestore[Shared Firestore Project \n(SHARED_FIRESTORE_PROJECT_ID)]
-        Firestore[(Firestore \nusers & receiptExtractions collections)]
+    subgraph SharedFirestore["Shared Firestore Project\n(SHARED_FIRESTORE_PROJECT_ID)"]
+        Firestore["Firestore\nusers & receiptExtractions collections"]
     end
 
-    subgraph Storage[Cloud Storage]
-        Bucket[(RECEIPTS_BUCKET)]
+    subgraph Storage["Cloud Storage"]
+        Bucket["RECEIPTS_BUCKET"]
     end
 
-    subgraph Functions[Receipt Processing]
-        GCF[Cloud Function \nreceipt-parser]
+    subgraph Functions["Receipt Processing"]
+        GCF["Cloud Function\nreceipt-parser"]
     end
 
-    subgraph VertexAI[Vertex AI \n(PROJECT_ID/REGION)]
-        Gemini[Gemini API]
+    subgraph VertexAI["Vertex AI\n(PROJECT_ID/REGION)"]
+        Gemini["Gemini API"]
     end
 
     Browser -->|HTTPS request| Domain
