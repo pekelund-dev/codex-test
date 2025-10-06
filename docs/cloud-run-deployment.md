@@ -97,6 +97,8 @@ The same Firestore database stores both the **user registration** data managed b
 3. Reuse the runtime service accounts created in this guide (or grant them `roles/datastore.user`) so the Cloud Run service, Cloud Function, and any local admin scripts can all read/write the shared documents.
 4. When setting environment variables, ensure `FIRESTORE_PROJECT_ID` (Cloud Run) and `RECEIPT_FIRESTORE_PROJECT_ID` (Cloud Function) point to this project. If you override collection names, update both components accordingly.
 
+> 💡 **No service-account keys needed on Cloud Run:** the deployed service automatically authenticates with Firestore through its runtime service account. Leave `FIRESTORE_CREDENTIALS` unset when running on Cloud Run or other Google Cloud hosts that support [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc). Only create JSON keys for local development or third-party platforms that cannot use Workload Identity.
+
 ---
 
 ## 3. Create a Runtime Service Account and Grant Permissions
@@ -184,15 +186,25 @@ gcloud artifacts repositories create web \
 4. Set the service name (`SERVICE_NAME`) and region (`REGION`).
 5. Under **Authentication**, choose whether to allow unauthenticated invocations.
 6. Expand **Security** → **Service account** and select the runtime service account (`SA_EMAIL`).
-7. Set environment variables (Firestore project ID, secrets references, etc.).
+7. Set environment variables (at a minimum `FIRESTORE_ENABLED=true`, `FIRESTORE_PROJECT_ID`, and your Google OAuth client credentials).
 8. Configure CPU/Memory limits and concurrency as required.
 9. Click **Create** to deploy.
 
 ### CLI
 
+Export the Google OAuth client credentials before running the deployment so the script can inject them automatically:
+
+```bash
+export GOOGLE_CLIENT_ID="your-oauth-client-id"
+export GOOGLE_CLIENT_SECRET="your-oauth-client-secret"
+```
+
 ```bash
 IMAGE_URI="${IMAGE_TAG}"
-ENV_VARS="SPRING_PROFILES_ACTIVE=prod,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},FIRESTORE_PROJECT_ID=${PROJECT_ID}"
+ENV_VARS="SPRING_PROFILES_ACTIVE=prod,FIRESTORE_ENABLED=true,FIRESTORE_PROJECT_ID=${PROJECT_ID}"
+if [[ -n "${GOOGLE_CLIENT_ID:-}" ]]; then
+  ENV_VARS="${ENV_VARS},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
+fi
 
  gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_URI" \
@@ -205,7 +217,7 @@ ENV_VARS="SPRING_PROFILES_ACTIVE=prod,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},FIRESTO
   --max-instances 10
 ```
 
-Adjust min/max instances, authentication, and environment variables as necessary. If access should be restricted, remove `--allow-unauthenticated` and grant IAM access explicitly.
+Adjust min/max instances, authentication, and environment variables as necessary. If access should be restricted, remove `--allow-unauthenticated` and grant IAM access explicitly. Make sure the OAuth client ID/secret are present so Google sign-in succeeds, and keep `FIRESTORE_ENABLED=true` so self-registration remains available.
 
 ---
 

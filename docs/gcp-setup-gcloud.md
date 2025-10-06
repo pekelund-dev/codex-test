@@ -52,7 +52,9 @@ gcloud services enable \
     # Optionally restrict to a custom role with only the needed Firestore permissions.
     ```
 
-4. **Generate a service-account key**
+    > Cloud Run automatically uses this service account without needing a JSON key. Skip the next step unless you run the app outside Google Cloud.
+
+4. **(Optional) Generate a service-account key for local/off-cloud runs**
 
     ```bash
     mkdir -p ~/secrets
@@ -64,7 +66,8 @@ gcloud services enable \
 
     ```bash
 export FIRESTORE_ENABLED=true
-export FIRESTORE_CREDENTIALS=file:/home/$USER/secrets/firestore-service-account.json
+# Leave FIRESTORE_CREDENTIALS unset on Cloud Run; ADC handles authentication automatically.
+export FIRESTORE_CREDENTIALS=${FIRESTORE_CREDENTIALS:-file:/home/$USER/secrets/firestore-service-account.json}
 export FIRESTORE_PROJECT_ID=$(gcloud config get-value project)
 export FIRESTORE_USERS_COLLECTION=users             # Optional override
 export FIRESTORE_DEFAULT_ROLE=ROLE_USER             # Optional override

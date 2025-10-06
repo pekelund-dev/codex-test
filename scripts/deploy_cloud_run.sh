@@ -13,16 +13,32 @@ ARTIFACT_REPO="${ARTIFACT_REPO:-web}"
 # Default the shared project to the deployment project, but allow overrides when the
 # Firestore database lives in a different project.
 SHARED_FIRESTORE_PROJECT_ID="${SHARED_FIRESTORE_PROJECT_ID:-${PROJECT_ID}}"
-# Append the shared Firestore project ID to the Cloud Run environment variables so the
-# application resolves users from the same database that stores receipt extractions.
-ENV_VARS="${ENV_VARS:-SPRING_PROFILES_ACTIVE=prod}"
-if [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
-  if [[ -z "${ENV_VARS}" ]]; then
-    ENV_VARS="FIRESTORE_PROJECT_ID=${SHARED_FIRESTORE_PROJECT_ID}"
-  elif [[ "${ENV_VARS}" != *"FIRESTORE_PROJECT_ID="* ]]; then
-    ENV_VARS="${ENV_VARS},FIRESTORE_PROJECT_ID=${SHARED_FIRESTORE_PROJECT_ID}"
+# Append shared configuration to the Cloud Run environment variables so every component
+# talks to the same Firestore project and OAuth client.
+ENV_VARS="${ENV_VARS:-}"
+
+append_env_var() {
+  local key="$1"
+  local value="$2"
+
+  if [[ -z "$value" ]]; then
+    return
   fi
+
+  if [[ -z "$ENV_VARS" ]]; then
+    ENV_VARS="${key}=${value}"
+  elif [[ ",$ENV_VARS," != *",${key}="* ]]; then
+    ENV_VARS="${ENV_VARS},${key}=${value}"
+  fi
+}
+
+append_env_var "SPRING_PROFILES_ACTIVE" "${SPRING_PROFILES_ACTIVE:-prod}"
+append_env_var "FIRESTORE_ENABLED" "${FIRESTORE_ENABLED:-true}"
+if [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
+  append_env_var "FIRESTORE_PROJECT_ID" "${SHARED_FIRESTORE_PROJECT_ID}"
 fi
+append_env_var "GOOGLE_CLIENT_ID" "${GOOGLE_CLIENT_ID:-}"
+append_env_var "GOOGLE_CLIENT_SECRET" "${GOOGLE_CLIENT_SECRET:-}"
 ALLOW_UNAUTH="${ALLOW_UNAUTH:-true}"
 DOMAIN="${DOMAIN:-pklnd.pekelund.dev}"
 

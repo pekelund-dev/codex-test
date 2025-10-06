@@ -20,17 +20,21 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    - In the Firebase console choose **Build → Firestore Database → Create database**.
    - Select the production mode ruleset, pick a region close to your users, and confirm.
 
-3. **Create a service account key**
+3. **Create a service account**
    - Navigate to **Project settings → Service accounts** (in Firebase) or **IAM & Admin → Service Accounts** (in Google Cloud).
-   - Create a new service account or reuse an existing one with Firestore access.
-   - Click **Add key → Create new key → JSON** and download the credentials. Store them outside your source tree (for example `~/secrets/firestore-service-account.json`).
+   - Create a new service account or reuse an existing one with Firestore access and grant it **Datastore User**.
+   - When deploying to Cloud Run, you can stop here—the runtime picks up credentials automatically via the selected service account.
 
-4. **Configure the Spring Boot app**
+4. **(Optional) Generate a service account key for local/off-cloud runs**
+   - If you need to run the app outside Google Cloud, click **Add key → Create new key → JSON** and download the credentials. Store them outside your source tree (for example `~/secrets/firestore-service-account.json`).
+
+5. **Configure the Spring Boot app**
    - Export the variables before running the app locally:
 
      ```bash
      export FIRESTORE_ENABLED=true
-     export FIRESTORE_CREDENTIALS=file:/absolute/path/to/firestore-service-account.json
+     # Leave FIRESTORE_CREDENTIALS unset on Cloud Run; ADC handles authentication automatically.
+     export FIRESTORE_CREDENTIALS=${FIRESTORE_CREDENTIALS:-file:/absolute/path/to/firestore-service-account.json}
      export FIRESTORE_PROJECT_ID=your-project-id              # Optional when derived from the key
      export FIRESTORE_USERS_COLLECTION=users                  # Optional override
      export FIRESTORE_DEFAULT_ROLE=ROLE_USER                  # Optional override

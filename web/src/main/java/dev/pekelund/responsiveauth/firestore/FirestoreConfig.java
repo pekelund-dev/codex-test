@@ -34,6 +34,10 @@ public class FirestoreConfig {
     public Firestore firestore() throws IOException {
         FirestoreOptions.Builder builder = FirestoreOptions.newBuilder();
 
+        if (StringUtils.hasText(properties.getProjectId())) {
+            builder.setProjectId(properties.getProjectId());
+        }
+
         if (StringUtils.hasText(properties.getEmulatorHost())) {
             Assert.isTrue(StringUtils.hasText(properties.getProjectId()),
                 "Firestore project id must be provided when using the emulator");
@@ -44,19 +48,18 @@ public class FirestoreConfig {
             return builder.build().getService();
         }
 
-        Assert.isTrue(StringUtils.hasText(properties.getCredentials()),
-            "Firestore credentials path must be provided when firestore.enabled is true");
+        if (StringUtils.hasText(properties.getCredentials())) {
+            Resource resource = resourceLoader.getResource(properties.getCredentials());
+            Assert.isTrue(resource.exists(),
+                () -> "Firestore credentials resource not found at " + properties.getCredentials());
 
-        Resource resource = resourceLoader.getResource(properties.getCredentials());
-        Assert.isTrue(resource.exists(),
-            () -> "Firestore credentials resource not found at " + properties.getCredentials());
-
-        try (InputStream inputStream = resource.getInputStream()) {
-            builder.setCredentials(GoogleCredentials.fromStream(inputStream));
-            if (StringUtils.hasText(properties.getProjectId())) {
-                builder.setProjectId(properties.getProjectId());
+            try (InputStream inputStream = resource.getInputStream()) {
+                builder.setCredentials(GoogleCredentials.fromStream(inputStream));
+                return builder.build().getService();
             }
-            return builder.build().getService();
         }
+
+        builder.setCredentials(GoogleCredentials.getApplicationDefault());
+        return builder.build().getService();
     }
 }
