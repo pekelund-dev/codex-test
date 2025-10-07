@@ -2,6 +2,9 @@ spring:
   application:
     name: responsive-auth-web
 
+server:
+  forward-headers-strategy: framework
+
 firestore:
   enabled: ${FIRESTORE_ENABLED:false}
   credentials: ${FIRESTORE_CREDENTIALS:}
