@@ -24,6 +24,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    - Navigate to **Project settings → Service accounts** (in Firebase) or **IAM & Admin → Service Accounts** (in Google Cloud).
    - Create a new service account or reuse an existing one with Firestore access and grant it **Datastore User**.
    - When deploying to Cloud Run, you can stop here—the runtime picks up credentials automatically via the selected service account.
+   - The Cloud Run deployment flow (script or console) attaches this service account to the service so Google can exchange it for short-lived tokens automatically. No JSON key is required on the server.
 
 4. **(Optional) Generate a service account key for local/off-cloud runs**
    - If you need to run the app outside Google Cloud, click **Add key → Create new key → JSON** and download the credentials. Store them outside your source tree (for example `~/secrets/firestore-service-account.json`).

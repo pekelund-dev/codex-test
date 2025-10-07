@@ -79,6 +79,12 @@ source ./scripts/load_local_secrets.sh
 
 The helper infers `FIRESTORE_CREDENTIALS=file:/...` and extracts `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` so subsequent Maven or deployment commands pick up the secure values automatically.
 
+### Service account handling by environment
+
+- **Cloud Run / Google-managed runtimes** – The deployment script (and the console walkthrough) attaches the `cloud-run-runtime` service account directly to the Cloud Run service. Google automatically exchanges that identity for short-lived tokens through [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc), so the container never needs a JSON key file. Leave `FIRESTORE_CREDENTIALS` unset in these environments; the Firestore client uses the attached service account transparently.
+- **Local development / other hosts** – Provide your own credentials via `FIRESTORE_CREDENTIALS_FILE` and source `./scripts/load_local_secrets.sh`, or point the application at the Firestore emulator with `scripts/source_local_env.sh`. These helpers export `FIRESTORE_CREDENTIALS=file:/…` only when you intentionally supply a downloaded key.
+- **Cloud Function** – The deployment script grants the same Firestore permissions to the function’s runtime identity. Like Cloud Run, the managed function never needs a downloaded key unless you run it on your own infrastructure.
+
 ### Google Cloud Storage configuration
 
 The receipts workspace reads from a private Cloud Storage bucket. Follow one of the companion guides to provision the bucket and credentials:

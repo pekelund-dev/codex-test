@@ -141,6 +141,14 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 
 > Cloud Run adds `roles/run.serviceAgent` automatically when the service is deployed. Include additional roles your app needs (Pub/Sub, Storage, etc.).
 
+### How Cloud Run uses the service account
+
+Cloud Run automatically injects the attached service account as [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc). The platform exchanges that identity for short-lived OAuth tokens whenever the web app talks to Firestore, Secret Manager, or other Google APIs. Because of this managed flow:
+
+- **Do not** provide a JSON key file to Cloud Run. Leaving `FIRESTORE_CREDENTIALS` unset is the correct configuration—the Firestore SDK picks up the runtime service account automatically.
+- The deployment script (`scripts/deploy_cloud_run.sh`) selects the `cloud-run-runtime` account by default, but you can swap in any other service account that has `roles/datastore.user`.
+- Only create key files for local development or if you plan to run the container outside Google Cloud. In those scenarios, point `FIRESTORE_CREDENTIALS_FILE` at the downloaded JSON and source `./scripts/load_local_secrets.sh`.
+
 ---
 
 ## 4. Build and Push the Container Image

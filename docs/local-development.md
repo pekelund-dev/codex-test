@@ -5,6 +5,8 @@ experimentation free. This guide explains how to launch the Firestore emulator, 
 matching environment variables, and run the Spring Boot web app plus the receipt parsing
 function on your workstation.
 
+> ℹ️ The JSON key files you use locally are **not** required when the container runs on Cloud Run. Google injects the attached service account automatically in managed environments, so keep the downloaded keys on your workstation only.
+
 ## Prerequisites
 
 - **Java 21** and **Maven 3.9+** for building the modules.

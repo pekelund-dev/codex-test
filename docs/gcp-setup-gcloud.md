@@ -53,6 +53,7 @@ gcloud services enable \
     ```
 
     > Cloud Run automatically uses this service account without needing a JSON key. Skip the next step unless you run the app outside Google Cloud.
+    > The deployment command (or `scripts/deploy_cloud_run.sh`) attaches this account to the Cloud Run service so Google can mint short-lived tokens transparently via Application Default Credentials.
 
 4. **(Optional) Generate a service-account key for local/off-cloud runs**
 
