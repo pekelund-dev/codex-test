@@ -248,7 +248,8 @@ gcloud run deploy "$SERVICE_NAME" \
 
 # Configure custom domain mapping
 if [[ -n "$DOMAIN" ]]; then
-  if gcloud beta run domain-mappings describe "$DOMAIN" \
+  if gcloud beta run domain-mappings describe \
+    --domain "$DOMAIN" \
     --region "$REGION" >/dev/null 2>&1; then
     echo "Domain mapping for ${DOMAIN} already exists; leaving it unchanged."
   else
@@ -267,7 +268,8 @@ if [[ -n "$DOMAIN" ]]; then
     fi
   fi
 
-  gcloud beta run domain-mappings describe "$DOMAIN" \
+  gcloud beta run domain-mappings describe \
+    --domain "$DOMAIN" \
     --region "$REGION"
 else
   echo "DOMAIN not set; skipping custom domain mapping."
