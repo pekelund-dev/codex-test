@@ -74,7 +74,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    ```bash
    export GCS_ENABLED=true
    export GCS_BUCKET=responsive-auth-receipts           # Replace with your bucket name
-   export GCS_CREDENTIALS=file:/home/user/secrets/gcs-receipts.json
+   export GCS_CREDENTIALS=file:/home/user/secrets/gcs-receipts.json  # Optional; omit on Cloud Run
    export GCS_PROJECT_ID=your-project-id                # Optional if derived from credentials
    ```
 

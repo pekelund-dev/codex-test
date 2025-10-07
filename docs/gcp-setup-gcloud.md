@@ -113,7 +113,7 @@ export RECEIPT_FIRESTORE_PROJECT_ID=${FIRESTORE_PROJECT_ID}
     export GCS_ENABLED=true
     export GCS_BUCKET=$(basename "${BUCKET}")
     export GCS_PROJECT_ID=$(gcloud config get-value project)
-    export GCS_CREDENTIALS=file:/home/$USER/secrets/gcs-receipts.json
+    export GCS_CREDENTIALS=file:/home/$USER/secrets/gcs-receipts.json  # Optional; omit on Cloud Run
     ```
 
 ## Deploy the receipt-processing function

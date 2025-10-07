@@ -52,8 +52,9 @@ The `setup-env.sh` script automatically configures:
 3. Configure Firestore if you want to enable user self-registration (see [Firestore configuration](#firestore-configuration)).
 4. (Optional) Configure Google Cloud Storage to enable the receipts upload page (see
    [Google Cloud Storage configuration](#google-cloud-storage-configuration)). The Cloud Run deployment
-   automation expects `GCS_BUCKET` (and optionally `GCS_PROJECT_ID`/`GCS_CREDENTIALS`) to be exported
-   before you run it so uploads are routed to the right bucket.
+   automation expects `GCS_BUCKET` (and optionally `GCS_PROJECT_ID`) to be exported before you run it so
+   uploads are routed to the right bucket. Leave `GCS_CREDENTIALS` unset when deploying to Google Cloud
+   managed runtimes—the attached service account provides Application Default Credentials automatically.
 
 5. Build and run the web application module (remember to enable the `include-web` profile):
 
@@ -99,6 +100,10 @@ The receipts workspace reads from a private Cloud Storage bucket. Follow one of 
 - [Storage configuration with the Cloud Console](docs/gcp-setup-cloud-console.md#configure-cloud-storage-in-the-console)
 
 After completing either path, restart the application and visit <http://localhost:8080/receipts> to upload and view receipt files.
+
+> 💡 When running on Cloud Run or other Google-managed platforms, rely on the runtime service account and
+> leave `GCS_CREDENTIALS` unset. The application will fall back to Application Default Credentials if the
+> configured resource is missing, allowing you to keep downloaded JSON keys strictly for local development.
 
 ### Receipt parsing Cloud Function (Vertex AI Gemini)
 
