@@ -63,7 +63,7 @@ fi
 
 # Append shared configuration to the Cloud Run environment variables so every component
 # talks to the same Firestore project and OAuth client.
-ENV_VARS_YAML=""
+ENV_VARS=""
 
 append_env_var() {
   local key="$1"
@@ -74,14 +74,18 @@ append_env_var() {
   fi
 
   local escaped_value="${value//\\/\\\\}"
-  escaped_value="${escaped_value//"/\"}"
+  escaped_value="${escaped_value//,/\\,}"
 
-  printf -v line '%s: "%s"\n' "$key" "$escaped_value"
-  ENV_VARS_YAML+="$line"
+  if [[ -z "$ENV_VARS" ]]; then
+    ENV_VARS="${key}=${escaped_value}"
+  elif [[ ",$ENV_VARS," != *",${key}="* ]]; then
+    ENV_VARS="${ENV_VARS},${key}=${escaped_value}"
+  fi
 }
 
-if [[ -z "${GOOGLE_CLIENT_ID:-}" || -z "${GOOGLE_CLIENT_SECRET:-}" ]]; then
-  echo "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be provided (directly or via GOOGLE_OAUTH_CREDENTIALS_FILE) when deploying with this script." >&2
+if [[ -z "${GOOGLE_CLIENT_ID:-}" ]] || [[ -z "${GOOGLE_CLIENT_SECRET:-}" ]]; then
+  printf '%s\n' \
+    'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be provided (directly or via GOOGLE_OAUTH_CREDENTIALS_FILE) when deploying with this script.' >&2
   exit 1
 fi
 
@@ -178,21 +182,13 @@ if [[ "$ALLOW_UNAUTH" == "true" ]]; then
   ALLOW_FLAG="--allow-unauthenticated"
 fi
 
-ENV_FILE="$(mktemp)"
-cleanup_env_file() {
-  rm -f "$ENV_FILE"
-}
-trap cleanup_env_file EXIT
-
-printf '%s' "$ENV_VARS_YAML" >"$ENV_FILE"
-
 gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_URI" \
   --service-account "$SA_EMAIL" \
   --region "$REGION" \
   --platform managed \
   $ALLOW_FLAG \
-  --env-vars-file "$ENV_FILE" \
+  --set-env-vars "${ENV_VARS}" \
   --min-instances 0 \
   --max-instances 10
 
