@@ -73,10 +73,15 @@ append_env_var() {
     return
   fi
 
+  # Escape characters that gcloud treats as delimiters inside --set-env-vars
+  local escaped_value="${value//\\/\\\\}"
+  escaped_value="${escaped_value//,/\\,}"
+  escaped_value="${escaped_value//=\=}"
+
   if [[ -z "$ENV_VARS" ]]; then
-    ENV_VARS="${key}=${value}"
+    ENV_VARS="${key}=${escaped_value}"
   elif [[ ",$ENV_VARS," != *",${key}="* ]]; then
-    ENV_VARS="${ENV_VARS},${key}=${value}"
+    ENV_VARS="${ENV_VARS},${key}=${escaped_value}"
   fi
 }
 
