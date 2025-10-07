@@ -80,7 +80,17 @@ append_env_var() {
   fi
 }
 
-append_env_var "SPRING_PROFILES_ACTIVE" "${SPRING_PROFILES_ACTIVE:-prod}"
+if [[ -z "${GOOGLE_CLIENT_ID:-}" || -z "${GOOGLE_CLIENT_SECRET:-}" ]]; then
+  echo "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be provided (directly or via GOOGLE_OAUTH_CREDENTIALS_FILE) when deploying with this script." >&2
+  exit 1
+fi
+
+ACTIVE_PROFILES="${SPRING_PROFILES_ACTIVE:-prod}"
+if [[ ",${ACTIVE_PROFILES}," != *",oauth,"* ]]; then
+  ACTIVE_PROFILES="${ACTIVE_PROFILES},oauth"
+fi
+
+append_env_var "SPRING_PROFILES_ACTIVE" "$ACTIVE_PROFILES"
 append_env_var "FIRESTORE_ENABLED" "${FIRESTORE_ENABLED:-true}"
 if [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
   append_env_var "FIRESTORE_PROJECT_ID" "${SHARED_FIRESTORE_PROJECT_ID}"

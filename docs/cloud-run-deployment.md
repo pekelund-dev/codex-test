@@ -196,13 +196,13 @@ gcloud artifacts repositories create web \
 4. Set the service name (`SERVICE_NAME`) and region (`REGION`).
 5. Under **Authentication**, choose whether to allow unauthenticated invocations.
 6. Expand **Security** → **Service account** and select the runtime service account (`SA_EMAIL`).
-7. Set environment variables (at a minimum `FIRESTORE_ENABLED=true`, `FIRESTORE_PROJECT_ID`, and your Google OAuth client credentials).
+7. Set environment variables (at a minimum `FIRESTORE_ENABLED=true`, `FIRESTORE_PROJECT_ID`, `SPRING_PROFILES_ACTIVE=prod,oauth`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET`).
 8. Configure CPU/Memory limits and concurrency as required.
 9. Click **Create** to deploy.
 
 ### CLI
 
-Export the Google OAuth client credentials before running the deployment so the script can inject them automatically:
+Export the Google OAuth client credentials before running the deployment so the script can inject them automatically. The automation aborts if the credentials are missing because Google sign-in is required in production:
 
 ```bash
 export GOOGLE_CLIENT_ID="your-oauth-client-id"
@@ -211,10 +211,9 @@ export GOOGLE_CLIENT_SECRET="your-oauth-client-secret"
 
 ```bash
 IMAGE_URI="${IMAGE_TAG}"
-ENV_VARS="SPRING_PROFILES_ACTIVE=prod,FIRESTORE_ENABLED=true,FIRESTORE_PROJECT_ID=${PROJECT_ID}"
-if [[ -n "${GOOGLE_CLIENT_ID:-}" ]]; then
-  ENV_VARS="${ENV_VARS},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
-fi
+SPRING_PROFILES="prod"
+SPRING_PROFILES="${SPRING_PROFILES},oauth"
+ENV_VARS="SPRING_PROFILES_ACTIVE=${SPRING_PROFILES},FIRESTORE_ENABLED=true,FIRESTORE_PROJECT_ID=${PROJECT_ID},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
 
  gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_URI" \
@@ -227,7 +226,7 @@ fi
   --max-instances 10
 ```
 
-Adjust min/max instances, authentication, and environment variables as necessary. If access should be restricted, remove `--allow-unauthenticated` and grant IAM access explicitly. Make sure the OAuth client ID/secret are present so Google sign-in succeeds, and keep `FIRESTORE_ENABLED=true` so self-registration remains available.
+Adjust min/max instances, authentication, and environment variables as necessary. If access should be restricted, remove `--allow-unauthenticated` and grant IAM access explicitly. Keep `FIRESTORE_ENABLED=true` so self-registration remains available.
 
 ---
 

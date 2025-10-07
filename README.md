@@ -38,12 +38,16 @@ The `setup-env.sh` script automatically configures:
 ### Manual Setup
 
 1. Ensure you have Java 21 available in your environment.
-2. Configure optional Google OAuth 2.0 credentials by exporting the variables before running the app:
+2. Configure Google OAuth 2.0 credentials by exporting the variables before running the app (the Cloud Run deployment script requires these values):
 
    ```bash
    export GOOGLE_CLIENT_ID=your-google-client-id
    export GOOGLE_CLIENT_SECRET=your-google-client-secret
    ```
+
+   > ℹ️ Google sign-in is enabled by activating the `oauth` Spring profile. When these variables are present the helper scripts
+   > automatically append `oauth` to `SPRING_PROFILES_ACTIVE`. For manual runs add `SPRING_PROFILES_ACTIVE=local,oauth` (or
+   > `prod,oauth` in production).
 
 3. Configure Firestore if you want to enable user self-registration (see [Firestore configuration](#firestore-configuration)).
 4. (Optional) Configure Google Cloud Storage to enable the receipts upload page (see
