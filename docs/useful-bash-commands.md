@@ -24,9 +24,16 @@ clear && curl -F "file=@test-receipt.pdf" http://localhost:8080/local-receipts/p
 
 clear && source ./scripts/source_local_env.sh && \
     ./mvnw -Pinclude-web -pl web -am spring-boot:run
+
+# Load locally stored service-account and OAuth credentials before running other helpers
+clear && export FIRESTORE_CREDENTIALS_FILE=$HOME/.config/responsive-auth/firestore.json && \
+    export GOOGLE_OAUTH_CREDENTIALS_FILE=$HOME/.config/responsive-auth/oauth-client.json && \
+    source ./scripts/load_local_secrets.sh
 ```
 
 These shortcuts assume that the appropriate environment helper has been sourced
-(`setup-env.sh` for GCP deployments or `scripts/source_local_env.sh` for the
-emulator workflow) so that `PROJECT_ID`, `GCS_BUCKET`, and other required
-environment variables are available before the commands are executed.
+(`setup-env.sh` for GCP deployments, `scripts/source_local_env.sh` for the
+emulator workflow) and, when required, that `scripts/load_local_secrets.sh` has
+populated credentials from any locally stored JSON files so `PROJECT_ID`,
+`GCS_BUCKET`, and other required environment variables are available before the
+commands are executed.

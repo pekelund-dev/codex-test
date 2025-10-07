@@ -69,6 +69,16 @@ Both guides walk through project creation, database provisioning, service accoun
 
 > 💡 When deploying to Cloud Run or any other Google-managed runtime, leave `FIRESTORE_CREDENTIALS` unset—the service account attached to the workload authenticates automatically via Application Default Credentials. Only download JSON keys for local development or third-party hosting.
 
+If you already generated service-account keys or OAuth credentials, keep the JSON files outside of the repository (for example `~/.config/responsive-auth/`). Point `FIRESTORE_CREDENTIALS_FILE` and/or `GOOGLE_OAUTH_CREDENTIALS_FILE` at those files and source the helper to populate the runtime environment without copying secrets into shell history:
+
+```bash
+export FIRESTORE_CREDENTIALS_FILE="$HOME/.config/responsive-auth/firestore.json"
+export GOOGLE_OAUTH_CREDENTIALS_FILE="$HOME/.config/responsive-auth/oauth-client.json"
+source ./scripts/load_local_secrets.sh
+```
+
+The helper infers `FIRESTORE_CREDENTIALS=file:/...` and extracts `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` so subsequent Maven or deployment commands pick up the secure values automatically.
+
 ### Google Cloud Storage configuration
 
 The receipts workspace reads from a private Cloud Storage bucket. Follow one of the companion guides to provision the bucket and credentials:

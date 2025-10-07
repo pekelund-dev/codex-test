@@ -64,10 +64,15 @@ gcloud services enable \
 
 5. **Export the application environment variables**
 
+    Keep any downloaded keys or OAuth credentials outside of the repository (for example under `~/.config/responsive-auth/`). Point environment variables at the files and source the helper so every shell inherits the derived values:
+
     ```bash
+export FIRESTORE_CREDENTIALS_FILE=${FIRESTORE_CREDENTIALS_FILE:-$HOME/.config/responsive-auth/firestore.json}
+export GOOGLE_OAUTH_CREDENTIALS_FILE=${GOOGLE_OAUTH_CREDENTIALS_FILE:-$HOME/.config/responsive-auth/oauth-client.json}
+source ./scripts/load_local_secrets.sh
+
 export FIRESTORE_ENABLED=true
 # Leave FIRESTORE_CREDENTIALS unset on Cloud Run; ADC handles authentication automatically.
-export FIRESTORE_CREDENTIALS=${FIRESTORE_CREDENTIALS:-file:/home/$USER/secrets/firestore-service-account.json}
 export FIRESTORE_PROJECT_ID=$(gcloud config get-value project)
 export FIRESTORE_USERS_COLLECTION=users             # Optional override
 export FIRESTORE_DEFAULT_ROLE=ROLE_USER             # Optional override

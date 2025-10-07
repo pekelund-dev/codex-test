@@ -29,12 +29,15 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    - If you need to run the app outside Google Cloud, click **Add key → Create new key → JSON** and download the credentials. Store them outside your source tree (for example `~/secrets/firestore-service-account.json`).
 
 5. **Configure the Spring Boot app**
-   - Export the variables before running the app locally:
+   - Keep downloaded JSON keys outside the repository (for example `~/.config/responsive-auth/firestore.json`). Point the helper at those files so the environment variables are populated without copying secrets into your shell history:
 
      ```bash
+     export FIRESTORE_CREDENTIALS_FILE=${FIRESTORE_CREDENTIALS_FILE:-$HOME/.config/responsive-auth/firestore.json}
+     export GOOGLE_OAUTH_CREDENTIALS_FILE=${GOOGLE_OAUTH_CREDENTIALS_FILE:-$HOME/.config/responsive-auth/oauth-client.json}
+     source ./scripts/load_local_secrets.sh
+
      export FIRESTORE_ENABLED=true
      # Leave FIRESTORE_CREDENTIALS unset on Cloud Run; ADC handles authentication automatically.
-     export FIRESTORE_CREDENTIALS=${FIRESTORE_CREDENTIALS:-file:/absolute/path/to/firestore-service-account.json}
      export FIRESTORE_PROJECT_ID=your-project-id              # Optional when derived from the key
      export FIRESTORE_USERS_COLLECTION=users                  # Optional override
      export FIRESTORE_DEFAULT_ROLE=ROLE_USER                  # Optional override

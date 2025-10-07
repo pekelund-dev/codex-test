@@ -64,6 +64,16 @@ export FIRESTORE_EMULATOR_HOST=127.0.0.1:9000
 source ./scripts/source_local_env.sh
 ```
 
+When you need to target your actual Firestore project or reuse Google OAuth credentials locally, keep the downloaded JSON files outside the repository and set `FIRESTORE_CREDENTIALS_FILE` / `GOOGLE_OAUTH_CREDENTIALS_FILE` before sourcing the helper:
+
+```bash
+export FIRESTORE_CREDENTIALS_FILE=$HOME/.config/responsive-auth/firestore.json
+export GOOGLE_OAUTH_CREDENTIALS_FILE=$HOME/.config/responsive-auth/oauth-client.json
+source ./scripts/load_local_secrets.sh
+```
+
+This leaves the emulator configuration intact but also makes the credentials available if you temporarily disable the emulator host variables to run against managed Firestore.
+
 ## 3. Run the web application
 
 With the emulator running and the environment sourced, start the web module in development

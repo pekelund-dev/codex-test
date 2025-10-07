@@ -99,6 +99,8 @@ The same Firestore database stores both the **user registration** data managed b
 
 > 💡 **No service-account keys needed on Cloud Run:** the deployed service automatically authenticates with Firestore through its runtime service account. Leave `FIRESTORE_CREDENTIALS` unset when running on Cloud Run or other Google Cloud hosts that support [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc). Only create JSON keys for local development or third-party platforms that cannot use Workload Identity.
 
+If you already downloaded key files for other environments, set `FIRESTORE_CREDENTIALS_FILE` and/or `GOOGLE_OAUTH_CREDENTIALS_FILE` to the secure file locations (outside the repository) and `source ./scripts/load_local_secrets.sh` before running any commands. The helper turns those paths into the runtime variables (`FIRESTORE_CREDENTIALS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) so both the CLI snippets below and the automation scripts reuse your stored secrets without editing them manually.
+
 ---
 
 ## 3. Create a Runtime Service Account and Grant Permissions

@@ -13,6 +13,54 @@ ARTIFACT_REPO="${ARTIFACT_REPO:-web}"
 # Default the shared project to the deployment project, but allow overrides when the
 # Firestore database lives in a different project.
 SHARED_FIRESTORE_PROJECT_ID="${SHARED_FIRESTORE_PROJECT_ID:-${PROJECT_ID}}"
+# Allow operators to point to a downloaded OAuth client JSON file instead of copying
+# the ID/secret manually.
+if [[ -n "${GOOGLE_OAUTH_CREDENTIALS_FILE:-}" ]] && \
+   ([[ -z "${GOOGLE_CLIENT_ID:-}" ]] || [[ -z "${GOOGLE_CLIENT_SECRET:-}" ]]); then
+  if [[ ! -f "${GOOGLE_OAUTH_CREDENTIALS_FILE}" ]]; then
+    echo "GOOGLE_OAUTH_CREDENTIALS_FILE=${GOOGLE_OAUTH_CREDENTIALS_FILE} does not exist" >&2
+    exit 1
+  fi
+
+  mapfile -t _oauth_from_file < <(python3 - "${GOOGLE_OAUTH_CREDENTIALS_FILE}" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+with open(path, 'r', encoding='utf-8') as handle:
+    data = json.load(handle)
+
+candidate = None
+for key in ("web", "installed", "oauth_client"):
+    if isinstance(data, dict) and key in data:
+        candidate = data[key]
+        break
+
+if candidate is None:
+    candidate = data
+
+client_id = candidate.get("client_id")
+client_secret = candidate.get("client_secret")
+
+if not client_id or not client_secret:
+    raise SystemExit("Missing client_id/client_secret in OAuth credentials JSON")
+
+print(client_id)
+print(client_secret)
+PY
+  ) || {
+    echo "Failed to parse Google OAuth credentials JSON at ${GOOGLE_OAUTH_CREDENTIALS_FILE}" >&2
+    exit 1
+  }
+
+  if [[ -z "${GOOGLE_CLIENT_ID:-}" ]]; then
+    GOOGLE_CLIENT_ID="${_oauth_from_file[0]}"
+  fi
+  if [[ -z "${GOOGLE_CLIENT_SECRET:-}" ]]; then
+    GOOGLE_CLIENT_SECRET="${_oauth_from_file[1]}"
+  fi
+fi
+
 # Append shared configuration to the Cloud Run environment variables so every component
 # talks to the same Firestore project and OAuth client.
 ENV_VARS="${ENV_VARS:-}"
