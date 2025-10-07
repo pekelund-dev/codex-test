@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle}">Receipt details</title>
+</head>
+<body>
+<section class="py-3 py-lg-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <a class="btn btn-link p-0 text-decoration-none" th:href="@{/receipts}">
+            <i class="bi bi-arrow-left"></i>
+            Back to receipts
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
+                <div>
+                    <h1 class="h3 fw-semibold text-primary mb-1"
+                        th:text="${receipt.displayName() != null ? receipt.displayName() : 'Receipt details'}">Receipt details</h1>
+                    <p class="text-muted mb-0" th:if="${receipt.objectPath()}" th:text="${receipt.objectPath()}">gs://bucket/object</p>
+                </div>
+                <span class="badge text-uppercase fw-semibold align-self-start"
+                      th:classappend="' ' + ${receipt.statusBadgeClass()}"
+                      th:text="${receipt.status() != null ? receipt.status() : 'UNKNOWN'}">COMPLETED</span>
+            </div>
+
+            <div class="row mt-4 gy-3">
+                <div class="col-md-6">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Store</dt>
+                        <dd class="col-sm-8" th:text="${receipt.storeName() != null ? receipt.storeName() : '—'}">Store name</dd>
+                        <dt class="col-sm-4">Receipt date</dt>
+                        <dd class="col-sm-8" th:text="${receipt.receiptDate() != null ? receipt.receiptDate() : '—'}">2024-01-01</dd>
+                        <dt class="col-sm-4">Total</dt>
+                        <dd class="col-sm-8" th:text="${receipt.totalAmount() != null ? receipt.totalAmount() : '—'}">129.99</dd>
+                        <dt class="col-sm-4">Format</dt>
+                        <dd class="col-sm-8" th:text="${receipt.format() != null ? receipt.format() : '—'}">NEW_FORMAT</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Updated</dt>
+                        <dd class="col-sm-8"
+                            th:text="${receipt.updatedAt() != null ? #temporals.format(receipt.updatedAt(), 'yyyy-MM-dd HH:mm:ss') : '—'}">
+                            2024-01-01 10:30:00
+                        </dd>
+                        <dt class="col-sm-4">Status message</dt>
+                        <dd class="col-sm-8" th:text="${receipt.statusMessage() != null ? receipt.statusMessage() : '—'}">Completed</dd>
+                        <dt class="col-sm-4">Error</dt>
+                        <dd class="col-sm-8" th:text="${receipt.error() != null ? receipt.error() : '—'}">—</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body p-4">
+            <h2 class="h5 fw-semibold mb-3">Items</h2>
+            <div th:if="${#lists.isEmpty(receipt.items())}" class="text-muted">No items were detected.</div>
+            <div th:if="${!#lists.isEmpty(receipt.items())}" class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Quantity</th>
+                        <th scope="col">Unit price</th>
+                        <th scope="col">Total price</th>
+                        <th scope="col">Discounts</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item : ${receipt.items()}">
+                        <td>
+                            <span class="fw-semibold" th:text="${item['name'] != null ? item['name'] : '—'}">Item name</span>
+                            <div class="text-muted small" th:if="${item['eanCode']}" th:text="'EAN: ' + item['eanCode']">EAN</div>
+                        </td>
+                        <td th:text="${item['quantity'] != null ? item['quantity'] : '—'}">—</td>
+                        <td th:text="${item['unitPrice'] != null ? item['unitPrice'] : '—'}">—</td>
+                        <td th:text="${item['totalPrice'] != null ? item['totalPrice'] : '—'}">—</td>
+                        <td>
+                            <ul class="list-unstyled mb-0"
+                                th:if="${item['discounts'] != null and !#lists.isEmpty(item['discounts'])}">
+                                <li th:each="discount : ${item['discounts']}"
+                                    th:text="${discount['description'] != null ? discount['description'] : 'Discount'} + ' (' + (discount['amount'] != null ? discount['amount'] : '—') + ')'">Discount</li>
+                            </ul>
+                            <span th:if="${item['discounts'] == null or #lists.isEmpty(item['discounts'])}" class="text-muted">—</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body p-4">
+            <h2 class="h5 fw-semibold mb-3">VAT summary</h2>
+            <div th:if="${#lists.isEmpty(receipt.vats())}" class="text-muted">No VAT information available.</div>
+            <div th:if="${!#lists.isEmpty(receipt.vats())}" class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col">Rate</th>
+                        <th scope="col">Net amount</th>
+                        <th scope="col">Tax amount</th>
+                        <th scope="col">Gross amount</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="vat : ${receipt.vats()}">
+                        <td th:text="${vat['rate'] != null ? vat['rate'] : '—'}">—</td>
+                        <td th:text="${vat['netAmount'] != null ? vat['netAmount'] : '—'}">—</td>
+                        <td th:text="${vat['taxAmount'] != null ? vat['taxAmount'] : '—'}">—</td>
+                        <td th:text="${vat['grossAmount'] != null ? vat['grossAmount'] : '—'}">—</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body p-4">
+            <h2 class="h5 fw-semibold mb-3">General discounts</h2>
+            <div th:if="${#lists.isEmpty(receipt.generalDiscounts())}" class="text-muted">No general discounts were found.</div>
+            <ul class="list-group list-group-flush"
+                th:if="${!#lists.isEmpty(receipt.generalDiscounts())}">
+                <li class="list-group-item" th:each="discount : ${receipt.generalDiscounts()}"
+                    th:text="${discount['description'] != null ? discount['description'] : 'Discount'} + ' (' + (discount['amount'] != null ? discount['amount'] : '—') + ')'">
+                    Discount description (amount)
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body p-4">
+            <h2 class="h5 fw-semibold mb-3">Parsing errors</h2>
+            <div th:if="${#lists.isEmpty(receipt.errors())}" class="text-muted">No parsing errors were reported.</div>
+            <div th:if="${!#lists.isEmpty(receipt.errors())}" class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col">Line</th>
+                        <th scope="col">Content</th>
+                        <th scope="col">Message</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="error : ${receipt.errors()}">
+                        <td th:text="${error['lineNumber'] != null ? error['lineNumber'] : '—'}">—</td>
+                        <td th:text="${error['content'] != null ? error['content'] : '—'}">—</td>
+                        <td th:text="${error['message'] != null ? error['message'] : '—'}">—</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body p-4">
+            <h2 class="h5 fw-semibold mb-3">Raw receipt text</h2>
+            <pre class="bg-light p-3 rounded small" th:text="${receipt.rawText() != null ? receipt.rawText() : 'No raw text available.'}">No raw text available.</pre>
+
+            <details class="mt-3">
+                <summary class="fw-semibold text-primary">View raw response</summary>
+                <pre class="bg-light p-3 rounded small mt-2"
+                     th:text="${receipt.rawResponse() != null ? receipt.rawResponse() : 'No raw response available.'}">Raw response</pre>
+            </details>
+        </div>
+    </div>
+</section>
+</body>
+</html>

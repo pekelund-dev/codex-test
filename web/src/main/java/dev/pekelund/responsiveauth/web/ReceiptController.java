@@ -1,11 +1,14 @@
 package dev.pekelund.responsiveauth.web;
 
 import dev.pekelund.responsiveauth.firestore.FirestoreUserDetails;
+import dev.pekelund.responsiveauth.firestore.ParsedReceipt;
+import dev.pekelund.responsiveauth.firestore.ReceiptExtractionAccessException;
+import dev.pekelund.responsiveauth.firestore.ReceiptExtractionService;
 import dev.pekelund.responsiveauth.storage.ReceiptFile;
 import dev.pekelund.responsiveauth.storage.ReceiptOwner;
+import dev.pekelund.responsiveauth.storage.ReceiptOwnerMatcher;
 import dev.pekelund.responsiveauth.storage.ReceiptStorageException;
 import dev.pekelund.responsiveauth.storage.ReceiptStorageService;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -18,11 +21,14 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class ReceiptController {
@@ -30,9 +36,14 @@ public class ReceiptController {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptController.class);
 
     private final Optional<ReceiptStorageService> receiptStorageService;
+    private final Optional<ReceiptExtractionService> receiptExtractionService;
 
-    public ReceiptController(@Autowired(required = false) ReceiptStorageService receiptStorageService) {
+    public ReceiptController(
+        @Autowired(required = false) ReceiptStorageService receiptStorageService,
+        @Autowired(required = false) ReceiptExtractionService receiptExtractionService
+    ) {
         this.receiptStorageService = Optional.ofNullable(receiptStorageService);
+        this.receiptExtractionService = Optional.ofNullable(receiptExtractionService);
     }
 
     @GetMapping("/receipts")
@@ -40,9 +51,13 @@ public class ReceiptController {
         model.addAttribute("pageTitle", "Receipts");
         model.addAttribute("storageEnabled", receiptStorageService.isPresent() && receiptStorageService.get().isEnabled());
 
-        List<ReceiptFile> receiptFiles = Collections.emptyList();
+        List<ReceiptFile> receiptFiles = List.of();
         String listingError = null;
         ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
+
+        boolean parsedReceiptsEnabled = receiptExtractionService.isPresent() && receiptExtractionService.get().isEnabled();
+        List<ParsedReceipt> parsedReceipts = List.of();
+        String parsedListingError = null;
 
         if (receiptStorageService.isPresent() && receiptStorageService.get().isEnabled()) {
             try {
@@ -57,13 +72,45 @@ public class ReceiptController {
             receiptFiles = List.of();
         } else {
             receiptFiles = receiptFiles.stream()
-                .filter(file -> isOwnedByCurrentUser(file.owner(), currentOwner))
+                .filter(file -> ReceiptOwnerMatcher.belongsToCurrentOwner(file.owner(), currentOwner))
                 .toList();
+            if (parsedReceiptsEnabled) {
+                try {
+                    parsedReceipts = receiptExtractionService.get().listReceiptsForOwner(currentOwner);
+                } catch (ReceiptExtractionAccessException ex) {
+                    parsedListingError = ex.getMessage();
+                    LOGGER.warn("Failed to list parsed receipts", ex);
+                }
+            }
         }
 
         model.addAttribute("files", receiptFiles);
         model.addAttribute("listingError", listingError);
+        model.addAttribute("parsedReceiptsEnabled", parsedReceiptsEnabled);
+        model.addAttribute("parsedReceipts", parsedReceipts);
+        model.addAttribute("parsedListingError", parsedListingError);
         return "receipts";
+    }
+
+    @GetMapping("/receipts/{documentId}")
+    public String viewParsedReceipt(@PathVariable("documentId") String documentId, Model model, Authentication authentication) {
+        if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Parsed receipts are not available.");
+        }
+
+        ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
+        if (currentOwner == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found.");
+        }
+
+        ParsedReceipt receipt = receiptExtractionService.get().findById(documentId)
+            .filter(parsed -> ReceiptOwnerMatcher.belongsToCurrentOwner(parsed.owner(), currentOwner))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found."));
+
+        String displayName = receipt.displayName();
+        model.addAttribute("pageTitle", displayName != null ? "Receipt: " + displayName : "Receipt details");
+        model.addAttribute("receipt", receipt);
+        return "receipt-detail";
     }
 
     @PostMapping("/receipts/upload")
@@ -154,38 +201,5 @@ public class ReceiptController {
         return null;
     }
 
-    private boolean isOwnedByCurrentUser(ReceiptOwner fileOwner, ReceiptOwner currentOwner) {
-        if (fileOwner == null || currentOwner == null) {
-            return false;
-        }
-
-        if (hasMatchingId(fileOwner, currentOwner)) {
-            return true;
-        }
-
-        if (hasMatchingEmail(fileOwner, currentOwner)) {
-            return true;
-        }
-
-        return hasMatchingDisplayName(fileOwner, currentOwner);
-    }
-
-    private boolean hasMatchingId(ReceiptOwner fileOwner, ReceiptOwner currentOwner) {
-        return StringUtils.hasText(fileOwner.id())
-            && StringUtils.hasText(currentOwner.id())
-            && fileOwner.id().equals(currentOwner.id());
-    }
-
-    private boolean hasMatchingEmail(ReceiptOwner fileOwner, ReceiptOwner currentOwner) {
-        return StringUtils.hasText(fileOwner.email())
-            && StringUtils.hasText(currentOwner.email())
-            && fileOwner.email().equalsIgnoreCase(currentOwner.email());
-    }
-
-    private boolean hasMatchingDisplayName(ReceiptOwner fileOwner, ReceiptOwner currentOwner) {
-        return StringUtils.hasText(fileOwner.displayName())
-            && StringUtils.hasText(currentOwner.displayName())
-            && fileOwner.displayName().equalsIgnoreCase(currentOwner.displayName());
-    }
 }
 
