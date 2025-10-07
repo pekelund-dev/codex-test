@@ -13,6 +13,7 @@ ARTIFACT_REPO="${ARTIFACT_REPO:-web}"
 # Default the shared project to the deployment project, but allow overrides when the
 # Firestore database lives in a different project.
 SHARED_FIRESTORE_PROJECT_ID="${SHARED_FIRESTORE_PROJECT_ID:-${PROJECT_ID}}"
+SHARED_GCS_PROJECT_ID="${SHARED_GCS_PROJECT_ID:-${PROJECT_ID}}"
 # Allow operators to point to a downloaded OAuth client JSON file instead of copying
 # the ID/secret manually.
 if [[ -n "${GOOGLE_OAUTH_CREDENTIALS_FILE:-}" ]] && \
@@ -63,7 +64,7 @@ fi
 
 # Append shared configuration to the Cloud Run environment variables so every component
 # talks to the same Firestore project and OAuth client.
-ENV_VARS="${ENV_VARS:-}"
+ENV_VARS_LIST=()
 
 append_env_var() {
   local key="$1"
@@ -73,20 +74,80 @@ append_env_var() {
     return
   fi
 
-  if [[ -z "$ENV_VARS" ]]; then
-    ENV_VARS="${key}=${value}"
-  elif [[ ",$ENV_VARS," != *",${key}="* ]]; then
-    ENV_VARS="${ENV_VARS},${key}=${value}"
-  fi
+  local pair="${key}=${value}"
+
+  local i
+  for i in "${!ENV_VARS_LIST[@]}"; do
+    if [[ "${ENV_VARS_LIST[i]}" == "${key}="* ]]; then
+      ENV_VARS_LIST[i]="${pair}"
+      return
+    fi
+  done
+
+  ENV_VARS_LIST+=("${pair}")
 }
 
-append_env_var "SPRING_PROFILES_ACTIVE" "${SPRING_PROFILES_ACTIVE:-prod}"
+if [[ -z "${GOOGLE_CLIENT_ID:-}" ]] || [[ -z "${GOOGLE_CLIENT_SECRET:-}" ]]; then
+  printf '%s\n' \
+    'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be provided (directly or via GOOGLE_OAUTH_CREDENTIALS_FILE) when deploying with this script.' >&2
+  exit 1
+fi
+
+if [[ -z "${GCS_BUCKET:-}" ]]; then
+  printf '%s\n' \
+    'GCS_BUCKET must be set when deploying with this script so receipt uploads can target the correct bucket.' >&2
+  exit 1
+fi
+
+ACTIVE_PROFILES="${SPRING_PROFILES_ACTIVE:-prod}"
+if [[ ",${ACTIVE_PROFILES}," != *",oauth,"* ]]; then
+  ACTIVE_PROFILES="${ACTIVE_PROFILES},oauth"
+fi
+
+append_env_var "SPRING_PROFILES_ACTIVE" "$ACTIVE_PROFILES"
 append_env_var "FIRESTORE_ENABLED" "${FIRESTORE_ENABLED:-true}"
 if [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
   append_env_var "FIRESTORE_PROJECT_ID" "${SHARED_FIRESTORE_PROJECT_ID}"
 fi
 append_env_var "GOOGLE_CLIENT_ID" "${GOOGLE_CLIENT_ID:-}"
 append_env_var "GOOGLE_CLIENT_SECRET" "${GOOGLE_CLIENT_SECRET:-}"
+append_env_var "GCS_ENABLED" "${GCS_ENABLED:-true}"
+append_env_var "GCS_PROJECT_ID" "${SHARED_GCS_PROJECT_ID:-}"
+append_env_var "GCS_BUCKET" "${GCS_BUCKET:-}"
+append_env_var "GCS_CREDENTIALS" "${GCS_CREDENTIALS:-}"
+
+choose_env_delimiter() {
+  local candidates=("|" "@" ":" ";" "#" "+" "~" "^" "%" "?")
+  local candidate pair
+
+  for candidate in "${candidates[@]}"; do
+    local collision=false
+    for pair in "${ENV_VARS_LIST[@]}"; do
+      if [[ "$pair" == *"${candidate}"* ]]; then
+        collision=true
+        break
+      fi
+    done
+    if [[ "$collision" == false ]]; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+
+  echo "Could not find a safe delimiter for Cloud Run environment variables" >&2
+  exit 1
+}
+
+ENV_VARS_ARG=""
+if (( ${#ENV_VARS_LIST[@]} > 0 )); then
+  DELIM="$(choose_env_delimiter)"
+  ENV_VARS_ARG="^${DELIM}^$(IFS="$DELIM"; printf '%s' "${ENV_VARS_LIST[*]}")"
+fi
+
+if [[ -z "$ENV_VARS_ARG" ]]; then
+  echo "Failed to assemble Cloud Run environment variables" >&2
+  exit 1
+fi
 ALLOW_UNAUTH="${ALLOW_UNAUTH:-true}"
 DOMAIN="${DOMAIN:-pklnd.pekelund.dev}"
 
@@ -105,6 +166,7 @@ gcloud services enable \
   cloudbuild.googleapis.com \
   artifactregistry.googleapis.com \
   firestore.googleapis.com \
+  storage.googleapis.com \
   secretmanager.googleapis.com \
   --quiet
 
@@ -151,6 +213,12 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:${SA_EMAIL}" \
   --role "roles/datastore.user" --condition=None || true
 
+if [[ -n "${SHARED_GCS_PROJECT_ID}" ]]; then
+  gcloud projects add-iam-policy-binding "${SHARED_GCS_PROJECT_ID}" \
+    --member "serviceAccount:${SA_EMAIL}" \
+    --role "roles/storage.objectAdmin" --condition=None || true
+fi
+
 # Add Secret Manager role only if secrets are required; safe to attempt.
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:${SA_EMAIL}" \
@@ -174,7 +242,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --region "$REGION" \
   --platform managed \
   $ALLOW_FLAG \
-  --set-env-vars "${ENV_VARS}" \
+  --set-env-vars "${ENV_VARS_ARG}" \
   --min-instances 0 \
   --max-instances 10
 

@@ -40,11 +40,14 @@
                         Don't have an account yet?
                         <a th:href="@{/register}">Create one now</a>.
                     </p>
-                    <div class="text-center my-3 text-muted">or</div>
-                    <div class="d-grid">
+                    <div th:if="${oauthEnabled}" class="text-center my-3 text-muted">or</div>
+                    <div th:if="${oauthEnabled}" class="d-grid">
                         <a class="btn btn-outline-secondary" th:href="@{/oauth2/authorization/google}">
                             <span class="me-2" aria-hidden="true">&#x1F310;</span> Continue with Google
                         </a>
+                    </div>
+                    <div th:if="${!oauthEnabled}" class="alert alert-warning mt-4" role="status">
+                        Google sign-in is currently unavailable. Please verify the deployment's OAuth configuration.
                     </div>
                 </div>
             </div>

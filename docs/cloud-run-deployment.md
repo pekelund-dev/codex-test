@@ -54,6 +54,7 @@ The rest of this document mirrors what the scripts perform under the hood if you
    - Cloud Build API
    - Artifact Registry API (or Container Registry if you still use it)
    - Firestore API
+   - Cloud Storage API (required for receipt uploads)
    - Secret Manager API (if the app reads secrets)
 
 ### CLI
@@ -113,6 +114,7 @@ If you already downloaded key files for other environments, set `FIRESTORE_CREDE
    - **Cloud Run Service Agent** (`roles/run.serviceAgent`) – automatically added for Cloud Run runtime.
    - **Cloud Run Invoker** (`roles/run.invoker`) – optional if you plan to make the service public; otherwise, manage access through IAM.
    - **Datastore User** (`roles/datastore.user`) – required for Firestore access.
+   - **Storage Object Admin** (`roles/storage.objectAdmin`) – required for uploading and listing receipts in Cloud Storage.
    - **Secret Manager Secret Accessor** (`roles/secretmanager.secretAccessor`) – only if your service uses secrets.
 4. Finish creation and note the service account email (`SA_EMAIL`).
 
@@ -196,13 +198,13 @@ gcloud artifacts repositories create web \
 4. Set the service name (`SERVICE_NAME`) and region (`REGION`).
 5. Under **Authentication**, choose whether to allow unauthenticated invocations.
 6. Expand **Security** → **Service account** and select the runtime service account (`SA_EMAIL`).
-7. Set environment variables (at a minimum `FIRESTORE_ENABLED=true`, `FIRESTORE_PROJECT_ID`, and your Google OAuth client credentials).
+7. Set environment variables (at a minimum `FIRESTORE_ENABLED=true`, `FIRESTORE_PROJECT_ID`, `SPRING_PROFILES_ACTIVE=prod,oauth`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GCS_ENABLED=true`, `GCS_PROJECT_ID`, and `GCS_BUCKET`).
 8. Configure CPU/Memory limits and concurrency as required.
 9. Click **Create** to deploy.
 
 ### CLI
 
-Export the Google OAuth client credentials before running the deployment so the script can inject them automatically:
+Export the Google OAuth client credentials before running the deployment so the script can inject them automatically. The automation aborts if the credentials are missing because Google sign-in is required in production:
 
 ```bash
 export GOOGLE_CLIENT_ID="your-oauth-client-id"
@@ -211,10 +213,9 @@ export GOOGLE_CLIENT_SECRET="your-oauth-client-secret"
 
 ```bash
 IMAGE_URI="${IMAGE_TAG}"
-ENV_VARS="SPRING_PROFILES_ACTIVE=prod,FIRESTORE_ENABLED=true,FIRESTORE_PROJECT_ID=${PROJECT_ID}"
-if [[ -n "${GOOGLE_CLIENT_ID:-}" ]]; then
-  ENV_VARS="${ENV_VARS},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
-fi
+SPRING_PROFILES="prod"
+SPRING_PROFILES="${SPRING_PROFILES},oauth"
+ENV_VARS="SPRING_PROFILES_ACTIVE=${SPRING_PROFILES},FIRESTORE_ENABLED=true,FIRESTORE_PROJECT_ID=${PROJECT_ID},GCS_ENABLED=true,GCS_PROJECT_ID=${PROJECT_ID},GCS_BUCKET=${GCS_BUCKET},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
 
  gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_URI" \
@@ -227,7 +228,7 @@ fi
   --max-instances 10
 ```
 
-Adjust min/max instances, authentication, and environment variables as necessary. If access should be restricted, remove `--allow-unauthenticated` and grant IAM access explicitly. Make sure the OAuth client ID/secret are present so Google sign-in succeeds, and keep `FIRESTORE_ENABLED=true` so self-registration remains available.
+Adjust min/max instances, authentication, and environment variables as necessary. If access should be restricted, remove `--allow-unauthenticated` and grant IAM access explicitly. Keep `FIRESTORE_ENABLED=true` so self-registration remains available.
 
 ---
 

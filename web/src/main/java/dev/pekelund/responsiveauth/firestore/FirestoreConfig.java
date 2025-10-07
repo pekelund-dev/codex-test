@@ -6,6 +6,8 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FirestoreOptions;
 import java.io.IOException;
 import java.io.InputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -19,6 +21,8 @@ import org.springframework.util.StringUtils;
 @Configuration
 @EnableConfigurationProperties(FirestoreProperties.class)
 public class FirestoreConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(FirestoreConfig.class);
 
     private final FirestoreProperties properties;
     private final ResourceLoader resourceLoader;
@@ -48,18 +52,25 @@ public class FirestoreConfig {
             return builder.build().getService();
         }
 
+        GoogleCredentials credentials = null;
+
         if (StringUtils.hasText(properties.getCredentials())) {
             Resource resource = resourceLoader.getResource(properties.getCredentials());
-            Assert.isTrue(resource.exists(),
-                () -> "Firestore credentials resource not found at " + properties.getCredentials());
-
-            try (InputStream inputStream = resource.getInputStream()) {
-                builder.setCredentials(GoogleCredentials.fromStream(inputStream));
-                return builder.build().getService();
+            if (resource.exists()) {
+                try (InputStream inputStream = resource.getInputStream()) {
+                    credentials = GoogleCredentials.fromStream(inputStream);
+                }
+            } else {
+                log.warn("Firestore credentials resource {} not found; falling back to application default credentials.",
+                    properties.getCredentials());
             }
         }
 
-        builder.setCredentials(GoogleCredentials.getApplicationDefault());
+        if (credentials == null) {
+            credentials = GoogleCredentials.getApplicationDefault();
+        }
+
+        builder.setCredentials(credentials);
         return builder.build().getService();
     }
 }
