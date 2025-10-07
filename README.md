@@ -51,7 +51,9 @@ The `setup-env.sh` script automatically configures:
 
 3. Configure Firestore if you want to enable user self-registration (see [Firestore configuration](#firestore-configuration)).
 4. (Optional) Configure Google Cloud Storage to enable the receipts upload page (see
-   [Google Cloud Storage configuration](#google-cloud-storage-configuration)).
+   [Google Cloud Storage configuration](#google-cloud-storage-configuration)). The Cloud Run deployment
+   automation expects `GCS_BUCKET` (and optionally `GCS_PROJECT_ID`/`GCS_CREDENTIALS`) to be exported
+   before you run it so uploads are routed to the right bucket.
 
 5. Build and run the web application module (remember to enable the `include-web` profile):
 

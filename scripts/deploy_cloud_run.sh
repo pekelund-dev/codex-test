@@ -13,6 +13,7 @@ ARTIFACT_REPO="${ARTIFACT_REPO:-web}"
 # Default the shared project to the deployment project, but allow overrides when the
 # Firestore database lives in a different project.
 SHARED_FIRESTORE_PROJECT_ID="${SHARED_FIRESTORE_PROJECT_ID:-${PROJECT_ID}}"
+SHARED_GCS_PROJECT_ID="${SHARED_GCS_PROJECT_ID:-${PROJECT_ID}}"
 # Allow operators to point to a downloaded OAuth client JSON file instead of copying
 # the ID/secret manually.
 if [[ -n "${GOOGLE_OAUTH_CREDENTIALS_FILE:-}" ]] && \
@@ -92,6 +93,12 @@ if [[ -z "${GOOGLE_CLIENT_ID:-}" ]] || [[ -z "${GOOGLE_CLIENT_SECRET:-}" ]]; the
   exit 1
 fi
 
+if [[ -z "${GCS_BUCKET:-}" ]]; then
+  printf '%s\n' \
+    'GCS_BUCKET must be set when deploying with this script so receipt uploads can target the correct bucket.' >&2
+  exit 1
+fi
+
 ACTIVE_PROFILES="${SPRING_PROFILES_ACTIVE:-prod}"
 if [[ ",${ACTIVE_PROFILES}," != *",oauth,"* ]]; then
   ACTIVE_PROFILES="${ACTIVE_PROFILES},oauth"
@@ -104,6 +111,10 @@ if [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
 fi
 append_env_var "GOOGLE_CLIENT_ID" "${GOOGLE_CLIENT_ID:-}"
 append_env_var "GOOGLE_CLIENT_SECRET" "${GOOGLE_CLIENT_SECRET:-}"
+append_env_var "GCS_ENABLED" "${GCS_ENABLED:-true}"
+append_env_var "GCS_PROJECT_ID" "${SHARED_GCS_PROJECT_ID:-}"
+append_env_var "GCS_BUCKET" "${GCS_BUCKET:-}"
+append_env_var "GCS_CREDENTIALS" "${GCS_CREDENTIALS:-}"
 
 choose_env_delimiter() {
   local candidates=("|" "@" ":" ";" "#" "+" "~" "^" "%" "?")
@@ -155,6 +166,7 @@ gcloud services enable \
   cloudbuild.googleapis.com \
   artifactregistry.googleapis.com \
   firestore.googleapis.com \
+  storage.googleapis.com \
   secretmanager.googleapis.com \
   --quiet
 
@@ -200,6 +212,12 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:${SA_EMAIL}" \
   --role "roles/datastore.user" --condition=None || true
+
+if [[ -n "${SHARED_GCS_PROJECT_ID}" ]]; then
+  gcloud projects add-iam-policy-binding "${SHARED_GCS_PROJECT_ID}" \
+    --member "serviceAccount:${SA_EMAIL}" \
+    --role "roles/storage.objectAdmin" --condition=None || true
+fi
 
 # Add Secret Manager role only if secrets are required; safe to attempt.
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
