@@ -20,20 +20,29 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    - In the Firebase console choose **Build → Firestore Database → Create database**.
    - Select the production mode ruleset, pick a region close to your users, and confirm.
 
-3. **Create a service account key**
+3. **Create a service account**
    - Navigate to **Project settings → Service accounts** (in Firebase) or **IAM & Admin → Service Accounts** (in Google Cloud).
-   - Create a new service account or reuse an existing one with Firestore access.
-   - Click **Add key → Create new key → JSON** and download the credentials. Store them outside your source tree (for example `~/secrets/firestore-service-account.json`).
+   - Create a new service account or reuse an existing one with Firestore access and grant it **Datastore User**.
+   - When deploying to Cloud Run, you can stop here—the runtime picks up credentials automatically via the selected service account.
+   - The Cloud Run deployment flow (script or console) attaches this service account to the service so Google can exchange it for short-lived tokens automatically. No JSON key is required on the server.
 
-4. **Configure the Spring Boot app**
-   - Export the variables before running the app locally:
+4. **(Optional) Generate a service account key for local/off-cloud runs**
+   - If you need to run the app outside Google Cloud, click **Add key → Create new key → JSON** and download the credentials. Store them outside your source tree (for example `~/secrets/firestore-service-account.json`).
+
+5. **Configure the Spring Boot app**
+   - Keep downloaded JSON keys outside the repository (for example `~/.config/responsive-auth/firestore.json`). Point the helper at those files so the environment variables are populated without copying secrets into your shell history:
 
      ```bash
+     export FIRESTORE_CREDENTIALS_FILE=${FIRESTORE_CREDENTIALS_FILE:-$HOME/.config/responsive-auth/firestore.json}
+     export GOOGLE_OAUTH_CREDENTIALS_FILE=${GOOGLE_OAUTH_CREDENTIALS_FILE:-$HOME/.config/responsive-auth/oauth-client.json}
+     source ./scripts/load_local_secrets.sh
+
      export FIRESTORE_ENABLED=true
-     export FIRESTORE_CREDENTIALS=file:/absolute/path/to/firestore-service-account.json
+     # Leave FIRESTORE_CREDENTIALS unset on Cloud Run; ADC handles authentication automatically.
      export FIRESTORE_PROJECT_ID=your-project-id              # Optional when derived from the key
      export FIRESTORE_USERS_COLLECTION=users                  # Optional override
      export FIRESTORE_DEFAULT_ROLE=ROLE_USER                  # Optional override
+     export RECEIPT_FIRESTORE_PROJECT_ID=$FIRESTORE_PROJECT_ID # Keep Cloud Run + Cloud Function aligned
      ```
 
    - Restart the application to pick up the Firestore integration. Visit `/register` to create your first account and sign in on `/login`.
@@ -98,7 +107,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
      - `VERTEX_AI_PROJECT_ID` — defaults to the function project if omitted.
      - `VERTEX_AI_LOCATION` — Vertex AI region that offers Gemini (for example `us-east1` or `us-central1`).
      - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
-     - `RECEIPT_FIRESTORE_PROJECT_ID` — optional override when the Firestore database lives in another project.
+     - `RECEIPT_FIRESTORE_PROJECT_ID` — reuse the same project ID exported for the web app to keep all components on one database.
      - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
    - Upload the source from your local machine or connect the repository, then click **Deploy**.
 

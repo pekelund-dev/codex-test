@@ -52,7 +52,10 @@ gcloud services enable \
     # Optionally restrict to a custom role with only the needed Firestore permissions.
     ```
 
-4. **Generate a service-account key**
+    > Cloud Run automatically uses this service account without needing a JSON key. Skip the next step unless you run the app outside Google Cloud.
+    > The deployment command (or `scripts/deploy_cloud_run.sh`) attaches this account to the Cloud Run service so Google can mint short-lived tokens transparently via Application Default Credentials.
+
+4. **(Optional) Generate a service-account key for local/off-cloud runs**
 
     ```bash
     mkdir -p ~/secrets
@@ -62,12 +65,20 @@ gcloud services enable \
 
 5. **Export the application environment variables**
 
+    Keep any downloaded keys or OAuth credentials outside of the repository (for example under `~/.config/responsive-auth/`). Point environment variables at the files and source the helper so every shell inherits the derived values:
+
     ```bash
-    export FIRESTORE_ENABLED=true
-    export FIRESTORE_CREDENTIALS=file:/home/$USER/secrets/firestore-service-account.json
-    export FIRESTORE_PROJECT_ID=$(gcloud config get-value project)
-    export FIRESTORE_USERS_COLLECTION=users             # Optional override
-    export FIRESTORE_DEFAULT_ROLE=ROLE_USER             # Optional override
+export FIRESTORE_CREDENTIALS_FILE=${FIRESTORE_CREDENTIALS_FILE:-$HOME/.config/responsive-auth/firestore.json}
+export GOOGLE_OAUTH_CREDENTIALS_FILE=${GOOGLE_OAUTH_CREDENTIALS_FILE:-$HOME/.config/responsive-auth/oauth-client.json}
+source ./scripts/load_local_secrets.sh
+
+export FIRESTORE_ENABLED=true
+# Leave FIRESTORE_CREDENTIALS unset on Cloud Run; ADC handles authentication automatically.
+export FIRESTORE_PROJECT_ID=$(gcloud config get-value project)
+export FIRESTORE_USERS_COLLECTION=users             # Optional override
+export FIRESTORE_DEFAULT_ROLE=ROLE_USER             # Optional override
+# Cloud Run and the Cloud Function reuse this value so every component talks to the same database
+export RECEIPT_FIRESTORE_PROJECT_ID=${FIRESTORE_PROJECT_ID}
     ```
 
 ## Configure Cloud Storage via gcloud
@@ -226,7 +237,7 @@ gcloud services enable cloudfunctions.googleapis.com \
       --set-build-env-vars=MAVEN_BUILD_ARGUMENTS="-pl function -am -DskipTests package" \
       --service-account="${FUNCTION_SA}" \
       --trigger-bucket=$(basename "${BUCKET}") \
-      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=$(gcloud config get-value project),RECEIPT_FIRESTORE_COLLECTION=receiptExtractions
+      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=${RECEIPT_FIRESTORE_PROJECT_ID},RECEIPT_FIRESTORE_COLLECTION=receiptExtractions
     ```
 
 4. **Verify the lifecycle**

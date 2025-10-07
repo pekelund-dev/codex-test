@@ -20,6 +20,7 @@ firestore:
   enabled: ${FIRESTORE_ENABLED:false}
   credentials: ${FIRESTORE_CREDENTIALS:}
   project-id: ${FIRESTORE_PROJECT_ID:}
+  emulator-host: ${FIRESTORE_EMULATOR_HOST:}
   users-collection: ${FIRESTORE_USERS_COLLECTION:users}
   default-role: ${FIRESTORE_DEFAULT_ROLE:ROLE_USER}
 

@@ -4,12 +4,24 @@
 # This script automates the deployment of the receiptProcessingFunction
 # incorporating all the troubleshooting steps and best practices
 
-set -e  # Exit on any error
+set -euo pipefail  # Exit on any error and propagate pipe failures
+IFS=$'\n\t'
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$REPO_ROOT"
 
 echo "🚀 Starting Cloud Function deployment..."
 
 # Source environment variables
-source setup-env.sh
+if [ -f "$REPO_ROOT/setup-env.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$REPO_ROOT/setup-env.sh"
+else
+    echo "❌ setup-env.sh not found in $REPO_ROOT. Please create it before running this script."
+    exit 1
+fi
 
 # Ensure CLOUD_FUNCTION_NAME is always set to a sensible default
 : "${CLOUD_FUNCTION_NAME:=receiptProcessingFunction}"
@@ -19,17 +31,17 @@ if [ -z "$CLOUD_FUNCTION_NAME" ]; then
     exit 1
 fi
 
-# Check if we're in the correct project
+# Check if we're in the correct project and make sure every component points to the same Firestore database
+PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project)}"
 CURRENT_PROJECT=$(gcloud config get-value project)
-EXPECTED_PROJECT="codex-test-473008"
-FUNCTION_SA=${FUNCTION_SA:-"receipt-parser@${EXPECTED_PROJECT}.iam.gserviceaccount.com"}
-: "${RECEIPT_FIRESTORE_PROJECT_ID:=$EXPECTED_PROJECT}"
-echo "👤 Using service account: $FUNCTION_SA"
-
-if [ "$CURRENT_PROJECT" != "$EXPECTED_PROJECT" ]; then
-    echo "⚠️  Switching to project: $EXPECTED_PROJECT"
-    gcloud config set project $EXPECTED_PROJECT
+if [ "$CURRENT_PROJECT" != "$PROJECT_ID" ]; then
+    echo "⚠️  Switching to project: $PROJECT_ID"
+    gcloud config set project "$PROJECT_ID"
 fi
+
+FUNCTION_SA=${FUNCTION_SA:-"receipt-parser@${PROJECT_ID}.iam.gserviceaccount.com"}
+: "${RECEIPT_FIRESTORE_PROJECT_ID:=$PROJECT_ID}"
+echo "👤 Using service account: $FUNCTION_SA"
 
 # Check bucket region
 echo "📍 Checking bucket region..."
@@ -54,7 +66,7 @@ else
     echo "📍 Using Vertex AI location $VERTEX_AI_LOCATION"
 fi
 
-FUNCTION_ENV_VARS="VERTEX_AI_PROJECT_ID=$EXPECTED_PROJECT,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=$RECEIPT_FIRESTORE_PROJECT_ID,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction"
+FUNCTION_ENV_VARS="VERTEX_AI_PROJECT_ID=$PROJECT_ID,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=$RECEIPT_FIRESTORE_PROJECT_ID,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction"
 
 # Enable required APIs
 echo "🔧 Enabling required Google Cloud APIs..."
@@ -67,7 +79,8 @@ gcloud services enable \
     eventarc.googleapis.com \
     firestore.googleapis.com \
     storage.googleapis.com \
-    pubsub.googleapis.com
+    pubsub.googleapis.com \
+    --quiet
 
 echo "✅ APIs enabled successfully"
 
@@ -78,7 +91,8 @@ SA_EXISTS=$(gcloud iam service-accounts list --filter="email:$FUNCTION_SA" --for
 if [ "$SA_EXISTS" -eq 0 ]; then
     echo "Creating service account: $FUNCTION_SA"
     gcloud iam service-accounts create receipt-parser \
-        --display-name="Receipt parsing Cloud Function"
+        --display-name="Receipt parsing Cloud Function" \
+        --project "$PROJECT_ID"
 else
     echo "✅ Service account already exists: $FUNCTION_SA"
 fi
@@ -90,29 +104,29 @@ echo "🔐 Granting IAM permissions..."
 gcloud storage buckets add-iam-policy-binding "gs://$GCS_BUCKET" \
     --member="serviceAccount:$FUNCTION_SA" \
     --role="roles/storage.objectAdmin" \
-    --quiet
+    --quiet || true
 
 # Firestore permissions
-gcloud projects add-iam-policy-binding $EXPECTED_PROJECT \
+gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$FUNCTION_SA" \
     --role="roles/datastore.user" \
-    --quiet
+    --quiet || true
 
 # Vertex AI permissions
-gcloud projects add-iam-policy-binding $EXPECTED_PROJECT \
+gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$FUNCTION_SA" \
     --role="roles/aiplatform.user" \
-    --quiet
+    --quiet || true
 
 echo "✅ IAM permissions configured"
 
 # Ensure Firestore database exists
 echo "🗄️  Setting up Firestore..."
-if gcloud firestore databases describe --database="(default)" --format="value(name)" >/dev/null 2>&1; then
+if gcloud firestore databases describe --database="(default)" --format="value(name)" --project="$PROJECT_ID" >/dev/null 2>&1; then
     echo "✅ Firestore database already exists"
 else
     echo "Creating Firestore database..."
-    gcloud firestore databases create --location=$REGION --type=firestore-native
+    gcloud firestore databases create --location=$REGION --type=firestore-native --project="$PROJECT_ID"
 fi
 
 # Build and stage the function artifact so the deployment always uses the latest sources
@@ -160,7 +174,7 @@ if gcloud run services describe "$RUN_SERVICE_NAME" --region="$REGION" --quiet >
         --region="$REGION" \
         --member="allUsers" \
         --role="roles/run.invoker" \
-        --quiet
+        --quiet || true
 else
     echo "⚠️  Unable to configure unauthenticated access for Cloud Run service '$RUN_SERVICE_NAME'."
     echo "    The service may not expose an HTTP endpoint (e.g., event-triggered Cloud Function)."

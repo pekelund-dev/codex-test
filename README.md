@@ -63,8 +63,27 @@ Firestore stores user profiles and receipt parsing output. Choose the setup styl
 
 - [Firestore configuration with the gcloud CLI](docs/gcp-setup-gcloud.md#configure-firestore-via-gcloud)
 - [Firestore configuration with the Cloud Console](docs/gcp-setup-cloud-console.md#configure-firestore-in-the-console)
+- [Local development without Google Cloud](docs/local-development.md)
 
 Both guides walk through project creation, database provisioning, service accounts, and environment variables required by the Spring Boot application.
+
+> 💡 When deploying to Cloud Run or any other Google-managed runtime, leave `FIRESTORE_CREDENTIALS` unset—the service account attached to the workload authenticates automatically via Application Default Credentials. Only download JSON keys for local development or third-party hosting.
+
+If you already generated service-account keys or OAuth credentials, keep the JSON files outside of the repository (for example `~/.config/responsive-auth/`). Point `FIRESTORE_CREDENTIALS_FILE` and/or `GOOGLE_OAUTH_CREDENTIALS_FILE` at those files and source the helper to populate the runtime environment without copying secrets into shell history:
+
+```bash
+export FIRESTORE_CREDENTIALS_FILE="$HOME/.config/responsive-auth/firestore.json"
+export GOOGLE_OAUTH_CREDENTIALS_FILE="$HOME/.config/responsive-auth/oauth-client.json"
+source ./scripts/load_local_secrets.sh
+```
+
+The helper infers `FIRESTORE_CREDENTIALS=file:/...` and extracts `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` so subsequent Maven or deployment commands pick up the secure values automatically.
+
+### Service account handling by environment
+
+- **Cloud Run / Google-managed runtimes** – The deployment script (and the console walkthrough) attaches the `cloud-run-runtime` service account directly to the Cloud Run service. Google automatically exchanges that identity for short-lived tokens through [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc), so the container never needs a JSON key file. Leave `FIRESTORE_CREDENTIALS` unset in these environments; the Firestore client uses the attached service account transparently.
+- **Local development / other hosts** – Provide your own credentials via `FIRESTORE_CREDENTIALS_FILE` and source `./scripts/load_local_secrets.sh`, or point the application at the Firestore emulator with `scripts/source_local_env.sh`. These helpers export `FIRESTORE_CREDENTIALS=file:/…` only when you intentionally supply a downloaded key.
+- **Cloud Function** – The deployment script grants the same Firestore permissions to the function’s runtime identity. Like Cloud Run, the managed function never needs a downloaded key unless you run it on your own infrastructure.
 
 ### Google Cloud Storage configuration
 
@@ -85,7 +104,7 @@ Use the automated deployment script for a streamlined setup:
 
 ```bash
 # Deploy the Cloud Function with all required configurations
-./deploy-cloud-function.sh
+./scripts/deploy_cloud_function.sh
 ```
 
 This script automatically:
@@ -94,6 +113,18 @@ This script automatically:
 - Detects the correct region for your Cloud Storage bucket
 - Builds and deploys the function with optimal settings
 - Provides comprehensive error handling and troubleshooting
+
+#### Teardown
+
+When you're finished testing, run the teardown helper to remove the Cloud Run service, Cloud Function, and related IAM bindings.
+The script is safe to execute multiple times; it only deletes resources that still exist.
+
+```bash
+./scripts/teardown_gcp_resources.sh
+```
+
+Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` if you also want to delete the identities or container
+registry created during deployment.
 
 #### Manual Deployment
 
