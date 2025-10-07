@@ -63,7 +63,7 @@ fi
 
 # Append shared configuration to the Cloud Run environment variables so every component
 # talks to the same Firestore project and OAuth client.
-ENV_VARS="${ENV_VARS:-}"
+ENV_VARS_YAML=""
 
 append_env_var() {
   local key="$1"
@@ -73,16 +73,11 @@ append_env_var() {
     return
   fi
 
-  # Escape characters that gcloud treats as delimiters inside --set-env-vars
   local escaped_value="${value//\\/\\\\}"
-  escaped_value="${escaped_value//,/\\,}"
-  escaped_value="${escaped_value//=\=}"
+  escaped_value="${escaped_value//"/\"}"
 
-  if [[ -z "$ENV_VARS" ]]; then
-    ENV_VARS="${key}=${escaped_value}"
-  elif [[ ",$ENV_VARS," != *",${key}="* ]]; then
-    ENV_VARS="${ENV_VARS},${key}=${escaped_value}"
-  fi
+  printf -v line '%s: "%s"\n' "$key" "$escaped_value"
+  ENV_VARS_YAML+="$line"
 }
 
 if [[ -z "${GOOGLE_CLIENT_ID:-}" || -z "${GOOGLE_CLIENT_SECRET:-}" ]]; then
@@ -183,13 +178,21 @@ if [[ "$ALLOW_UNAUTH" == "true" ]]; then
   ALLOW_FLAG="--allow-unauthenticated"
 fi
 
+ENV_FILE="$(mktemp)"
+cleanup_env_file() {
+  rm -f "$ENV_FILE"
+}
+trap cleanup_env_file EXIT
+
+printf '%s' "$ENV_VARS_YAML" >"$ENV_FILE"
+
 gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_URI" \
   --service-account "$SA_EMAIL" \
   --region "$REGION" \
   --platform managed \
   $ALLOW_FLAG \
-  --set-env-vars "${ENV_VARS}" \
+  --env-vars-file "$ENV_FILE" \
   --min-instances 0 \
   --max-instances 10
 
