@@ -63,7 +63,7 @@ fi
 
 # Append shared configuration to the Cloud Run environment variables so every component
 # talks to the same Firestore project and OAuth client.
-ENV_VARS=""
+ENV_VARS_LIST=()
 
 append_env_var() {
   local key="$1"
@@ -73,14 +73,17 @@ append_env_var() {
     return
   fi
 
-  local escaped_value="${value//\\/\\\\}"
-  escaped_value="${escaped_value//,/\\,}"
+  local pair="${key}=${value}"
 
-  if [[ -z "$ENV_VARS" ]]; then
-    ENV_VARS="${key}=${escaped_value}"
-  elif [[ ",$ENV_VARS," != *",${key}="* ]]; then
-    ENV_VARS="${ENV_VARS},${key}=${escaped_value}"
-  fi
+  local i
+  for i in "${!ENV_VARS_LIST[@]}"; do
+    if [[ "${ENV_VARS_LIST[i]}" == "${key}="* ]]; then
+      ENV_VARS_LIST[i]="${pair}"
+      return
+    fi
+  done
+
+  ENV_VARS_LIST+=("${pair}")
 }
 
 if [[ -z "${GOOGLE_CLIENT_ID:-}" ]] || [[ -z "${GOOGLE_CLIENT_SECRET:-}" ]]; then
@@ -101,6 +104,39 @@ if [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
 fi
 append_env_var "GOOGLE_CLIENT_ID" "${GOOGLE_CLIENT_ID:-}"
 append_env_var "GOOGLE_CLIENT_SECRET" "${GOOGLE_CLIENT_SECRET:-}"
+
+choose_env_delimiter() {
+  local candidates=("|" "@" ":" ";" "#" "+" "~" "^" "%" "?")
+  local candidate pair
+
+  for candidate in "${candidates[@]}"; do
+    local collision=false
+    for pair in "${ENV_VARS_LIST[@]}"; do
+      if [[ "$pair" == *"${candidate}"* ]]; then
+        collision=true
+        break
+      fi
+    done
+    if [[ "$collision" == false ]]; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+
+  echo "Could not find a safe delimiter for Cloud Run environment variables" >&2
+  exit 1
+}
+
+ENV_VARS_ARG=""
+if (( ${#ENV_VARS_LIST[@]} > 0 )); then
+  DELIM="$(choose_env_delimiter)"
+  ENV_VARS_ARG="^${DELIM}^$(IFS="$DELIM"; printf '%s' "${ENV_VARS_LIST[*]}")"
+fi
+
+if [[ -z "$ENV_VARS_ARG" ]]; then
+  echo "Failed to assemble Cloud Run environment variables" >&2
+  exit 1
+fi
 ALLOW_UNAUTH="${ALLOW_UNAUTH:-true}"
 DOMAIN="${DOMAIN:-pklnd.pekelund.dev}"
 
@@ -188,7 +224,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --region "$REGION" \
   --platform managed \
   $ALLOW_FLAG \
-  --set-env-vars "${ENV_VARS}" \
+  --set-env-vars "${ENV_VARS_ARG}" \
   --min-instances 0 \
   --max-instances 10
 
