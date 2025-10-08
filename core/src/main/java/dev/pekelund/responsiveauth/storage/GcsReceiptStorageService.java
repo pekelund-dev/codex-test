@@ -108,6 +108,29 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
         }
     }
 
+    @Override
+    public void deleteReceiptsForOwner(ReceiptOwner owner) {
+        if (owner == null) {
+            return;
+        }
+
+        try {
+            Iterable<Blob> blobs = storage.list(properties.getBucket()).iterateAll();
+            for (Blob blob : blobs) {
+                if (blob.isDirectory()) {
+                    continue;
+                }
+                ReceiptOwner fileOwner = ReceiptOwner.fromMetadata(blob.getMetadata());
+                if (!ReceiptOwnerMatcher.belongsToCurrentOwner(fileOwner, owner)) {
+                    continue;
+                }
+                storage.delete(blob.getBlobId());
+            }
+        } catch (StorageException ex) {
+            throw new ReceiptStorageException("Unable to delete receipt files", ex);
+        }
+    }
+
     private String buildObjectName(String originalFilename) {
         String filename = StringUtils.hasText(originalFilename) ? originalFilename : "receipt";
         filename = extractFilename(filename);

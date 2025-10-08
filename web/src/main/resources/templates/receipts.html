@@ -62,17 +62,19 @@
         <div class="col-lg-5">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body p-4">
-                    <h2 class="h5 fw-semibold mb-3">Quick start checklist</h2>
-                    <ol class="list-group list-group-numbered list-group-flush">
-                        <li class="list-group-item">Create or select a Google Cloud project.</li>
-                        <li class="list-group-item">Enable the Cloud Storage API and create a bucket for receipts.</li>
-                        <li class="list-group-item">Generate a service account key with Storage Admin access.</li>
-                        <li class="list-group-item">Set the <code>GCS_*</code> environment variables before starting the
-                            app.
-                        </li>
-                    </ol>
-                    <p class="text-muted small mt-3 mb-0">See the repository README for detailed setup instructions and
-                        recommended security practices.</p>
+                    <h2 class="h5 fw-semibold mb-3">Testing utilities</h2>
+                    <p class="text-muted small mb-4">Quickly clear uploaded receipts and parsed receipt data for your
+                        account while testing the application.</p>
+                    <form th:action="@{/receipts/clear}" method="post" class="d-flex flex-wrap align-items-center gap-3">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <button type="submit" class="btn btn-outline-danger"
+                                th:disabled="${!storageEnabled and !parsedReceiptsEnabled}">
+                            Clear receipt data
+                        </button>
+                        <span class="text-muted small" th:if="${!storageEnabled and !parsedReceiptsEnabled}">
+                            Receipt storage and parsing are disabled.
+                        </span>
+                    </form>
                 </div>
             </div>
         </div>
