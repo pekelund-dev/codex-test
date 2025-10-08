@@ -79,15 +79,16 @@
                     </thead>
                     <tbody>
                     <tr th:each="item : ${receipt.displayItems()}">
-                        <td th:with="itemName=${item['name'] != null ? #strings.trim(item['name']) : null}">
+                        <td th:with="itemName=${item['name'] != null ? #strings.trim(item['name']) : null},
+                                       itemEan=${item['eanCode'] != null ? #strings.trim(item['eanCode']) : null}">
                             <span class="fw-semibold" th:text="${itemName != null ? itemName : '—'}">Item name</span>
-                            <div class="text-muted small" th:if="${item['eanCode']}" th:text="${'EAN: ' + item['eanCode']}">EAN</div>
+                            <div class="text-muted small" th:if="${itemEan != null}" th:text="${'EAN: ' + itemEan}">EAN</div>
                             <div class="mt-1"
-                                 th:if="${itemName != null and itemOccurrences != null and itemOccurrences[itemName] != null and itemOccurrences[itemName] > 1}">
+                                 th:if="${itemEan != null and itemOccurrences != null and itemOccurrences[itemEan] != null and itemOccurrences[itemEan] > 1}">
                                 <a class="link-primary text-decoration-none small d-inline-flex align-items-center gap-1"
-                                   th:href="@{/receipts/items/{itemName}(itemName=${itemName}, sourceId=${receipt.id()})}">
+                                   th:href="@{/receipts/items/{eanCode}(eanCode=${itemEan}, sourceId=${receipt.id()})}">
                                     <i class="bi bi-graph-up"></i>
-                                    <span th:text="${'View purchase history (' + itemOccurrences[itemName] + ')'}">View purchase history (2)</span>
+                                    <span th:text="${'View purchase history (' + itemOccurrences[itemEan] + ')'}">View purchase history (2)</span>
                                 </a>
                             </div>
                         </td>

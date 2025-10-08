@@ -272,6 +272,7 @@ public class ReceiptController {
 
     private record ItemPurchaseView(
         String itemDisplayName,
+        String itemEanCode,
         String receiptId,
         String receiptDisplayName,
         String storeName,
@@ -300,7 +301,7 @@ public class ReceiptController {
             .findFirst()
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found."));
 
-        Map<String, Long> itemOccurrences = computeItemOccurrences(receipts);
+        Map<String, Long> itemOccurrences = computeItemOccurrencesByEan(receipts);
 
         String displayName = receipt.displayName();
         model.addAttribute("pageTitle", displayName != null ? "Receipt: " + displayName : "Receipt details");
@@ -309,9 +310,9 @@ public class ReceiptController {
         return "receipt-detail";
     }
 
-    @GetMapping("/receipts/items/{itemName}")
+    @GetMapping("/receipts/items/{eanCode}")
     public String viewItemPurchases(
-        @PathVariable("itemName") String itemName,
+        @PathVariable("eanCode") String eanCode,
         @RequestParam(value = "sourceId", required = false) String sourceReceiptId,
         Model model,
         Authentication authentication
@@ -321,19 +322,24 @@ public class ReceiptController {
         }
 
         ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
-        if (currentOwner == null || !StringUtils.hasText(itemName)) {
+        if (currentOwner == null || !StringUtils.hasText(eanCode)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found.");
         }
 
-        String trimmedItemName = itemName.trim();
+        String trimmedEanCode = eanCode.trim();
         List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(currentOwner);
-        List<ItemPurchaseView> purchases = buildItemPurchases(trimmedItemName, receipts);
+        List<ItemPurchaseView> purchases = buildItemPurchases(trimmedEanCode, receipts);
 
         if (purchases.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found.");
         }
 
-        String displayItemName = purchases.get(0).itemDisplayName();
+        String displayItemName = purchases.stream()
+            .map(ItemPurchaseView::itemDisplayName)
+            .filter(StringUtils::hasText)
+            .findFirst()
+            .orElse("EAN " + trimmedEanCode);
+        String displayEanCode = purchases.get(0).itemEanCode();
         List<Map<String, Object>> priceHistory = buildPriceHistory(purchases);
         String priceHistoryJson = serializePriceHistory(priceHistory);
         boolean hasPriceHistory = !priceHistory.isEmpty();
@@ -348,6 +354,7 @@ public class ReceiptController {
 
         model.addAttribute("pageTitle", "Item: " + displayItemName);
         model.addAttribute("itemName", displayItemName);
+        model.addAttribute("itemEan", displayEanCode);
         model.addAttribute("purchases", purchases);
         model.addAttribute("purchaseCount", purchases.size());
         model.addAttribute("priceHistoryJson", priceHistoryJson);
@@ -359,7 +366,7 @@ public class ReceiptController {
         return "receipt-item";
     }
 
-    private Map<String, Long> computeItemOccurrences(List<ParsedReceipt> receipts) {
+    private Map<String, Long> computeItemOccurrencesByEan(List<ParsedReceipt> receipts) {
         if (receipts == null || receipts.isEmpty()) {
             return Map.of();
         }
@@ -373,22 +380,22 @@ public class ReceiptController {
                 if (item == null || item.isEmpty()) {
                     continue;
                 }
-                String name = extractDisplayName(item.get("name"));
-                if (name == null) {
+                String ean = extractEanCode(item.get("eanCode"));
+                if (ean == null) {
                     continue;
                 }
-                occurrences.merge(name, 1L, Long::sum);
+                occurrences.merge(ean, 1L, Long::sum);
             }
         }
         return Collections.unmodifiableMap(occurrences);
     }
 
-    private List<ItemPurchaseView> buildItemPurchases(String targetName, List<ParsedReceipt> receipts) {
-        if (!StringUtils.hasText(targetName) || receipts == null || receipts.isEmpty()) {
+    private List<ItemPurchaseView> buildItemPurchases(String targetEan, List<ParsedReceipt> receipts) {
+        if (!StringUtils.hasText(targetEan) || receipts == null || receipts.isEmpty()) {
             return List.of();
         }
 
-        String normalizedTarget = targetName.trim();
+        String normalizedTarget = targetEan.trim();
         List<ItemPurchaseView> purchases = new ArrayList<>();
 
         for (ParsedReceipt receipt : receipts) {
@@ -411,10 +418,12 @@ public class ReceiptController {
                     continue;
                 }
 
-                String itemName = extractDisplayName(item.get("name"));
-                if (itemName == null || !itemName.equals(normalizedTarget)) {
+                String itemEan = extractEanCode(item.get("eanCode"));
+                if (itemEan == null || !itemEan.equals(normalizedTarget)) {
                     continue;
                 }
+
+                String itemName = extractDisplayName(item.get("name"));
 
                 BigDecimal totalPrice = parseBigDecimal(item.get("totalPrice"));
                 String priceLabel = determinePriceLabel(item, totalPrice);
@@ -422,6 +431,7 @@ public class ReceiptController {
 
                 purchases.add(new ItemPurchaseView(
                     itemName,
+                    itemEan,
                     receipt.id(),
                     receiptDisplayName,
                     receipt.storeName(),
@@ -453,6 +463,15 @@ public class ReceiptController {
                 return point;
             })
             .toList();
+    }
+
+    private String extractEanCode(Object rawValue) {
+        if (rawValue == null) {
+            return null;
+        }
+
+        String ean = rawValue.toString().trim();
+        return ean.isEmpty() ? null : ean;
     }
 
     private String serializePriceHistory(List<Map<String, Object>> priceHistory) {
