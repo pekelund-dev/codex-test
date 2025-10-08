@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -253,6 +254,12 @@ public class ReceiptController {
     ) {
     }
 
+    private record ReceiptClearResponse(String successMessage, String errorMessage) {
+    }
+
+    private record ClearOutcome(String successMessage, String errorMessage) {
+    }
+
     @GetMapping("/receipts/{documentId}")
     public String viewParsedReceipt(@PathVariable("documentId") String documentId, Model model, Authentication authentication) {
         if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
@@ -322,12 +329,43 @@ public class ReceiptController {
             return "redirect:/receipts";
         }
 
+        ClearOutcome outcome = clearReceiptData(owner);
+
+        if (outcome.successMessage() != null) {
+            redirectAttributes.addFlashAttribute("successMessage", outcome.successMessage());
+        }
+
+        if (outcome.errorMessage() != null) {
+            redirectAttributes.addFlashAttribute("errorMessage", outcome.errorMessage());
+        }
+
+        return "redirect:/receipts";
+    }
+
+    @PostMapping(value = "/receipts/clear", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<ReceiptClearResponse> clearReceiptsJson(Authentication authentication) {
+        ReceiptOwner owner = resolveReceiptOwner(authentication);
+        if (owner == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ReceiptClearResponse(null, "Unable to determine the current user."));
+        }
+
+        ClearOutcome outcome = clearReceiptData(owner);
+        HttpStatus status = outcome.successMessage() == null && outcome.errorMessage() != null
+            ? HttpStatus.BAD_REQUEST
+            : HttpStatus.OK;
+
+        return ResponseEntity.status(status)
+            .body(new ReceiptClearResponse(outcome.successMessage(), outcome.errorMessage()));
+    }
+
+    private ClearOutcome clearReceiptData(ReceiptOwner owner) {
         boolean storageEnabled = receiptStorageService.isPresent() && receiptStorageService.get().isEnabled();
         boolean parsedReceiptsEnabled = receiptExtractionService.isPresent() && receiptExtractionService.get().isEnabled();
 
         if (!storageEnabled && !parsedReceiptsEnabled) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Receipt storage and parsing are disabled.");
-            return "redirect:/receipts";
+            return new ClearOutcome(null, "Receipt storage and parsing are disabled.");
         }
 
         List<String> successes = new ArrayList<>();
@@ -353,21 +391,21 @@ public class ReceiptController {
             }
         }
 
+        String successMessage = null;
         if (!successes.isEmpty()) {
-            String message = "Cleared " + String.join(" and ", successes) + ".";
-            redirectAttributes.addFlashAttribute("successMessage", message);
+            successMessage = "Cleared " + String.join(" and ", successes) + ".";
         }
 
+        String errorMessage = null;
         if (!errors.isEmpty()) {
-            String message = String.join(" ", errors);
-            redirectAttributes.addFlashAttribute("errorMessage", message);
+            errorMessage = String.join(" ", errors);
         }
 
-        if (successes.isEmpty() && errors.isEmpty()) {
-            redirectAttributes.addFlashAttribute("errorMessage", "No receipt data was cleared.");
+        if (successMessage == null && errorMessage == null) {
+            errorMessage = "No receipt data was cleared.";
         }
 
-        return "redirect:/receipts";
+        return new ClearOutcome(successMessage, errorMessage);
     }
 
     private ReceiptOwner resolveReceiptOwner(Authentication authentication) {

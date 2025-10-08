@@ -1,6 +1,7 @@
 (function () {
     setupUploadControls();
-    setupDashboardPolling();
+    const poller = setupDashboardPolling();
+    setupClearReceiptsControl(poller);
 })();
 
 function setupUploadControls() {
@@ -207,12 +208,12 @@ function setupUploadControls() {
 function setupDashboardPolling() {
     const container = document.querySelector('[data-dashboard-url]');
     if (!container) {
-        return;
+        return null;
     }
 
     const endpoint = container.getAttribute('data-dashboard-url');
     if (!endpoint) {
-        return;
+        return null;
     }
 
     const filesCountBadge = container.querySelector('[data-files-count]');
@@ -224,11 +225,16 @@ function setupDashboardPolling() {
     const parsedTable = container.querySelector('[data-parsed-table]');
     const parsedBody = container.querySelector('[data-parsed-body]');
 
-    const POLL_INTERVAL = 5000;
+    const POLL_INTERVAL = 2000;
     let pollTimeoutId = null;
     let isFetching = false;
 
     async function fetchAndRender() {
+        if (pollTimeoutId !== null) {
+            window.clearTimeout(pollTimeoutId);
+            pollTimeoutId = null;
+        }
+
         if (isFetching) {
             scheduleNext();
             return;
@@ -274,6 +280,10 @@ function setupDashboardPolling() {
     });
 
     fetchAndRender();
+
+    return {
+        refreshNow: fetchAndRender,
+    };
 }
 
 function renderFilesSection(data, refs) {
@@ -396,6 +406,88 @@ function buildFileRow(file) {
     row.appendChild(typeCell);
 
     return row;
+}
+
+function setupClearReceiptsControl(poller) {
+    const form = document.querySelector('form[action$="/receipts/clear"]');
+    if (!form) {
+        return;
+    }
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    const feedbackContainer = form.parentElement
+        ? form.parentElement.querySelector('[data-clear-feedback]')
+        : null;
+
+    function renderFeedback(message, type) {
+        if (!feedbackContainer) {
+            return;
+        }
+
+        if (!message) {
+            feedbackContainer.innerHTML = '';
+            feedbackContainer.classList.add('d-none');
+            return;
+        }
+
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} mb-0`;
+        alert.setAttribute('role', 'alert');
+        alert.textContent = message;
+        feedbackContainer.innerHTML = '';
+        feedbackContainer.appendChild(alert);
+        feedbackContainer.classList.remove('d-none');
+    }
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        if (submitButton) {
+            submitButton.disabled = true;
+        }
+        renderFeedback(null, 'info');
+
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: form.method || 'POST',
+            body: formData,
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        }).then(async (response) => {
+            let payload = null;
+            try {
+                payload = await response.json();
+            } catch (error) {
+                // Ignore parsing errors and fall back to a generic message.
+            }
+
+            if (!response.ok) {
+                const message = payload && payload.errorMessage
+                    ? payload.errorMessage
+                    : 'Failed to clear receipt data. Please try again.';
+                throw new Error(message);
+            }
+
+            const successMessage = payload && payload.successMessage
+                ? payload.successMessage
+                : 'Receipt data cleared.';
+            renderFeedback(successMessage, 'success');
+
+            if (poller && typeof poller.refreshNow === 'function') {
+                poller.refreshNow();
+            }
+        }).catch((error) => {
+            const message = error && error.message
+                ? error.message
+                : 'Failed to clear receipt data. Please try again.';
+            renderFeedback(message, 'danger');
+        }).finally(() => {
+            if (submitButton) {
+                submitButton.disabled = false;
+            }
+        });
+    });
 }
 
 function buildParsedRow(receipt) {
