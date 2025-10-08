@@ -65,8 +65,8 @@
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
             <h2 class="h5 fw-semibold mb-3">Items</h2>
-            <div th:if="${#lists.isEmpty(receipt.items())}" class="text-muted">No items were detected.</div>
-            <div th:if="${!#lists.isEmpty(receipt.items())}" class="table-responsive">
+            <div th:if="${#lists.isEmpty(receiptItems)}" class="text-muted">No items were detected.</div>
+            <div th:if="${!#lists.isEmpty(receiptItems)}" class="table-responsive">
                 <table class="table align-middle">
                     <thead class="table-light">
                     <tr>
@@ -78,10 +78,18 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="item : ${receipt.displayItems()}">
-                        <td>
-                            <span class="fw-semibold" th:text="${item['name'] != null ? item['name'] : '—'}">Item name</span>
-                            <div class="text-muted small" th:if="${item['eanCode']}" th:text="${'EAN: ' + item['eanCode']}">EAN</div>
+                    <tr th:each="item : ${receiptItems}">
+                        <td th:with="itemName=${item['name'] != null ? #strings.trim(item['name']) : null},
+                                       itemEan=${item['normalizedEan'] != null ? item['normalizedEan'] : null},
+                                       historyCount=${item['historyCount'] != null ? item['historyCount'] : 0L}">
+                            <a th:if="${itemEan != null and historyCount > 1}"
+                               class="fw-semibold text-decoration-none"
+                               th:href="@{/receipts/items/{eanCode}(eanCode=${itemEan}, sourceId=${receipt.id()})}"
+                               th:text="${itemName != null ? itemName : '—'}">Item name</a>
+                            <span th:if="${!(itemEan != null and historyCount > 1)}"
+                                  class="fw-semibold"
+                                  th:text="${itemName != null ? itemName : '—'}">Item name</span>
+                            <div class="text-muted small" th:if="${itemEan != null}" th:text="${'EAN: ' + itemEan}">EAN</div>
                         </td>
                         <td th:text="${item['displayQuantity'] != null ? item['displayQuantity'] : (item['quantity'] != null ? item['quantity'] : '—')}">—</td>
                         <td th:text="${item['displayUnitPrice'] != null ? item['displayUnitPrice'] : (item['unitPrice'] != null ? item['unitPrice'] : '—')}">—</td>

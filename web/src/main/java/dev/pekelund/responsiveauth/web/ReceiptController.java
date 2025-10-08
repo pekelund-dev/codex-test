@@ -1,5 +1,7 @@
 package dev.pekelund.responsiveauth.web;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.pekelund.responsiveauth.firestore.FirestoreUserDetails;
 import dev.pekelund.responsiveauth.firestore.ParsedReceipt;
 import dev.pekelund.responsiveauth.firestore.ReceiptExtractionAccessException;
@@ -9,15 +11,24 @@ import dev.pekelund.responsiveauth.storage.ReceiptOwner;
 import dev.pekelund.responsiveauth.storage.ReceiptOwnerMatcher;
 import dev.pekelund.responsiveauth.storage.ReceiptStorageException;
 import dev.pekelund.responsiveauth.storage.ReceiptStorageService;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +58,20 @@ public class ReceiptController {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptController.class);
     private static final DateTimeFormatter TIMESTAMP_FORMATTER =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final Pattern EAN_PATTERN = Pattern.compile("(\\d{8,14})");
+    private static final Pattern QUANTITY_VALUE_PATTERN = Pattern.compile("([-+]?\\d+(?:[.,]\\d+)?)");
+    private static final List<String> POSSIBLE_EAN_KEYS = List.of(
+        "eanCode",
+        "ean",
+        "barcode",
+        "barCode",
+        "ean_code",
+        "EAN",
+        "gtin",
+        "itemEan",
+        "sku"
+    );
 
     private final Optional<ReceiptStorageService> receiptStorageService;
     private final Optional<ReceiptExtractionService> receiptExtractionService;
@@ -260,6 +285,20 @@ public class ReceiptController {
     private record ClearOutcome(String successMessage, String errorMessage) {
     }
 
+    private record ItemPurchaseView(
+        String itemDisplayName,
+        String itemEanCode,
+        String receiptId,
+        String receiptDisplayName,
+        String storeName,
+        String dateLabel,
+        String priceLabel,
+        Instant sortInstant,
+        String chartDate,
+        BigDecimal priceValue
+    ) {
+    }
+
     @GetMapping("/receipts/{documentId}")
     public String viewParsedReceipt(@PathVariable("documentId") String documentId, Model model, Authentication authentication) {
         if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
@@ -271,14 +310,426 @@ public class ReceiptController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found.");
         }
 
-        ParsedReceipt receipt = receiptExtractionService.get().findById(documentId)
-            .filter(parsed -> ReceiptOwnerMatcher.belongsToCurrentOwner(parsed.owner(), currentOwner))
+        List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(currentOwner);
+        ParsedReceipt receipt = receipts.stream()
+            .filter(parsed -> documentId.equals(parsed.id()))
+            .findFirst()
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found."));
+
+        Map<String, Long> itemOccurrences = computeItemOccurrencesByEan(receipts);
+        List<Map<String, Object>> receiptItems = prepareReceiptItems(receipt.displayItems(), itemOccurrences);
 
         String displayName = receipt.displayName();
         model.addAttribute("pageTitle", displayName != null ? "Receipt: " + displayName : "Receipt details");
         model.addAttribute("receipt", receipt);
+        model.addAttribute("itemOccurrences", itemOccurrences);
+        model.addAttribute("receiptItems", receiptItems);
         return "receipt-detail";
+    }
+
+    @GetMapping("/receipts/items/{eanCode}")
+    public String viewItemPurchases(
+        @PathVariable("eanCode") String eanCode,
+        @RequestParam(value = "sourceId", required = false) String sourceReceiptId,
+        Model model,
+        Authentication authentication
+    ) {
+        if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Parsed receipts are not available.");
+        }
+
+        ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
+        if (currentOwner == null || !StringUtils.hasText(eanCode)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found.");
+        }
+
+        String trimmedEanCode = eanCode.trim();
+        List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(currentOwner);
+        List<ItemPurchaseView> purchases = buildItemPurchases(trimmedEanCode, receipts);
+
+        if (purchases.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found.");
+        }
+
+        String displayItemName = purchases.stream()
+            .map(ItemPurchaseView::itemDisplayName)
+            .filter(StringUtils::hasText)
+            .findFirst()
+            .orElse("EAN " + trimmedEanCode);
+        String displayEanCode = purchases.get(0).itemEanCode();
+        List<Map<String, Object>> priceHistory = buildPriceHistory(purchases);
+        String priceHistoryJson = serializePriceHistory(priceHistory);
+        boolean hasPriceHistory = !priceHistory.isEmpty();
+
+        ParsedReceipt sourceReceipt = null;
+        if (StringUtils.hasText(sourceReceiptId)) {
+            sourceReceipt = receipts.stream()
+                .filter(parsed -> sourceReceiptId.equals(parsed.id()))
+                .findFirst()
+                .orElse(null);
+        }
+
+        model.addAttribute("pageTitle", "Item: " + displayItemName);
+        model.addAttribute("itemName", displayItemName);
+        model.addAttribute("itemEan", displayEanCode);
+        model.addAttribute("purchases", purchases);
+        model.addAttribute("purchaseCount", purchases.size());
+        model.addAttribute("priceHistoryJson", priceHistoryJson);
+        model.addAttribute("hasPriceHistory", hasPriceHistory);
+
+        model.addAttribute("sourceReceiptId", sourceReceipt != null ? sourceReceipt.id() : null);
+        model.addAttribute("sourceReceiptName", sourceReceipt != null ? resolveReceiptDisplayName(sourceReceipt) : null);
+
+        return "receipt-item";
+    }
+
+    private Map<String, Long> computeItemOccurrencesByEan(List<ParsedReceipt> receipts) {
+        if (receipts == null || receipts.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, Long> occurrences = new HashMap<>();
+        for (ParsedReceipt receipt : receipts) {
+            if (receipt == null) {
+                continue;
+            }
+            for (Map<String, Object> item : receipt.displayItems()) {
+                if (item == null || item.isEmpty()) {
+                    continue;
+                }
+                String ean = extractItemEan(item);
+                if (ean == null) {
+                    continue;
+                }
+                occurrences.merge(ean, 1L, Long::sum);
+            }
+        }
+        return Collections.unmodifiableMap(occurrences);
+    }
+
+    private List<ItemPurchaseView> buildItemPurchases(String targetEan, List<ParsedReceipt> receipts) {
+        if (!StringUtils.hasText(targetEan) || receipts == null || receipts.isEmpty()) {
+            return List.of();
+        }
+
+        String normalizedTarget = targetEan.trim();
+        List<ItemPurchaseView> purchases = new ArrayList<>();
+
+        for (ParsedReceipt receipt : receipts) {
+            if (receipt == null) {
+                continue;
+            }
+
+            String receiptDisplayName = resolveReceiptDisplayName(receipt);
+            LocalDate parsedReceiptDate = parseReceiptDate(receipt.receiptDate());
+            Instant sortInstant = determineSortInstant(parsedReceiptDate, receipt.updatedAt());
+            String dateLabel = determineDateLabel(receipt.receiptDate(), receipt.updatedAt());
+            String chartDate = parsedReceiptDate != null
+                ? parsedReceiptDate.toString()
+                : sortInstant != null
+                    ? sortInstant.atZone(ZoneId.systemDefault()).toLocalDate().toString()
+                    : null;
+
+            for (Map<String, Object> item : receipt.displayItems()) {
+                if (item == null || item.isEmpty()) {
+                    continue;
+                }
+
+                String itemEan = extractItemEan(item);
+                if (itemEan == null || !itemEan.equals(normalizedTarget)) {
+                    continue;
+                }
+
+                String itemName = extractDisplayName(item.get("name"));
+
+                BigDecimal totalPrice = resolveTotalPrice(item);
+                BigDecimal unitPrice = resolveUnitPrice(item, totalPrice);
+                String priceLabel = determinePriceLabel(item, unitPrice, totalPrice);
+                BigDecimal resolvedPrice = unitPrice != null ? unitPrice : totalPrice;
+                BigDecimal priceValue = resolvedPrice != null ? resolvedPrice.setScale(2, RoundingMode.HALF_UP) : null;
+
+                purchases.add(new ItemPurchaseView(
+                    itemName,
+                    itemEan,
+                    receipt.id(),
+                    receiptDisplayName,
+                    receipt.storeName(),
+                    dateLabel,
+                    priceLabel,
+                    sortInstant,
+                    chartDate,
+                    priceValue
+                ));
+            }
+        }
+
+        purchases.sort(Comparator.comparing(ItemPurchaseView::sortInstant, Comparator.nullsLast(Comparator.reverseOrder())));
+        return List.copyOf(purchases);
+    }
+
+    private List<Map<String, Object>> buildPriceHistory(List<ItemPurchaseView> purchases) {
+        if (purchases == null || purchases.isEmpty()) {
+            return List.of();
+        }
+
+        return purchases.stream()
+            .filter(entry -> entry.chartDate() != null && entry.priceValue() != null)
+            .sorted(Comparator.comparing(ItemPurchaseView::sortInstant, Comparator.nullsLast(Comparator.naturalOrder())))
+            .map(entry -> {
+                Map<String, Object> point = new LinkedHashMap<>();
+                point.put("date", entry.chartDate());
+                point.put("price", entry.priceValue());
+                return point;
+            })
+            .toList();
+    }
+
+    private BigDecimal resolveTotalPrice(Map<String, Object> item) {
+        BigDecimal totalPrice = parseBigDecimal(item.get("totalPrice"));
+        if (totalPrice == null) {
+            totalPrice = parseBigDecimal(item.get("displayTotalPrice"));
+        }
+        return totalPrice;
+    }
+
+    private BigDecimal resolveUnitPrice(Map<String, Object> item, BigDecimal totalPrice) {
+        BigDecimal unitPrice = parseBigDecimal(item.get("unitPrice"));
+        if (unitPrice == null) {
+            unitPrice = parseBigDecimal(item.get("displayUnitPrice"));
+        }
+        if (unitPrice != null) {
+            return unitPrice;
+        }
+
+        BigDecimal effectiveTotal = totalPrice != null ? totalPrice : resolveTotalPrice(item);
+        if (effectiveTotal == null) {
+            return null;
+        }
+
+        BigDecimal quantity = parseQuantityValue(item.get("quantity"));
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) == 0) {
+            quantity = parseQuantityValue(item.get("displayQuantity"));
+        }
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+
+        try {
+            return effectiveTotal.divide(quantity, 2, RoundingMode.HALF_UP);
+        } catch (ArithmeticException ex) {
+            return null;
+        }
+    }
+
+    private BigDecimal parseQuantityValue(Object rawQuantity) {
+        if (rawQuantity == null) {
+            return null;
+        }
+        String text = rawQuantity.toString().replace('\u00A0', ' ').trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+
+        Matcher matcher = QUANTITY_VALUE_PATTERN.matcher(text);
+        if (!matcher.find()) {
+            return null;
+        }
+
+        String numeric = matcher.group(1).replace(" ", "").replace(',', '.');
+        try {
+            return new BigDecimal(numeric);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private List<Map<String, Object>> prepareReceiptItems(List<Map<String, Object>> items, Map<String, Long> occurrences) {
+        if (items == null || items.isEmpty()) {
+            return List.of();
+        }
+
+        List<Map<String, Object>> prepared = new ArrayList<>(items.size());
+        for (Map<String, Object> item : items) {
+            if (item == null || item.isEmpty()) {
+                prepared.add(Map.of());
+                continue;
+            }
+
+            String normalizedEan = extractItemEan(item);
+            Map<String, Object> copy = new LinkedHashMap<>(item);
+            copy.put("normalizedEan", normalizedEan);
+            long historyCount = normalizedEan != null && occurrences != null
+                ? occurrences.getOrDefault(normalizedEan, 0L)
+                : 0L;
+            copy.put("historyCount", historyCount);
+
+            prepared.add(Collections.unmodifiableMap(copy));
+        }
+
+        return Collections.unmodifiableList(prepared);
+    }
+
+    private String extractItemEan(Map<String, Object> item) {
+        if (item == null || item.isEmpty()) {
+            return null;
+        }
+
+        for (String key : POSSIBLE_EAN_KEYS) {
+            Object raw = item.get(key);
+            String normalized = extractEanCode(raw);
+            if (normalized != null) {
+                return normalized;
+            }
+        }
+        return null;
+    }
+
+    private String extractEanCode(Object rawValue) {
+        if (rawValue == null) {
+            return null;
+        }
+
+        String text = rawValue.toString().trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+
+        Matcher matcher = EAN_PATTERN.matcher(text);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+
+        String digitsOnly = text.replaceAll("\\D+", "");
+        if (digitsOnly.length() >= 8 && digitsOnly.length() <= 14) {
+            return digitsOnly;
+        }
+
+        if (text.chars().allMatch(Character::isDigit) && text.length() >= 8 && text.length() <= 14) {
+            return text;
+        }
+
+        return null;
+    }
+
+    private String serializePriceHistory(List<Map<String, Object>> priceHistory) {
+        if (priceHistory == null || priceHistory.isEmpty()) {
+            return "[]";
+        }
+
+        try {
+            return OBJECT_MAPPER.writeValueAsString(priceHistory);
+        } catch (JsonProcessingException ex) {
+            LOGGER.warn("Failed to serialize price history for item chart", ex);
+            return "[]";
+        }
+    }
+
+    private String resolveReceiptDisplayName(ParsedReceipt receipt) {
+        if (receipt == null) {
+            return null;
+        }
+        String displayName = receipt.displayName();
+        if (StringUtils.hasText(displayName)) {
+            return displayName;
+        }
+        if (StringUtils.hasText(receipt.objectPath())) {
+            return receipt.objectPath();
+        }
+        if (StringUtils.hasText(receipt.objectName())) {
+            return receipt.objectName();
+        }
+        return receipt.id();
+    }
+
+    private LocalDate parseReceiptDate(String rawDate) {
+        if (!StringUtils.hasText(rawDate)) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(rawDate);
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
+    }
+
+    private Instant determineSortInstant(LocalDate receiptDate, Instant updatedAt) {
+        if (receiptDate != null) {
+            return receiptDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
+        }
+        return updatedAt;
+    }
+
+    private String determineDateLabel(String rawReceiptDate, Instant updatedAt) {
+        if (StringUtils.hasText(rawReceiptDate)) {
+            return rawReceiptDate;
+        }
+        return formatInstant(updatedAt);
+    }
+
+    private String determinePriceLabel(Map<String, Object> item, BigDecimal unitPrice, BigDecimal totalPrice) {
+        Object displayUnit = item.get("displayUnitPrice");
+        if (displayUnit != null) {
+            return displayUnit.toString();
+        }
+        if (unitPrice != null) {
+            return formatAmount(unitPrice);
+        }
+        Object rawUnit = item.get("unitPrice");
+        if (rawUnit != null) {
+            return rawUnit.toString();
+        }
+
+        Object displayTotal = item.get("displayTotalPrice");
+        if (displayTotal != null) {
+            return displayTotal.toString();
+        }
+        if (totalPrice != null) {
+            return formatAmount(totalPrice);
+        }
+        Object rawTotal = item.get("totalPrice");
+        return rawTotal != null ? rawTotal.toString() : null;
+    }
+
+    private String extractDisplayName(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = value.toString().trim();
+        return text.isEmpty() ? null : text;
+    }
+
+    private BigDecimal parseBigDecimal(Object value) {
+        if (value instanceof BigDecimal bigDecimal) {
+            return bigDecimal;
+        }
+        if (value instanceof Number number) {
+            try {
+                return new BigDecimal(number.toString());
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+        }
+        if (value instanceof String stringValue) {
+            String normalized = stringValue.replace('\u00A0', ' ').trim();
+            if (normalized.isEmpty()) {
+                return null;
+            }
+            normalized = normalized.replace(" ", "");
+            normalized = normalized.replace(',', '.');
+            try {
+                return new BigDecimal(normalized);
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private String formatAmount(BigDecimal value) {
+        if (value == null) {
+            return null;
+        }
+        return value.setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
 
     @PostMapping("/receipts/upload")

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle}">Item details</title>
+</head>
+<body>
+<section class="py-3 py-lg-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <a class="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center gap-1"
+           th:if="${sourceReceiptId != null}"
+           th:href="@{/receipts/{id}(id=${sourceReceiptId})}">
+            <i class="bi bi-arrow-left"></i>
+            <span th:text="${sourceReceiptName != null ? 'Back to ' + sourceReceiptName : 'Back to receipt'}">Back to receipt</span>
+        </a>
+        <a class="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center gap-1"
+           th:href="@{/receipts}">
+            <i class="bi bi-receipt"></i>
+            <span>Back to receipts</span>
+        </a>
+    </div>
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-semibold text-primary mb-1" th:text="${itemName}">Item name</h1>
+            <p class="text-muted mb-1" th:if="${itemEan != null}" th:text="${'EAN: ' + itemEan}">EAN: 0000000000000</p>
+            <p class="text-muted mb-0"
+               th:text="${purchaseCount == 1 ? '1 purchase found' : purchaseCount + ' purchases found'}">3 purchases found</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <h2 class="h5 fw-semibold mb-3">Price history</h2>
+            <div th:if="${hasPriceHistory}" class="chart-container">
+                <canvas id="priceHistoryChart"
+                        th:data-price-history="${priceHistoryJson}"></canvas>
+            </div>
+            <div th:if="${!hasPriceHistory}" class="text-muted">Not enough price information to render a chart.</div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body p-4">
+            <h2 class="h5 fw-semibold mb-3">Purchases</h2>
+            <div th:if="${#lists.isEmpty(purchases)}" class="text-muted">No purchases were found for this item.</div>
+            <div th:if="${!#lists.isEmpty(purchases)}" class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Store</th>
+                        <th scope="col">Price</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="purchase : ${purchases}"
+                        th:classappend="${purchase.receiptId() != null} ? 'position-relative cursor-pointer'">
+                        <td>
+                            <span th:text="${purchase.dateLabel() != null ? purchase.dateLabel() : '—'}">2024-01-01</span>
+                            <a th:if="${purchase.receiptId() != null}"
+                               class="stretched-link"
+                               th:href="@{/receipts/{id}(id=${purchase.receiptId()})}"
+                               th:aria-label="${'View receipt' + (purchase.receiptDisplayName() != null ? ' ' + purchase.receiptDisplayName() : '')}"></a>
+                            <span th:if="${purchase.receiptId() == null}"
+                                  class="text-muted small d-block mt-1">Receipt unavailable</span>
+                        </td>
+                        <td th:text="${purchase.storeName() != null ? purchase.storeName() : '—'}">Sample Store</td>
+                        <td th:text="${purchase.priceLabel() != null ? purchase.priceLabel() : '—'}">19.99</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${hasPriceHistory}">
+        <script defer th:src="@{/webjars/chart.js/dist/chart.umd.js}"></script>
+        <script defer th:src="@{/js/price-history.js}"></script>
+    </th:block>
+</section>
+</body>
+</html>
