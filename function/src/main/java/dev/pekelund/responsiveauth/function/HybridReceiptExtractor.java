@@ -48,10 +48,15 @@ public class HybridReceiptExtractor implements ReceiptDataExtractor {
         }
 
         Map<String, Object> combined = new LinkedHashMap<>();
+        Map<String, Object> primaryData = aiResult.structuredData();
+        if (primaryData != null && !primaryData.isEmpty()) {
+            combined.putAll(primaryData);
+        }
+
         combined.put("source", "hybrid");
         combined.put("primary", "gemini");
         combined.put("legacy", legacyResult.structuredData());
-        combined.put("gemini", aiResult.structuredData());
+        combined.put("gemini", primaryData);
         String rawResponse = toJson(combined, legacyResult.rawResponse(), aiResult.rawResponse());
         return new ReceiptExtractionResult(combined, rawResponse);
     }

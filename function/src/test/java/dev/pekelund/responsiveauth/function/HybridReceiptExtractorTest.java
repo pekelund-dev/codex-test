@@ -76,6 +76,8 @@ class HybridReceiptExtractorTest {
         assertThat(result.structuredData()).containsEntry("primary", "gemini");
         assertThat(result.structuredData()).containsEntry("legacy", legacyResult.structuredData());
         assertThat(result.structuredData()).containsEntry("gemini", aiResult.structuredData());
+        assertThat(result.structuredData()).containsEntry("general", aiData.get("general"));
+        assertThat(result.structuredData()).containsEntry("items", aiData.get("items"));
         verify(aiExtractor).extract(any(), eq("sample.pdf"));
     }
 
