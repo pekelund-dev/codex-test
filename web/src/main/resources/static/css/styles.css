@@ -112,8 +112,8 @@ details.receipt-table[open] .details-toggle-icon {
 
 .chart-container {
     position: relative;
-    min-height: 220px;
-    height: clamp(220px, 35vh, 340px);
+    min-height: 180px;
+    height: clamp(180px, 28vh, 260px);
 }
 
 .chart-container canvas {
