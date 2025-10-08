@@ -32,6 +32,11 @@ class CodexParserTest {
         );
     }
 
+    @Test
+    void supportsUnknownFormat() {
+        assertThat(parser.supportsFormat(ReceiptFormat.UNKNOWN)).isTrue();
+    }
+
     private List<LegacyReceiptItem> expectedItems() {
         return List.of(
             item("Broccoli filmad", "7318690662952", "20.95", "2,00 st", "41.90"),
