@@ -65,8 +65,8 @@
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
             <h2 class="h5 fw-semibold mb-3">Items</h2>
-            <div th:if="${#lists.isEmpty(receipt.items())}" class="text-muted">No items were detected.</div>
-            <div th:if="${!#lists.isEmpty(receipt.items())}" class="table-responsive">
+            <div th:if="${#lists.isEmpty(receiptItems)}" class="text-muted">No items were detected.</div>
+            <div th:if="${!#lists.isEmpty(receiptItems)}" class="table-responsive">
                 <table class="table align-middle">
                     <thead class="table-light">
                     <tr>
@@ -78,17 +78,18 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="item : ${receipt.displayItems()}">
+                    <tr th:each="item : ${receiptItems}">
                         <td th:with="itemName=${item['name'] != null ? #strings.trim(item['name']) : null},
-                                       itemEan=${item['eanCode'] != null ? #strings.trim(item['eanCode']) : null}">
+                                       itemEan=${item['normalizedEan'] != null ? item['normalizedEan'] : null},
+                                       historyCount=${item['historyCount'] != null ? item['historyCount'] : 0L}">
                             <span class="fw-semibold" th:text="${itemName != null ? itemName : '—'}">Item name</span>
                             <div class="text-muted small" th:if="${itemEan != null}" th:text="${'EAN: ' + itemEan}">EAN</div>
                             <div class="mt-1"
-                                 th:if="${itemEan != null and itemOccurrences != null and itemOccurrences[itemEan] != null and itemOccurrences[itemEan] > 1}">
+                                 th:if="${itemEan != null and historyCount > 1}">
                                 <a class="link-primary text-decoration-none small d-inline-flex align-items-center gap-1"
                                    th:href="@{/receipts/items/{eanCode}(eanCode=${itemEan}, sourceId=${receipt.id()})}">
                                     <i class="bi bi-graph-up"></i>
-                                    <span th:text="${'View purchase history (' + itemOccurrences[itemEan] + ')'}">View purchase history (2)</span>
+                                    <span th:text="${'View purchase history (' + historyCount + ')'}">View purchase history (2)</span>
                                 </a>
                             </div>
                         </td>

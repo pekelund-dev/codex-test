@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +59,18 @@ public class ReceiptController {
     private static final DateTimeFormatter TIMESTAMP_FORMATTER =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final Pattern EAN_PATTERN = Pattern.compile("(\\d{8,14})");
+    private static final List<String> POSSIBLE_EAN_KEYS = List.of(
+        "eanCode",
+        "ean",
+        "barcode",
+        "barCode",
+        "ean_code",
+        "EAN",
+        "gtin",
+        "itemEan",
+        "sku"
+    );
 
     private final Optional<ReceiptStorageService> receiptStorageService;
     private final Optional<ReceiptExtractionService> receiptExtractionService;
@@ -302,11 +316,13 @@ public class ReceiptController {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found."));
 
         Map<String, Long> itemOccurrences = computeItemOccurrencesByEan(receipts);
+        List<Map<String, Object>> receiptItems = prepareReceiptItems(receipt.displayItems(), itemOccurrences);
 
         String displayName = receipt.displayName();
         model.addAttribute("pageTitle", displayName != null ? "Receipt: " + displayName : "Receipt details");
         model.addAttribute("receipt", receipt);
         model.addAttribute("itemOccurrences", itemOccurrences);
+        model.addAttribute("receiptItems", receiptItems);
         return "receipt-detail";
     }
 
@@ -380,7 +396,7 @@ public class ReceiptController {
                 if (item == null || item.isEmpty()) {
                     continue;
                 }
-                String ean = extractEanCode(item.get("eanCode"));
+                String ean = extractItemEan(item);
                 if (ean == null) {
                     continue;
                 }
@@ -418,7 +434,7 @@ public class ReceiptController {
                     continue;
                 }
 
-                String itemEan = extractEanCode(item.get("eanCode"));
+                String itemEan = extractItemEan(item);
                 if (itemEan == null || !itemEan.equals(normalizedTarget)) {
                     continue;
                 }
@@ -465,13 +481,72 @@ public class ReceiptController {
             .toList();
     }
 
+    private List<Map<String, Object>> prepareReceiptItems(List<Map<String, Object>> items, Map<String, Long> occurrences) {
+        if (items == null || items.isEmpty()) {
+            return List.of();
+        }
+
+        List<Map<String, Object>> prepared = new ArrayList<>(items.size());
+        for (Map<String, Object> item : items) {
+            if (item == null || item.isEmpty()) {
+                prepared.add(Map.of());
+                continue;
+            }
+
+            String normalizedEan = extractItemEan(item);
+            Map<String, Object> copy = new LinkedHashMap<>(item);
+            copy.put("normalizedEan", normalizedEan);
+            long historyCount = normalizedEan != null && occurrences != null
+                ? occurrences.getOrDefault(normalizedEan, 0L)
+                : 0L;
+            copy.put("historyCount", historyCount);
+
+            prepared.add(Collections.unmodifiableMap(copy));
+        }
+
+        return Collections.unmodifiableList(prepared);
+    }
+
+    private String extractItemEan(Map<String, Object> item) {
+        if (item == null || item.isEmpty()) {
+            return null;
+        }
+
+        for (String key : POSSIBLE_EAN_KEYS) {
+            Object raw = item.get(key);
+            String normalized = extractEanCode(raw);
+            if (normalized != null) {
+                return normalized;
+            }
+        }
+        return null;
+    }
+
     private String extractEanCode(Object rawValue) {
         if (rawValue == null) {
             return null;
         }
 
-        String ean = rawValue.toString().trim();
-        return ean.isEmpty() ? null : ean;
+        String text = rawValue.toString().trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+
+        Matcher matcher = EAN_PATTERN.matcher(text);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+
+        String digitsOnly = text.replaceAll("\\D+", "");
+        if (digitsOnly.length() >= 8 && digitsOnly.length() <= 14) {
+            return digitsOnly;
+        }
+
+        if (text.chars().allMatch(Character::isDigit) && text.length() >= 8 && text.length() <= 14) {
+            return text;
+        }
+
+        return null;
     }
 
     private String serializePriceHistory(List<Map<String, Object>> priceHistory) {
