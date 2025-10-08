@@ -72,11 +72,11 @@
             </div>
         </div>
     </div>
-</section>
 
-<th:block th:if="${hasPriceHistory}">
-    <script defer th:src="@{/webjars/chart.js/dist/chart.umd.js}"></script>
-    <script defer th:src="@{/js/price-history.js}"></script>
-</th:block>
+    <th:block th:if="${hasPriceHistory}">
+        <script defer th:src="@{/webjars/chart.js/dist/chart.umd.js}"></script>
+        <script defer th:src="@{/js/price-history.js}"></script>
+    </th:block>
+</section>
 </body>
 </html>
