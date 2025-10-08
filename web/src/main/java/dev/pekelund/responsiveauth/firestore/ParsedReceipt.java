@@ -222,7 +222,7 @@ public record ParsedReceipt(
             return null;
         }
         BigDecimal normalized = weight.max(BigDecimal.ZERO);
-        BigDecimal scaled = normalized.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal scaled = normalized.setScale(3, RoundingMode.HALF_UP);
         return scaled.toPlainString() + " kg";
     }
 

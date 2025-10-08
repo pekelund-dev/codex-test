@@ -34,7 +34,7 @@ class ParsedReceiptTest {
         )));
 
         Map<String, Object> item = receipt.displayItems().get(0);
-        assertThat(item.get("displayQuantity")).isEqualTo("0.03 kg");
+        assertThat(item.get("displayQuantity")).isEqualTo("0.026 kg");
         assertThat(item.get("displayUnitPrice")).isEqualTo("590.00");
         assertThat(item.get("displayTotalPrice")).isEqualTo("15.34");
     }
@@ -55,7 +55,7 @@ class ParsedReceiptTest {
     }
 
     @Test
-    void keepsExistingWeightQuantitiesWithTwoDecimals() {
+    void keepsExistingWeightQuantitiesWithThreeDecimals() {
         ParsedReceipt receipt = receiptWithItems(List.of(Map.of(
             "name", "Potatis",
             "unitPrice", new BigDecimal("15.95"),
@@ -64,7 +64,7 @@ class ParsedReceiptTest {
         )));
 
         Map<String, Object> item = receipt.displayItems().get(0);
-        assertThat(item.get("displayQuantity")).isEqualTo("0.75 kg");
+        assertThat(item.get("displayQuantity")).isEqualTo("0.750 kg");
         assertThat(item.get("displayUnitPrice")).isEqualTo("15.95");
         assertThat(item.get("displayTotalPrice")).isEqualTo("11.96");
     }
