@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle}">Item details</title>
+</head>
+<body>
+<section class="py-3 py-lg-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <a class="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center gap-1"
+           th:if="${sourceReceiptId != null}"
+           th:href="@{/receipts/{id}(id=${sourceReceiptId})}">
+            <i class="bi bi-arrow-left"></i>
+            <span th:text="${sourceReceiptName != null ? 'Back to ' + sourceReceiptName : 'Back to receipt'}">Back to receipt</span>
+        </a>
+        <a class="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center gap-1"
+           th:href="@{/receipts}">
+            <i class="bi bi-receipt"></i>
+            <span>Back to receipts</span>
+        </a>
+    </div>
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-semibold text-primary mb-1" th:text="${itemName}">Item name</h1>
+            <p class="text-muted mb-0"
+               th:text="${purchaseCount == 1 ? '1 purchase found' : purchaseCount + ' purchases found'}">3 purchases found</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <h2 class="h5 fw-semibold mb-3">Price history</h2>
+            <div th:if="${hasPriceHistory}">
+                <canvas id="priceHistoryChart" height="220"
+                        th:attr="data-price-history=${priceHistoryJson}"></canvas>
+            </div>
+            <div th:if="${!hasPriceHistory}" class="text-muted">Not enough price information to render a chart.</div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body p-4">
+            <h2 class="h5 fw-semibold mb-3">Purchases</h2>
+            <div th:if="${#lists.isEmpty(purchases)}" class="text-muted">No purchases were found for this item.</div>
+            <div th:if="${!#lists.isEmpty(purchases)}" class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Store</th>
+                        <th scope="col">Price</th>
+                        <th scope="col">Receipt</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="purchase : ${purchases}">
+                        <td th:text="${purchase.dateLabel() != null ? purchase.dateLabel() : '—'}">2024-01-01</td>
+                        <td th:text="${purchase.storeName() != null ? purchase.storeName() : '—'}">Sample Store</td>
+                        <td th:text="${purchase.priceLabel() != null ? purchase.priceLabel() : '—'}">19.99</td>
+                        <td>
+                            <a th:if="${purchase.receiptId() != null}"
+                               class="text-decoration-none"
+                               th:href="@{/receipts/{id}(id=${purchase.receiptId()})}"
+                               th:text="${purchase.receiptDisplayName() != null ? purchase.receiptDisplayName() : 'View receipt'}">View receipt</a>
+                            <span th:if="${purchase.receiptId() == null}" class="text-muted">—</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script th:if="${hasPriceHistory}" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script th:if="${hasPriceHistory}" th:inline="javascript">
+    const chartElement = document.getElementById('priceHistoryChart');
+    if (chartElement) {
+        let priceHistory = [];
+        const rawData = chartElement.dataset.priceHistory;
+        if (rawData) {
+            try {
+                priceHistory = JSON.parse(rawData);
+            } catch (error) {
+                console.error('Failed to parse price history data', error);
+            }
+        }
+
+        if (priceHistory.length > 0) {
+            const labels = priceHistory.map(point => point.date);
+            const prices = priceHistory.map(point => Number(point.price));
+            const context = chartElement.getContext('2d');
+
+            new Chart(context, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Price',
+                        data: prices,
+                        fill: false,
+                        borderColor: 'rgb(13, 110, 253)',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        tension: 0.2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+</script>
+</body>
+</html>
