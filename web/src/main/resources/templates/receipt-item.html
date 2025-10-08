@@ -89,44 +89,75 @@
         }
 
         if (priceHistory.length > 0) {
-            const labels = priceHistory.map(point => point.date);
-            const prices = priceHistory.map(point => Number(point.price));
-            const context = chartElement.getContext('2d');
+            if (window.Chart && Chart.registerables) {
+                Chart.register(...Chart.registerables);
+            }
 
-            new Chart(context, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Price',
-                        data: prices,
-                        fill: false,
-                        borderColor: 'rgb(13, 110, 253)',
-                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                        tension: 0.2,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
+            priceHistory = priceHistory
+                .filter(point => point.date && point.price !== undefined && point.price !== null)
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            if (priceHistory.length === 0) {
+                console.warn('Price history chart skipped: no valid data points');
+            } else {
+                const labels = priceHistory.map(point => point.date);
+                const prices = priceHistory.map(point => Number.parseFloat(point.price));
+                const context = chartElement.getContext('2d');
+
+                new Chart(context, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Price',
+                            data: prices,
+                            fill: false,
+                            borderColor: 'rgb(13, 110, 253)',
+                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                            tension: 0.2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
                     },
-                    scales: {
-                        y: {
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toFixed(2);
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.parsed.y;
+                                        return value !== undefined ? `${value.toFixed(2)} SEK` : '';
+                                    }
                                 }
                             }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    autoSkip: true,
+                                    maxTicksLimit: 8
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    callback: function(value) {
+                                        return Number.parseFloat(value).toFixed(2);
+                                    }
+                                },
+                                beginAtZero: false
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'nearest'
                         }
                     }
-                }
-            });
+                });
+            }
         }
     }
 </script>
