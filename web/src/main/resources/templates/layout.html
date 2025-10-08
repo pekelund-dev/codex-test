@@ -48,8 +48,13 @@
                 </li>
                 <li class="nav-item" th:if="${userProfile.authenticated}">
                     <a class="nav-link"
-                       th:classappend="${#strings.startsWith(currentUri, '/receipts')} ? ' active'"
+                       th:classappend="${currentUri == '/receipts' or (#strings.startsWith(currentUri, '/receipts/') and currentUri != '/receipts/uploads')} ? ' active'"
                        th:href="@{/receipts}">Receipts</a>
+                </li>
+                <li class="nav-item" th:if="${userProfile.authenticated}">
+                    <a class="nav-link"
+                       th:classappend="${currentUri == '/receipts/uploads'} ? ' active'"
+                       th:href="@{/receipts/uploads}">Upload receipts</a>
                 </li>
             </ul>
             <div class="d-flex align-items-center gap-3 ms-lg-auto">

@@ -1,5 +1,7 @@
 package dev.pekelund.responsiveauth.storage;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
 public record ReceiptFile(String name, long size, Instant updated, String contentType, ReceiptOwner owner) {
@@ -39,8 +41,50 @@ public record ReceiptFile(String name, long size, Instant updated, String conten
         return "—";
     }
 
+    public String displayName() {
+        if (!hasText(name)) {
+            return "—";
+        }
+
+        String stripped = stripGeneratedPrefix(name);
+        String decoded = decodeSafely(stripped);
+        String candidate = hasText(decoded) ? decoded : name;
+        return truncate(candidate, 48);
+    }
+
     private static boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private String stripGeneratedPrefix(String value) {
+        int firstUnderscore = value.indexOf('_');
+        if (firstUnderscore < 0) {
+            return value;
+        }
+        int secondUnderscore = value.indexOf('_', firstUnderscore + 1);
+        if (secondUnderscore < 0) {
+            return value.substring(firstUnderscore + 1);
+        }
+        if (secondUnderscore + 1 >= value.length()) {
+            return value;
+        }
+        return value.substring(secondUnderscore + 1);
+    }
+
+    private String decodeSafely(String value) {
+        try {
+            return URLDecoder.decode(value, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException ex) {
+            return value;
+        }
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (!hasText(value) || value.length() <= maxLength) {
+            return value;
+        }
+        int safeLength = Math.max(1, maxLength - 1);
+        return value.substring(0, safeLength) + "…";
     }
 }
 

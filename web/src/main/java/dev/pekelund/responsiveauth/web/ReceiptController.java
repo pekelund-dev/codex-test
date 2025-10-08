@@ -59,6 +59,7 @@ public class ReceiptController {
     private static final DateTimeFormatter TIMESTAMP_FORMATTER =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final int MAX_UPLOAD_FILES = 50;
     private static final Pattern EAN_PATTERN = Pattern.compile("(\\d{8,14})");
     private static final Pattern QUANTITY_VALUE_PATTERN = Pattern.compile("([-+]?\\d+(?:[.,]\\d+)?)");
     private static final List<String> POSSIBLE_EAN_KEYS = List.of(
@@ -97,6 +98,15 @@ public class ReceiptController {
         model.addAttribute("parsedListingError", pageData.parsedListingError());
         model.addAttribute("fileStatuses", pageData.fileStatuses());
         return "receipts";
+    }
+
+    @GetMapping("/receipts/uploads")
+    public String receiptUploads(Model model) {
+        boolean storageEnabled = receiptStorageService.isPresent() && receiptStorageService.get().isEnabled();
+        model.addAttribute("pageTitle", "Upload receipts");
+        model.addAttribute("storageEnabled", storageEnabled);
+        model.addAttribute("maxUploadFiles", MAX_UPLOAD_FILES);
+        return "receipt-uploads";
     }
 
     @GetMapping(value = "/receipts/dashboard", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -188,6 +198,7 @@ public class ReceiptController {
 
         return new ReceiptFileEntry(
             file.name(),
+            file.displayName(),
             file.name(),
             file.formattedSize(),
             file.ownerDisplayName(),
@@ -241,6 +252,7 @@ public class ReceiptController {
 
     private record ReceiptFileEntry(
         String objectName,
+        String displayName,
         String name,
         String formattedSize,
         String ownerDisplayName,
@@ -283,6 +295,12 @@ public class ReceiptController {
     }
 
     private record ClearOutcome(String successMessage, String errorMessage) {
+    }
+
+    private record ReceiptUploadResponse(String successMessage, String errorMessage) {
+    }
+
+    private record UploadOutcome(String successMessage, String errorMessage) {
     }
 
     private record ItemPurchaseView(
@@ -732,44 +750,70 @@ public class ReceiptController {
         return value.setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
 
-    @PostMapping("/receipts/upload")
-    public String uploadReceipts(
-        @RequestParam(value = "files", required = false) List<MultipartFile> files,
-        RedirectAttributes redirectAttributes,
-        Authentication authentication
-    ) {
-        if (receiptStorageService.isEmpty() || !receiptStorageService.get().isEnabled()) {
-            redirectAttributes.addFlashAttribute("errorMessage",
+    private UploadOutcome processUpload(List<MultipartFile> files, Authentication authentication) {
+        ReceiptStorageService storage = receiptStorageService
+            .filter(ReceiptStorageService::isEnabled)
+            .orElse(null);
+
+        if (storage == null) {
+            return new UploadOutcome(null,
                 "Receipt uploads are disabled. Configure Google Cloud Storage to enable this feature.");
-            return "redirect:/receipts";
         }
 
         List<MultipartFile> sanitizedFiles = files == null ? List.of()
             : files.stream().filter(file -> file != null && !file.isEmpty()).toList();
 
         if (sanitizedFiles.isEmpty()) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Please choose at least one file to upload.");
-            return "redirect:/receipts";
+            return new UploadOutcome(null, "Please choose at least one file to upload.");
         }
 
-        if (sanitizedFiles.size() > 10) {
-            redirectAttributes.addFlashAttribute("errorMessage", "You can upload up to 10 files at a time.");
-            return "redirect:/receipts";
+        if (sanitizedFiles.size() > MAX_UPLOAD_FILES) {
+            return new UploadOutcome(null,
+                "You can upload up to %d files at a time.".formatted(MAX_UPLOAD_FILES));
         }
 
         ReceiptOwner owner = resolveReceiptOwner(authentication);
 
         try {
-            receiptStorageService.get().uploadFiles(sanitizedFiles, owner);
+            storage.uploadFiles(sanitizedFiles, owner);
             int count = sanitizedFiles.size();
-            redirectAttributes.addFlashAttribute("successMessage",
-                "%d file%s uploaded successfully.".formatted(count, count == 1 ? "" : "s"));
+            String successMessage = "%d file%s uploaded successfully.".formatted(count, count == 1 ? "" : "s");
+            return new UploadOutcome(successMessage, null);
         } catch (ReceiptStorageException ex) {
-            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
             LOGGER.error("Failed to upload receipts", ex);
+            return new UploadOutcome(null, ex.getMessage());
         }
+    }
 
-        return "redirect:/receipts";
+    @PostMapping("/receipts/upload")
+    public String uploadReceipts(
+        @RequestParam(value = "files", required = false) List<MultipartFile> files,
+        RedirectAttributes redirectAttributes,
+        Authentication authentication
+    ) {
+        UploadOutcome outcome = processUpload(files, authentication);
+        if (outcome.successMessage() != null) {
+            redirectAttributes.addFlashAttribute("successMessage", outcome.successMessage());
+        }
+        if (outcome.errorMessage() != null) {
+            redirectAttributes.addFlashAttribute("errorMessage", outcome.errorMessage());
+        }
+        return "redirect:/receipts/uploads";
+    }
+
+    @PostMapping(value = "/receipts/upload", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<ReceiptUploadResponse> uploadReceiptsJson(
+        @RequestParam(value = "files", required = false) List<MultipartFile> files,
+        Authentication authentication
+    ) {
+        UploadOutcome outcome = processUpload(files, authentication);
+        HttpStatus status = outcome.errorMessage() != null && outcome.successMessage() == null
+            ? HttpStatus.BAD_REQUEST
+            : HttpStatus.OK;
+
+        return ResponseEntity.status(status)
+            .body(new ReceiptUploadResponse(outcome.successMessage(), outcome.errorMessage()));
     }
 
     @PostMapping("/receipts/clear")
