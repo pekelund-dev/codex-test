@@ -9,6 +9,7 @@ import dev.pekelund.responsiveauth.storage.ReceiptOwner;
 import dev.pekelund.responsiveauth.storage.ReceiptOwnerMatcher;
 import dev.pekelund.responsiveauth.storage.ReceiptStorageException;
 import dev.pekelund.responsiveauth.storage.ReceiptStorageService;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -148,6 +149,62 @@ public class ReceiptController {
         } catch (ReceiptStorageException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
             LOGGER.error("Failed to upload receipts", ex);
+        }
+
+        return "redirect:/receipts";
+    }
+
+    @PostMapping("/receipts/clear")
+    public String clearReceipts(RedirectAttributes redirectAttributes, Authentication authentication) {
+        ReceiptOwner owner = resolveReceiptOwner(authentication);
+        if (owner == null) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Unable to determine the current user.");
+            return "redirect:/receipts";
+        }
+
+        boolean storageEnabled = receiptStorageService.isPresent() && receiptStorageService.get().isEnabled();
+        boolean parsedReceiptsEnabled = receiptExtractionService.isPresent() && receiptExtractionService.get().isEnabled();
+
+        if (!storageEnabled && !parsedReceiptsEnabled) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Receipt storage and parsing are disabled.");
+            return "redirect:/receipts";
+        }
+
+        List<String> successes = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+
+        if (storageEnabled) {
+            try {
+                receiptStorageService.get().deleteReceiptsForOwner(owner);
+                successes.add("uploaded receipts");
+            } catch (ReceiptStorageException ex) {
+                errors.add("Failed to clear uploaded receipts: " + ex.getMessage());
+                LOGGER.error("Failed to clear uploaded receipts", ex);
+            }
+        }
+
+        if (parsedReceiptsEnabled) {
+            try {
+                receiptExtractionService.get().deleteReceiptsForOwner(owner);
+                successes.add("parsed receipt data");
+            } catch (ReceiptExtractionAccessException ex) {
+                errors.add("Failed to clear parsed receipt data: " + ex.getMessage());
+                LOGGER.error("Failed to clear parsed receipts", ex);
+            }
+        }
+
+        if (!successes.isEmpty()) {
+            String message = "Cleared " + String.join(" and ", successes) + ".";
+            redirectAttributes.addFlashAttribute("successMessage", message);
+        }
+
+        if (!errors.isEmpty()) {
+            String message = String.join(" ", errors);
+            redirectAttributes.addFlashAttribute("errorMessage", message);
+        }
+
+        if (successes.isEmpty() && errors.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "No receipt data was cleared.");
         }
 
         return "redirect:/receipts";

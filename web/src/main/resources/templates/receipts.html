@@ -188,6 +188,24 @@
         </div>
     </div>
 
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body p-4">
+            <h2 class="h5 fw-semibold mb-3">Testing utilities</h2>
+            <p class="text-muted small mb-4">Quickly clear uploaded receipts and parsed receipt data for your
+                account while testing the application.</p>
+            <form th:action="@{/receipts/clear}" method="post" class="d-flex flex-wrap align-items-center gap-3">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button type="submit" class="btn btn-outline-danger"
+                        th:disabled="${!storageEnabled and !parsedReceiptsEnabled}">
+                    Clear receipt data
+                </button>
+                <span class="text-muted small" th:if="${!storageEnabled and !parsedReceiptsEnabled}">
+                    Receipt storage and parsing are disabled.
+                </span>
+            </form>
+        </div>
+    </div>
+
     <script defer th:src="@{/js/receipts.js}" th:if="${storageEnabled}"></script>
 </section>
 </body>

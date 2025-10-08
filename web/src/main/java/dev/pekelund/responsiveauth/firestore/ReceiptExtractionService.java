@@ -98,6 +98,39 @@ public class ReceiptExtractionService {
         }
     }
 
+    public void deleteReceiptsForOwner(ReceiptOwner owner) {
+        if (owner == null || firestore.isEmpty()) {
+            return;
+        }
+
+        try {
+            Iterable<DocumentReference> documents = firestore.get()
+                .collection(properties.getReceiptsCollection())
+                .listDocuments();
+            for (DocumentReference document : documents) {
+                DocumentSnapshot snapshot = document.get().get();
+                if (!snapshot.exists()) {
+                    continue;
+                }
+                ParsedReceipt receipt = toParsedReceipt(snapshot);
+                if (receipt == null) {
+                    continue;
+                }
+                if (!ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), owner)) {
+                    continue;
+                }
+                document.delete().get();
+            }
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while deleting parsed receipts from Firestore", ex);
+            throw new ReceiptExtractionAccessException("Interrupted while deleting parsed receipts from Firestore.", ex);
+        } catch (ExecutionException ex) {
+            log.error("Failed to delete parsed receipts from Firestore", ex);
+            throw new ReceiptExtractionAccessException("Failed to delete parsed receipts from Firestore.", ex);
+        }
+    }
+
     private ParsedReceipt toParsedReceipt(DocumentSnapshot snapshot) {
         Map<String, Object> data = snapshot.getData();
         if (data == null || data.isEmpty()) {
