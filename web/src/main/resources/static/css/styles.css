@@ -110,6 +110,16 @@ details.receipt-table[open] .details-toggle-icon {
     transform: rotate(180deg);
 }
 
+.chart-container {
+    position: relative;
+    min-height: 260px;
+}
+
+.chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
 @media (max-width: 767.98px) {
     .user-avatar,
     .user-badge {

@@ -31,8 +31,8 @@
     <div class="card shadow-sm border-0">
         <div class="card-body p-4">
             <h2 class="h5 fw-semibold mb-3">Price history</h2>
-            <div th:if="${hasPriceHistory}">
-                <canvas id="priceHistoryChart" height="220"
+            <div th:if="${hasPriceHistory}" class="chart-container">
+                <canvas id="priceHistoryChart"
                         th:attr="data-price-history=${priceHistoryJson}"></canvas>
             </div>
             <div th:if="${!hasPriceHistory}" class="text-muted">Not enough price information to render a chart.</div>
