@@ -34,6 +34,7 @@ public class ReceiptParser extends BaseReceiptParser {
     public LegacyParsedReceipt parse(String[] pdfData, ReceiptFormat format) {
         List<LegacyReceiptItem> items = new ArrayList<>();
         List<LegacyReceiptError> errors = new ArrayList<>();
+        List<LegacyReceiptDiscount> generalDiscounts = new ArrayList<>();
 
         String store = pdfData != null && pdfData.length > 1 ? pdfData[1].trim() : null;
         LocalDate receiptDate = extractDate(pdfData).orElse(null);
@@ -54,7 +55,12 @@ public class ReceiptParser extends BaseReceiptParser {
                     if (index + 1 <= itemsEndIndex) {
                         Optional<LegacyReceiptDiscount> discount = parseDiscountLine(pdfData[index + 1], DISCOUNT_PATTERN);
                         if (discount.isPresent()) {
-                            receiptItem.addDiscount(discount.get());
+                            LegacyReceiptDiscount parsedDiscount = normalizeDiscount(discount.get());
+                            if (isGeneralDiscount(receiptItem, parsedDiscount)) {
+                                generalDiscounts.add(parsedDiscount);
+                            } else {
+                                receiptItem.addDiscount(parsedDiscount);
+                            }
                             index++;
                         }
                     }
@@ -63,7 +69,13 @@ public class ReceiptParser extends BaseReceiptParser {
                     Optional<LegacyReceiptDiscount> discount = parseDiscountLine(line, DISCOUNT_PATTERN);
                     if (discount.isPresent()) {
                         if (!items.isEmpty()) {
-                            items.get(items.size() - 1).addDiscount(discount.get());
+                            LegacyReceiptItem lastItem = items.get(items.size() - 1);
+                            LegacyReceiptDiscount parsedDiscount = normalizeDiscount(discount.get());
+                            if (isGeneralDiscount(lastItem, parsedDiscount)) {
+                                generalDiscounts.add(parsedDiscount);
+                            } else {
+                                lastItem.addDiscount(parsedDiscount);
+                            }
                         } else {
                             errors.add(new LegacyReceiptError(index, line, "Discount encountered before any item"));
                         }
@@ -78,7 +90,41 @@ public class ReceiptParser extends BaseReceiptParser {
 
         LOGGER.debug("Parsed NEW_FORMAT receipt - store: {}, date: {}, total: {}, items: {}, vat lines: {}", store,
             receiptDate, totalAmount, items.size(), vats.size());
-        return new LegacyParsedReceipt(format, store, receiptDate, totalAmount, items, vats, List.of(), errors);
+        return new LegacyParsedReceipt(format, store, receiptDate, totalAmount, items, vats, generalDiscounts, errors);
+    }
+
+    private boolean isGeneralDiscount(LegacyReceiptItem lastItem, LegacyReceiptDiscount discount) {
+        if (discount == null) {
+            return false;
+        }
+        BigDecimal discountAmount = discount.amount();
+        BigDecimal lastTotal = lastItem != null ? lastItem.getTotalPrice() : null;
+        if (discountAmount == null || lastTotal == null) {
+            return lastItem == null;
+        }
+
+        BigDecimal absoluteDiscount = discountAmount.abs();
+        BigDecimal absoluteItemTotal = lastTotal.abs();
+        if (absoluteItemTotal.signum() == 0) {
+            return absoluteDiscount.signum() > 0;
+        }
+
+        return absoluteDiscount.compareTo(absoluteItemTotal) > 0;
+    }
+
+    private LegacyReceiptDiscount normalizeDiscount(LegacyReceiptDiscount discount) {
+        if (discount == null) {
+            return null;
+        }
+        String description = discount.description();
+        if (description != null) {
+            description = description.replace('\u00A0', ' ').trim();
+        }
+        BigDecimal amount = discount.amount();
+        if (amount != null) {
+            amount = amount.abs().negate();
+        }
+        return new LegacyReceiptDiscount(description, amount);
     }
 
     private Optional<LocalDate> extractDate(String[] pdfData) {
