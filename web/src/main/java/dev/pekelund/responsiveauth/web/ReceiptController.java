@@ -60,6 +60,7 @@ public class ReceiptController {
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Pattern EAN_PATTERN = Pattern.compile("(\\d{8,14})");
+    private static final Pattern QUANTITY_VALUE_PATTERN = Pattern.compile("([-+]?\\d+(?:[.,]\\d+)?)");
     private static final List<String> POSSIBLE_EAN_KEYS = List.of(
         "eanCode",
         "ean",
@@ -441,9 +442,11 @@ public class ReceiptController {
 
                 String itemName = extractDisplayName(item.get("name"));
 
-                BigDecimal totalPrice = parseBigDecimal(item.get("totalPrice"));
-                String priceLabel = determinePriceLabel(item, totalPrice);
-                BigDecimal priceValue = totalPrice != null ? totalPrice.setScale(2, RoundingMode.HALF_UP) : null;
+                BigDecimal totalPrice = resolveTotalPrice(item);
+                BigDecimal unitPrice = resolveUnitPrice(item, totalPrice);
+                String priceLabel = determinePriceLabel(item, unitPrice, totalPrice);
+                BigDecimal resolvedPrice = unitPrice != null ? unitPrice : totalPrice;
+                BigDecimal priceValue = resolvedPrice != null ? resolvedPrice.setScale(2, RoundingMode.HALF_UP) : null;
 
                 purchases.add(new ItemPurchaseView(
                     itemName,
@@ -479,6 +482,65 @@ public class ReceiptController {
                 return point;
             })
             .toList();
+    }
+
+    private BigDecimal resolveTotalPrice(Map<String, Object> item) {
+        BigDecimal totalPrice = parseBigDecimal(item.get("totalPrice"));
+        if (totalPrice == null) {
+            totalPrice = parseBigDecimal(item.get("displayTotalPrice"));
+        }
+        return totalPrice;
+    }
+
+    private BigDecimal resolveUnitPrice(Map<String, Object> item, BigDecimal totalPrice) {
+        BigDecimal unitPrice = parseBigDecimal(item.get("unitPrice"));
+        if (unitPrice == null) {
+            unitPrice = parseBigDecimal(item.get("displayUnitPrice"));
+        }
+        if (unitPrice != null) {
+            return unitPrice;
+        }
+
+        BigDecimal effectiveTotal = totalPrice != null ? totalPrice : resolveTotalPrice(item);
+        if (effectiveTotal == null) {
+            return null;
+        }
+
+        BigDecimal quantity = parseQuantityValue(item.get("quantity"));
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) == 0) {
+            quantity = parseQuantityValue(item.get("displayQuantity"));
+        }
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+
+        try {
+            return effectiveTotal.divide(quantity, 2, RoundingMode.HALF_UP);
+        } catch (ArithmeticException ex) {
+            return null;
+        }
+    }
+
+    private BigDecimal parseQuantityValue(Object rawQuantity) {
+        if (rawQuantity == null) {
+            return null;
+        }
+        String text = rawQuantity.toString().replace('\u00A0', ' ').trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+
+        Matcher matcher = QUANTITY_VALUE_PATTERN.matcher(text);
+        if (!matcher.find()) {
+            return null;
+        }
+
+        String numeric = matcher.group(1).replace(" ", "").replace(',', '.');
+        try {
+            return new BigDecimal(numeric);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private List<Map<String, Object>> prepareReceiptItems(List<Map<String, Object>> items, Map<String, Long> occurrences) {
@@ -604,16 +666,28 @@ public class ReceiptController {
         return formatInstant(updatedAt);
     }
 
-    private String determinePriceLabel(Map<String, Object> item, BigDecimal totalPrice) {
-        Object displayValue = item.get("displayTotalPrice");
-        if (displayValue != null) {
-            return displayValue.toString();
+    private String determinePriceLabel(Map<String, Object> item, BigDecimal unitPrice, BigDecimal totalPrice) {
+        Object displayUnit = item.get("displayUnitPrice");
+        if (displayUnit != null) {
+            return displayUnit.toString();
+        }
+        if (unitPrice != null) {
+            return formatAmount(unitPrice);
+        }
+        Object rawUnit = item.get("unitPrice");
+        if (rawUnit != null) {
+            return rawUnit.toString();
+        }
+
+        Object displayTotal = item.get("displayTotalPrice");
+        if (displayTotal != null) {
+            return displayTotal.toString();
         }
         if (totalPrice != null) {
             return formatAmount(totalPrice);
         }
-        Object rawValue = item.get("totalPrice");
-        return rawValue != null ? rawValue.toString() : null;
+        Object rawTotal = item.get("totalPrice");
+        return rawTotal != null ? rawTotal.toString() : null;
     }
 
     private String extractDisplayName(Object value) {

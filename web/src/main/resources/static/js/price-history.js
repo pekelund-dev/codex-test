@@ -71,7 +71,7 @@
             data: {
                 labels: priceHistory.map(function (point) { return point.date; }),
                 datasets: [{
-                    label: 'Price',
+                    label: 'Price per item',
                     data: priceHistory.map(function (point) { return point.price; }),
                     fill: false,
                     borderColor: 'rgb(13, 110, 253)',
@@ -92,7 +92,7 @@
                         callbacks: {
                             label: function (context) {
                                 var value = context.parsed.y;
-                                return value !== undefined ? value.toFixed(2) + ' SEK' : '';
+                                return value !== undefined ? value.toFixed(2) + ' SEK per item' : '';
                             }
                         }
                     }
