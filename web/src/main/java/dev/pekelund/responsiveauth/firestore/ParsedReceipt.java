@@ -2,6 +2,9 @@ package dev.pekelund.responsiveauth.firestore;
 
 import dev.pekelund.responsiveauth.storage.ReceiptOwner;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,11 +28,11 @@ public record ParsedReceipt(
 ) {
 
     public ParsedReceipt {
-        general = general != null ? Map.copyOf(general) : Map.of();
-        items = items != null ? List.copyOf(items) : List.of();
-        vats = vats != null ? List.copyOf(vats) : List.of();
-        generalDiscounts = generalDiscounts != null ? List.copyOf(generalDiscounts) : List.of();
-        errors = errors != null ? List.copyOf(errors) : List.of();
+        general = copyOfMap(general);
+        items = copyOfMapList(items);
+        vats = copyOfMapList(vats);
+        generalDiscounts = copyOfMapList(generalDiscounts);
+        errors = copyOfMapList(errors);
     }
 
     public String displayName() {
@@ -79,5 +82,28 @@ public record ParsedReceipt(
     private String valueFromGeneral(String key) {
         Object value = general.get(key);
         return value != null ? value.toString() : null;
+    }
+
+    private static Map<String, Object> copyOfMap(Map<String, Object> source) {
+        if (source == null || source.isEmpty()) {
+            return Map.of();
+        }
+        return Collections.unmodifiableMap(new LinkedHashMap<>(source));
+    }
+
+    private static List<Map<String, Object>> copyOfMapList(List<Map<String, Object>> source) {
+        if (source == null || source.isEmpty()) {
+            return List.of();
+        }
+
+        List<Map<String, Object>> copy = new ArrayList<>(source.size());
+        for (Map<String, Object> element : source) {
+            if (element == null || element.isEmpty()) {
+                copy.add(Map.of());
+            } else {
+                copy.add(Collections.unmodifiableMap(new LinkedHashMap<>(element)));
+            }
+        }
+        return Collections.unmodifiableList(copy);
     }
 }
