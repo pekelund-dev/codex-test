@@ -11,7 +11,7 @@
                 <div class="card-body p-4 d-flex flex-column gap-4">
                     <div>
                         <h1 class="h3 fw-semibold text-primary mb-2">Receipt archive</h1>
-                        <p class="text-muted mb-0">Review the files and parsed data generated from your receipt uploads. Use the button below to add new receipts.</p>
+                        <p class="text-muted mb-0">Review parsed receipt data generated from your uploads. Use the button below to add new receipts or manage the uploaded files.</p>
                     </div>
 
                     <div class="d-flex flex-wrap align-items-center gap-3" aria-live="polite">
@@ -20,9 +20,9 @@
                             Upload new receipts
                         </a>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="text-muted small">Storage status:</span>
-                            <span th:if="${storageEnabled}" class="badge bg-success">Enabled</span>
-                            <span th:if="${!storageEnabled}" class="badge bg-danger">Disabled</span>
+                            <span class="text-muted small">Parsing status:</span>
+                            <span th:if="${parsedReceiptsEnabled}" class="badge bg-success">Enabled</span>
+                            <span th:if="${!parsedReceiptsEnabled}" class="badge bg-danger">Disabled</span>
                         </div>
                     </div>
 
@@ -59,68 +59,6 @@
 
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
-                    <details class="receipt-table" open>
-                        <summary class="details-toggle d-flex align-items-center justify-content-between mb-3">
-                            <span class="d-flex align-items-center gap-2">
-                                <img th:src="@{/img/collapsible-indicator.svg}" src="/img/collapsible-indicator.svg" alt="" class="details-toggle-icon" aria-hidden="true">
-                                <span class="h5 fw-semibold mb-0">Stored receipts</span>
-                            </span>
-                            <span class="badge bg-primary-subtle text-primary" data-files-count
-                                  th:classappend="${files == null or #lists.isEmpty(files)} ? ' d-none'"
-                                  th:text="${files != null ? files.size() + ' files' : '0 files'}">0 files</span>
-                        </summary>
-
-                <div th:if="${listingError}" class="alert alert-danger" role="alert">
-                    <span th:text="${listingError}">Unable to list files.</span>
-                </div>
-
-                <div class="text-center text-muted py-5" data-files-empty
-                     th:classappend="${files != null and !#lists.isEmpty(files)} ? ' d-none'">
-                    <p class="mb-0">No receipts have been uploaded yet.</p>
-                </div>
-
-                <div class="table-responsive" data-files-table
-                     th:classappend="${files == null or #lists.isEmpty(files)} ? ' d-none'">
-                    <table class="table align-middle">
-                        <thead class="table-light">
-                        <tr>
-                            <th scope="col">File name</th>
-                            <th scope="col" class="text-end">Size</th>
-                            <th scope="col">Uploaded by</th>
-                            <th scope="col">Last updated</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Content type</th>
-                        </tr>
-                        </thead>
-                        <tbody data-files-body>
-                        <tr th:each="file : ${files}" th:attr="data-object-name=${file.name()}">
-                            <td>
-                                <span class="fw-semibold" th:attr="title=${file.name()}" th:text="${file.displayName()}">receipt.pdf</span>
-                            </td>
-                            <td class="text-end" th:text="${file.formattedSize()}">24.5 KB</td>
-                            <td th:text="${file.ownerDisplayName()}">—</td>
-                            <td th:text="${file.updated() != null ? #temporals.format(file.updated(), 'yyyy-MM-dd HH:mm:ss') : '—'}">2024-01-01 10:30:00</td>
-                            <td th:with="status=${fileStatuses != null ? fileStatuses[file.name()] : null}">
-                                <div class="d-flex flex-column gap-1">
-                                    <span class="badge text-uppercase fw-semibold file-status-badge"
-                                          th:classappend="${status != null ? ' ' + status.statusBadgeClass() : ' bg-secondary-subtle text-secondary'}"
-                                          th:text="${status != null && status.status() != null ? status.status() : 'PENDING'}">PENDING</span>
-                                    <span class="text-muted small file-status-message"
-                                          th:classappend="${status == null || status.statusMessage() == null} ? ' d-none'"
-                                          th:text="${status != null ? status.statusMessage() : ''}">Status message</span>
-                                </div>
-                            </td>
-                            <td th:text="${file.contentType() != null ? file.contentType() : '—'}">application/pdf</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </details>
-        </div>
-    </div>
-
-    <div class="card shadow-sm border-0 mt-4">
-        <div class="card-body p-4">
             <details class="receipt-table" open>
                 <summary class="details-toggle d-flex align-items-center justify-content-between mb-3">
                     <span class="d-flex align-items-center gap-2">
@@ -136,8 +74,10 @@
                     Parsed receipts are currently unavailable. Configure Firestore to enable this feature.
                 </div>
 
-                <div th:if="${parsedListingError}" class="alert alert-danger" role="alert">
-                    <span th:text="${parsedListingError}">Unable to load parsed receipts.</span>
+                <div class="alert alert-danger" role="alert" data-parsed-error
+                     th:classappend="${parsedListingError == null} ? ' d-none'"
+                     th:text="${parsedListingError != null ? parsedListingError : ''}">
+                    Unable to load parsed receipts.
                 </div>
 
                 <div class="text-center text-muted py-5" data-parsed-empty

@@ -1,4 +1,5 @@
 (function () {
+    const poller = setupStoredFilesDashboard();
     const form = document.querySelector('.receipt-upload');
     if (!form) {
         return;
@@ -302,6 +303,9 @@
                 selectedFiles = [];
                 syncFileInput();
                 refreshSelectedFiles();
+                if (poller && typeof poller.refreshNow === 'function') {
+                    poller.refreshNow();
+                }
                 if (progressBar) {
                     progressBar.classList.remove('progress-bar-animated');
                     progressBar.classList.add('bg-success');
@@ -360,4 +364,203 @@
     }
 
     refreshSelectedFiles();
+
+    function setupStoredFilesDashboard() {
+        const container = document.querySelector('[data-dashboard-url]');
+        if (!container) {
+            return null;
+        }
+
+        const endpoint = container.getAttribute('data-dashboard-url');
+        if (!endpoint) {
+            return null;
+        }
+
+        const filesCountBadge = container.querySelector('[data-files-count]');
+        const filesEmpty = container.querySelector('[data-files-empty]');
+        const filesTable = container.querySelector('[data-files-table]');
+        const filesBody = container.querySelector('[data-files-body]');
+        const filesError = container.querySelector('[data-files-error]');
+
+        const POLL_INTERVAL = 2000;
+        let pollTimeoutId = null;
+        let isFetching = false;
+
+        async function fetchAndRender() {
+            if (pollTimeoutId !== null) {
+                window.clearTimeout(pollTimeoutId);
+                pollTimeoutId = null;
+            }
+
+            if (isFetching) {
+                scheduleNext();
+                return;
+            }
+
+            if (document.hidden) {
+                scheduleNext();
+                return;
+            }
+
+            isFetching = true;
+            try {
+                const response = await fetch(endpoint, {
+                    headers: { Accept: 'application/json' },
+                    credentials: 'same-origin',
+                });
+                if (!response.ok) {
+                    throw new Error(`Unexpected status ${response.status}`);
+                }
+                const data = await response.json();
+                const listingError = data.listingError ? String(data.listingError).trim() : '';
+                updateListingError(filesError, listingError);
+                renderStoredFiles(data.files, { filesCountBadge, filesEmpty, filesTable, filesBody });
+            } catch (error) {
+                // eslint-disable-next-line no-console
+                console.error('Failed to refresh stored receipts', error);
+            } finally {
+                isFetching = false;
+                scheduleNext();
+            }
+        }
+
+        function scheduleNext() {
+            if (pollTimeoutId !== null) {
+                window.clearTimeout(pollTimeoutId);
+            }
+            pollTimeoutId = window.setTimeout(fetchAndRender, POLL_INTERVAL);
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                fetchAndRender();
+            }
+        });
+
+        fetchAndRender();
+
+        return {
+            refreshNow: fetchAndRender,
+        };
+    }
+
+    function renderStoredFiles(files, refs) {
+        if (!refs || !refs.filesBody) {
+            return;
+        }
+
+        const safeFiles = Array.isArray(files) ? files : [];
+        const hasFiles = safeFiles.length > 0;
+
+        updateCountBadge(refs.filesCountBadge, safeFiles.length, 'file', hasFiles);
+        toggleVisibility(refs.filesTable, hasFiles);
+        toggleVisibility(refs.filesEmpty, !hasFiles);
+
+        refs.filesBody.innerHTML = '';
+        if (!hasFiles) {
+            return;
+        }
+
+        safeFiles.forEach((file) => {
+            refs.filesBody.appendChild(buildFileRow(file));
+        });
+    }
+
+    function updateCountBadge(element, count, noun, visible) {
+        if (!element) {
+            return;
+        }
+
+        if (!visible) {
+            element.classList.add('d-none');
+            return;
+        }
+
+        const safeCount = Number.isFinite(count) ? count : 0;
+        const label = `${safeCount} ${noun}${safeCount === 1 ? '' : 's'}`;
+        element.textContent = label;
+        element.classList.remove('d-none');
+    }
+
+    function toggleVisibility(element, shouldShow) {
+        if (!element) {
+            return;
+        }
+        element.classList.toggle('d-none', !shouldShow);
+    }
+
+    function buildFileRow(file) {
+        const row = document.createElement('tr');
+        if (file && file.objectName) {
+            row.dataset.objectName = String(file.objectName);
+        }
+
+        const nameCell = document.createElement('td');
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'fw-semibold';
+        const rawName = file && file.name ? String(file.name) : '';
+        const hasName = rawName.trim() !== '';
+        const displayName = file && file.displayName ? file.displayName : (hasName ? rawName : '—');
+        nameSpan.textContent = displayName;
+        if (hasName) {
+            nameSpan.title = rawName;
+        }
+        nameCell.appendChild(nameSpan);
+        row.appendChild(nameCell);
+
+        const sizeCell = document.createElement('td');
+        sizeCell.className = 'text-end';
+        sizeCell.textContent = file && file.formattedSize ? file.formattedSize : '—';
+        row.appendChild(sizeCell);
+
+        const ownerCell = document.createElement('td');
+        ownerCell.textContent = file && file.ownerDisplayName ? file.ownerDisplayName : '—';
+        row.appendChild(ownerCell);
+
+        const updatedCell = document.createElement('td');
+        updatedCell.textContent = file && file.updated ? file.updated : '—';
+        row.appendChild(updatedCell);
+
+        const statusCell = document.createElement('td');
+        const statusContainer = document.createElement('div');
+        statusContainer.className = 'd-flex flex-column gap-1';
+        const badge = document.createElement('span');
+        const badgeClass = file && file.statusBadgeClass ? file.statusBadgeClass : 'bg-secondary-subtle text-secondary';
+        badge.className = `badge text-uppercase fw-semibold file-status-badge ${badgeClass}`.trim();
+        const statusText = file && file.status && String(file.status).trim() ? String(file.status).trim() : 'PENDING';
+        badge.textContent = statusText;
+        statusContainer.appendChild(badge);
+
+        const message = document.createElement('span');
+        message.className = 'text-muted small file-status-message';
+        if (file && file.statusMessage) {
+            message.textContent = file.statusMessage;
+        } else {
+            message.classList.add('d-none');
+        }
+        statusContainer.appendChild(message);
+        statusCell.appendChild(statusContainer);
+        row.appendChild(statusCell);
+
+        const typeCell = document.createElement('td');
+        typeCell.textContent = file && file.contentType ? file.contentType : '—';
+        row.appendChild(typeCell);
+
+        return row;
+    }
+
+    function updateListingError(element, message) {
+        if (!element) {
+            return;
+        }
+
+        if (!message) {
+            element.classList.add('d-none');
+            element.textContent = '';
+            return;
+        }
+
+        element.textContent = message;
+        element.classList.remove('d-none');
+    }
 })();

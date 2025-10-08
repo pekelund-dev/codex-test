@@ -101,11 +101,15 @@ public class ReceiptController {
     }
 
     @GetMapping("/receipts/uploads")
-    public String receiptUploads(Model model) {
-        boolean storageEnabled = receiptStorageService.isPresent() && receiptStorageService.get().isEnabled();
+    public String receiptUploads(Model model, Authentication authentication) {
+        ReceiptPageData pageData = loadReceiptPageData(authentication);
+
         model.addAttribute("pageTitle", "Upload receipts");
-        model.addAttribute("storageEnabled", storageEnabled);
+        model.addAttribute("storageEnabled", pageData.storageEnabled());
         model.addAttribute("maxUploadFiles", MAX_UPLOAD_FILES);
+        model.addAttribute("files", pageData.files());
+        model.addAttribute("listingError", pageData.listingError());
+        model.addAttribute("fileStatuses", pageData.fileStatuses());
         return "receipt-uploads";
     }
 
