@@ -21,7 +21,7 @@
                     <p class="text-muted mb-0" th:if="${receipt.objectPath()}" th:text="${receipt.objectPath()}">gs://bucket/object</p>
                 </div>
                 <span class="badge text-uppercase fw-semibold align-self-start"
-                      th:classappend="' ' + ${receipt.statusBadgeClass()}"
+                      th:classappend="${receipt.statusBadgeClass()}"
                       th:text="${receipt.status() != null ? receipt.status() : 'UNKNOWN'}">COMPLETED</span>
             </div>
 
@@ -74,7 +74,7 @@
                     <tr th:each="item : ${receipt.items()}">
                         <td>
                             <span class="fw-semibold" th:text="${item['name'] != null ? item['name'] : '—'}">Item name</span>
-                            <div class="text-muted small" th:if="${item['eanCode']}" th:text="'EAN: ' + item['eanCode']">EAN</div>
+                            <div class="text-muted small" th:if="${item['eanCode']}" th:text="${'EAN: ' + item['eanCode']}">EAN</div>
                         </td>
                         <td th:text="${item['quantity'] != null ? item['quantity'] : '—'}">—</td>
                         <td th:text="${item['unitPrice'] != null ? item['unitPrice'] : '—'}">—</td>
@@ -83,7 +83,7 @@
                             <ul class="list-unstyled mb-0"
                                 th:if="${item['discounts'] != null and !#lists.isEmpty(item['discounts'])}">
                                 <li th:each="discount : ${item['discounts']}"
-                                    th:text="${discount['description'] != null ? discount['description'] : 'Discount'} + ' (' + (discount['amount'] != null ? discount['amount'] : '—') + ')'">Discount</li>
+                                    th:text="${(discount['description'] != null ? discount['description'] : 'Discount') + ' (' + (discount['amount'] != null ? discount['amount'] : '—') + ')'}">Discount</li>
                             </ul>
                             <span th:if="${item['discounts'] == null or #lists.isEmpty(item['discounts'])}" class="text-muted">—</span>
                         </td>
@@ -128,7 +128,7 @@
             <ul class="list-group list-group-flush"
                 th:if="${!#lists.isEmpty(receipt.generalDiscounts())}">
                 <li class="list-group-item" th:each="discount : ${receipt.generalDiscounts()}"
-                    th:text="${discount['description'] != null ? discount['description'] : 'Discount'} + ' (' + (discount['amount'] != null ? discount['amount'] : '—') + ')'">
+                    th:text="${(discount['description'] != null ? discount['description'] : 'Discount') + ' (' + (discount['amount'] != null ? discount['amount'] : '—') + ')'}">
                     Discount description (amount)
                 </li>
             </ul>
