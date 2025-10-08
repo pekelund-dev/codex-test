@@ -9,9 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
-@Component
 public class ReceiptParser extends BaseReceiptParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptParser.class);

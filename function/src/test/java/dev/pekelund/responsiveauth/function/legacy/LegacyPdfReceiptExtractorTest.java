@@ -29,7 +29,7 @@ class LegacyPdfReceiptExtractorTest {
         objectMapper.findAndRegisterModules();
         ReceiptFormatDetector detector = new ReceiptFormatDetector();
         PdfParser pdfParser = new PdfParser(
-            List.of(new StandardFormatParser(), new ReceiptParser()),
+            List.of(new CodexParser(), new StandardFormatParser()),
             detector);
         extractor = new LegacyPdfReceiptExtractor(pdfParser, objectMapper);
     }
@@ -75,6 +75,55 @@ class LegacyPdfReceiptExtractorTest {
 
         String rawText = (String) result.structuredData().get("rawText");
         assertThat(rawText).contains("Beskrivning Art. nr. Pris Mängd Summa(SEK)");
+    }
+
+    @Test
+    void parsesNewFormatReceiptPdfWithCodexParser() throws IOException {
+        byte[] pdfBytes = createPdf("""
+            Kvitto
+            ICA Maxi Teststad
+            Kvitto nr 987654
+            2024-10-15
+            Beskrivning
+            Bananer 0123456789012 12,90 1,00 st 12,90
+            Rabatt bananer -2,00
+            Äpple 1234567890123 5,00 2,00 st 10,00
+            Erhållen rabatt -3,50
+            Moms % Moms Netto Brutto
+            12 1,20 10,00 11,20
+            25 2,30 9,50 11,80
+            Betalat 17,40
+            """);
+
+        ReceiptExtractionResult result = extractor.extract(pdfBytes, "new-format.pdf");
+
+        Map<String, Object> general = getMap(result.structuredData().get("general"));
+        assertThat(general.get("format")).isEqualTo("NEW_FORMAT");
+        assertThat(new BigDecimal(general.get("totalAmount").toString()))
+            .isEqualByComparingTo(new BigDecimal("17.40"));
+
+        List<Map<String, Object>> items = getList(result.structuredData().get("items"));
+        assertThat(items).hasSize(2);
+        assertThat(items.get(0)).containsEntry("name", "Bananer");
+        assertThat(items.get(0)).containsEntry("totalPrice", new BigDecimal("12.90"));
+        assertThat(items.get(0)).containsEntry("discounts", List.of(Map.of(
+            "description", "Rabatt bananer",
+            "amount", new BigDecimal("-2.00")
+        )));
+        assertThat(items.get(1)).containsEntry("name", "Äpple");
+        assertThat(items.get(1)).containsEntry("quantity", "2,00 st");
+        List<Map<String, Object>> appleDiscounts = getList(items.get(1).get("discounts"));
+        Map<String, Object> appleDiscount = appleDiscounts.get(0);
+        assertThat(appleDiscount)
+            .containsEntry("description", "Erhållen rabatt")
+            .containsEntry("amount", new BigDecimal("-3.50"));
+
+        List<Map<String, Object>> generalDiscounts = getList(result.structuredData().get("generalDiscounts"));
+        assertThat(generalDiscounts).isEmpty();
+
+        List<Map<String, Object>> vats = getList(result.structuredData().get("vats"));
+        assertThat(vats).hasSize(2);
+        assertThat(vats.get(0)).containsEntry("rate", new BigDecimal("12"));
     }
 
     @Test

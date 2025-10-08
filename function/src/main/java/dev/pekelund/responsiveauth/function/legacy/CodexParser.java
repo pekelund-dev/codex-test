@@ -9,6 +9,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+@Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class CodexParser implements ReceiptFormatParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CodexParser.class);
@@ -36,7 +42,7 @@ public class CodexParser implements ReceiptFormatParser {
 
     @Override
     public boolean supportsFormat(ReceiptFormat format) {
-        return format == ReceiptFormat.NEW_FORMAT;
+        return format == ReceiptFormat.NEW_FORMAT || format == ReceiptFormat.UNKNOWN;
     }
 
     @Override
