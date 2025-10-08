@@ -9,12 +9,21 @@ import dev.pekelund.responsiveauth.storage.ReceiptOwner;
 import dev.pekelund.responsiveauth.storage.ReceiptOwnerMatcher;
 import dev.pekelund.responsiveauth.storage.ReceiptStorageException;
 import dev.pekelund.responsiveauth.storage.ReceiptStorageService;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,11 +31,11 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -35,6 +44,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class ReceiptController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptController.class);
+    private static final DateTimeFormatter TIMESTAMP_FORMATTER =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
 
     private final Optional<ReceiptStorageService> receiptStorageService;
     private final Optional<ReceiptExtractionService> receiptExtractionService;
@@ -49,18 +60,48 @@ public class ReceiptController {
 
     @GetMapping("/receipts")
     public String receipts(Model model, Authentication authentication) {
-        model.addAttribute("pageTitle", "Receipts");
-        model.addAttribute("storageEnabled", receiptStorageService.isPresent() && receiptStorageService.get().isEnabled());
+        ReceiptPageData pageData = loadReceiptPageData(authentication);
 
+        model.addAttribute("pageTitle", "Receipts");
+        model.addAttribute("storageEnabled", pageData.storageEnabled());
+        model.addAttribute("files", pageData.files());
+        model.addAttribute("listingError", pageData.listingError());
+        model.addAttribute("parsedReceiptsEnabled", pageData.parsedReceiptsEnabled());
+        model.addAttribute("parsedReceipts", pageData.parsedReceipts());
+        model.addAttribute("parsedListingError", pageData.parsedListingError());
+        model.addAttribute("fileStatuses", pageData.fileStatuses());
+        return "receipts";
+    }
+
+    @GetMapping(value = "/receipts/dashboard", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ReceiptDashboardResponse receiptsDashboard(Authentication authentication) {
+        ReceiptPageData pageData = loadReceiptPageData(authentication);
+
+        List<ReceiptFileEntry> fileEntries = pageData.files().stream()
+            .map(file -> toReceiptFileEntry(file, pageData.fileStatuses()))
+            .toList();
+
+        List<ParsedReceiptEntry> parsedEntries = pageData.parsedReceipts().stream()
+            .map(this::toParsedReceiptEntry)
+            .toList();
+
+        return new ReceiptDashboardResponse(
+            pageData.storageEnabled(),
+            pageData.listingError(),
+            fileEntries,
+            pageData.parsedReceiptsEnabled(),
+            pageData.parsedListingError(),
+            parsedEntries
+        );
+    }
+
+    private ReceiptPageData loadReceiptPageData(Authentication authentication) {
+        boolean storageEnabled = receiptStorageService.isPresent() && receiptStorageService.get().isEnabled();
         List<ReceiptFile> receiptFiles = List.of();
         String listingError = null;
-        ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
 
-        boolean parsedReceiptsEnabled = receiptExtractionService.isPresent() && receiptExtractionService.get().isEnabled();
-        List<ParsedReceipt> parsedReceipts = List.of();
-        String parsedListingError = null;
-
-        if (receiptStorageService.isPresent() && receiptStorageService.get().isEnabled()) {
+        if (storageEnabled) {
             try {
                 receiptFiles = receiptStorageService.get().listReceipts();
             } catch (ReceiptStorageException ex) {
@@ -69,12 +110,18 @@ public class ReceiptController {
             }
         }
 
+        boolean parsedReceiptsEnabled = receiptExtractionService.isPresent() && receiptExtractionService.get().isEnabled();
+        List<ParsedReceipt> parsedReceipts = List.of();
+        String parsedListingError = null;
+
+        ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
         if (currentOwner == null) {
             receiptFiles = List.of();
         } else {
             receiptFiles = receiptFiles.stream()
                 .filter(file -> ReceiptOwnerMatcher.belongsToCurrentOwner(file.owner(), currentOwner))
                 .toList();
+
             if (parsedReceiptsEnabled) {
                 try {
                     parsedReceipts = receiptExtractionService.get().listReceiptsForOwner(currentOwner);
@@ -85,12 +132,125 @@ public class ReceiptController {
             }
         }
 
-        model.addAttribute("files", receiptFiles);
-        model.addAttribute("listingError", listingError);
-        model.addAttribute("parsedReceiptsEnabled", parsedReceiptsEnabled);
-        model.addAttribute("parsedReceipts", parsedReceipts);
-        model.addAttribute("parsedListingError", parsedListingError);
-        return "receipts";
+        Map<String, ParsedReceipt> fileStatuses = parsedReceipts.stream()
+            .filter(parsed -> parsed != null && StringUtils.hasText(parsed.objectName()))
+            .collect(Collectors.toMap(
+                ParsedReceipt::objectName,
+                Function.identity(),
+                (existing, replacement) -> replacement,
+                LinkedHashMap::new
+            ));
+
+        return new ReceiptPageData(
+            storageEnabled,
+            receiptFiles,
+            listingError,
+            parsedReceiptsEnabled,
+            parsedReceipts,
+            parsedListingError,
+            fileStatuses
+        );
+    }
+
+    private ReceiptFileEntry toReceiptFileEntry(ReceiptFile file, Map<String, ParsedReceipt> fileStatuses) {
+        ParsedReceipt status = fileStatuses.getOrDefault(file.name(), null);
+        String updated = formatInstant(file.updated());
+
+        String statusBadgeClass = status != null ? status.statusBadgeClass() : "bg-secondary-subtle text-secondary";
+        String statusValue = status != null ? status.status() : null;
+        String statusMessage = status != null ? status.statusMessage() : null;
+
+        return new ReceiptFileEntry(
+            file.name(),
+            file.name(),
+            file.formattedSize(),
+            file.ownerDisplayName(),
+            updated,
+            file.contentType(),
+            statusValue,
+            statusMessage,
+            statusBadgeClass
+        );
+    }
+
+    private ParsedReceiptEntry toParsedReceiptEntry(ParsedReceipt parsed) {
+        String displayName = parsed.displayName() != null ? parsed.displayName() : parsed.objectPath();
+        String updatedAt = formatInstant(parsed.updatedAt());
+        String detailsUrl = parsed.id() != null ? "/receipts/" + parsed.id() : null;
+
+        return new ParsedReceiptEntry(
+            parsed.id(),
+            displayName,
+            parsed.objectPath(),
+            parsed.objectName(),
+            parsed.storeName(),
+            parsed.receiptDate(),
+            parsed.totalAmount(),
+            parsed.formattedTotalAmount(),
+            updatedAt,
+            parsed.status(),
+            parsed.statusMessage(),
+            parsed.statusBadgeClass(),
+            detailsUrl
+        );
+    }
+
+    private String formatInstant(Instant instant) {
+        if (instant == null) {
+            return null;
+        }
+        return TIMESTAMP_FORMATTER.format(instant);
+    }
+
+    private record ReceiptPageData(
+        boolean storageEnabled,
+        List<ReceiptFile> files,
+        String listingError,
+        boolean parsedReceiptsEnabled,
+        List<ParsedReceipt> parsedReceipts,
+        String parsedListingError,
+        Map<String, ParsedReceipt> fileStatuses
+    ) {
+    }
+
+    private record ReceiptFileEntry(
+        String objectName,
+        String name,
+        String formattedSize,
+        String ownerDisplayName,
+        String updated,
+        String contentType,
+        String status,
+        String statusMessage,
+        String statusBadgeClass
+    ) {
+    }
+
+    private record ParsedReceiptEntry(
+        String id,
+        String displayName,
+        String objectPath,
+        String objectName,
+        String storeName,
+        String receiptDate,
+        String totalAmount,
+        String formattedTotalAmount,
+        String updatedAt,
+        String status,
+        String statusMessage,
+        String statusBadgeClass,
+        String detailsUrl
+    ) {
+    }
+
+    private record ReceiptDashboardResponse(
+        boolean storageEnabled,
+        String listingError,
+        List<ReceiptFileEntry> files,
+        boolean parsedReceiptsEnabled,
+        String parsedListingError,
+        List<ParsedReceiptEntry> parsedReceipts
+    ) {
     }
 
     @GetMapping("/receipts/{documentId}")
