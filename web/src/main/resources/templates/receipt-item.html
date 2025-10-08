@@ -50,21 +50,22 @@
                         <th scope="col">Date</th>
                         <th scope="col">Store</th>
                         <th scope="col">Price</th>
-                        <th scope="col">Receipt</th>
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="purchase : ${purchases}">
-                        <td th:text="${purchase.dateLabel() != null ? purchase.dateLabel() : '—'}">2024-01-01</td>
+                    <tr th:each="purchase : ${purchases}"
+                        th:classappend="${purchase.receiptId() != null} ? 'position-relative cursor-pointer'">
+                        <td>
+                            <span th:text="${purchase.dateLabel() != null ? purchase.dateLabel() : '—'}">2024-01-01</span>
+                            <a th:if="${purchase.receiptId() != null}"
+                               class="stretched-link"
+                               th:href="@{/receipts/{id}(id=${purchase.receiptId()})}"
+                               th:aria-label="${'View receipt' + (purchase.receiptDisplayName() != null ? ' ' + purchase.receiptDisplayName() : '')}"></a>
+                            <span th:if="${purchase.receiptId() == null}"
+                                  class="text-muted small d-block mt-1">Receipt unavailable</span>
+                        </td>
                         <td th:text="${purchase.storeName() != null ? purchase.storeName() : '—'}">Sample Store</td>
                         <td th:text="${purchase.priceLabel() != null ? purchase.priceLabel() : '—'}">19.99</td>
-                        <td>
-                            <a th:if="${purchase.receiptId() != null}"
-                               class="text-decoration-none"
-                               th:href="@{/receipts/{id}(id=${purchase.receiptId()})}"
-                               th:text="${purchase.receiptDisplayName() != null ? purchase.receiptDisplayName() : 'View receipt'}">View receipt</a>
-                            <span th:if="${purchase.receiptId() == null}" class="text-muted">—</span>
-                        </td>
                     </tr>
                     </tbody>
                 </table>
