@@ -20,9 +20,16 @@
                         th:text="${receipt.displayName() != null ? receipt.displayName() : 'Receipt details'}">Receipt details</h1>
                     <p class="text-muted mb-0" th:if="${receipt.objectPath()}" th:text="${receipt.objectPath()}">gs://bucket/object</p>
                 </div>
-                <span class="badge text-uppercase fw-semibold align-self-start"
-                      th:classappend="${receipt.statusBadgeClass()}"
-                      th:text="${receipt.status() != null ? receipt.status() : 'UNKNOWN'}">COMPLETED</span>
+                <div class="d-flex flex-column align-items-md-end gap-2">
+                    <span class="badge text-uppercase fw-semibold align-self-start align-self-md-end"
+                          th:classappend="${receipt.statusBadgeClass()}"
+                          th:text="${receipt.status() != null ? receipt.status() : 'UNKNOWN'}">COMPLETED</span>
+                    <div class="fw-semibold text-secondary" th:if="${receipt.formattedTotalAmount()}">
+                        Total:
+                        <span th:text="${receipt.formattedTotalAmount()}">129.99</span>
+                        <span class="text-muted">SEK</span>
+                    </div>
+                </div>
             </div>
 
             <div class="row mt-4 gy-3">
@@ -33,7 +40,7 @@
                         <dt class="col-sm-4">Receipt date</dt>
                         <dd class="col-sm-8" th:text="${receipt.receiptDate() != null ? receipt.receiptDate() : '—'}">2024-01-01</dd>
                         <dt class="col-sm-4">Total</dt>
-                        <dd class="col-sm-8" th:text="${receipt.totalAmount() != null ? receipt.totalAmount() : '—'}">129.99</dd>
+                        <dd class="col-sm-8" th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() : (receipt.totalAmount() != null ? receipt.totalAmount() : '—')}">129.99</dd>
                         <dt class="col-sm-4">Format</dt>
                         <dd class="col-sm-8" th:text="${receipt.format() != null ? receipt.format() : '—'}">NEW_FORMAT</dd>
                     </dl>
@@ -71,14 +78,14 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="item : ${receipt.items()}">
+                    <tr th:each="item : ${receipt.displayItems()}">
                         <td>
                             <span class="fw-semibold" th:text="${item['name'] != null ? item['name'] : '—'}">Item name</span>
                             <div class="text-muted small" th:if="${item['eanCode']}" th:text="${'EAN: ' + item['eanCode']}">EAN</div>
                         </td>
-                        <td th:text="${item['quantity'] != null ? item['quantity'] : '—'}">—</td>
-                        <td th:text="${item['unitPrice'] != null ? item['unitPrice'] : '—'}">—</td>
-                        <td th:text="${item['totalPrice'] != null ? item['totalPrice'] : '—'}">—</td>
+                        <td th:text="${item['displayQuantity'] != null ? item['displayQuantity'] : (item['quantity'] != null ? item['quantity'] : '—')}">—</td>
+                        <td th:text="${item['displayUnitPrice'] != null ? item['displayUnitPrice'] : (item['unitPrice'] != null ? item['unitPrice'] : '—')}">—</td>
+                        <td th:text="${item['displayTotalPrice'] != null ? item['displayTotalPrice'] : (item['totalPrice'] != null ? item['totalPrice'] : '—')}">—</td>
                         <td>
                             <ul class="list-unstyled mb-0"
                                 th:if="${item['discounts'] != null and !#lists.isEmpty(item['discounts'])}">

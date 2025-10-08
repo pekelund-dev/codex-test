@@ -80,102 +80,111 @@
 
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <h2 class="h5 fw-semibold mb-0">Stored receipts</h2>
-                <span class="badge bg-primary-subtle text-primary" th:if="${files}" th:text="${files.size()} + ' files'">0 files</span>
-            </div>
+            <details class="receipt-table" open>
+                <summary class="details-toggle d-flex align-items-center justify-content-between mb-3">
+                    <span class="d-flex align-items-center gap-2">
+                        <i class="bi bi-chevron-down details-toggle-icon" aria-hidden="true"></i>
+                        <span class="h5 fw-semibold mb-0">Stored receipts</span>
+                    </span>
+                    <span class="badge bg-primary-subtle text-primary" th:if="${files}" th:text="${files.size()} + ' files'">0 files</span>
+                </summary>
 
-            <div th:if="${listingError}" class="alert alert-danger" role="alert">
-                <span th:text="${listingError}">Unable to list files.</span>
-            </div>
+                <div th:if="${listingError}" class="alert alert-danger" role="alert">
+                    <span th:text="${listingError}">Unable to list files.</span>
+                </div>
 
-            <div th:if="${files == null or #lists.isEmpty(files)}" class="text-center text-muted py-5">
-                <p class="mb-0">No receipts have been uploaded yet.</p>
-            </div>
+                <div th:if="${files == null or #lists.isEmpty(files)}" class="text-center text-muted py-5">
+                    <p class="mb-0">No receipts have been uploaded yet.</p>
+                </div>
 
-            <div th:if="${files != null and !#lists.isEmpty(files)}" class="table-responsive">
-                <table class="table align-middle">
-                    <thead class="table-light">
-                    <tr>
-                        <th scope="col">File name</th>
-                        <th scope="col" class="text-end">Size</th>
-                        <th scope="col">Uploaded by</th>
-                        <th scope="col">Last updated</th>
-                        <th scope="col">Content type</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="file : ${files}">
-                        <td>
-                            <span class="fw-semibold" th:text="${file.name()}">receipt.pdf</span>
-                        </td>
-                        <td class="text-end" th:text="${file.formattedSize()}">24.5 KB</td>
-                        <td th:text="${file.ownerDisplayName()}">—</td>
-                        <td th:text="${file.updated() != null ? #temporals.format(file.updated(), 'yyyy-MM-dd HH:mm:ss') : '—'}">2024-01-01 10:30:00</td>
-                        <td th:text="${file.contentType() != null ? file.contentType() : '—'}">application/pdf</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
+                <div th:if="${files != null and !#lists.isEmpty(files)}" class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th scope="col">File name</th>
+                            <th scope="col" class="text-end">Size</th>
+                            <th scope="col">Uploaded by</th>
+                            <th scope="col">Last updated</th>
+                            <th scope="col">Content type</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="file : ${files}">
+                            <td>
+                                <span class="fw-semibold" th:text="${file.name()}">receipt.pdf</span>
+                            </td>
+                            <td class="text-end" th:text="${file.formattedSize()}">24.5 KB</td>
+                            <td th:text="${file.ownerDisplayName()}">—</td>
+                            <td th:text="${file.updated() != null ? #temporals.format(file.updated(), 'yyyy-MM-dd HH:mm:ss') : '—'}">2024-01-01 10:30:00</td>
+                            <td th:text="${file.contentType() != null ? file.contentType() : '—'}">application/pdf</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </details>
         </div>
     </div>
 
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <h2 class="h5 fw-semibold mb-0">Parsed receipts</h2>
-                <span class="badge bg-primary-subtle text-primary"
-                      th:if="${parsedReceipts != null and !#lists.isEmpty(parsedReceipts)}"
-                      th:text="${parsedReceipts.size()} + ' receipts'">0 receipts</span>
-            </div>
+            <details class="receipt-table" open>
+                <summary class="details-toggle d-flex align-items-center justify-content-between mb-3">
+                    <span class="d-flex align-items-center gap-2">
+                        <i class="bi bi-chevron-down details-toggle-icon" aria-hidden="true"></i>
+                        <span class="h5 fw-semibold mb-0">Parsed receipts</span>
+                    </span>
+                    <span class="badge bg-primary-subtle text-primary"
+                          th:if="${parsedReceipts != null and !#lists.isEmpty(parsedReceipts)}"
+                          th:text="${parsedReceipts.size()} + ' receipts'">0 receipts</span>
+                </summary>
 
-            <div th:if="${!parsedReceiptsEnabled}" class="alert alert-warning" role="alert">
-                Parsed receipts are currently unavailable. Configure Firestore to enable this feature.
-            </div>
+                <div th:if="${!parsedReceiptsEnabled}" class="alert alert-warning" role="alert">
+                    Parsed receipts are currently unavailable. Configure Firestore to enable this feature.
+                </div>
 
-            <div th:if="${parsedListingError}" class="alert alert-danger" role="alert">
-                <span th:text="${parsedListingError}">Unable to load parsed receipts.</span>
-            </div>
+                <div th:if="${parsedListingError}" class="alert alert-danger" role="alert">
+                    <span th:text="${parsedListingError}">Unable to load parsed receipts.</span>
+                </div>
 
-            <div th:if="${parsedReceiptsEnabled and (parsedReceipts == null or #lists.isEmpty(parsedReceipts))}" class="text-center text-muted py-5">
-                <p class="mb-0">No receipts have been parsed yet.</p>
-            </div>
+                <div th:if="${parsedReceiptsEnabled and (parsedReceipts == null or #lists.isEmpty(parsedReceipts))}" class="text-center text-muted py-5">
+                    <p class="mb-0">No receipts have been parsed yet.</p>
+                </div>
 
-            <div th:if="${parsedReceiptsEnabled and parsedReceipts != null and !#lists.isEmpty(parsedReceipts)}" class="table-responsive">
-                <table class="table align-middle">
-                    <thead class="table-light">
-                    <tr>
-                        <th scope="col">Receipt</th>
-                        <th scope="col">Date</th>
-                        <th scope="col">Total</th>
-                        <th scope="col">Status</th>
-                        <th scope="col" class="text-end">Updated</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="parsed : ${parsedReceipts}">
-                        <td>
-                            <a th:href="@{'/receipts/' + ${parsed.id()}}" class="fw-semibold text-decoration-none">
-                                <span th:text="${parsed.displayName() != null ? parsed.displayName() : parsed.objectPath()}">Receipt</span>
-                            </a>
-                            <div class="text-muted small" th:if="${parsed.storeName()}" th:text="${parsed.storeName()}">Store name</div>
-                        </td>
-                        <td th:text="${parsed.receiptDate() != null ? parsed.receiptDate() : '—'}">—</td>
-                        <td th:text="${parsed.totalAmount() != null ? parsed.totalAmount() : '—'}">—</td>
-                        <td>
-                            <span class="badge text-uppercase fw-semibold"
-                                  th:classappend="' ' + ${parsed.statusBadgeClass()}"
-                                  th:text="${parsed.status() != null ? parsed.status() : 'UNKNOWN'}">COMPLETED</span>
-                            <div class="text-muted small" th:if="${parsed.statusMessage()}" th:text="${parsed.statusMessage()}">Status message</div>
-                        </td>
-                        <td class="text-end"
-                            th:text="${parsed.updatedAt() != null ? #temporals.format(parsed.updatedAt(), 'yyyy-MM-dd HH:mm:ss') : '—'}">
-                            2024-01-01 10:30:00
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
+                <div th:if="${parsedReceiptsEnabled and parsedReceipts != null and !#lists.isEmpty(parsedReceipts)}" class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th scope="col">Receipt</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Total</th>
+                            <th scope="col" class="text-end">Updated</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="parsed : ${parsedReceipts}">
+                            <td>
+                                <a th:href="@{'/receipts/' + ${parsed.id()}}" class="fw-semibold text-decoration-none">
+                                    <span th:text="${parsed.displayName() != null ? parsed.displayName() : parsed.objectPath()}">Receipt</span>
+                                </a>
+                                <div class="text-muted small" th:if="${parsed.storeName()}" th:text="${parsed.storeName()}">Store name</div>
+                                <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                                    <span class="badge text-uppercase fw-semibold"
+                                          th:classappend="' ' + ${parsed.statusBadgeClass()}"
+                                          th:text="${parsed.status() != null ? parsed.status() : 'UNKNOWN'}">COMPLETED</span>
+                                    <span class="text-muted small" th:if="${parsed.statusMessage()}" th:text="${parsed.statusMessage()}">Status message</span>
+                                </div>
+                            </td>
+                            <td th:text="${parsed.receiptDate() != null ? parsed.receiptDate() : '—'}">—</td>
+                            <td th:text="${parsed.totalAmount() != null ? parsed.totalAmount() : '—'}">—</td>
+                            <td class="text-end"
+                                th:text="${parsed.updatedAt() != null ? #temporals.format(parsed.updatedAt(), 'yyyy-MM-dd HH:mm:ss') : '—'}">
+                                2024-01-01 10:30:00
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </details>
         </div>
     </div>
 

@@ -72,11 +72,13 @@ abstract class BaseReceiptParser implements ReceiptFormatParser {
         if (line == null) {
             return Optional.empty();
         }
-        Matcher matcher = pattern.matcher(line.trim());
+        String sanitized = line.replace('\u00A0', ' ').trim();
+        Matcher matcher = pattern.matcher(sanitized);
         if (!matcher.matches()) {
             return Optional.empty();
         }
         String description = matcher.group("name");
+        String normalizedDescription = description == null ? null : description.replace('\u00A0', ' ').trim();
         String amountGroup = matcher.group("discountAmount");
         if (amountGroup == null && matcher.groupCount() >= 2) {
             try {
@@ -85,6 +87,13 @@ abstract class BaseReceiptParser implements ReceiptFormatParser {
                 amountGroup = null;
             }
         }
-        return parseDecimal(amountGroup).map(amount -> new LegacyReceiptDiscount(description, amount));
+        String normalizedAmount = amountGroup;
+        if (normalizedAmount != null) {
+            normalizedAmount = normalizedAmount.replace('\u00A0', ' ').trim();
+            if (!normalizedAmount.startsWith("-")) {
+                normalizedAmount = "-" + normalizedAmount;
+            }
+        }
+        return parseDecimal(normalizedAmount).map(amount -> new LegacyReceiptDiscount(normalizedDescription, amount));
     }
 }

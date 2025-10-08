@@ -95,6 +95,18 @@ footer {
     border-bottom: 0;
 }
 
+.details-toggle {
+    cursor: pointer;
+}
+
+.details-toggle-icon {
+    transition: transform 0.2s ease-in-out;
+}
+
+details.receipt-table[open] .details-toggle-icon {
+    transform: rotate(180deg);
+}
+
 @media (max-width: 767.98px) {
     .user-avatar,
     .user-badge {
