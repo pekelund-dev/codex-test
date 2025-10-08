@@ -20,7 +20,8 @@ public class ReceiptParser extends BaseReceiptParser {
         "(?<name>.+?) (?<eanCode>\\d{8,13}) (?<unitPrice>\\d+[.,]\\d{2}) (?<quantity>\\d+(?:[.,]\\d+)?\\s(?:st|kg)) (?<totalPrice>\\d+[.,]\\d{2})");
     private static final Pattern DISCOUNT_PATTERN = Pattern.compile("(?<name>.+?)\\s-\\s?(?<discountAmount>[\\d]+[.,][\\d]{2})");
     private static final Pattern DATE_PATTERN = Pattern.compile("(\\d{4}-\\d{2}-\\d{2})");
-    private static final Pattern TOTAL_PATTERN = Pattern.compile("Total(?:t att betala)?\\s*([\\d,.]+)");
+    private static final Pattern TOTAL_PATTERN = Pattern.compile("Total(?:t(?: att betala)?)?\\s*(?:SEK)?\\s*([\\d,.]+)",
+        Pattern.CASE_INSENSITIVE);
     private static final Pattern VAT_LINE_PATTERN = Pattern.compile(
         "(?:Moms\\s*)?(?<rate>\\d+(?:[.,]\\d+)?)%?\\s+(?<tax>\\d+[.,]\\d{2})\\s+(?<net>\\d+[.,]\\d{2})\\s+(?<gross>\\d+[.,]\\d{2})",
         Pattern.CASE_INSENSITIVE);

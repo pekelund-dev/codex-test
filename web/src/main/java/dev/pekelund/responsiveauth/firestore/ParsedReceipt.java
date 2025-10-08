@@ -32,7 +32,7 @@ public record ParsedReceipt(
 ) {
 
     private static final Pattern QUANTITY_PATTERN = Pattern.compile("([-+]?\\d+(?:[.,]\\d+)?)\\s*(\\p{L}+)?");
-    private static final BigDecimal WEIGHT_TOLERANCE = new BigDecimal("0.02");
+    private static final BigDecimal PRICE_TOLERANCE = new BigDecimal("0.01");
 
     public ParsedReceipt {
         general = copyOfMap(general);
@@ -107,14 +107,45 @@ public record ParsedReceipt(
                 normalized.add(Map.of());
                 continue;
             }
+
             Map<String, Object> copy = new LinkedHashMap<>(item);
-            BigDecimal unitPrice = parseBigDecimal(item.get("unitPrice"));
+            BigDecimal originalUnitPrice = parseBigDecimal(item.get("unitPrice"));
             BigDecimal totalPrice = parseBigDecimal(item.get("totalPrice"));
             QuantityParts parts = parseQuantity(item.get("quantity"));
 
-            String quantityDisplay = buildQuantityDisplay(parts, unitPrice, totalPrice);
-            copy.put("displayQuantity", quantityDisplay != null ? quantityDisplay : parts.originalText());
-            copy.put("displayUnitPrice", formatAmount(unitPrice));
+            boolean starItem = isStarItem(item.get("name"));
+            BigDecimal quantityValue = parts.value();
+            String unit = parts.unit();
+            boolean priceMismatch = hasPriceMismatch(quantityValue, originalUnitPrice, totalPrice);
+
+            BigDecimal displayUnitPrice = originalUnitPrice;
+            String quantityDisplay;
+
+            if (isWeightUnit(unit)) {
+                quantityDisplay = formatWeight(quantityValue != null ? quantityValue : deriveWeight(originalUnitPrice, totalPrice));
+            } else if (priceMismatch && !starItem) {
+                BigDecimal weight = deriveWeight(originalUnitPrice, totalPrice);
+                quantityDisplay = formatWeight(weight);
+            } else {
+                quantityDisplay = formatCount(quantityValue, unit);
+            }
+
+            if (priceMismatch && starItem) {
+                BigDecimal recalculated = recalculateUnitPrice(totalPrice, quantityValue);
+                if (recalculated != null) {
+                    displayUnitPrice = recalculated;
+                }
+                if (quantityDisplay == null) {
+                    quantityDisplay = formatCount(quantityValue, unit);
+                }
+            }
+
+            if (quantityDisplay == null) {
+                quantityDisplay = parts.originalText();
+            }
+
+            copy.put("displayQuantity", quantityDisplay);
+            copy.put("displayUnitPrice", formatAmount(displayUnitPrice));
             copy.put("displayTotalPrice", formatAmount(totalPrice));
 
             normalized.add(Collections.unmodifiableMap(copy));
@@ -139,54 +170,51 @@ public record ParsedReceipt(
         return new QuantityParts(null, null, text);
     }
 
-    private String buildQuantityDisplay(QuantityParts parts, BigDecimal unitPrice, BigDecimal totalPrice) {
-        if (parts == null) {
-            return null;
-        }
-
-        BigDecimal quantityValue = parts.value();
-        String unit = parts.unit();
-
-        if (isWeightUnit(unit)) {
-            BigDecimal weight = quantityValue != null ? quantityValue : deriveWeight(unitPrice, totalPrice);
-            return formatWeight(weight);
-        }
-
-        if (quantityValue != null && isWeightBased(quantityValue, unitPrice, totalPrice)) {
-            BigDecimal weight = deriveWeight(unitPrice, totalPrice);
-            return formatWeight(weight);
-        }
-
-        if (quantityValue != null) {
-            BigDecimal rounded = quantityValue.setScale(0, RoundingMode.HALF_UP);
-            String suffix = unit != null ? " " + unit : "";
-            return rounded.stripTrailingZeros().toPlainString() + suffix;
-        }
-
-        return null;
-    }
-
     private boolean isWeightUnit(String unit) {
         return unit != null && unit.equalsIgnoreCase("kg");
-    }
-
-    private boolean isWeightBased(BigDecimal quantity, BigDecimal unitPrice, BigDecimal totalPrice) {
-        if (quantity == null || unitPrice == null || totalPrice == null) {
-            return false;
-        }
-        if (unitPrice.compareTo(BigDecimal.ZERO) == 0) {
-            return false;
-        }
-        BigDecimal expectedTotal = unitPrice.multiply(quantity);
-        BigDecimal difference = expectedTotal.subtract(totalPrice).abs();
-        return difference.compareTo(WEIGHT_TOLERANCE) > 0;
     }
 
     private BigDecimal deriveWeight(BigDecimal unitPrice, BigDecimal totalPrice) {
         if (unitPrice == null || totalPrice == null || unitPrice.compareTo(BigDecimal.ZERO) == 0) {
             return null;
         }
-        return totalPrice.divide(unitPrice, 3, RoundingMode.HALF_UP);
+        return totalPrice.divide(unitPrice, 4, RoundingMode.HALF_UP);
+    }
+
+    private boolean hasPriceMismatch(BigDecimal quantity, BigDecimal unitPrice, BigDecimal totalPrice) {
+        if (quantity == null || unitPrice == null || totalPrice == null) {
+            return false;
+        }
+        if (unitPrice.compareTo(BigDecimal.ZERO) == 0) {
+            return totalPrice.compareTo(BigDecimal.ZERO) != 0;
+        }
+        BigDecimal expectedTotal = unitPrice.multiply(quantity);
+        BigDecimal difference = expectedTotal.subtract(totalPrice).abs();
+        return difference.compareTo(PRICE_TOLERANCE) > 0;
+    }
+
+    private boolean isStarItem(Object name) {
+        if (name == null) {
+            return false;
+        }
+        String text = name.toString().trim();
+        return text.startsWith("*");
+    }
+
+    private BigDecimal recalculateUnitPrice(BigDecimal totalPrice, BigDecimal quantity) {
+        if (totalPrice == null || quantity == null || quantity.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+        return totalPrice.divide(quantity, 2, RoundingMode.HALF_UP);
+    }
+
+    private String formatCount(BigDecimal quantity, String unit) {
+        if (quantity == null) {
+            return null;
+        }
+        BigDecimal rounded = quantity.setScale(0, RoundingMode.HALF_UP);
+        String suffix = unit != null ? " " + unit : "";
+        return rounded.stripTrailingZeros().toPlainString() + suffix;
     }
 
     private String formatWeight(BigDecimal weight) {
@@ -194,7 +222,7 @@ public record ParsedReceipt(
             return null;
         }
         BigDecimal normalized = weight.max(BigDecimal.ZERO);
-        BigDecimal scaled = normalized.setScale(3, RoundingMode.HALF_UP).stripTrailingZeros();
+        BigDecimal scaled = normalized.setScale(2, RoundingMode.HALF_UP);
         return scaled.toPlainString() + " kg";
     }
 
