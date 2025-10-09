@@ -377,6 +377,7 @@ public class ReceiptController {
         }
 
         ReceiptViewScope scope = resolveScope(scopeParam, authentication);
+        ReceiptViewScope effectiveScope = scope;
         boolean canViewAll = isAdmin(authentication);
 
         ParsedReceipt receipt = receiptExtractionService
@@ -392,6 +393,9 @@ public class ReceiptController {
         }
 
         boolean viewingAll = isViewingAll(scope, authentication) || (canViewAll && !ownsReceipt);
+        if (viewingAll) {
+            effectiveScope = ReceiptViewScope.ALL;
+        }
 
         List<ParsedReceipt> receipts = viewingAll
             ? receiptExtractionService.get().listAllReceipts()
@@ -411,7 +415,7 @@ public class ReceiptController {
         model.addAttribute("itemOccurrences", itemOccurrences);
         model.addAttribute("receiptItems", receiptItems);
         model.addAttribute("canViewAll", canViewAll);
-        model.addAttribute("scopeParam", toScopeParameter(scope));
+        model.addAttribute("scopeParam", toScopeParameter(effectiveScope));
         model.addAttribute("viewingAll", viewingAll);
         model.addAttribute("ownsReceipt", ownsReceipt);
         return "receipt-detail";
@@ -430,6 +434,7 @@ public class ReceiptController {
         }
 
         ReceiptViewScope scope = resolveScope(scopeParam, authentication);
+        ReceiptViewScope effectiveScope = scope;
         boolean canViewAll = isAdmin(authentication);
         boolean viewingAll = isViewingAll(scope, authentication);
 
@@ -439,9 +444,35 @@ public class ReceiptController {
         }
 
         String trimmedEanCode = eanCode.trim();
+        ParsedReceipt sourceReceipt = null;
+        if (StringUtils.hasText(sourceReceiptId)) {
+            sourceReceipt = receiptExtractionService
+                .get()
+                .findById(sourceReceiptId)
+                .orElse(null);
+            boolean ownsSourceReceipt = sourceReceipt != null
+                && currentOwner != null
+                && ReceiptOwnerMatcher.belongsToCurrentOwner(sourceReceipt.owner(), currentOwner);
+            if (!viewingAll && sourceReceipt != null && !ownsSourceReceipt && canViewAll) {
+                viewingAll = true;
+                effectiveScope = ReceiptViewScope.ALL;
+            }
+        }
+
         List<ParsedReceipt> receipts = viewingAll
             ? receiptExtractionService.get().listAllReceipts()
             : receiptExtractionService.get().listReceiptsForOwner(currentOwner);
+
+        if (sourceReceipt != null) {
+            String sourceReceiptIdentifier = sourceReceipt.id();
+            boolean alreadyIncluded = sourceReceiptIdentifier != null
+                && receipts.stream().anyMatch(parsed -> sourceReceiptIdentifier.equals(parsed.id()));
+            if (!alreadyIncluded) {
+                receipts = new ArrayList<>(receipts);
+                receipts.add(sourceReceipt);
+            }
+        }
+
         List<ItemPurchaseView> purchases = buildItemPurchases(trimmedEanCode, receipts);
 
         if (purchases.isEmpty()) {
@@ -458,14 +489,6 @@ public class ReceiptController {
         String priceHistoryJson = serializePriceHistory(priceHistory);
         boolean hasPriceHistory = !priceHistory.isEmpty();
 
-        ParsedReceipt sourceReceipt = null;
-        if (StringUtils.hasText(sourceReceiptId)) {
-            sourceReceipt = receipts.stream()
-                .filter(parsed -> sourceReceiptId.equals(parsed.id()))
-                .findFirst()
-                .orElse(null);
-        }
-
         model.addAttribute("pageTitle", "Item: " + displayItemName);
         model.addAttribute("itemName", displayItemName);
         model.addAttribute("itemEan", displayEanCode);
@@ -474,7 +497,7 @@ public class ReceiptController {
         model.addAttribute("priceHistoryJson", priceHistoryJson);
         model.addAttribute("hasPriceHistory", hasPriceHistory);
         model.addAttribute("canViewAll", canViewAll);
-        model.addAttribute("scopeParam", toScopeParameter(scope));
+        model.addAttribute("scopeParam", toScopeParameter(effectiveScope));
         model.addAttribute("viewingAll", viewingAll);
 
         model.addAttribute("sourceReceiptId", sourceReceipt != null ? sourceReceipt.id() : null);
