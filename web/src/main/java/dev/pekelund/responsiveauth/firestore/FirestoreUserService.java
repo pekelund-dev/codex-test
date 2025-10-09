@@ -63,6 +63,26 @@ public class FirestoreUserService implements UserDetailsService {
         return enabled;
     }
 
+    public long countUsers() {
+        if (!enabled) {
+            return countFallbackUsers();
+        }
+
+        try {
+            CollectionReference collection = firestore.collection(properties.getUsersCollection());
+            ApiFuture<QuerySnapshot> query = collection.get();
+            QuerySnapshot snapshot = query.get();
+            return snapshot != null ? snapshot.size() : 0L;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while counting Firestore user documents.", ex);
+            return countFallbackUsers();
+        } catch (ExecutionException ex) {
+            log.error("Failed to count Firestore user documents.", ex);
+            return countFallbackUsers();
+        }
+    }
+
     public FirestoreUserDetails registerUser(RegistrationForm registrationForm) {
         ensureEnabled();
 
@@ -410,6 +430,11 @@ public class FirestoreUserService implements UserDetailsService {
 
     private String adminRole() {
         return ensureRolePrefix("ROLE_ADMIN");
+    }
+
+    private long countFallbackUsers() {
+        List<FirestoreProperties.FallbackUser> fallbackUsers = properties.getFallbackUsers();
+        return fallbackUsers != null ? fallbackUsers.size() : 0L;
     }
 
     private String ensureRolePrefix(String role) {
