@@ -2,7 +2,6 @@ package dev.pekelund.responsiveauth.web;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.pekelund.responsiveauth.firestore.FirestoreUserDetails;
 import dev.pekelund.responsiveauth.firestore.ParsedReceipt;
 import dev.pekelund.responsiveauth.firestore.ReceiptExtractionAccessException;
 import dev.pekelund.responsiveauth.firestore.ReceiptExtractionService;
@@ -36,11 +35,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
@@ -84,13 +80,16 @@ public class ReceiptController {
 
     private final Optional<ReceiptStorageService> receiptStorageService;
     private final Optional<ReceiptExtractionService> receiptExtractionService;
+    private final ReceiptOwnerResolver receiptOwnerResolver;
 
     public ReceiptController(
         @Autowired(required = false) ReceiptStorageService receiptStorageService,
-        @Autowired(required = false) ReceiptExtractionService receiptExtractionService
+        @Autowired(required = false) ReceiptExtractionService receiptExtractionService,
+        ReceiptOwnerResolver receiptOwnerResolver
     ) {
         this.receiptStorageService = Optional.ofNullable(receiptStorageService);
         this.receiptExtractionService = Optional.ofNullable(receiptExtractionService);
+        this.receiptOwnerResolver = receiptOwnerResolver;
     }
 
     @GetMapping("/receipts")
@@ -189,7 +188,7 @@ public class ReceiptController {
         List<ParsedReceipt> parsedReceipts = List.of();
         String parsedListingError = null;
 
-        ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
+        ReceiptOwner currentOwner = receiptOwnerResolver.resolve(authentication);
         if (currentOwner == null && !viewingAll) {
             receiptFiles = List.of();
         } else {
@@ -385,7 +384,7 @@ public class ReceiptController {
             .findById(documentId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found."));
 
-        ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
+        ReceiptOwner currentOwner = receiptOwnerResolver.resolve(authentication);
         boolean ownsReceipt =
             currentOwner != null && ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), currentOwner);
         if (!ownsReceipt && !canViewAll) {
@@ -438,7 +437,7 @@ public class ReceiptController {
         boolean canViewAll = isAdmin(authentication);
         boolean viewingAll = isViewingAll(scope, authentication);
 
-        ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
+        ReceiptOwner currentOwner = receiptOwnerResolver.resolve(authentication);
         if ((!viewingAll && currentOwner == null) || !StringUtils.hasText(eanCode)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found.");
         }
@@ -877,7 +876,7 @@ public class ReceiptController {
                 "You can upload up to %d files at a time.".formatted(MAX_UPLOAD_FILES));
         }
 
-        ReceiptOwner owner = resolveReceiptOwner(authentication);
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
 
         try {
             storage.uploadFiles(sanitizedFiles, owner);
@@ -923,7 +922,7 @@ public class ReceiptController {
 
     @PostMapping("/receipts/clear")
     public String clearReceipts(RedirectAttributes redirectAttributes, Authentication authentication) {
-        ReceiptOwner owner = resolveReceiptOwner(authentication);
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
         if (owner == null) {
             redirectAttributes.addFlashAttribute("errorMessage", "Unable to determine the current user.");
             return "redirect:/receipts";
@@ -945,7 +944,7 @@ public class ReceiptController {
     @PostMapping(value = "/receipts/clear", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public ResponseEntity<ReceiptClearResponse> clearReceiptsJson(Authentication authentication) {
-        ReceiptOwner owner = resolveReceiptOwner(authentication);
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
         if (owner == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ReceiptClearResponse(null, "Unable to determine the current user."));
@@ -1037,54 +1036,6 @@ public class ReceiptController {
 
     private String toScopeParameter(ReceiptViewScope scope) {
         return scope == ReceiptViewScope.ALL ? SCOPE_ALL : SCOPE_MY;
-    }
-
-    private ReceiptOwner resolveReceiptOwner(Authentication authentication) {
-        if (authentication == null
-            || !authentication.isAuthenticated()
-            || authentication instanceof AnonymousAuthenticationToken) {
-            return null;
-        }
-
-        String identifier = authentication.getName();
-        String displayName = null;
-        String email = null;
-        Object principal = authentication.getPrincipal();
-
-        if (principal instanceof FirestoreUserDetails firestoreUserDetails) {
-            identifier = firestoreUserDetails.getId();
-            displayName = firestoreUserDetails.getDisplayName();
-            email = firestoreUserDetails.getUsername();
-        } else if (principal instanceof OAuth2User oAuth2User) {
-            displayName = readAttribute(oAuth2User, "name");
-            email = readAttribute(oAuth2User, "email");
-            String subject = readAttribute(oAuth2User, "sub");
-            identifier = StringUtils.hasText(subject) ? subject : oAuth2User.getName();
-            if (!StringUtils.hasText(displayName)) {
-                displayName = StringUtils.hasText(email) ? email : authentication.getName();
-            }
-        } else if (principal instanceof UserDetails userDetails) {
-            identifier = userDetails.getUsername();
-            displayName = userDetails.getUsername();
-            email = userDetails.getUsername();
-        } else if (principal instanceof String stringPrincipal) {
-            displayName = stringPrincipal;
-        }
-
-        if (!StringUtils.hasText(identifier)) {
-            identifier = authentication.getName();
-        }
-
-        ReceiptOwner owner = new ReceiptOwner(identifier, displayName, email);
-        return owner.hasValues() ? owner : null;
-    }
-
-    private String readAttribute(OAuth2User oAuth2User, String attributeName) {
-        Object value = oAuth2User.getAttributes().get(attributeName);
-        if (value instanceof String stringValue && StringUtils.hasText(stringValue)) {
-            return stringValue;
-        }
-        return null;
     }
 
 }

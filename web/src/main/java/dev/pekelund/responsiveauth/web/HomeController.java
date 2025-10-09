@@ -2,6 +2,7 @@ package dev.pekelund.responsiveauth.web;
 
 import dev.pekelund.responsiveauth.firestore.FirestoreUserService;
 import dev.pekelund.responsiveauth.firestore.UserRoleUpdateException;
+import dev.pekelund.responsiveauth.web.DashboardStatisticsService.DashboardStatistics;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.List;
@@ -22,9 +23,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class HomeController {
 
     private final FirestoreUserService firestoreUserService;
+    private final DashboardStatisticsService dashboardStatisticsService;
 
-    public HomeController(FirestoreUserService firestoreUserService) {
+    public HomeController(FirestoreUserService firestoreUserService,
+                          DashboardStatisticsService dashboardStatisticsService) {
         this.firestoreUserService = firestoreUserService;
+        this.dashboardStatisticsService = dashboardStatisticsService;
     }
 
     @GetMapping({"/", "/home"})
@@ -72,6 +76,17 @@ public class HomeController {
         }
 
         return "dashboard";
+    }
+
+    @GetMapping("/dashboard/statistics")
+    public String dashboardStatistics(Model model, Principal principal, Authentication authentication) {
+        model.addAttribute("pageTitle", "Statistics");
+        model.addAttribute("principalName", principal != null ? principal.getName() : "");
+
+        DashboardStatistics statistics = dashboardStatisticsService.loadStatistics(authentication);
+        model.addAttribute("statistics", statistics);
+
+        return "dashboard-statistics";
     }
 
     @PostMapping("/dashboard/admins")

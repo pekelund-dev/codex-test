@@ -78,6 +78,10 @@ public record ParsedReceipt(
         return formatAmount(amount);
     }
 
+    public BigDecimal totalAmountValue() {
+        return numericValueFromGeneral("totalAmount");
+    }
+
     public String format() {
         return valueFromGeneral("format");
     }
