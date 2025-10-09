@@ -10,6 +10,7 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QuerySnapshot;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -159,6 +160,156 @@ public class FirestoreUserService implements UserDetailsService {
         throw new UsernameNotFoundException("No user found with email " + normalizedEmail);
     }
 
+    public List<AdminUserSummary> listAdministrators() {
+        ensureEnabled();
+
+        String adminRole = adminRole();
+
+        try {
+            CollectionReference collection = firestore.collection(properties.getUsersCollection());
+            ApiFuture<QuerySnapshot> queryFuture = collection.whereArrayContains("roles", adminRole).get();
+            QuerySnapshot querySnapshot = queryFuture.get();
+
+            if (querySnapshot == null || querySnapshot.isEmpty()) {
+                return List.of();
+            }
+
+            return querySnapshot.getDocuments().stream()
+                .map(this::toAdminUserSummary)
+                .sorted(Comparator.comparing(AdminUserSummary::displayName, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new UserRoleUpdateException("Interrupted while loading administrator accounts.", ex);
+        } catch (ExecutionException ex) {
+            throw new UserRoleUpdateException("Failed to load administrator accounts from Firestore.", ex);
+        }
+    }
+
+    public AdminPromotionOutcome promoteToAdministrator(String email, String displayName) {
+        ensureEnabled();
+
+        String normalizedEmail = normalizeEmail(email);
+        if (!StringUtils.hasText(normalizedEmail)) {
+            throw new UserRoleUpdateException("Email address is required to grant administrator access.");
+        }
+
+        String trimmedDisplayName = StringUtils.hasText(displayName) ? displayName.trim() : null;
+        String adminRole = adminRole();
+        String defaultRole = defaultRole();
+
+        try {
+            DocumentSnapshot documentSnapshot = findUserByEmail(normalizedEmail);
+
+            if (documentSnapshot == null) {
+                Map<String, Object> document = new HashMap<>();
+                document.put("email", normalizedEmail);
+                if (StringUtils.hasText(trimmedDisplayName)) {
+                    document.put("fullName", trimmedDisplayName);
+                }
+                document.put("roles", List.of(defaultRole, adminRole));
+                document.put("createdAt", FieldValue.serverTimestamp());
+                document.put("authProvider", "admin-dashboard");
+
+                CollectionReference collection = firestore.collection(properties.getUsersCollection());
+                collection.add(document).get();
+                return new AdminPromotionOutcome(true, true);
+            }
+
+            List<String> normalizedRoles = normalizeRoleList(readRoleNames(documentSnapshot));
+            boolean defaultAdded = false;
+            if (!normalizedRoles.contains(defaultRole)) {
+                normalizedRoles.add(defaultRole);
+                defaultAdded = true;
+            }
+
+            boolean adminAdded = false;
+            if (!normalizedRoles.contains(adminRole)) {
+                normalizedRoles.add(adminRole);
+                adminAdded = true;
+            }
+
+            Map<String, Object> updates = new HashMap<>();
+            if (defaultAdded || adminAdded) {
+                updates.put("roles", normalizedRoles);
+            }
+
+            if (StringUtils.hasText(trimmedDisplayName)) {
+                String storedDisplayName = documentSnapshot.getString("fullName");
+                if (!StringUtils.hasText(storedDisplayName) || !storedDisplayName.equals(trimmedDisplayName)) {
+                    updates.put("fullName", trimmedDisplayName);
+                }
+            }
+
+            if (!updates.isEmpty()) {
+                documentSnapshot.getReference().update(updates).get();
+            }
+
+            return new AdminPromotionOutcome(false, adminAdded);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new UserRoleUpdateException(
+                "Interrupted while granting administrator access to " + normalizedEmail + ".",
+                ex
+            );
+        } catch (ExecutionException ex) {
+            throw new UserRoleUpdateException(
+                "Failed to update administrator access for " + normalizedEmail + ".",
+                ex
+            );
+        }
+    }
+
+    public AdminDemotionOutcome revokeAdministrator(String email) {
+        ensureEnabled();
+
+        String normalizedEmail = normalizeEmail(email);
+        if (!StringUtils.hasText(normalizedEmail)) {
+            throw new UserRoleUpdateException("Email address is required to revoke administrator access.");
+        }
+
+        String adminRole = adminRole();
+        String defaultRole = defaultRole();
+
+        try {
+            DocumentSnapshot documentSnapshot = findUserByEmail(normalizedEmail);
+
+            if (documentSnapshot == null) {
+                return new AdminDemotionOutcome(false, false);
+            }
+
+            List<String> normalizedRoles = normalizeRoleList(readRoleNames(documentSnapshot));
+            boolean rolesChanged = false;
+
+            boolean adminRemoved = normalizedRoles.remove(adminRole);
+            if (adminRemoved) {
+                rolesChanged = true;
+            }
+
+            if (!normalizedRoles.contains(defaultRole)) {
+                normalizedRoles.add(defaultRole);
+                rolesChanged = true;
+            }
+
+            if (rolesChanged) {
+                documentSnapshot.getReference().update("roles", normalizedRoles).get();
+            }
+
+            return new AdminDemotionOutcome(true, adminRemoved);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new UserRoleUpdateException(
+                "Interrupted while revoking administrator access for " + normalizedEmail + ".",
+                ex
+            );
+        } catch (ExecutionException ex) {
+            throw new UserRoleUpdateException(
+                "Failed to update administrator access for " + normalizedEmail + ".",
+                ex
+            );
+        }
+    }
+
     private boolean userExists(String normalizedEmail) throws ExecutionException, InterruptedException {
         CollectionReference collection = firestore.collection(properties.getUsersCollection());
         ApiFuture<QuerySnapshot> queryFuture = collection
@@ -230,12 +381,35 @@ public class FirestoreUserService implements UserDetailsService {
             .toList();
     }
 
+    private List<String> normalizeRoleList(List<String> roles) {
+        if (roles == null || roles.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<String> normalized = new ArrayList<>(roles.size());
+        for (String role : roles) {
+            if (!StringUtils.hasText(role)) {
+                continue;
+            }
+            String normalizedRole = ensureRolePrefix(role.trim());
+            if (!normalized.contains(normalizedRole)) {
+                normalized.add(normalizedRole);
+            }
+        }
+
+        return normalized;
+    }
+
     private String defaultRole() {
         String role = properties.getDefaultRole();
         if (!StringUtils.hasText(role)) {
             role = "ROLE_USER";
         }
         return ensureRolePrefix(role.trim());
+    }
+
+    private String adminRole() {
+        return ensureRolePrefix("ROLE_ADMIN");
     }
 
     private String ensureRolePrefix(String role) {
@@ -250,6 +424,18 @@ public class FirestoreUserService implements UserDetailsService {
 
     private static String normalizeEmail(String email) {
         return email != null ? email.trim().toLowerCase() : null;
+    }
+
+    private AdminUserSummary toAdminUserSummary(DocumentSnapshot documentSnapshot) {
+        String email = documentSnapshot.getString("email");
+        if (!StringUtils.hasText(email)) {
+            email = documentSnapshot.getId();
+        }
+
+        String fullName = documentSnapshot.getString("fullName");
+        String displayName = StringUtils.hasText(fullName) ? fullName.trim() : email;
+
+        return new AdminUserSummary(documentSnapshot.getId(), email, displayName);
     }
 
     private UserDetailsService createFallbackUserDetailsService(PasswordEncoder passwordEncoder) {
@@ -297,4 +483,10 @@ public class FirestoreUserService implements UserDetailsService {
 
         return inMemoryManager;
     }
+
+    public record AdminPromotionOutcome(boolean userCreated, boolean adminRoleGranted) { }
+
+    public record AdminDemotionOutcome(boolean userFound, boolean adminRoleRevoked) { }
+
+    public record AdminUserSummary(String id, String email, String displayName) { }
 }

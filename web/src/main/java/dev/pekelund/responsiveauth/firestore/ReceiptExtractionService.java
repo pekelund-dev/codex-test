@@ -41,7 +41,19 @@ public class ReceiptExtractionService {
     }
 
     public List<ParsedReceipt> listReceiptsForOwner(ReceiptOwner owner) {
-        if (owner == null || firestore.isEmpty()) {
+        return listReceipts(owner, false);
+    }
+
+    public List<ParsedReceipt> listAllReceipts() {
+        return listReceipts(null, true);
+    }
+
+    private List<ParsedReceipt> listReceipts(ReceiptOwner owner, boolean includeAllOwners) {
+        if (firestore.isEmpty()) {
+            return List.of();
+        }
+
+        if (!includeAllOwners && owner == null) {
             return List.of();
         }
 
@@ -56,7 +68,7 @@ public class ReceiptExtractionService {
                 if (parsed == null) {
                     continue;
                 }
-                if (!ReceiptOwnerMatcher.belongsToCurrentOwner(parsed.owner(), owner)) {
+                if (!includeAllOwners && !ReceiptOwnerMatcher.belongsToCurrentOwner(parsed.owner(), owner)) {
                     continue;
                 }
                 receipts.add(parsed);

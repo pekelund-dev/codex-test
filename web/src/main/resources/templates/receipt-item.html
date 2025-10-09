@@ -8,15 +8,26 @@
     <div class="d-flex align-items-center gap-2 mb-3">
         <a class="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center gap-1"
            th:if="${sourceReceiptId != null}"
-           th:href="@{/receipts/{id}(id=${sourceReceiptId})}">
+           th:href="@{/receipts/{id}(id=${sourceReceiptId}, scope=${scopeParam})}">
             <i class="bi bi-arrow-left"></i>
             <span th:text="${sourceReceiptName != null ? 'Back to ' + sourceReceiptName : 'Back to receipt'}">Back to receipt</span>
         </a>
         <a class="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center gap-1"
-           th:href="@{/receipts}">
+           th:href="@{/receipts(scope=${scopeParam})}">
             <i class="bi bi-receipt"></i>
             <span>Back to receipts</span>
         </a>
+    </div>
+
+    <div th:if="${canViewAll}" class="mb-3">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Receipt scope">
+            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
+               th:href="${sourceReceiptId != null} ? @{/receipts/items/{eanCode}(eanCode=${itemEan}, sourceId=${sourceReceiptId}, scope='my')} : @{/receipts/items/{eanCode}(eanCode=${itemEan}, scope='my')}">My receipts</a>
+            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
+               th:href="${sourceReceiptId != null} ? @{/receipts/items/{eanCode}(eanCode=${itemEan}, sourceId=${sourceReceiptId}, scope='all')} : @{/receipts/items/{eanCode}(eanCode=${itemEan}, scope='all')}">All receipts</a>
+        </div>
+        <p class="text-muted small mb-0 mt-2"
+           th:text="${viewingAll} ? 'Showing purchases from all parsed receipts.' : 'Showing purchases from your parsed receipts only.'">Showing purchases from your parsed receipts only.</p>
     </div>
 
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
@@ -59,7 +70,7 @@
                             <span th:text="${purchase.dateLabel() != null ? purchase.dateLabel() : '—'}">2024-01-01</span>
                             <a th:if="${purchase.receiptId() != null}"
                                class="stretched-link"
-                               th:href="@{/receipts/{id}(id=${purchase.receiptId()})}"
+                               th:href="@{/receipts/{id}(id=${purchase.receiptId()}, scope=${scopeParam})}"
                                th:aria-label="${'View receipt' + (purchase.receiptDisplayName() != null ? ' ' + purchase.receiptDisplayName() : '')}"></a>
                             <span th:if="${purchase.receiptId() == null}"
                                   class="text-muted small d-block mt-1">Receipt unavailable</span>
