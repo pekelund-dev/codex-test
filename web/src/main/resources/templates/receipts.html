@@ -8,54 +8,30 @@
     <div class="row g-4">
         <div class="col-lg-7">
             <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-4">
-                    <h1 class="h3 fw-semibold text-primary mb-3">Upload receipts</h1>
-                    <p class="text-muted mb-4">Drop PDF or image receipts into the area below, or click to choose files
-                        from your computer. Up to 10 files can be uploaded at a time.</p>
-
-                    <div class="d-flex align-items-center gap-2 mb-4" aria-live="polite">
-                        <span class="text-muted small">Storage status:</span>
-                        <span th:if="${storageEnabled}" class="badge bg-success">Enabled</span>
-                        <span th:if="${!storageEnabled}" class="badge bg-danger">Disabled</span>
+                <div class="card-body p-4 d-flex flex-column gap-4">
+                    <div>
+                        <h1 class="h3 fw-semibold text-primary mb-2">Receipt archive</h1>
+                        <p class="text-muted mb-0">Review parsed receipt data generated from your uploads. Use the button below to add new receipts or manage the uploaded files.</p>
                     </div>
 
-                    <div th:if="${successMessage}" class="alert alert-success" role="alert">
+                    <div class="d-flex flex-wrap align-items-center gap-3" aria-live="polite">
+                        <a class="btn btn-primary" th:href="@{/receipts/uploads}">
+                            <i class="bi bi-cloud-arrow-up me-2" aria-hidden="true"></i>
+                            Upload new receipts
+                        </a>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small">Parsing status:</span>
+                            <span th:if="${parsedReceiptsEnabled}" class="badge bg-success">Enabled</span>
+                            <span th:if="${!parsedReceiptsEnabled}" class="badge bg-danger">Disabled</span>
+                        </div>
+                    </div>
+
+                    <div th:if="${successMessage}" class="alert alert-success mb-0" role="alert">
                         <span th:text="${successMessage}">Files uploaded successfully.</span>
                     </div>
-                    <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
-                        <span th:text="${errorMessage}">Upload failed.</span>
+                    <div th:if="${errorMessage}" class="alert alert-danger mb-0" role="alert">
+                        <span th:text="${errorMessage}">Action failed.</span>
                     </div>
-
-                    <div th:if="${!storageEnabled}" class="alert alert-warning" role="alert">
-                        Receipt uploads are currently disabled. Follow the Google Cloud Storage setup instructions in the
-                        README to enable this feature.
-                    </div>
-
-                    <form th:if="${storageEnabled}" th:action="@{/receipts/upload}" method="post"
-                          enctype="multipart/form-data" class="receipt-upload">
-                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                        <div id="receipt-dropzone" class="upload-dropzone text-center p-4">
-                            <input id="receipt-files" class="visually-hidden" type="file" name="files" multiple>
-                            <div class="dropzone-icon text-primary mb-2">
-                                <i class="bi bi-cloud-arrow-up-fill"></i>
-                            </div>
-                            <p class="fw-semibold mb-1">Drag &amp; drop receipts here</p>
-                            <p class="text-muted small mb-3">or</p>
-                            <button type="button" class="btn btn-outline-primary" id="trigger-file-select">Click to
-                                select files
-                            </button>
-                            <p class="text-muted small mt-3 mb-0" id="file-limit-hint">You can add up to 10 files per
-                                upload.</p>
-                        </div>
-
-                        <ul class="list-group list-group-flush mt-3" id="selected-files" aria-live="polite"></ul>
-
-                        <div class="d-flex justify-content-end mt-3">
-                            <button type="submit" class="btn btn-primary" id="upload-button" disabled>Upload
-                                receipt files
-                            </button>
-                        </div>
-                    </form>
                 </div>
             </div>
         </div>
@@ -82,68 +58,6 @@
     </div>
 
     <div class="card shadow-sm border-0 mt-4">
-                <div class="card-body p-4">
-                    <details class="receipt-table" open>
-                        <summary class="details-toggle d-flex align-items-center justify-content-between mb-3">
-                            <span class="d-flex align-items-center gap-2">
-                                <img th:src="@{/img/collapsible-indicator.svg}" src="/img/collapsible-indicator.svg" alt="" class="details-toggle-icon" aria-hidden="true">
-                                <span class="h5 fw-semibold mb-0">Stored receipts</span>
-                            </span>
-                            <span class="badge bg-primary-subtle text-primary" data-files-count
-                                  th:classappend="${files == null or #lists.isEmpty(files)} ? ' d-none'"
-                                  th:text="${files != null ? files.size() + ' files' : '0 files'}">0 files</span>
-                        </summary>
-
-                <div th:if="${listingError}" class="alert alert-danger" role="alert">
-                    <span th:text="${listingError}">Unable to list files.</span>
-                </div>
-
-                <div class="text-center text-muted py-5" data-files-empty
-                     th:classappend="${files != null and !#lists.isEmpty(files)} ? ' d-none'">
-                    <p class="mb-0">No receipts have been uploaded yet.</p>
-                </div>
-
-                <div class="table-responsive" data-files-table
-                     th:classappend="${files == null or #lists.isEmpty(files)} ? ' d-none'">
-                    <table class="table align-middle">
-                        <thead class="table-light">
-                        <tr>
-                            <th scope="col">File name</th>
-                            <th scope="col" class="text-end">Size</th>
-                            <th scope="col">Uploaded by</th>
-                            <th scope="col">Last updated</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Content type</th>
-                        </tr>
-                        </thead>
-                        <tbody data-files-body>
-                        <tr th:each="file : ${files}" th:attr="data-object-name=${file.name()}">
-                            <td>
-                                <span class="fw-semibold" th:text="${file.name()}">receipt.pdf</span>
-                            </td>
-                            <td class="text-end" th:text="${file.formattedSize()}">24.5 KB</td>
-                            <td th:text="${file.ownerDisplayName()}">—</td>
-                            <td th:text="${file.updated() != null ? #temporals.format(file.updated(), 'yyyy-MM-dd HH:mm:ss') : '—'}">2024-01-01 10:30:00</td>
-                            <td th:with="status=${fileStatuses != null ? fileStatuses[file.name()] : null}">
-                                <div class="d-flex flex-column gap-1">
-                                    <span class="badge text-uppercase fw-semibold file-status-badge"
-                                          th:classappend="${status != null ? ' ' + status.statusBadgeClass() : ' bg-secondary-subtle text-secondary'}"
-                                          th:text="${status != null && status.status() != null ? status.status() : 'PENDING'}">PENDING</span>
-                                    <span class="text-muted small file-status-message"
-                                          th:classappend="${status == null || status.statusMessage() == null} ? ' d-none'"
-                                          th:text="${status != null ? status.statusMessage() : ''}">Status message</span>
-                                </div>
-                            </td>
-                            <td th:text="${file.contentType() != null ? file.contentType() : '—'}">application/pdf</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </details>
-        </div>
-    </div>
-
-    <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
             <details class="receipt-table" open>
                 <summary class="details-toggle d-flex align-items-center justify-content-between mb-3">
@@ -160,8 +74,10 @@
                     Parsed receipts are currently unavailable. Configure Firestore to enable this feature.
                 </div>
 
-                <div th:if="${parsedListingError}" class="alert alert-danger" role="alert">
-                    <span th:text="${parsedListingError}">Unable to load parsed receipts.</span>
+                <div class="alert alert-danger" role="alert" data-parsed-error
+                     th:classappend="${parsedListingError == null} ? ' d-none'"
+                     th:text="${parsedListingError != null ? parsedListingError : ''}">
+                    Unable to load parsed receipts.
                 </div>
 
                 <div class="text-center text-muted py-5" data-parsed-empty

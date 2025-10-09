@@ -32,6 +32,7 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
 
     private static final DateTimeFormatter OBJECT_PREFIX =
         DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS", Locale.US).withZone(ZoneOffset.UTC);
+    private static final int MAX_OBJECT_FILENAME_LENGTH = 60;
 
     private final Storage storage;
     private final GcsProperties properties;
@@ -134,12 +135,13 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
     private String buildObjectName(String originalFilename) {
         String filename = StringUtils.hasText(originalFilename) ? originalFilename : "receipt";
         filename = extractFilename(filename);
+        filename = shortenFilename(filename, MAX_OBJECT_FILENAME_LENGTH);
         filename = encodeFilename(filename);
         if (!StringUtils.hasText(filename)) {
             filename = "receipt";
         }
         String prefix = OBJECT_PREFIX.format(Instant.now());
-        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String suffix = UUID.randomUUID().toString().substring(0, 6);
         return prefix + "_" + suffix + "_" + filename;
     }
 
@@ -165,6 +167,26 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
             return filename;
         }
         return UriUtils.encodePathSegment(filename, StandardCharsets.UTF_8);
+    }
+
+    private String shortenFilename(String filename, int maxLength) {
+        if (!StringUtils.hasText(filename) || filename.length() <= maxLength) {
+            return filename;
+        }
+
+        int extensionIndex = filename.lastIndexOf('.');
+        if (extensionIndex > 0 && extensionIndex < filename.length() - 1) {
+            String baseName = filename.substring(0, extensionIndex);
+            String extension = filename.substring(extensionIndex);
+            int allowedBaseLength = Math.max(1, maxLength - extension.length() - 1);
+            if (baseName.length() > allowedBaseLength) {
+                baseName = baseName.substring(0, allowedBaseLength);
+            }
+            return baseName + "…" + extension;
+        }
+
+        int safeLength = Math.max(1, maxLength - 1);
+        return filename.substring(0, safeLength) + "…";
     }
 }
 
