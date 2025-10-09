@@ -31,6 +31,8 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
 
     private static final Logger log = LoggerFactory.getLogger(FirestoreUserAuthoritiesMapper.class);
 
+    private static final Set<String> DEFAULT_ADMIN_EMAILS = Set.of("pekelund.dev@gmail.com");
+
     private final FirestoreProperties properties;
     private final Firestore firestore;
     private final boolean firestoreEnabled;
@@ -62,13 +64,18 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
 
         String normalizedEmail = normalizeEmail(email);
         String displayName = extractDisplayName(authorities);
+        boolean isDefaultAdmin = DEFAULT_ADMIN_EMAILS.contains(normalizedEmail);
+
+        if (isDefaultAdmin) {
+            mappedAuthorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        }
 
         try {
             DocumentSnapshot userDocument = findUserDocument(normalizedEmail);
             List<String> storedRoles;
 
             if (userDocument == null) {
-                storedRoles = createUserDocument(normalizedEmail, displayName);
+                storedRoles = createUserDocument(normalizedEmail, displayName, isDefaultAdmin);
             } else {
                 storedRoles = readRoleNames(userDocument);
                 if (!StringUtils.hasText(displayName)) {
@@ -79,6 +86,10 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
 
                 if (storedRoles.isEmpty()) {
                     storedRoles = List.of(defaultRole());
+                }
+
+                if (isDefaultAdmin) {
+                    storedRoles = ensureAdminRole(userDocument.getReference(), storedRoles);
                 }
             }
 
@@ -112,7 +123,7 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
         return querySnapshot.getDocuments().get(0);
     }
 
-    private List<String> createUserDocument(String normalizedEmail, String displayName)
+    private List<String> createUserDocument(String normalizedEmail, String displayName, boolean assignAdmin)
         throws ExecutionException, InterruptedException {
         CollectionReference collection = firestore.collection(properties.getUsersCollection());
 
@@ -121,13 +132,21 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
         if (StringUtils.hasText(displayName)) {
             document.put("fullName", displayName.trim());
         }
-        document.put("roles", List.of(defaultRole()));
+        List<String> roles = new ArrayList<>();
+        roles.add(defaultRole());
+        if (assignAdmin) {
+            String adminRole = adminRole();
+            if (!roles.contains(adminRole)) {
+                roles.add(adminRole);
+            }
+        }
+        document.put("roles", roles);
         document.put("createdAt", FieldValue.serverTimestamp());
         document.put("authProvider", "oauth");
 
         ApiFuture<DocumentReference> writeFuture = collection.add(document);
         writeFuture.get();
-        return List.of(defaultRole());
+        return List.copyOf(roles);
     }
 
     private void updateDisplayName(DocumentReference reference, String displayName) {
@@ -299,7 +318,24 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
         return role.startsWith("ROLE_") ? role : "ROLE_" + role;
     }
 
+    private String adminRole() {
+        return ensureRolePrefix("ROLE_ADMIN");
+    }
+
     private String normalizeEmail(String email) {
         return email != null ? email.trim().toLowerCase() : null;
+    }
+
+    private List<String> ensureAdminRole(DocumentReference reference, List<String> storedRoles)
+        throws ExecutionException, InterruptedException {
+        String adminRole = adminRole();
+        if (storedRoles.contains(adminRole)) {
+            return storedRoles;
+        }
+
+        List<String> updatedRoles = new ArrayList<>(storedRoles);
+        updatedRoles.add(adminRole);
+        reference.update("roles", updatedRoles).get();
+        return List.copyOf(updatedRoles);
     }
 }
