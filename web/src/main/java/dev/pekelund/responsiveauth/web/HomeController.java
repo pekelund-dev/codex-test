@@ -15,6 +15,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -121,6 +122,56 @@ public class HomeController {
         } catch (UserRoleUpdateException ex) {
             redirectAttributes.addFlashAttribute("adminErrorMessage", ex.getMessage());
             redirectAttributes.addFlashAttribute("adminPromotionForm", form);
+        }
+
+        return "redirect:/dashboard#admin-management";
+    }
+
+    @PostMapping("/dashboard/admins/remove")
+    public String revokeAdministrator(@RequestParam("email") String email,
+                                      Authentication authentication,
+                                      RedirectAttributes redirectAttributes) {
+        if (!isAdmin(authentication)) {
+            redirectAttributes.addFlashAttribute(
+                "adminErrorMessage",
+                "You do not have permission to manage administrator accounts."
+            );
+            return "redirect:/dashboard";
+        }
+
+        if (!firestoreUserService.isEnabled()) {
+            redirectAttributes.addFlashAttribute(
+                "adminErrorMessage",
+                "Firestore integration must be enabled to manage administrator accounts."
+            );
+            return "redirect:/dashboard#admin-management";
+        }
+
+        String submittedEmail = email != null ? email.trim() : "";
+        String normalizedEmail = submittedEmail.toLowerCase(Locale.ROOT);
+
+        try {
+            FirestoreUserService.AdminDemotionOutcome outcome =
+                firestoreUserService.revokeAdministrator(submittedEmail);
+
+            if (!outcome.userFound()) {
+                redirectAttributes.addFlashAttribute(
+                    "adminInfoMessage",
+                    normalizedEmail + " is not associated with an administrator account."
+                );
+            } else if (outcome.adminRoleRevoked()) {
+                redirectAttributes.addFlashAttribute(
+                    "adminSuccessMessage",
+                    "Removed administrator access from " + normalizedEmail + "."
+                );
+            } else {
+                redirectAttributes.addFlashAttribute(
+                    "adminInfoMessage",
+                    normalizedEmail + " does not currently have administrator access."
+                );
+            }
+        } catch (UserRoleUpdateException ex) {
+            redirectAttributes.addFlashAttribute("adminErrorMessage", ex.getMessage());
         }
 
         return "redirect:/dashboard#admin-management";

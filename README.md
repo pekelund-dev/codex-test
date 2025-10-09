@@ -217,7 +217,7 @@ Each configured password is encoded with the active `PasswordEncoder` on startup
 
 Users granted the `ROLE_ADMIN` authority can toggle between viewing only their own receipts and all uploaded receipts. The receipt overview, upload list, detail view, and item history pages include a scope switch when an administrator signs in.
 
-For both password and OAuth sign-ins the application defers to Firestore for role assignments. When a new OAuth user authenticates, a document is created (or updated) in the configured users collection with their email address, name, and a default `ROLE_USER` role. With Firestore enabled, administrators can open the dashboard and use the **Administrator access** panel to add more admins by entering their email address (and an optional display name). The app updates the stored roles immediately, creating a new document when necessary, so the promotion applies to the very next sign-in.
+For both password and OAuth sign-ins the application defers to Firestore for role assignments. When a new OAuth user authenticates, a document is created (or updated) in the configured users collection with their email address, name, and a default `ROLE_USER` role. With Firestore enabled, administrators can open the dashboard and use the **Administrator access** panel to add more admins by entering their email address (and an optional display name). The app updates the stored roles immediately, creating a new document when necessary, so the promotion applies to the very next sign-in. Existing admins also appear in the dashboard list with a quick remove control that revokes the `ROLE_ADMIN` authority while keeping their account intact.
 
 If Firestore is disabled, fallback users continue to rely on the roles defined in configuration.
 

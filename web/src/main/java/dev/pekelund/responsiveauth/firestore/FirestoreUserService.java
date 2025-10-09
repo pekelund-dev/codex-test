@@ -260,6 +260,56 @@ public class FirestoreUserService implements UserDetailsService {
         }
     }
 
+    public AdminDemotionOutcome revokeAdministrator(String email) {
+        ensureEnabled();
+
+        String normalizedEmail = normalizeEmail(email);
+        if (!StringUtils.hasText(normalizedEmail)) {
+            throw new UserRoleUpdateException("Email address is required to revoke administrator access.");
+        }
+
+        String adminRole = adminRole();
+        String defaultRole = defaultRole();
+
+        try {
+            DocumentSnapshot documentSnapshot = findUserByEmail(normalizedEmail);
+
+            if (documentSnapshot == null) {
+                return new AdminDemotionOutcome(false, false);
+            }
+
+            List<String> normalizedRoles = normalizeRoleList(readRoleNames(documentSnapshot));
+            boolean rolesChanged = false;
+
+            boolean adminRemoved = normalizedRoles.remove(adminRole);
+            if (adminRemoved) {
+                rolesChanged = true;
+            }
+
+            if (!normalizedRoles.contains(defaultRole)) {
+                normalizedRoles.add(defaultRole);
+                rolesChanged = true;
+            }
+
+            if (rolesChanged) {
+                documentSnapshot.getReference().update("roles", normalizedRoles).get();
+            }
+
+            return new AdminDemotionOutcome(true, adminRemoved);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new UserRoleUpdateException(
+                "Interrupted while revoking administrator access for " + normalizedEmail + ".",
+                ex
+            );
+        } catch (ExecutionException ex) {
+            throw new UserRoleUpdateException(
+                "Failed to update administrator access for " + normalizedEmail + ".",
+                ex
+            );
+        }
+    }
+
     private boolean userExists(String normalizedEmail) throws ExecutionException, InterruptedException {
         CollectionReference collection = firestore.collection(properties.getUsersCollection());
         ApiFuture<QuerySnapshot> queryFuture = collection
@@ -435,6 +485,8 @@ public class FirestoreUserService implements UserDetailsService {
     }
 
     public record AdminPromotionOutcome(boolean userCreated, boolean adminRoleGranted) { }
+
+    public record AdminDemotionOutcome(boolean userFound, boolean adminRoleRevoked) { }
 
     public record AdminUserSummary(String id, String email, String displayName) { }
 }
