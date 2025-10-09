@@ -43,6 +43,10 @@ public record ParsedReceipt(
     }
 
     public String displayName() {
+        String storeName = storeName();
+        if (storeName != null && !storeName.isBlank()) {
+            return storeName;
+        }
         String fileName = fileName();
         if (fileName != null && !fileName.isBlank()) {
             return fileName;
