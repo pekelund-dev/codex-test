@@ -50,6 +50,96 @@
             </div>
         </div>
     </div>
+    <div class="row pb-4" th:if="${showAdminManagement}">
+        <div class="col-12">
+            <div class="card shadow-sm border-0" id="admin-management">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                        <div>
+                            <h2 class="h5 fw-semibold text-primary mb-1">Administrator access</h2>
+                            <p class="text-muted mb-0">Promote additional teammates to manage receipts and items across every account.</p>
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary fw-semibold">Admin tools</span>
+                    </div>
+
+                    <div class="mt-4" th:if="${adminSuccessMessage}">
+                        <div class="alert alert-success mb-0" role="alert">
+                            <span th:text="${adminSuccessMessage}">Administrator updated.</span>
+                        </div>
+                    </div>
+                    <div class="mt-4" th:if="${adminInfoMessage}">
+                        <div class="alert alert-info mb-0" role="alert">
+                            <span th:text="${adminInfoMessage}">Administrator already granted.</span>
+                        </div>
+                    </div>
+                    <div class="mt-4" th:if="${adminErrorMessage}">
+                        <div class="alert alert-danger mb-0" role="alert">
+                            <span th:text="${adminErrorMessage}">Unable to promote administrator.</span>
+                        </div>
+                    </div>
+                    <div class="mt-4" th:if="${adminLoadError}">
+                        <div class="alert alert-danger mb-0" role="alert">
+                            <span th:text="${adminLoadError}">Unable to load administrators.</span>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning mt-4 mb-0" role="alert"
+                         th:if="${!adminManagementActive}">
+                        <span th:text="${adminManagementDisabledMessage != null ? adminManagementDisabledMessage : 'Configure Firestore integration to manage administrator accounts.'}">Configure Firestore integration to manage administrator accounts.</span>
+                    </div>
+
+                    <div class="mt-4" th:if="${adminManagementActive}">
+                        <div class="row gy-4">
+                            <div class="col-lg-7">
+                                <form th:action="@{/dashboard/admins}" method="post" th:object="${adminPromotionForm}" class="row gy-3">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                    <div class="col-12">
+                                        <label for="admin-email" class="form-label fw-semibold">Email address</label>
+                                        <input id="admin-email" type="email" class="form-control"
+                                               th:classappend="${#fields.hasErrors('email')} ? ' is-invalid'"
+                                               th:field="*{email}" placeholder="name@example.com">
+                                        <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">
+                                            Please provide an email address.
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label for="admin-name" class="form-label fw-semibold">Display name <span class="text-muted fw-normal">(optional)</span></label>
+                                        <input id="admin-name" type="text" class="form-control"
+                                               th:classappend="${#fields.hasErrors('fullName')} ? ' is-invalid'"
+                                               th:field="*{fullName}" placeholder="Full name">
+                                        <div class="invalid-feedback" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}">
+                                            Please provide a shorter name.
+                                        </div>
+                                        <div class="form-text">Names help distinguish administrators inside Firestore and dashboards.</div>
+                                    </div>
+                                    <div class="col-12 d-flex flex-wrap align-items-center gap-3">
+                                        <button type="submit" class="btn btn-primary">Grant admin access</button>
+                                        <p class="text-muted small mb-0">The selected user will be assigned the <code>ROLE_ADMIN</code> authority.</p>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="col-lg-5">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <h3 class="h6 fw-semibold text-uppercase text-primary mb-3">Current administrators</h3>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item px-0" th:each="admin : ${currentAdmins}">
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-semibold" th:text="${admin.displayName()}">Jane Doe</span>
+                                                <span class="text-muted small" th:text="${admin.email()}">jane@example.com</span>
+                                            </div>
+                                        </li>
+                                        <li class="list-group-item px-0 text-muted small" th:if="${#lists.isEmpty(currentAdmins)}">
+                                            No administrator accounts have been added yet.
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
 </body>
 </html>

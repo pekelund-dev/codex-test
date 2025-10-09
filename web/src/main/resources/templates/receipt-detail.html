@@ -6,10 +6,21 @@
 <body>
 <section class="py-3 py-lg-4">
     <div class="d-flex align-items-center gap-2 mb-3">
-        <a class="btn btn-link p-0 text-decoration-none" th:href="@{/receipts}">
+        <a class="btn btn-link p-0 text-decoration-none" th:href="@{/receipts(scope=${scopeParam})}">
             <i class="bi bi-arrow-left"></i>
             Back to receipts
         </a>
+    </div>
+
+    <div th:if="${canViewAll}" class="mb-3">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Receipt scope">
+            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
+               th:href="${ownsReceipt} ? @{/receipts/{id}(id=${receipt.id()}, scope='my')} : @{/receipts(scope='my')}">My receipts</a>
+            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
+               th:href="@{/receipts/{id}(id=${receipt.id()}, scope='all')}">All receipts</a>
+        </div>
+        <p class="text-muted small mb-0 mt-2"
+           th:text="${viewingAll} ? 'Viewing all parsed receipts.' : 'Viewing only your parsed receipts.'">Viewing only your parsed receipts.</p>
     </div>
 
     <div class="card shadow-sm border-0">
@@ -84,7 +95,7 @@
                                        historyCount=${item['historyCount'] != null ? item['historyCount'] : 0L}">
                             <a th:if="${itemEan != null and historyCount > 1}"
                                class="fw-semibold text-decoration-none"
-                               th:href="@{/receipts/items/{eanCode}(eanCode=${itemEan}, sourceId=${receipt.id()})}"
+                               th:href="@{/receipts/items/{eanCode}(eanCode=${itemEan}, sourceId=${receipt.id()}, scope=${scopeParam})}"
                                th:text="${itemName != null ? itemName : '—'}">Item name</a>
                             <span th:if="${!(itemEan != null and historyCount > 1)}"
                                   class="fw-semibold"

@@ -19,3 +19,4 @@ gcs:
   credentials: ${GCS_CREDENTIALS:}
   project-id: ${GCS_PROJECT_ID:}
   bucket: ${GCS_BUCKET:}
+

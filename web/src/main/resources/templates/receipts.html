@@ -4,7 +4,7 @@
     <title th:text="${pageTitle}">Receipts</title>
 </head>
 <body>
-<section class="py-3 py-lg-4" th:attr="data-dashboard-url=@{/receipts/dashboard}">
+<section class="py-3 py-lg-4" th:attr="data-dashboard-url=@{/receipts/dashboard(scope=${scopeParam})}">
     <div class="row g-4">
         <div class="col-lg-7">
             <div class="card shadow-sm border-0 h-100">
@@ -14,8 +14,16 @@
                         <p class="text-muted mb-0">Review parsed receipt data generated from your uploads. Use the button below to add new receipts or manage the uploaded files.</p>
                     </div>
 
+                    <div th:if="${canViewAll}" class="btn-group btn-group-sm w-auto" role="group" aria-label="Receipt scope">
+                        <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
+                           th:href="@{/receipts(scope='my')}">My receipts</a>
+                        <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
+                           th:href="@{/receipts(scope='all')}">All receipts</a>
+                    </div>
+                    <p th:if="${canViewAll}" class="text-muted small mb-0" th:text="${viewingAll} ? 'Showing all uploaded receipts.' : 'Showing only receipts you have uploaded.'">Showing only receipts you have uploaded.</p>
+
                     <div class="d-flex flex-wrap align-items-center gap-3" aria-live="polite">
-                        <a class="btn btn-primary" th:href="@{/receipts/uploads}">
+                        <a class="btn btn-primary" th:href="@{/receipts/uploads(scope=${scopeParam})}">
                             <i class="bi bi-cloud-arrow-up me-2" aria-hidden="true"></i>
                             Upload new receipts
                         </a>
@@ -99,7 +107,7 @@
                         <tbody data-parsed-body>
                         <tr th:each="parsed : ${parsedReceipts}" th:attr="data-receipt-id=${parsed.id()}">
                             <td>
-                                <a th:href="@{'/receipts/' + ${parsed.id()}}" class="fw-semibold text-decoration-none">
+                                <a th:href="@{/receipts/{id}(id=${parsed.id()}, scope=${scopeParam})}" class="fw-semibold text-decoration-none">
                                     <span th:text="${!#strings.isEmpty(parsed.storeName()) ? parsed.storeName() : (!#strings.isEmpty(parsed.displayName()) ? parsed.displayName() : parsed.objectPath())}">Receipt</span>
                                 </a>
                             </td>

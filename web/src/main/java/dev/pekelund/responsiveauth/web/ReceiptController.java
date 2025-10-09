@@ -38,6 +38,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
@@ -73,6 +74,13 @@ public class ReceiptController {
         "itemEan",
         "sku"
     );
+    private static final String SCOPE_MY = "my";
+    private static final String SCOPE_ALL = "all";
+
+    private enum ReceiptViewScope {
+        MY,
+        ALL
+    }
 
     private final Optional<ReceiptStorageService> receiptStorageService;
     private final Optional<ReceiptExtractionService> receiptExtractionService;
@@ -86,8 +94,14 @@ public class ReceiptController {
     }
 
     @GetMapping("/receipts")
-    public String receipts(Model model, Authentication authentication) {
-        ReceiptPageData pageData = loadReceiptPageData(authentication);
+    public String receipts(
+        @RequestParam(value = "scope", required = false) String scopeParam,
+        Model model,
+        Authentication authentication
+    ) {
+        ReceiptViewScope scope = resolveScope(scopeParam, authentication);
+        ReceiptPageData pageData = loadReceiptPageData(authentication, scope);
+        boolean canViewAll = isAdmin(authentication);
 
         model.addAttribute("pageTitle", "Receipts");
         model.addAttribute("storageEnabled", pageData.storageEnabled());
@@ -97,12 +111,21 @@ public class ReceiptController {
         model.addAttribute("parsedReceipts", pageData.parsedReceipts());
         model.addAttribute("parsedListingError", pageData.parsedListingError());
         model.addAttribute("fileStatuses", pageData.fileStatuses());
+        model.addAttribute("scopeParam", toScopeParameter(scope));
+        model.addAttribute("canViewAll", canViewAll);
+        model.addAttribute("viewingAll", pageData.viewingAll());
         return "receipts";
     }
 
     @GetMapping("/receipts/uploads")
-    public String receiptUploads(Model model, Authentication authentication) {
-        ReceiptPageData pageData = loadReceiptPageData(authentication);
+    public String receiptUploads(
+        @RequestParam(value = "scope", required = false) String scopeParam,
+        Model model,
+        Authentication authentication
+    ) {
+        ReceiptViewScope scope = resolveScope(scopeParam, authentication);
+        ReceiptPageData pageData = loadReceiptPageData(authentication, scope);
+        boolean canViewAll = isAdmin(authentication);
 
         model.addAttribute("pageTitle", "Upload receipts");
         model.addAttribute("storageEnabled", pageData.storageEnabled());
@@ -110,13 +133,21 @@ public class ReceiptController {
         model.addAttribute("files", pageData.files());
         model.addAttribute("listingError", pageData.listingError());
         model.addAttribute("fileStatuses", pageData.fileStatuses());
+        model.addAttribute("scopeParam", toScopeParameter(scope));
+        model.addAttribute("canViewAll", canViewAll);
+        model.addAttribute("viewingAll", pageData.viewingAll());
         return "receipt-uploads";
     }
 
     @GetMapping(value = "/receipts/dashboard", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public ReceiptDashboardResponse receiptsDashboard(Authentication authentication) {
-        ReceiptPageData pageData = loadReceiptPageData(authentication);
+    public ReceiptDashboardResponse receiptsDashboard(
+        @RequestParam(value = "scope", required = false) String scopeParam,
+        Authentication authentication
+    ) {
+        ReceiptViewScope scope = resolveScope(scopeParam, authentication);
+        ReceiptPageData pageData = loadReceiptPageData(authentication, scope);
+        boolean canViewAll = isAdmin(authentication);
 
         List<ReceiptFileEntry> fileEntries = pageData.files().stream()
             .map(file -> toReceiptFileEntry(file, pageData.fileStatuses()))
@@ -132,14 +163,18 @@ public class ReceiptController {
             fileEntries,
             pageData.parsedReceiptsEnabled(),
             pageData.parsedListingError(),
-            parsedEntries
+            parsedEntries,
+            pageData.viewingAll(),
+            toScopeParameter(scope),
+            canViewAll
         );
     }
 
-    private ReceiptPageData loadReceiptPageData(Authentication authentication) {
+    private ReceiptPageData loadReceiptPageData(Authentication authentication, ReceiptViewScope scope) {
         boolean storageEnabled = receiptStorageService.isPresent() && receiptStorageService.get().isEnabled();
         List<ReceiptFile> receiptFiles = List.of();
         String listingError = null;
+        boolean viewingAll = isViewingAll(scope, authentication);
 
         if (storageEnabled) {
             try {
@@ -155,16 +190,20 @@ public class ReceiptController {
         String parsedListingError = null;
 
         ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
-        if (currentOwner == null) {
+        if (currentOwner == null && !viewingAll) {
             receiptFiles = List.of();
         } else {
-            receiptFiles = receiptFiles.stream()
-                .filter(file -> ReceiptOwnerMatcher.belongsToCurrentOwner(file.owner(), currentOwner))
-                .toList();
+            if (!viewingAll) {
+                receiptFiles = receiptFiles.stream()
+                    .filter(file -> ReceiptOwnerMatcher.belongsToCurrentOwner(file.owner(), currentOwner))
+                    .toList();
+            }
 
             if (parsedReceiptsEnabled) {
                 try {
-                    parsedReceipts = receiptExtractionService.get().listReceiptsForOwner(currentOwner);
+                    parsedReceipts = viewingAll
+                        ? receiptExtractionService.get().listAllReceipts()
+                        : receiptExtractionService.get().listReceiptsForOwner(currentOwner);
                 } catch (ReceiptExtractionAccessException ex) {
                     parsedListingError = ex.getMessage();
                     LOGGER.warn("Failed to list parsed receipts", ex);
@@ -188,7 +227,8 @@ public class ReceiptController {
             parsedReceiptsEnabled,
             parsedReceipts,
             parsedListingError,
-            fileStatuses
+            fileStatuses,
+            viewingAll
         );
     }
 
@@ -250,7 +290,8 @@ public class ReceiptController {
         boolean parsedReceiptsEnabled,
         List<ParsedReceipt> parsedReceipts,
         String parsedListingError,
-        Map<String, ParsedReceipt> fileStatuses
+        Map<String, ParsedReceipt> fileStatuses,
+        boolean viewingAll
     ) {
     }
 
@@ -291,7 +332,10 @@ public class ReceiptController {
         List<ReceiptFileEntry> files,
         boolean parsedReceiptsEnabled,
         String parsedListingError,
-        List<ParsedReceiptEntry> parsedReceipts
+        List<ParsedReceiptEntry> parsedReceipts,
+        boolean viewingAll,
+        String scope,
+        boolean canViewAll
     ) {
     }
 
@@ -322,21 +366,34 @@ public class ReceiptController {
     }
 
     @GetMapping("/receipts/{documentId}")
-    public String viewParsedReceipt(@PathVariable("documentId") String documentId, Model model, Authentication authentication) {
+    public String viewParsedReceipt(
+        @PathVariable("documentId") String documentId,
+        @RequestParam(value = "scope", required = false) String scopeParam,
+        Model model,
+        Authentication authentication
+    ) {
         if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Parsed receipts are not available.");
         }
 
+        ReceiptViewScope scope = resolveScope(scopeParam, authentication);
+        boolean canViewAll = isAdmin(authentication);
+        boolean viewingAll = isViewingAll(scope, authentication);
+
         ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
-        if (currentOwner == null) {
+        if (currentOwner == null && !viewingAll) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found.");
         }
 
-        List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(currentOwner);
+        List<ParsedReceipt> receipts = viewingAll
+            ? receiptExtractionService.get().listAllReceipts()
+            : receiptExtractionService.get().listReceiptsForOwner(currentOwner);
         ParsedReceipt receipt = receipts.stream()
             .filter(parsed -> documentId.equals(parsed.id()))
             .findFirst()
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found."));
+
+        boolean ownsReceipt = currentOwner != null && ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), currentOwner);
 
         Map<String, Long> itemOccurrences = computeItemOccurrencesByEan(receipts);
         List<Map<String, Object>> receiptItems = prepareReceiptItems(receipt.displayItems(), itemOccurrences);
@@ -346,6 +403,10 @@ public class ReceiptController {
         model.addAttribute("receipt", receipt);
         model.addAttribute("itemOccurrences", itemOccurrences);
         model.addAttribute("receiptItems", receiptItems);
+        model.addAttribute("canViewAll", canViewAll);
+        model.addAttribute("scopeParam", toScopeParameter(scope));
+        model.addAttribute("viewingAll", viewingAll);
+        model.addAttribute("ownsReceipt", ownsReceipt);
         return "receipt-detail";
     }
 
@@ -353,6 +414,7 @@ public class ReceiptController {
     public String viewItemPurchases(
         @PathVariable("eanCode") String eanCode,
         @RequestParam(value = "sourceId", required = false) String sourceReceiptId,
+        @RequestParam(value = "scope", required = false) String scopeParam,
         Model model,
         Authentication authentication
     ) {
@@ -360,13 +422,19 @@ public class ReceiptController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Parsed receipts are not available.");
         }
 
+        ReceiptViewScope scope = resolveScope(scopeParam, authentication);
+        boolean canViewAll = isAdmin(authentication);
+        boolean viewingAll = isViewingAll(scope, authentication);
+
         ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
-        if (currentOwner == null || !StringUtils.hasText(eanCode)) {
+        if ((!viewingAll && currentOwner == null) || !StringUtils.hasText(eanCode)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found.");
         }
 
         String trimmedEanCode = eanCode.trim();
-        List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(currentOwner);
+        List<ParsedReceipt> receipts = viewingAll
+            ? receiptExtractionService.get().listAllReceipts()
+            : receiptExtractionService.get().listReceiptsForOwner(currentOwner);
         List<ItemPurchaseView> purchases = buildItemPurchases(trimmedEanCode, receipts);
 
         if (purchases.isEmpty()) {
@@ -398,6 +466,9 @@ public class ReceiptController {
         model.addAttribute("purchaseCount", purchases.size());
         model.addAttribute("priceHistoryJson", priceHistoryJson);
         model.addAttribute("hasPriceHistory", hasPriceHistory);
+        model.addAttribute("canViewAll", canViewAll);
+        model.addAttribute("scopeParam", toScopeParameter(scope));
+        model.addAttribute("viewingAll", viewingAll);
 
         model.addAttribute("sourceReceiptId", sourceReceipt != null ? sourceReceipt.id() : null);
         model.addAttribute("sourceReceiptName", sourceReceipt != null ? resolveReceiptDisplayName(sourceReceipt) : null);
@@ -905,6 +976,37 @@ public class ReceiptController {
         }
 
         return new ClearOutcome(successMessage, errorMessage);
+    }
+
+    private ReceiptViewScope resolveScope(String scopeParam, Authentication authentication) {
+        if (scopeParam != null && SCOPE_ALL.equalsIgnoreCase(scopeParam) && isAdmin(authentication)) {
+            return ReceiptViewScope.ALL;
+        }
+        return ReceiptViewScope.MY;
+    }
+
+    private boolean isViewingAll(ReceiptViewScope scope, Authentication authentication) {
+        return scope == ReceiptViewScope.ALL && isAdmin(authentication);
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        return hasAuthority(authentication, "ROLE_ADMIN");
+    }
+
+    private boolean hasAuthority(Authentication authentication, String authority) {
+        if (authentication == null || authentication.getAuthorities() == null) {
+            return false;
+        }
+        for (GrantedAuthority grantedAuthority : authentication.getAuthorities()) {
+            if (authority.equals(grantedAuthority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String toScopeParameter(ReceiptViewScope scope) {
+        return scope == ReceiptViewScope.ALL ? SCOPE_ALL : SCOPE_MY;
     }
 
     private ReceiptOwner resolveReceiptOwner(Authentication authentication) {

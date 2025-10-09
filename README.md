@@ -213,6 +213,14 @@ firestore:
 
 Each configured password is encoded with the active `PasswordEncoder` on startup, so store only plaintext secrets in development configuration files and provide them securely through environment variables in production.
 
+### Admin access
+
+Users granted the `ROLE_ADMIN` authority can toggle between viewing only their own receipts and all uploaded receipts. The receipt overview, upload list, detail view, and item history pages include a scope switch when an administrator signs in.
+
+For both password and OAuth sign-ins the application defers to Firestore for role assignments. When a new OAuth user authenticates, a document is created (or updated) in the configured users collection with their email address, name, and a default `ROLE_USER` role. With Firestore enabled, administrators can open the dashboard and use the **Administrator access** panel to add more admins by entering their email address (and an optional display name). The app updates the stored roles immediately, creating a new document when necessary, so the promotion applies to the very next sign-in.
+
+If Firestore is disabled, fallback users continue to rely on the roles defined in configuration.
+
 ### OAuth 2.0 login
 
 To enable Google sign-in, create OAuth credentials in the Google Cloud Console and configure the `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` environment variables. The default callback URL is `http://localhost:8080/login/oauth2/code/google`.

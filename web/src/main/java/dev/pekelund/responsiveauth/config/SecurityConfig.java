@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -20,7 +21,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
         HttpSecurity http,
-        ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider
+        ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider,
+        GrantedAuthoritiesMapper oauthAuthoritiesMapper
     ) throws Exception {
         http
             .authorizeHttpRequests(authorize -> authorize
@@ -64,7 +66,9 @@ public class SecurityConfig {
         }
 
         if (oauthEnabled) {
-            http.oauth2Login(oauth -> oauth.loginPage("/login"));
+            http.oauth2Login(oauth -> oauth
+                .loginPage("/login")
+                .userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(oauthAuthoritiesMapper)));
         } else {
             log.info("OAuth2 login disabled - no client registrations configured. Set the 'oauth' profile and provide Google client credentials to enable it.");
         }

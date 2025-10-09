@@ -4,7 +4,7 @@
     <title th:text="${pageTitle}">Receipt uploads</title>
 </head>
 <body>
-<section class="py-3 py-lg-4" th:attr="data-dashboard-url=@{/receipts/dashboard}">
+<section class="py-3 py-lg-4" th:attr="data-dashboard-url=@{/receipts/dashboard(scope=${scopeParam})}">
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="card shadow-sm border-0 h-100">
@@ -14,6 +14,17 @@
                         Drop PDF or image receipts into the area below, or click to choose files from your computer.
                         Up to <span th:text="${maxUploadFiles}">50</span> files can be uploaded at a time.
                     </p>
+
+                    <div th:if="${canViewAll}" class="mb-3">
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Receipt scope">
+                            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
+                               th:href="@{/receipts/uploads(scope='my')}">My receipts</a>
+                            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
+                               th:href="@{/receipts/uploads(scope='all')}">All receipts</a>
+                        </div>
+                        <p class="text-muted small mb-0 mt-2"
+                           th:text="${viewingAll} ? 'Managing all uploaded receipt files.' : 'Managing only the receipt files you have uploaded.'">Managing only the receipt files you have uploaded.</p>
+                    </div>
 
                     <div class="d-flex align-items-center gap-2 mb-4" aria-live="polite">
                         <span class="text-muted small">Storage status:</span>
@@ -63,7 +74,7 @@
                         <div class="alert mt-3 d-none" id="upload-feedback" role="alert"></div>
 
                         <div class="d-flex justify-content-between align-items-center mt-3">
-                            <a class="btn btn-link px-0" th:href="@{/receipts}">
+                            <a class="btn btn-link px-0" th:href="@{/receipts(scope=${scopeParam})}">
                                 <i class="bi bi-collection me-2" aria-hidden="true"></i>
                                 View stored receipts
                             </a>
