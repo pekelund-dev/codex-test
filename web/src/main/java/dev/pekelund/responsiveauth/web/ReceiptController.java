@@ -378,22 +378,29 @@ public class ReceiptController {
 
         ReceiptViewScope scope = resolveScope(scopeParam, authentication);
         boolean canViewAll = isAdmin(authentication);
-        boolean viewingAll = isViewingAll(scope, authentication);
+
+        ParsedReceipt receipt = receiptExtractionService
+            .get()
+            .findById(documentId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found."));
 
         ReceiptOwner currentOwner = resolveReceiptOwner(authentication);
-        if (currentOwner == null && !viewingAll) {
+        boolean ownsReceipt =
+            currentOwner != null && ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), currentOwner);
+        if (!ownsReceipt && !canViewAll) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found.");
         }
+
+        boolean viewingAll = isViewingAll(scope, authentication) || (canViewAll && !ownsReceipt);
 
         List<ParsedReceipt> receipts = viewingAll
             ? receiptExtractionService.get().listAllReceipts()
             : receiptExtractionService.get().listReceiptsForOwner(currentOwner);
-        ParsedReceipt receipt = receipts.stream()
-            .filter(parsed -> documentId.equals(parsed.id()))
-            .findFirst()
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found."));
 
-        boolean ownsReceipt = currentOwner != null && ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), currentOwner);
+        if (!viewingAll && receipts.stream().noneMatch(parsed -> documentId.equals(parsed.id()))) {
+            receipts = new ArrayList<>(receipts);
+            receipts.add(receipt);
+        }
 
         Map<String, Long> itemOccurrences = computeItemOccurrencesByEan(receipts);
         List<Map<String, Object>> receiptItems = prepareReceiptItems(receipt.displayItems(), itemOccurrences);
