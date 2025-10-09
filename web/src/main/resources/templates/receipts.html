@@ -100,9 +100,8 @@
                         <tr th:each="parsed : ${parsedReceipts}" th:attr="data-receipt-id=${parsed.id()}">
                             <td>
                                 <a th:href="@{'/receipts/' + ${parsed.id()}}" class="fw-semibold text-decoration-none">
-                                    <span th:text="${parsed.displayName() != null ? parsed.displayName() : parsed.objectPath()}">Receipt</span>
+                                    <span th:text="${!#strings.isEmpty(parsed.storeName()) ? parsed.storeName() : (!#strings.isEmpty(parsed.displayName()) ? parsed.displayName() : parsed.objectPath())}">Receipt</span>
                                 </a>
-                                <div class="text-muted small" th:if="${parsed.storeName()}" th:text="${parsed.storeName()}">Store name</div>
                             </td>
                             <td th:text="${parsed.receiptDate() != null ? parsed.receiptDate() : '—'}">—</td>
                             <td th:text="${parsed.formattedTotalAmount() != null ? parsed.formattedTotalAmount() : (parsed.totalAmount() != null ? parsed.totalAmount() : '—')}">—</td>

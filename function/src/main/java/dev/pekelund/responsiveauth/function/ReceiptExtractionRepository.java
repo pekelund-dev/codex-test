@@ -6,11 +6,11 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.SetOptions;
 import dev.pekelund.responsiveauth.storage.ReceiptOwner;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,7 +124,7 @@ public class ReceiptExtractionRepository {
 
     private String buildDocumentId(String bucket, String objectName) {
         String value = bucket + ":" + objectName;
-        return Base64.getUrlEncoder().withoutPadding()
-            .encodeToString(value.getBytes(StandardCharsets.UTF_8));
+        UUID uuid = UUID.nameUUIDFromBytes(value.getBytes(StandardCharsets.UTF_8));
+        return uuid.toString().replace("-", "");
     }
 }

@@ -221,16 +221,14 @@ function buildParsedRow(receipt) {
     link.className = 'fw-semibold text-decoration-none';
     const href = receipt && receipt.detailsUrl ? receipt.detailsUrl : (receipt && receipt.id ? `/receipts/${encodeURIComponent(receipt.id)}` : '#');
     link.href = href;
-    const displayName = receipt && receipt.displayName ? receipt.displayName : (receipt && receipt.objectPath ? receipt.objectPath : 'Receipt');
+    const storeName = receipt && receipt.storeName ? receipt.storeName : null;
+    const displayName = storeName
+        ? storeName
+        : (receipt && receipt.displayName
+            ? receipt.displayName
+            : (receipt && receipt.objectPath ? receipt.objectPath : 'Receipt'));
     link.textContent = displayName;
     receiptCell.appendChild(link);
-
-    if (receipt && receipt.storeName) {
-        const store = document.createElement('div');
-        store.className = 'text-muted small';
-        store.textContent = receipt.storeName;
-        receiptCell.appendChild(store);
-    }
 
     row.appendChild(receiptCell);
 
