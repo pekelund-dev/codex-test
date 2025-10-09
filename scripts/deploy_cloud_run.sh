@@ -66,6 +66,11 @@ fi
 # talks to the same Firestore project and OAuth client.
 ENV_VARS_LIST=()
 
+FIRESTORE_USERS_COLLECTION="${FIRESTORE_USERS_COLLECTION:-users}"
+# Seed an initial OAuth administrator so the dashboard can manage roles immediately.
+INITIAL_OAUTH_ADMIN_EMAIL="${INITIAL_OAUTH_ADMIN_EMAIL:-pekelund.dev@gmail.com}"
+INITIAL_OAUTH_ADMIN_DISPLAY_NAME="${INITIAL_OAUTH_ADMIN_DISPLAY_NAME:-Pekelund.dev}"
+
 append_env_var() {
   local key="$1"
   local value="$2"
@@ -109,6 +114,7 @@ append_env_var "FIRESTORE_ENABLED" "${FIRESTORE_ENABLED:-true}"
 if [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
   append_env_var "FIRESTORE_PROJECT_ID" "${SHARED_FIRESTORE_PROJECT_ID}"
 fi
+append_env_var "FIRESTORE_USERS_COLLECTION" "${FIRESTORE_USERS_COLLECTION:-}"
 append_env_var "GOOGLE_CLIENT_ID" "${GOOGLE_CLIENT_ID:-}"
 append_env_var "GOOGLE_CLIENT_SECRET" "${GOOGLE_CLIENT_SECRET:-}"
 append_env_var "GCS_ENABLED" "${GCS_ENABLED:-true}"
@@ -192,6 +198,139 @@ if [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
       --project="${SHARED_FIRESTORE_PROJECT_ID}"
   else
     echo "Firestore database already exists in project ${SHARED_FIRESTORE_PROJECT_ID}; skipping creation."
+  fi
+fi
+
+if [[ -n "${INITIAL_OAUTH_ADMIN_EMAIL}" ]] && [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
+  mapfile -t _admin_identity < <(python3 - <<'PY'
+import re
+import sys
+
+raw_email = sys.argv[1]
+raw_display = sys.argv[2]
+
+email = (raw_email or "").strip().lower()
+display = (raw_display or "").strip()
+
+doc_id = re.sub(r'[^a-z0-9-]', '-', email)
+doc_id = re.sub(r'-+', '-', doc_id).strip('-')
+if not doc_id:
+    doc_id = 'bootstrap-admin'
+
+print(email)
+print(doc_id)
+print(display)
+PY
+    "${INITIAL_OAUTH_ADMIN_EMAIL}"
+    "${INITIAL_OAUTH_ADMIN_DISPLAY_NAME}"
+  )
+
+  INITIAL_OAUTH_ADMIN_EMAIL="${_admin_identity[0]}"
+  INITIAL_OAUTH_ADMIN_DOCUMENT_ID="${_admin_identity[1]}"
+  INITIAL_OAUTH_ADMIN_DISPLAY_NAME="${_admin_identity[2]}"
+
+  if [[ -n "${INITIAL_OAUTH_ADMIN_EMAIL}" ]]; then
+    echo "Ensuring OAuth administrator ${INITIAL_OAUTH_ADMIN_EMAIL} exists in ${SHARED_FIRESTORE_PROJECT_ID}/${FIRESTORE_USERS_COLLECTION}" >&2
+
+    ADMIN_EXISTING_JSON="$(mktemp)"
+    ADMIN_MUTATED_JSON="$(mktemp)"
+
+    DOCUMENT_PATH="${FIRESTORE_USERS_COLLECTION}/${INITIAL_OAUTH_ADMIN_DOCUMENT_ID}"
+
+    generate_admin_seed_document() {
+      local existing_path="$1"
+      local output_path="$2"
+      local email="$3"
+      local display="$4"
+
+      python3 - <<'PY' \
+        "${existing_path}" \
+        "${output_path}" \
+        "${email}" \
+        "${display}"
+import json
+import os
+import sys
+
+existing_path, output_path, email, display = sys.argv[1:5]
+
+existing = {}
+if existing_path and os.path.exists(existing_path) and os.path.getsize(existing_path) > 0:
+    with open(existing_path, 'r', encoding='utf-8') as handle:
+        existing = json.load(handle)
+
+existing_fields = existing.get('fields', {}) if isinstance(existing, dict) else {}
+
+def string_field(value):
+    return {'stringValue': value}
+
+roles = []
+roles_field = existing_fields.get('roles')
+if isinstance(roles_field, dict):
+    array_value = roles_field.get('arrayValue', {})
+    if isinstance(array_value, dict):
+        for entry in array_value.get('values', []) or []:
+            if isinstance(entry, dict):
+                role_value = entry.get('stringValue')
+                if role_value and role_value not in roles:
+                    roles.append(role_value)
+
+for required_role in ("ROLE_USER", "ROLE_ADMIN"):
+    if required_role not in roles:
+        roles.append(required_role)
+
+auth_provider = None
+auth_field = existing_fields.get('authProvider')
+if isinstance(auth_field, dict):
+    auth_provider = auth_field.get('stringValue')
+if not auth_provider:
+    auth_provider = 'oauth'
+
+display = display.strip()
+
+fields = {
+    'email': string_field(email),
+    'roles': {
+        'arrayValue': {
+            'values': [string_field(role) for role in roles]
+        }
+    },
+    'authProvider': string_field(auth_provider),
+}
+
+if display:
+    fields['fullName'] = string_field(display)
+
+with open(output_path, 'w', encoding='utf-8') as handle:
+    json.dump({'fields': fields}, handle)
+PY
+    }
+
+    if gcloud firestore documents describe "${DOCUMENT_PATH}" \
+      --project="${SHARED_FIRESTORE_PROJECT_ID}" \
+      --format=json >"${ADMIN_EXISTING_JSON}" 2>/dev/null; then
+      generate_admin_seed_document "${ADMIN_EXISTING_JSON}" "${ADMIN_MUTATED_JSON}" "${INITIAL_OAUTH_ADMIN_EMAIL}" "${INITIAL_OAUTH_ADMIN_DISPLAY_NAME}"
+
+      ADMIN_UPDATE_MASK="email,roles,authProvider"
+      if [[ -n "${INITIAL_OAUTH_ADMIN_DISPLAY_NAME}" ]]; then
+        ADMIN_UPDATE_MASK+=",fullName"
+      fi
+
+      gcloud firestore documents update "${DOCUMENT_PATH}" \
+        --project="${SHARED_FIRESTORE_PROJECT_ID}" \
+        --document="${ADMIN_MUTATED_JSON}" \
+        --update-mask="${ADMIN_UPDATE_MASK}"
+    else
+      : >"${ADMIN_EXISTING_JSON}"
+      generate_admin_seed_document "${ADMIN_EXISTING_JSON}" "${ADMIN_MUTATED_JSON}" "${INITIAL_OAUTH_ADMIN_EMAIL}" "${INITIAL_OAUTH_ADMIN_DISPLAY_NAME}"
+
+      gcloud firestore documents create "${DOCUMENT_PATH}" \
+        --project="${SHARED_FIRESTORE_PROJECT_ID}" \
+        --document="${ADMIN_MUTATED_JSON}"
+    fi
+
+    rm -f "${ADMIN_EXISTING_JSON}" "${ADMIN_MUTATED_JSON}"
+    unset -f generate_admin_seed_document
   fi
 fi
 
