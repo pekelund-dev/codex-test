@@ -80,14 +80,14 @@
                 </div>
                 <div class="dropdown"
                      th:with="currentUri=${#strings.isEmpty(currentRequestUri) ? '/' : currentRequestUri},
-                              languages=${#maps.entries({'sv':'nav.language.swedish','en':'nav.language.english'})}">
+                              languages=${{'sv':'nav.language.swedish','en':'nav.language.english'}}">
                     <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="languageDropdown"
                             data-bs-toggle="dropdown" aria-expanded="false"
                             th:text="#{nav.language}" th:aria-label="#{nav.language.toggle}">
                         Språk
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
-                        <li th:each="language : ${languages}">
+                        <li th:each="language : ${languages.entrySet()}">
                             <a class="dropdown-item"
                                th:classappend="${#locale.language == language.key} ? ' active'"
                                th:href="@{__${currentUri}__(lang=${language.key})}"
