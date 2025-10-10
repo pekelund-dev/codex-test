@@ -3,6 +3,7 @@ package dev.pekelund.responsiveauth.web;
 import dev.pekelund.responsiveauth.firestore.FirestoreUserDetails;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -52,6 +53,11 @@ public class CurrentUserAdvice {
 
         String requestUri = request.getRequestURI();
         return requestUri != null ? requestUri : "";
+    }
+
+    @ModelAttribute("supportedLanguages")
+    public List<String> supportedLanguages() {
+        return List.of("sv", "en");
     }
 
     private String deriveInitials(String displayName) {

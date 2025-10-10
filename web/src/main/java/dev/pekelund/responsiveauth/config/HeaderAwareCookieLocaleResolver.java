@@ -12,11 +12,13 @@ import org.springframework.web.servlet.i18n.CookieLocaleResolver;
  */
 public class HeaderAwareCookieLocaleResolver extends CookieLocaleResolver {
 
-    private final List<Locale> supportedLocales;
     private final Locale fallbackLocale;
 
     public HeaderAwareCookieLocaleResolver(List<Locale> supportedLocales, Locale fallbackLocale) {
-        this.supportedLocales = List.copyOf(Objects.requireNonNull(supportedLocales));
+        List<Locale> locales = List.copyOf(Objects.requireNonNull(supportedLocales));
+        if (!locales.contains(Objects.requireNonNull(fallbackLocale))) {
+            throw new IllegalArgumentException("Fallback locale must be included in supported locales");
+        }
         this.fallbackLocale = Objects.requireNonNull(fallbackLocale);
         setDefaultLocale(fallbackLocale);
         setLanguageTagCompliant(true);
@@ -35,8 +37,11 @@ public class HeaderAwareCookieLocaleResolver extends CookieLocaleResolver {
 
         try {
             List<Locale.LanguageRange> ranges = Locale.LanguageRange.parse(header);
-            Locale matched = Locale.lookup(ranges, supportedLocales);
-            return matched != null ? matched : fallbackLocale;
+            Locale matchedSwedish = Locale.lookup(ranges, List.of(fallbackLocale));
+            if (matchedSwedish != null) {
+                return matchedSwedish;
+            }
+            return fallbackLocale;
         } catch (IllegalArgumentException ex) {
             return fallbackLocale;
         }

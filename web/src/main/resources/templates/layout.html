@@ -80,7 +80,7 @@
                 </div>
                 <div class="dropdown"
                      th:with="currentUri=${#strings.isEmpty(currentRequestUri) ? '/' : currentRequestUri},
-                              languages=${T(java.util.List).of('sv', 'en')}">
+                              languages=${supportedLanguages}">
                     <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="languageDropdown"
                             data-bs-toggle="dropdown" aria-expanded="false"
                             th:text="#{nav.language}" th:aria-label="#{nav.language.toggle}">
