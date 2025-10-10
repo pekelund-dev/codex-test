@@ -1,6 +1,9 @@
 spring:
   application:
     name: responsive-auth-web
+  messages:
+    basename: messages
+    fallback-to-system-locale: false
 
 server:
   forward-headers-strategy: framework

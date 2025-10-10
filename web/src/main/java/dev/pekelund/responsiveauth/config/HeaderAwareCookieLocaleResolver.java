@@ -40,6 +40,14 @@ public class HeaderAwareCookieLocaleResolver extends CookieLocaleResolver {
             return fallbackLocale;
         }
 
+        Locale requestedLocale = (Locale) request.getAttribute(LOCALE_REQUEST_ATTRIBUTE_NAME);
+        if (requestedLocale != null) {
+            Locale normalised = normaliseSupportedLocale(requestedLocale);
+            if (normalised != null) {
+                return normalised;
+            }
+        }
+
         Locale cookieLocale = extractLocaleFromCookie(request);
         if (cookieLocale != null) {
             return cookieLocale;
