@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import jakarta.servlet.http.Cookie;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 class HeaderAwareCookieLocaleResolverTests {
@@ -18,6 +19,7 @@ class HeaderAwareCookieLocaleResolverTests {
             new HeaderAwareCookieLocaleResolver(
                 List.of(Locale.forLanguageTag("sv"), Locale.ENGLISH),
                 Locale.forLanguageTag("sv"));
+        localeResolver.setCookieName("pklnd-lang");
     }
 
     @Test
@@ -34,6 +36,26 @@ class HeaderAwareCookieLocaleResolverTests {
     void honoursSwedishFromAcceptLanguage() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Accept-Language", "sv-SE,sv;q=0.9,en;q=0.8");
+
+        Locale resolved = localeResolver.resolveLocale(request);
+
+        assertThat(resolved).isEqualTo(Locale.forLanguageTag("sv"));
+    }
+
+    @Test
+    void usesCookieLocaleWhenPresent() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setCookies(new Cookie("pklnd-lang", "en"));
+
+        Locale resolved = localeResolver.resolveLocale(request);
+
+        assertThat(resolved).isEqualTo(Locale.ENGLISH);
+    }
+
+    @Test
+    void ignoresInvalidCookieValue() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setCookies(new Cookie("pklnd-lang", "zz"));
 
         Locale resolved = localeResolver.resolveLocale(request);
 

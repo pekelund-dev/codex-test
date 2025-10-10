@@ -1,9 +1,11 @@
 package dev.pekelund.responsiveauth.config;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
 /**
@@ -13,10 +15,12 @@ import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 public class HeaderAwareCookieLocaleResolver extends CookieLocaleResolver {
 
     private final Locale fallbackLocale;
+    private final List<Locale> supportedLocales;
+    private String cookieName = DEFAULT_COOKIE_NAME;
 
     public HeaderAwareCookieLocaleResolver(List<Locale> supportedLocales, Locale fallbackLocale) {
-        List<Locale> locales = List.copyOf(Objects.requireNonNull(supportedLocales));
-        if (!locales.contains(Objects.requireNonNull(fallbackLocale))) {
+        this.supportedLocales = List.copyOf(Objects.requireNonNull(supportedLocales));
+        if (!this.supportedLocales.contains(Objects.requireNonNull(fallbackLocale))) {
             throw new IllegalArgumentException("Fallback locale must be included in supported locales");
         }
         this.fallbackLocale = Objects.requireNonNull(fallbackLocale);
@@ -25,25 +29,75 @@ public class HeaderAwareCookieLocaleResolver extends CookieLocaleResolver {
     }
 
     @Override
-    protected Locale determineDefaultLocale(HttpServletRequest request) {
+    public void setCookieName(String cookieName) {
+        super.setCookieName(cookieName);
+        this.cookieName = cookieName;
+    }
+
+    @Override
+    public Locale resolveLocale(HttpServletRequest request) {
         if (request == null) {
             return fallbackLocale;
         }
 
-        String header = request.getHeader("Accept-Language");
-        if (header == null || header.isBlank()) {
-            return fallbackLocale;
+        Locale cookieLocale = extractLocaleFromCookie(request);
+        if (cookieLocale != null) {
+            return cookieLocale;
+        }
+
+        Locale headerLocale = resolveFromAcceptLanguage(request.getHeader("Accept-Language"));
+        if (headerLocale != null) {
+            return headerLocale;
+        }
+
+        return fallbackLocale;
+    }
+
+    private Locale extractLocaleFromCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null || cookies.length == 0) {
+            return null;
+        }
+
+        for (Cookie cookie : cookies) {
+            if (cookieName.equals(cookie.getName()) && StringUtils.hasText(cookie.getValue())) {
+                try {
+                    Locale parsed = parseLocaleValue(cookie.getValue());
+                    return normaliseSupportedLocale(parsed);
+                } catch (IllegalArgumentException ex) {
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
+    private Locale resolveFromAcceptLanguage(String header) {
+        if (!StringUtils.hasText(header)) {
+            return null;
         }
 
         try {
             List<Locale.LanguageRange> ranges = Locale.LanguageRange.parse(header);
-            Locale matchedSwedish = Locale.lookup(ranges, List.of(fallbackLocale));
-            if (matchedSwedish != null) {
-                return matchedSwedish;
+            Locale matched = Locale.lookup(ranges, supportedLocales);
+            if (matched != null && matched.equals(fallbackLocale)) {
+                return fallbackLocale;
             }
-            return fallbackLocale;
-        } catch (IllegalArgumentException ex) {
-            return fallbackLocale;
+        } catch (IllegalArgumentException ignored) {
+            // ignore invalid header values and fall back to Swedish
         }
+        return null;
+    }
+
+    private Locale normaliseSupportedLocale(Locale locale) {
+        if (locale == null) {
+            return null;
+        }
+        for (Locale supported : supportedLocales) {
+            if (supported.getLanguage().equalsIgnoreCase(locale.getLanguage())) {
+                return supported;
+            }
+        }
+        return null;
     }
 }
