@@ -143,7 +143,7 @@ Before deploying the Cloud Function, ensure you have the proper Maven configurat
             <artifactId>function-maven-plugin</artifactId>
             <version>0.10.1</version>
             <configuration>
-                <functionTarget>dev.pekelund.responsiveauth.function.ReceiptProcessingFunction</functionTarget>
+                <functionTarget>dev.pekelund.pklnd.function.ReceiptProcessingFunction</functionTarget>
             </configuration>
         </plugin>
     </plugins>
@@ -277,7 +277,7 @@ When you run `gcloud functions deploy`, the following process occurs:
 ### Common Issues and Solutions
 
 #### 1. "class not found" Error
-**Error**: `Build failed with status: FAILURE and message: build succeeded but did not produce the class "dev.pekelund.responsiveauth.function.ReceiptProcessingFunction"`
+**Error**: `Build failed with status: FAILURE and message: build succeeded but did not produce the class "dev.pekelund.pklnd.function.ReceiptProcessingFunction"`
 
 **Root Cause**: Cloud Functions buildpack runs `javap -classpath target/[jar]:target/dependency/*` but finds classes in different locations than expected.
 
@@ -296,7 +296,7 @@ When you run `gcloud functions deploy`, the following process occurs:
    ls function/target/dependency/ | head -5
 
    # Test the same command the buildpack uses
-   javap -classpath function/target/responsive-auth-function-0.0.1-SNAPSHOT.jar:function/target/dependency/* dev.pekelund.responsiveauth.function.ReceiptProcessingFunction
+   javap -classpath function/target/responsive-auth-function-0.0.1-SNAPSHOT.jar:function/target/dependency/* dev.pekelund.pklnd.function.ReceiptProcessingFunction
    ```
 
 #### 2. Region Mismatch Error

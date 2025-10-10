@@ -22,7 +22,7 @@ spring:
 logging:
   level:
     root: INFO
-    dev.pekelund.responsiveauth.function: INFO
+    dev.pekelund.pklnd.function: INFO
     org.springframework.ai: INFO
 
 app:
