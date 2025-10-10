@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
 <head>
-    <title th:text="${pageTitle}">Sign in</title>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : #{page.login.title}">Logga in</title>
 </head>
 <body>
 <section>
@@ -9,45 +9,46 @@
         <div class="col-md-6 col-lg-5">
             <div class="card shadow-sm border-0">
                 <div class="card-body p-4">
-                    <h1 class="h3 fw-bold mb-3 text-center">Sign in</h1>
-                    <p class="text-muted text-center">Use your account credentials or authenticate with Google.</p>
+                    <h1 class="h3 fw-bold mb-3 text-center" th:text="#{login.heading}">Logga in</h1>
+                    <p class="text-muted text-center" th:text="#{login.description}">Beskrivning</p>
                     <div th:if="${param.error}" class="alert alert-danger" role="alert">
-                        Invalid username or password. Please try again.
+                        <span th:text="#{login.error}">Fel</span>
                     </div>
                     <div th:if="${param.registered}" class="alert alert-success" role="alert">
-                        Your account has been created. You can sign in now.
+                        <span th:text="#{login.registered}">Konto skapat</span>
                     </div>
                     <div th:if="${param.logout}" class="alert alert-success" role="alert">
-                        You have been signed out.
+                        <span th:text="#{login.logout}">Utloggad</span>
                     </div>
                     <form th:action="@{/login}" method="post" class="needs-validation" novalidate>
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
                         <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
+                            <label for="email" class="form-label" th:text="#{login.form.email}">E-postadress</label>
                             <input type="email" class="form-control" id="email" name="email" required autofocus>
-                            <div class="invalid-feedback">Please enter the email address associated with your account.</div>
+                            <div class="invalid-feedback" th:text="#{login.form.email.validation}">Meddelande</div>
                         </div>
                         <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
+                            <label for="password" class="form-label" th:text="#{login.form.password}">Lösenord</label>
                             <input type="password" class="form-control" id="password" name="password" required>
-                            <div class="invalid-feedback">Please enter your password.</div>
+                            <div class="invalid-feedback" th:text="#{login.form.password.validation}">Meddelande</div>
                         </div>
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">Sign in</button>
+                            <button type="submit" class="btn btn-primary" th:text="#{login.submit}">Logga in</button>
                         </div>
                     </form>
                     <p class="mt-3 text-center">
-                        Don't have an account yet?
-                        <a th:href="@{/register}">Create one now</a>.
+                        <span th:text="#{login.register.prompt}">Har du inget konto?</span>
+                        <a th:href="@{/register}" th:text="#{login.register.link}">Skapa ett nu.</a>
                     </p>
-                    <div th:if="${oauthEnabled}" class="text-center my-3 text-muted">or</div>
+                    <div th:if="${oauthEnabled}" class="text-center my-3 text-muted" th:text="#{login.oauth.separator}">eller</div>
                     <div th:if="${oauthEnabled}" class="d-grid">
                         <a class="btn btn-outline-secondary" th:href="@{/oauth2/authorization/google}">
-                            <span class="me-2" aria-hidden="true">&#x1F310;</span> Continue with Google
+                            <span class="me-2" aria-hidden="true">&#x1F310;</span>
+                            <span th:text="#{login.oauth.cta}">Fortsätt med Google</span>
                         </a>
                     </div>
                     <div th:if="${!oauthEnabled}" class="alert alert-warning mt-4" role="status">
-                        Google sign-in is currently unavailable. Please verify the deployment's OAuth configuration.
+                        <span th:text="#{login.oauth.unavailable}">Ej tillgängligt</span>
                     </div>
                 </div>
             </div>

@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -24,29 +26,32 @@ public class HomeController {
 
     private final FirestoreUserService firestoreUserService;
     private final DashboardStatisticsService dashboardStatisticsService;
+    private final MessageSource messageSource;
 
     public HomeController(FirestoreUserService firestoreUserService,
-                          DashboardStatisticsService dashboardStatisticsService) {
+                          DashboardStatisticsService dashboardStatisticsService,
+                          MessageSource messageSource) {
         this.firestoreUserService = firestoreUserService;
         this.dashboardStatisticsService = dashboardStatisticsService;
+        this.messageSource = messageSource;
     }
 
     @GetMapping({"/", "/home"})
     public String home(Model model) {
-        model.addAttribute("pageTitle", "Home");
-        model.addAttribute("welcomeMessage", "Experience secure and modern authentication with responsive design.");
+        model.addAttribute("pageTitleKey", "page.home.title");
         return "home";
     }
 
     @GetMapping("/about")
     public String about(Model model) {
-        model.addAttribute("pageTitle", "About");
+        model.addAttribute("pageTitleKey", "page.about.title");
         return "about";
     }
 
     @GetMapping("/dashboard")
     public String dashboard(Model model, Principal principal, Authentication authentication) {
-        model.addAttribute("pageTitle", "Dashboard");
+        Locale locale = LocaleContextHolder.getLocale();
+        model.addAttribute("pageTitleKey", "page.dashboard.title");
         model.addAttribute("principalName", principal != null ? principal.getName() : "");
 
         boolean admin = isAdmin(authentication);
@@ -57,7 +62,7 @@ public class HomeController {
 
         if (admin && !firestoreEnabled) {
             model.addAttribute("adminManagementDisabledMessage",
-                "Configure Firestore integration to manage administrator accounts.");
+                messageSource.getMessage("dashboard.admin.disabled", null, locale));
         }
 
         if (admin && firestoreEnabled) {
@@ -69,7 +74,8 @@ public class HomeController {
                 model.addAttribute("currentAdmins", firestoreUserService.listAdministrators());
             } catch (UserRoleUpdateException ex) {
                 model.addAttribute("currentAdmins", List.of());
-                model.addAttribute("adminLoadError", ex.getMessage());
+                model.addAttribute("adminLoadError",
+                    messageSource.getMessage("dashboard.admin.error.load", null, locale));
             }
         } else if (admin) {
             model.addAttribute("currentAdmins", List.of());
@@ -80,7 +86,7 @@ public class HomeController {
 
     @GetMapping("/dashboard/statistics")
     public String dashboardStatistics(Model model, Principal principal, Authentication authentication) {
-        model.addAttribute("pageTitle", "Statistics");
+        model.addAttribute("pageTitleKey", "page.statistics.title");
         model.addAttribute("principalName", principal != null ? principal.getName() : "");
 
         DashboardStatistics statistics = dashboardStatisticsService.loadStatistics(authentication);
@@ -96,13 +102,13 @@ public class HomeController {
                                        RedirectAttributes redirectAttributes) {
         if (!isAdmin(authentication)) {
             redirectAttributes.addFlashAttribute("adminErrorMessage",
-                "You do not have permission to manage administrator accounts.");
+                messageSource.getMessage("dashboard.admin.error.no-permission", null, LocaleContextHolder.getLocale()));
             return "redirect:/dashboard";
         }
 
         if (!firestoreUserService.isEnabled()) {
             redirectAttributes.addFlashAttribute("adminErrorMessage",
-                "Firestore integration must be enabled to manage administrator accounts.");
+                messageSource.getMessage("dashboard.admin.error.firestore", null, LocaleContextHolder.getLocale()));
             return "redirect:/dashboard#admin-management";
         }
 
@@ -121,21 +127,28 @@ public class HomeController {
                 firestoreUserService.promoteToAdministrator(submittedEmail, form.getFullName());
 
             if (outcome.adminRoleGranted()) {
-                String message = outcome.userCreated()
-                    ? "Created a new user record and granted administrator access to %s."
-                    : "Granted administrator access to %s.";
+                String messageKey = outcome.userCreated()
+                    ? "dashboard.admin.success.created"
+                    : "dashboard.admin.success.granted";
                 redirectAttributes.addFlashAttribute(
                     "adminSuccessMessage",
-                    String.format(message, normalizedEmail)
+                    messageSource.getMessage(messageKey, new Object[]{normalizedEmail}, LocaleContextHolder.getLocale())
                 );
             } else {
                 redirectAttributes.addFlashAttribute(
                     "adminInfoMessage",
-                    normalizedEmail + " already has administrator access."
+                    messageSource.getMessage(
+                        "dashboard.admin.info.already",
+                        new Object[]{normalizedEmail},
+                        LocaleContextHolder.getLocale()
+                    )
                 );
             }
         } catch (UserRoleUpdateException ex) {
-            redirectAttributes.addFlashAttribute("adminErrorMessage", ex.getMessage());
+            redirectAttributes.addFlashAttribute(
+                "adminErrorMessage",
+                messageSource.getMessage("dashboard.admin.error.generic", null, LocaleContextHolder.getLocale())
+            );
             redirectAttributes.addFlashAttribute("adminPromotionForm", form);
         }
 
@@ -149,7 +162,7 @@ public class HomeController {
         if (!isAdmin(authentication)) {
             redirectAttributes.addFlashAttribute(
                 "adminErrorMessage",
-                "You do not have permission to manage administrator accounts."
+                messageSource.getMessage("dashboard.admin.error.no-permission", null, LocaleContextHolder.getLocale())
             );
             return "redirect:/dashboard";
         }
@@ -157,7 +170,7 @@ public class HomeController {
         if (!firestoreUserService.isEnabled()) {
             redirectAttributes.addFlashAttribute(
                 "adminErrorMessage",
-                "Firestore integration must be enabled to manage administrator accounts."
+                messageSource.getMessage("dashboard.admin.error.firestore", null, LocaleContextHolder.getLocale())
             );
             return "redirect:/dashboard#admin-management";
         }
@@ -172,21 +185,36 @@ public class HomeController {
             if (!outcome.userFound()) {
                 redirectAttributes.addFlashAttribute(
                     "adminInfoMessage",
-                    normalizedEmail + " is not associated with an administrator account."
+                    messageSource.getMessage(
+                        "dashboard.admin.info.not-found",
+                        new Object[]{normalizedEmail},
+                        LocaleContextHolder.getLocale()
+                    )
                 );
             } else if (outcome.adminRoleRevoked()) {
                 redirectAttributes.addFlashAttribute(
                     "adminSuccessMessage",
-                    "Removed administrator access from " + normalizedEmail + "."
+                    messageSource.getMessage(
+                        "dashboard.admin.success.removed",
+                        new Object[]{normalizedEmail},
+                        LocaleContextHolder.getLocale()
+                    )
                 );
             } else {
                 redirectAttributes.addFlashAttribute(
                     "adminInfoMessage",
-                    normalizedEmail + " does not currently have administrator access."
+                    messageSource.getMessage(
+                        "dashboard.admin.info.no-role",
+                        new Object[]{normalizedEmail},
+                        LocaleContextHolder.getLocale()
+                    )
                 );
             }
         } catch (UserRoleUpdateException ex) {
-            redirectAttributes.addFlashAttribute("adminErrorMessage", ex.getMessage());
+            redirectAttributes.addFlashAttribute(
+                "adminErrorMessage",
+                messageSource.getMessage("dashboard.admin.error.generic", null, LocaleContextHolder.getLocale())
+            );
         }
 
         return "redirect:/dashboard#admin-management";
@@ -194,7 +222,7 @@ public class HomeController {
 
     @GetMapping("/login")
     public String login(Model model) {
-        model.addAttribute("pageTitle", "Sign in");
+        model.addAttribute("pageTitleKey", "page.login.title");
         return "login";
     }
 

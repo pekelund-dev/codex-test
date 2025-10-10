@@ -1,36 +1,42 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
 <head>
-    <title th:text="${pageTitle}">About</title>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : #{page.about.title}">Om</title>
 </head>
 <body>
 <section>
     <div class="row justify-content-center py-4">
         <div class="col-lg-10 col-xl-8">
-            <h1 class="fw-bold mb-4">About this starter</h1>
-            <p class="lead text-muted">This Spring Boot application demonstrates a modern responsive UI coupled with Spring Security.</p>
+            <h1 class="fw-bold mb-4" th:text="#{about.title}">Om pklnd</h1>
+            <p class="lead text-muted" th:text="#{about.intro}">Intro</p>
             <div class="row g-4 mt-2">
                 <div class="col-md-6">
                     <div class="card h-100 shadow-sm">
                         <div class="card-body">
-                            <h2 class="h5 fw-semibold">Technology stack</h2>
-                            <ul class="list-unstyled mt-3 mb-0 text-muted">
-                                <li class="mb-2">Spring Boot, Spring MVC, and Thymeleaf</li>
-                                <li class="mb-2">Spring Security with OAuth2 client support</li>
-                                <li class="mb-2">Bootstrap 5 for responsive components</li>
-                                <li>Maven with Java 21 for modern language features</li>
-                            </ul>
+                            <h2 class="h5 fw-semibold" th:text="#{about.section.mission.title}">Vårt fokus</h2>
+                            <p class="text-muted mb-0" th:text="#{about.section.mission.body}">Beskrivning</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="card h-100 shadow-sm">
                         <div class="card-body">
-                            <h2 class="h5 fw-semibold">Next steps</h2>
-                            <p class="text-muted">Extend the starter with your business logic, connect to a database, or integrate additional OAuth2 providers.</p>
-                            <a class="btn btn-primary" th:href="@{/dashboard}">Preview authenticated page</a>
+                            <h2 class="h5 fw-semibold" th:text="#{about.section.getting_started.title}">Så kommer du igång</h2>
+                            <p class="text-muted" th:text="#{about.section.getting_started.body}">Steg</p>
+                            <a class="btn btn-primary" th:href="@{/dashboard}" th:text="#{about.section.getting_started.cta}">Utforska översikten</a>
                         </div>
                     </div>
+                </div>
+            </div>
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-body p-4">
+                    <h2 class="h5 fw-semibold mb-3" th:text="#{about.section.features.title}">Nyckelfunktioner</h2>
+                    <ul class="list-unstyled text-muted mb-0">
+                        <li class="mb-2" th:text="#{about.section.features.item1}">Funktion 1</li>
+                        <li class="mb-2" th:text="#{about.section.features.item2}">Funktion 2</li>
+                        <li class="mb-2" th:text="#{about.section.features.item3}">Funktion 3</li>
+                        <li th:text="#{about.section.features.item4}">Funktion 4</li>
+                    </ul>
                 </div>
             </div>
         </div>

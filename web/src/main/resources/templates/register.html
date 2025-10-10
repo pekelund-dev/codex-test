@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
 <head>
-    <title th:text="${pageTitle}">Create account</title>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : #{page.register.title}">Skapa konto</title>
 </head>
 <body>
 <section>
@@ -9,10 +9,10 @@
         <div class="col-md-7 col-lg-6">
             <div class="card shadow-sm border-0">
                 <div class="card-body p-4">
-                    <h1 class="h3 fw-bold mb-3 text-center">Create your account</h1>
-                    <p class="text-muted text-center">Set up your credentials to access the dashboard and personalized features.</p>
+                    <h1 class="h3 fw-bold mb-3 text-center" th:text="#{register.heading}">Skapa ditt konto</h1>
+                    <p class="text-muted text-center" th:text="#{register.description}">Beskrivning</p>
                     <div th:if="${!registrationEnabled}" class="alert alert-warning" role="alert">
-                        Registration is currently disabled. Configure Firestore credentials to enable sign ups.
+                        <span th:text="#{register.disabled}">Registrering avstängd</span>
                     </div>
                     <form th:action="@{/register}" th:object="${registrationForm}" method="post" class="needs-validation" novalidate>
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
@@ -21,42 +21,42 @@
                         </div>
                         <fieldset th:attr="disabled=${!registrationEnabled}">
                             <div class="mb-3">
-                                <label for="fullName" class="form-label">Full name</label>
+                                <label for="fullName" class="form-label" th:text="#{register.form.fullname}">Fullständigt namn</label>
                                 <input type="text" class="form-control" id="fullName" th:field="*{fullName}" required>
                                 <div class="invalid-feedback" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}">
-                                    Please provide your name.
+                                    <span th:text="#{register.form.fullname.validation}">Fel</span>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="email" class="form-label">Email</label>
+                                <label for="email" class="form-label" th:text="#{register.form.email}">E-postadress</label>
                                 <input type="email" class="form-control" id="email" th:field="*{email}" required>
                                 <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">
-                                    Please provide a valid email address.
+                                    <span th:text="#{register.form.email.validation}">Fel</span>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="password" class="form-label">Password</label>
+                                <label for="password" class="form-label" th:text="#{register.form.password}">Lösenord</label>
                                 <input type="password" class="form-control" id="password" th:field="*{password}" minlength="8" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$" required>
-                                <div class="form-text">Use at least 8 characters, including uppercase, lowercase, numbers, and special characters.</div>
+                                <div class="form-text" th:text="#{register.form.password.hint}">Hint</div>
                                 <div class="invalid-feedback" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">
-                                    Please enter a password with at least 8 characters, including uppercase, lowercase, numbers, and special characters.
+                                    <span th:text="#{register.form.password.validation}">Fel</span>
                                 </div>
                             </div>
                             <div class="mb-4">
-                                <label for="confirmPassword" class="form-label">Confirm password</label>
+                                <label for="confirmPassword" class="form-label" th:text="#{register.form.confirm}">Bekräfta lösenord</label>
                                 <input type="password" class="form-control" id="confirmPassword" th:field="*{confirmPassword}" required>
                                 <div class="invalid-feedback" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}">
-                                    Please confirm your password.
+                                    <span th:text="#{register.form.confirm.validation}">Fel</span>
                                 </div>
                             </div>
                             <div class="d-grid">
-                                <button type="submit" class="btn btn-primary">Create account</button>
+                                <button type="submit" class="btn btn-primary" th:text="#{register.submit}">Skapa konto</button>
                             </div>
                         </fieldset>
                     </form>
                     <p class="mt-3 text-center">
-                        Already have an account?
-                        <a th:href="@{/login}">Sign in instead</a>.
+                        <span th:text="#{register.signin.prompt}">Har du redan ett konto?</span>
+                        <a th:href="@{/login}" th:text="#{register.signin.link}">Logga in i stället.</a>
                     </p>
                 </div>
             </div>
