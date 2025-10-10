@@ -1,13 +1,19 @@
 package dev.pekelund.responsiveauth.web;
 
+import dev.pekelund.responsiveauth.config.HeaderAwareCookieLocaleResolver;
 import dev.pekelund.responsiveauth.firestore.FirestoreUserDetails;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
@@ -56,11 +62,31 @@ public class CurrentUserAdvice {
     }
 
     @ModelAttribute("supportedLanguages")
-    public List<LanguageOption> supportedLanguages() {
-        return List.of(
-            new LanguageOption("sv", "nav.language.swedish"),
-            new LanguageOption("en", "nav.language.english")
-        );
+    public List<LanguageOption> supportedLanguages(HttpServletRequest request) {
+        String requestUri = request != null ? request.getRequestURI() : "/";
+        Map<String, String[]> parameters = request != null
+            ? new LinkedHashMap<>(request.getParameterMap())
+            : new LinkedHashMap<>();
+
+        parameters.remove(HeaderAwareCookieLocaleResolver.LANGUAGE_PARAMETER_NAME);
+
+        List<LanguageOption> options = new ArrayList<>();
+        options.add(buildOption("sv", "nav.language.swedish", requestUri, parameters));
+        options.add(buildOption("en", "nav.language.english", requestUri, parameters));
+        return options;
+    }
+
+    private LanguageOption buildOption(
+        String code,
+        String labelKey,
+        String requestUri,
+        Map<String, String[]> parameters
+    ) {
+        UriComponentsBuilder builder = ServletUriComponentsBuilder.fromCurrentContextPath().path(requestUri);
+        parameters.forEach((name, values) -> builder.queryParam(name, (Object[]) values));
+        builder.queryParam(HeaderAwareCookieLocaleResolver.LANGUAGE_PARAMETER_NAME, code);
+        String href = builder.build().toUriString();
+        return new LanguageOption(code, labelKey, href);
     }
 
     private String deriveInitials(String displayName) {

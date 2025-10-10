@@ -91,7 +91,7 @@
                         <li th:each="language : ${supportedLanguages}">
                             <a class="dropdown-item"
                                th:classappend="${#locale.language == language.code} ? ' active'"
-                               th:href="@{__${currentUri}__(lang=${language.code})}"
+                               th:href="${language.href}"
                                th:text="${#messages.msg(language.labelKey)}">
                                 Svenska
                             </a>
