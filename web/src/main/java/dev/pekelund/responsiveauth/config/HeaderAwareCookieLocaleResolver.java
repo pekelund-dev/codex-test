@@ -14,6 +14,8 @@ import org.springframework.web.servlet.i18n.CookieLocaleResolver;
  */
 public class HeaderAwareCookieLocaleResolver extends CookieLocaleResolver {
 
+    public static final String LANGUAGE_PARAMETER_NAME = "lang";
+
     private final Locale fallbackLocale;
     private final List<Locale> supportedLocales;
     private String cookieName = DEFAULT_COOKIE_NAME;
@@ -46,6 +48,12 @@ public class HeaderAwareCookieLocaleResolver extends CookieLocaleResolver {
             if (normalised != null) {
                 return normalised;
             }
+        }
+
+        Locale parameterLocale = resolveFromParameter(request.getParameter(LANGUAGE_PARAMETER_NAME));
+        if (parameterLocale != null) {
+            request.setAttribute(LOCALE_REQUEST_ATTRIBUTE_NAME, parameterLocale);
+            return parameterLocale;
         }
 
         Locale cookieLocale = extractLocaleFromCookie(request);
@@ -95,6 +103,18 @@ public class HeaderAwareCookieLocaleResolver extends CookieLocaleResolver {
             // ignore invalid header values and fall back to Swedish
         }
         return null;
+    }
+
+    private Locale resolveFromParameter(String parameterValue) {
+        if (!StringUtils.hasText(parameterValue)) {
+            return null;
+        }
+        try {
+            Locale parsed = parseLocaleValue(parameterValue);
+            return normaliseSupportedLocale(parsed);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     private Locale normaliseSupportedLocale(Locale locale) {

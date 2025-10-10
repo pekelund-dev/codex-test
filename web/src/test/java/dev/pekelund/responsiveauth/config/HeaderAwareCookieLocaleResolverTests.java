@@ -53,6 +53,16 @@ class HeaderAwareCookieLocaleResolverTests {
     }
 
     @Test
+    void usesQueryParameterWhenPresent() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter(HeaderAwareCookieLocaleResolver.LANGUAGE_PARAMETER_NAME, "en");
+
+        Locale resolved = localeResolver.resolveLocale(request);
+
+        assertThat(resolved).isEqualTo(Locale.ENGLISH);
+    }
+
+    @Test
     void ignoresInvalidCookieValue() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie("pklnd-lang", "zz"));

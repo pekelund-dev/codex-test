@@ -31,7 +31,7 @@ public class LocalizationConfig implements WebMvcConfigurer {
     @Bean
     public LocaleChangeInterceptor localeChangeInterceptor() {
         LocaleChangeInterceptor interceptor = new LocaleChangeInterceptor();
-        interceptor.setParamName("lang");
+        interceptor.setParamName(HeaderAwareCookieLocaleResolver.LANGUAGE_PARAMETER_NAME);
         interceptor.setHttpMethods("GET");
         return interceptor;
     }
