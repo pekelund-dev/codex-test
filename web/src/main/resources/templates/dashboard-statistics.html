@@ -1,17 +1,15 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org"
+<html lang="sv" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
 <head>
-    <title th:text="${pageTitle}">Statistics</title>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : #{page.statistics.title}">Statistik</title>
 </head>
 <body>
 <section>
     <div class="row py-4">
         <div class="col-12">
-            <h1 class="fw-bold mb-3">Account statistics</h1>
-            <p class="text-muted mb-0">
-                Track usage metrics across the platform and review your recent spending at a glance.
-            </p>
+            <h1 class="fw-bold mb-3" th:text="#{dashboard.statistics.heading}">Kontostatistik</h1>
+            <p class="text-muted mb-0" th:text="#{dashboard.statistics.description}">Beskrivning</p>
         </div>
     </div>
 
@@ -19,10 +17,10 @@
         <div class="col-lg-3 col-sm-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
-                    <h2 class="h6 fw-semibold text-uppercase text-primary">Registered users</h2>
+                    <h2 class="h6 fw-semibold text-uppercase text-primary" th:text="#{dashboard.statistics.cards.users}">Registrerade</h2>
                     <p class="display-6 fw-bold mb-0" th:text="${statistics.totalUsers}">0</p>
                     <p class="text-muted small mb-0" th:if="${!statistics.userCountAccurate}">
-                        Showing fallback accounts because Firestore integration is disabled.
+                        <span th:text="#{dashboard.statistics.cards.users.fallback}">Fallback</span>
                     </p>
                 </div>
             </div>
@@ -30,11 +28,11 @@
         <div class="col-lg-3 col-sm-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
-                    <h2 class="h6 fw-semibold text-uppercase text-primary">Uploaded receipts</h2>
+                    <h2 class="h6 fw-semibold text-uppercase text-primary" th:text="#{dashboard.statistics.cards.receipts}">Kvitton</h2>
                     <p class="display-6 fw-bold mb-0"
                        th:text="${statistics.receiptDataAvailable} ? ${statistics.totalReceipts} : '--'">--</p>
                     <p class="text-muted small mb-0" th:if="${!statistics.receiptDataAvailable}">
-                        Receipt analytics require Firestore receipt extraction.
+                        <span th:text="#{dashboard.statistics.cards.receipts.fallback}">Info</span>
                     </p>
                 </div>
             </div>
@@ -42,11 +40,11 @@
         <div class="col-lg-3 col-sm-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
-                    <h2 class="h6 fw-semibold text-uppercase text-primary">Stores tracked</h2>
+                    <h2 class="h6 fw-semibold text-uppercase text-primary" th:text="#{dashboard.statistics.cards.stores}">Butiker</h2>
                     <p class="display-6 fw-bold mb-0"
                        th:text="${statistics.receiptDataAvailable} ? ${statistics.totalStores} : '--'">--</p>
                     <p class="text-muted small mb-0" th:if="${!statistics.receiptDataAvailable}">
-                        Connect Firestore receipts to analyze store coverage.
+                        <span th:text="#{dashboard.statistics.cards.stores.fallback}">Info</span>
                     </p>
                 </div>
             </div>
@@ -54,11 +52,11 @@
         <div class="col-lg-3 col-sm-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
-                    <h2 class="h6 fw-semibold text-uppercase text-primary">Items cataloged</h2>
+                    <h2 class="h6 fw-semibold text-uppercase text-primary" th:text="#{dashboard.statistics.cards.items}">Artiklar</h2>
                     <p class="display-6 fw-bold mb-0"
                        th:text="${statistics.receiptDataAvailable} ? ${statistics.totalItems} : '--'">--</p>
                     <p class="text-muted small mb-0" th:if="${!statistics.receiptDataAvailable}">
-                        Enable receipt parsing to populate item insights.
+                        <span th:text="#{dashboard.statistics.cards.items.fallback}">Info</span>
                     </p>
                 </div>
             </div>
@@ -69,11 +67,11 @@
         <div class="col-lg-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
-                    <h2 class="h6 fw-semibold text-uppercase text-primary">Your spending last month</h2>
+                    <h2 class="h6 fw-semibold text-uppercase text-primary" th:text="#{dashboard.statistics.cards.last-month}">Förra månaden</h2>
                     <p class="display-5 fw-bold mb-2"
                        th:text="${statistics.personalTotalsAvailable} ? ${statistics.formatAmount(statistics.lastMonthTotal)} : '--'">--</p>
                     <p class="text-muted mb-0" th:if="${!statistics.personalTotalsAvailable}">
-                        Upload receipts to calculate personal spending trends.
+                        <span th:text="#{dashboard.statistics.cards.last-month.fallback}">Info</span>
                     </p>
                 </div>
             </div>
@@ -81,11 +79,11 @@
         <div class="col-lg-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
-                    <h2 class="h6 fw-semibold text-uppercase text-primary">Your spending this month</h2>
+                    <h2 class="h6 fw-semibold text-uppercase text-primary" th:text="#{dashboard.statistics.cards.this-month}">Den här månaden</h2>
                     <p class="display-5 fw-bold mb-2"
                        th:text="${statistics.personalTotalsAvailable} ? ${statistics.formatAmount(statistics.currentMonthTotal)} : '--'">--</p>
                     <p class="text-muted mb-0" th:if="${!statistics.personalTotalsAvailable}">
-                        Totals become available once receipts are parsed for your account.
+                        <span th:text="#{dashboard.statistics.cards.this-month.fallback}">Info</span>
                     </p>
                 </div>
             </div>

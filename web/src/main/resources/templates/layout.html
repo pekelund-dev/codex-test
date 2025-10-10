@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout (pageTitle, content)">
+<html th:lang="${#locale}" xmlns:th="http://www.thymeleaf.org" th:fragment="layout (pageTitle, content)">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${pageTitle}">Responsive Auth App</title>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : (${pageTitleKey != null} ? #{${pageTitleKey}} : #{page.home.title})">pklnd</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -17,14 +17,14 @@
 <div id="splash-screen" class="splash-screen">
     <div class="text-center">
         <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
+            <span class="visually-hidden" th:text="#{layout.splash.loading}">Loading...</span>
         </div>
-        <p class="mt-3 fw-semibold text-primary">Starting responsive experience...</p>
+        <p class="mt-3 fw-semibold text-primary" th:text="#{layout.splash.tagline}">Starting responsive experience...</p>
     </div>
 </div>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
     <div class="container">
-        <a class="navbar-brand fw-bold" th:href="@{/}">ResponsiveAuth</a>
+        <a class="navbar-brand fw-bold" th:href="@{/}" th:text="#{app.name}">pklnd</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
                 aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -34,32 +34,32 @@
                 <li class="nav-item">
                     <a class="nav-link"
                        th:classappend="${currentUri == '/home' or currentUri == '/'} ? ' active'"
-                       th:href="@{/}">Home</a>
+                       th:href="@{/}" th:text="#{nav.home}">Home</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link"
                        th:classappend="${currentUri == '/about'} ? ' active'"
-                       th:href="@{/about}">About</a>
+                       th:href="@{/about}" th:text="#{nav.about}">About</a>
                 </li>
                 <li class="nav-item" th:if="${userProfile.authenticated}">
                     <a class="nav-link"
                        th:classappend="${currentUri == '/dashboard'} ? ' active'"
-                       th:href="@{/dashboard}">Dashboard</a>
+                       th:href="@{/dashboard}" th:text="#{nav.dashboard}">Dashboard</a>
                 </li>
                 <li class="nav-item" th:if="${userProfile.authenticated}">
                     <a class="nav-link"
                        th:classappend="${currentUri == '/dashboard/statistics'} ? ' active'"
-                       th:href="@{/dashboard/statistics}">Statistics</a>
+                       th:href="@{/dashboard/statistics}" th:text="#{nav.statistics}">Statistics</a>
                 </li>
                 <li class="nav-item" th:if="${userProfile.authenticated}">
                     <a class="nav-link"
                        th:classappend="${currentUri == '/receipts' or (#strings.startsWith(currentUri, '/receipts/') and currentUri != '/receipts/uploads')} ? ' active'"
-                       th:href="@{/receipts}">Receipts</a>
+                       th:href="@{/receipts}" th:text="#{nav.receipts}">Receipts</a>
                 </li>
                 <li class="nav-item" th:if="${userProfile.authenticated}">
                     <a class="nav-link"
                        th:classappend="${currentUri == '/receipts/uploads'} ? ' active'"
-                       th:href="@{/receipts/uploads}">Upload receipts</a>
+                       th:href="@{/receipts/uploads}" th:text="#{nav.uploads}">Upload receipts</a>
                 </li>
             </ul>
             <div class="d-flex align-items-center gap-3 ms-lg-auto">
@@ -70,13 +70,31 @@
                     <span class="fw-semibold" th:text="${userProfile.displayName}">Jane Doe</span>
                     <form th:action="@{/logout}" method="post">
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                        <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
+                        <button type="submit" class="btn btn-outline-light btn-sm" th:text="#{nav.logout}">Logout</button>
                     </form>
                 </div>
                 <div th:if="${!userProfile.authenticated}" class="d-flex gap-2 flex-wrap">
-                    <a class="btn btn-outline-light btn-sm" th:href="@{/login}">Sign in</a>
-                    <a class="btn btn-light btn-sm" th:href="@{/register}">Create account</a>
-                    <a th:if="${oauthEnabled}" class="btn btn-light btn-sm" th:href="@{/oauth2/authorization/google}">Sign in with Google</a>
+                    <a class="btn btn-outline-light btn-sm" th:href="@{/login}" th:text="#{nav.signin}">Sign in</a>
+                    <a class="btn btn-light btn-sm" th:href="@{/register}" th:text="#{nav.register}">Create account</a>
+                    <a th:if="${oauthEnabled}" class="btn btn-light btn-sm" th:href="@{/oauth2/authorization/google}" th:text="#{nav.signin.google}">Sign in with Google</a>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="languageDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false"
+                            th:text="#{nav.language}" th:aria-label="#{nav.language.toggle}">
+                        Språk
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown"
+                        th:with="currentUri=${currentRequestUri}">
+                        <li>
+                            <a class="dropdown-item" th:classappend="${#locale.language == 'sv'} ? ' active'"
+                               th:href="@{__${currentUri}__(lang='sv')}" th:text="#{nav.language.swedish}">Svenska</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" th:classappend="${#locale.language == 'en'} ? ' active'"
+                               th:href="@{__${currentUri}__(lang='en')}" th:text="#{nav.language.english}">English</a>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -85,8 +103,10 @@
 <main class="flex-fill">
     <div class="container py-4" th:replace="${content}"></div>
 </main>
-<footer class="bg-light text-center py-3 mt-auto border-top">
-    <small class="text-muted">&copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}"></span> ResponsiveAuth. All rights reserved.</small>
+<footer class="bg-light text-center py-3 mt-auto border-top" th:with="currentYear=${#dates.format(#dates.createNow(), 'yyyy')}">
+    <small class="text-muted" th:utext="#{footer.copyright(${currentYear})}">
+        &copy; <span>2024</span> pklnd. Alla rättigheter förbehållna.
+    </small>
 </footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-HoA2QHnwLgwSdaFGfc1RpHwcx9IwaP42CikI6jneih/7nToYtL6vhfVqlhK/SXG1" crossorigin="anonymous"></script>

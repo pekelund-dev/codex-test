@@ -1,44 +1,44 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
 <head>
-    <title th:text="${pageTitle}">Home</title>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : #{page.home.title}">Hem</title>
 </head>
 <body>
 <section>
     <div class="row align-items-center g-5 py-5">
         <div class="col-lg-6">
-            <h1 class="display-5 fw-bold text-primary mb-4">Secure, responsive experiences with Spring Boot</h1>
-            <p class="lead" th:text="${welcomeMessage}">Welcome message</p>
+            <h1 class="display-5 fw-bold text-primary mb-4" th:text="#{home.hero.title}">Hero text</h1>
+            <p class="lead" th:text="#{home.hero.lead}">Lead text</p>
             <div class="d-flex gap-3 mt-4">
-                <a class="btn btn-primary btn-lg" th:href="@{/dashboard}" th:if="${userProfile.authenticated}">Go to dashboard</a>
-                <a class="btn btn-outline-primary btn-lg" th:if="${!userProfile.authenticated}" th:href="@{/login}">Get started</a>
-                <a class="btn btn-outline-secondary btn-lg" th:href="@{/about}">Learn more</a>
+                <a class="btn btn-primary btn-lg" th:href="@{/dashboard}" th:if="${userProfile.authenticated}" th:text="#{home.hero.authenticated}">Gå till översikten</a>
+                <a class="btn btn-outline-primary btn-lg" th:if="${!userProfile.authenticated}" th:href="@{/login}" th:text="#{home.hero.start}">Kom igång</a>
+                <a class="btn btn-outline-secondary btn-lg" th:href="@{/about}" th:text="#{home.hero.learn}">Läs mer</a>
             </div>
         </div>
         <div class="col-lg-6">
             <div class="card shadow border-0">
                 <div class="card-body p-4">
-                    <h2 class="h4 fw-semibold">Highlights</h2>
+                    <h2 class="h4 fw-semibold" th:text="#{home.highlights.title}">Highlights</h2>
                     <ul class="list-unstyled mt-3">
                         <li class="d-flex align-items-start gap-2 mb-3">
                             <span class="badge rounded-pill text-bg-primary">1</span>
                             <div>
-                                <h3 class="h6 fw-semibold mb-1">Full authentication stack</h3>
-                                <p class="mb-0 text-muted">Use username &amp; password or sign in with Google powered by Spring Security.</p>
+                                <h3 class="h6 fw-semibold mb-1" th:text="#{home.highlights.item1.title}">Titel</h3>
+                                <p class="mb-0 text-muted" th:text="#{home.highlights.item1.body}">Beskrivning</p>
                             </div>
                         </li>
                         <li class="d-flex align-items-start gap-2 mb-3">
                             <span class="badge rounded-pill text-bg-primary">2</span>
                             <div>
-                                <h3 class="h6 fw-semibold mb-1">Responsive UI</h3>
-                                <p class="mb-0 text-muted">Built with Bootstrap 5 and custom styling for delightful experiences on every device.</p>
+                                <h3 class="h6 fw-semibold mb-1" th:text="#{home.highlights.item2.title}">Titel</h3>
+                                <p class="mb-0 text-muted" th:text="#{home.highlights.item2.body}">Beskrivning</p>
                             </div>
                         </li>
                         <li class="d-flex align-items-start gap-2">
                             <span class="badge rounded-pill text-bg-primary">3</span>
                             <div>
-                                <h3 class="h6 fw-semibold mb-1">Ready to extend</h3>
-                                <p class="mb-0 text-muted">Modular controllers and templates make it easy to grow your application.</p>
+                                <h3 class="h6 fw-semibold mb-1" th:text="#{home.highlights.item3.title}">Titel</h3>
+                                <p class="mb-0 text-muted" th:text="#{home.highlights.item3.body}">Beskrivning</p>
                             </div>
                         </li>
                     </ul>
