@@ -56,8 +56,11 @@ public class CurrentUserAdvice {
     }
 
     @ModelAttribute("supportedLanguages")
-    public List<String> supportedLanguages() {
-        return List.of("sv", "en");
+    public List<LanguageOption> supportedLanguages() {
+        return List.of(
+            new LanguageOption("sv", "nav.language.swedish"),
+            new LanguageOption("en", "nav.language.english")
+        );
     }
 
     private String deriveInitials(String displayName) {

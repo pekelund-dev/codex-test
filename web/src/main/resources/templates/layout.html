@@ -80,18 +80,19 @@
                 </div>
                 <div class="dropdown"
                      th:with="currentUri=${#strings.isEmpty(currentRequestUri) ? '/' : currentRequestUri},
-                              languages=${supportedLanguages}">
+                              currentLanguage=${#locale.language}">
                     <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="languageDropdown"
                             data-bs-toggle="dropdown" aria-expanded="false"
-                            th:text="#{nav.language}" th:aria-label="#{nav.language.toggle}">
+                            th:text="${#messages.msg(currentLanguage == 'sv' ? 'nav.language.swedish' : 'nav.language.english')}"
+                            th:aria-label="#{nav.language.toggle}">
                         Språk
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
-                        <li th:each="language : ${languages}">
+                        <li th:each="language : ${supportedLanguages}">
                             <a class="dropdown-item"
-                               th:classappend="${#locale.language == language} ? ' active'"
-                               th:href="@{__${currentUri}__(lang=${language})}"
-                               th:text="${language == 'sv' ? #messages.msg('nav.language.swedish') : #messages.msg('nav.language.english')}">
+                               th:classappend="${#locale.language == language.code} ? ' active'"
+                               th:href="@{__${currentUri}__(lang=${language.code})}"
+                               th:text="${#messages.msg(language.labelKey)}">
                                 Svenska
                             </a>
                         </li>
