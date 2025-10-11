@@ -149,7 +149,7 @@ gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
     --gen2 \
     --region="$REGION" \
     --runtime=java21 \
-    --entry-point=dev.pekelund.responsiveauth.function.ReceiptProcessingFunction \
+    --entry-point=dev.pekelund.pklnd.function.ReceiptProcessingFunction \
     --source=. \
     --service-account="$FUNCTION_SA" \
     --trigger-bucket="$GCS_BUCKET" \

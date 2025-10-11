@@ -102,7 +102,7 @@
                 <configuration>
                     <archive>
                         <manifestEntries>
-                            <Start-Class>dev.pekelund.responsiveauth.function.FunctionApplication</Start-Class>
+                            <Start-Class>dev.pekelund.pklnd.function.FunctionApplication</Start-Class>
                         </manifestEntries>
                     </archive>
                 </configuration>

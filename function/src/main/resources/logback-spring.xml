@@ -18,7 +18,7 @@
         <appender-ref ref="CLOUD"/>
     </root>
 
-    <logger name="dev.pekelund.responsiveauth" level="INFO" additivity="false">
+    <logger name="dev.pekelund.pklnd" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="CLOUD"/>
     </logger>
