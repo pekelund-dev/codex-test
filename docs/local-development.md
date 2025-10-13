@@ -76,6 +76,18 @@ source ./scripts/load_local_secrets.sh
 
 This leaves the emulator configuration intact but also makes the credentials available if you temporarily disable the emulator host variables to run against managed Firestore.
 
+### Switch between emulator and remote Firestore
+
+Sometimes you want to run the application locally but interact with the managed Firestore instance instead of the emulator. The companion helper `scripts/source_remote_env.sh` mirrors the local script while deliberately removing the emulator override. Make sure you set `FIRESTORE_PROJECT_ID` (and optionally `RECEIPT_FIRESTORE_PROJECT_ID`) to your production project before sourcing it:
+
+```bash
+export FIRESTORE_PROJECT_ID=my-production-project
+export FIRESTORE_CREDENTIALS_FILE=$HOME/.config/responsive-auth/firestore.json
+source ./scripts/source_remote_env.sh
+```
+
+The remote helper keeps `FIRESTORE_ENABLED=true`, reads the default collection names from `web/src/main/resources/application.yml`, and automatically loads credentials via `scripts/load_local_secrets.sh` when `FIRESTORE_CREDENTIALS_FILE` is exported. Re-source `scripts/source_local_env.sh` whenever you want to return to the emulator; it will reset the host override and clear credential variables.
+
 ## 3. Run the web application
 
 With the emulator running and the environment sourced, start the web module in development
@@ -84,6 +96,8 @@ mode:
 ```bash
 ./mvnw -Pinclude-web -pl web -am spring-boot:run
 ```
+
+> 💡 To exercise the application with production data from your managed Firestore instance, source `scripts/source_remote_env.sh` first so the emulator host is cleared, then run the same command. The helper keeps the `include-web` profile active while pointing the client at your remote project.
 
 Navigate to <http://localhost:8080> and exercise the registration flow. User accounts are
 stored in the Firestore emulator and persist across restarts as long as you keep the emulator
