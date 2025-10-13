@@ -86,10 +86,32 @@ source ./scripts/load_local_secrets.sh
 
 The helper infers `FIRESTORE_CREDENTIALS=file:/...` and extracts `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` so subsequent Maven or deployment commands pick up the secure values automatically.
 
+#### Switching between emulator and remote Firestore locally
+
+Use the paired environment helpers to change data sources without manually exporting dozens of variables:
+
+```bash
+# Emulator mode
+source ./scripts/source_local_env.sh
+
+# Remote/production mode
+export FIRESTORE_PROJECT_ID=my-production-project
+export FIRESTORE_CREDENTIALS_FILE="$HOME/.config/responsive-auth/firestore.json"
+source ./scripts/source_remote_env.sh
+```
+
+Both scripts keep `FIRESTORE_ENABLED=true` and reuse the collection defaults from `web/src/main/resources/application.yml`. The remote helper unsets `FIRESTORE_EMULATOR_HOST` and, when `FIRESTORE_CREDENTIALS_FILE` is present, automatically sources `scripts/load_local_secrets.sh` so the Firestore SDK picks up your downloaded key. After sourcing the preferred helper, start the web module as usual:
+
+```bash
+./mvnw -Pinclude-web -pl web -am spring-boot:run
+```
+
+Running the command after `source_remote_env.sh` tells the local Spring Boot app to reach your production Firestore project; re-source `source_local_env.sh` to hop back to the emulator.
+
 ### Service account handling by environment
 
 - **Cloud Run / Google-managed runtimes** – The deployment script (and the console walkthrough) attaches the `cloud-run-runtime` service account directly to the Cloud Run service. Google automatically exchanges that identity for short-lived tokens through [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc), so the container never needs a JSON key file. Leave `FIRESTORE_CREDENTIALS` unset in these environments; the Firestore client uses the attached service account transparently.
-- **Local development / other hosts** – Provide your own credentials via `FIRESTORE_CREDENTIALS_FILE` and source `./scripts/load_local_secrets.sh`, or point the application at the Firestore emulator with `scripts/source_local_env.sh`. These helpers export `FIRESTORE_CREDENTIALS=file:/…` only when you intentionally supply a downloaded key.
+- **Local development / other hosts** – Provide your own credentials via `FIRESTORE_CREDENTIALS_FILE` and source `./scripts/load_local_secrets.sh`, or point the application at the Firestore emulator with `scripts/source_local_env.sh`. Use `scripts/source_remote_env.sh` when you want the local application to talk to your managed Firestore project; it clears the emulator host override while keeping the rest of the configuration consistent. These helpers export `FIRESTORE_CREDENTIALS=file:/…` only when you intentionally supply a downloaded key.
 - **Cloud Function** – The deployment script grants the same Firestore permissions to the function’s runtime identity. Like Cloud Run, the managed function never needs a downloaded key unless you run it on your own infrastructure.
 
 ### Google Cloud Storage configuration
