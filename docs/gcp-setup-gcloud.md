@@ -243,7 +243,7 @@ gcloud services enable cloudfunctions.googleapis.com \
         SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction
     ```
 
-    > The deployment relies on the Paketo native-image buildpack. Setting `BP_NATIVE_IMAGE=true` triggers a GraalVM build so the uploaded artifact matches the slim Cloud Run container without managing Dockerfiles or Artifact Registry images manually.
+> The deployment relies on the Paketo native-image buildpack. Setting `BP_NATIVE_IMAGE=true` triggers a GraalVM build so the uploaded artifact matches the slim Cloud Run container (GraalVM build stage + distroless runtime) without managing Dockerfiles or Artifact Registry images manually.
     > Keep the `FUNCTION_TARGET` unset—Spring Cloud Function's `GcfJarLauncher` bootstraps the `receiptProcessingFunction` bean as long as `SPRING_CLOUD_FUNCTION_DEFINITION` is provided.
 
 4. **Verify the lifecycle**

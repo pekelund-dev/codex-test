@@ -23,7 +23,7 @@ RUN ./mvnw -Pinclude-web -pl web -am -DskipTests package \
     && JAR_PATH=$(find web/target -maxdepth 1 -type f -name '*SNAPSHOT.jar' ! -name '*original*' | head -n 1) \
     && cp "$JAR_PATH" /workspace/dist/app.jar
 
-FROM ghcr.io/graalvm/jdk:21 AS runtime
+FROM gcr.io/distroless/java21-debian12:nonroot AS runtime
 
 ENV JAVA_TOOL_OPTIONS="-XX:+UseSerialGC -XX:MaxRAMPercentage=75"
 WORKDIR /app
