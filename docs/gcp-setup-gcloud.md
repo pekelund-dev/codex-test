@@ -231,14 +231,16 @@ gcloud services enable cloudfunctions.googleapis.com \
     gcloud functions deploy "${FUNCTION_NAME}" \
       --gen2 \
       --region="${REGION}" \
-      --runtime=java21 \
-      --entry-point=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
       --source=. \
-      --set-build-env-vars=MAVEN_BUILD_ARGUMENTS="-pl function -am -DskipTests package" \
+      --dockerfile=function/Dockerfile \
       --service-account="${FUNCTION_SA}" \
       --trigger-bucket=$(basename "${BUCKET}") \
-      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=${RECEIPT_FIRESTORE_PROJECT_ID},RECEIPT_FIRESTORE_COLLECTION=receiptExtractions
+      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash, \
+        RECEIPT_FIRESTORE_PROJECT_ID=${RECEIPT_FIRESTORE_PROJECT_ID},RECEIPT_FIRESTORE_COLLECTION=receiptExtractions, \
+        SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction,FUNCTION_TARGET=dev.pekelund.pklnd.function.ReceiptProcessingFunction
     ```
+
+    > The multi-stage Dockerfile builds the function module inside a GraalVM JDK 21 image and publishes a slim GraalVM runtime layer. Artifact Registry stores the resulting container image, which keeps Cloud Functions deploys aligned with the Cloud Run images.
 
 4. **Verify the lifecycle**
 
@@ -265,12 +267,12 @@ gcloud services enable cloudfunctions.googleapis.com \
 When you run `gcloud functions deploy`, the following process occurs:
 
 1. **Source Upload**: Your entire project directory (excluding `.gcloudignore` files) is packaged and uploaded to Google Cloud Storage
-2. **Cloud Build**: Google Cloud Build downloads the source code and initiates the build process  
-3. **Buildpack Processing**: The Java buildpack runs Maven in the cloud environment to compile and package your application
-4. **Container Creation**: A container image is created and stored in Google Cloud's Artifact Registry
+2. **Cloud Build**: Google Cloud Build downloads the source code and runs the Docker build defined in `function/Dockerfile`
+3. **GraalVM Build Stage**: Maven executes inside the GraalVM builder image to compile the multi-module project and assemble a runnable fat JAR
+4. **Container Creation**: The runtime layer copies the GraalVM-built artifact into a slim GraalVM Java 21 base image and pushes it to Artifact Registry
 5. **Function Deployment**: The container is deployed as a Cloud Function with the specified triggers
 
-**Important**: Your local `target/` directory is not directly used - Google Cloud rebuilds everything from source code in the cloud environment.
+**Important**: Your local `target/` directory is not directly used—Cloud Build reproduces the Maven build inside the GraalVM container using the repository sources.
 
 ### Common Issues and Solutions
 
@@ -283,20 +285,20 @@ When you run `gcloud functions deploy`, the following process occurs:
 
 **Solutions**:
 
-1. **Match the Cloud Build arguments**: Set `MAVEN_BUILD_ARGUMENTS="-pl function -am -DskipTests package"` when deploying (for example with `--set-build-env-vars` or via `project.toml`). This ensures the buildpack compiles the multi-module project and produces the Cloud Function JAR under `function/target`.
+1. **Verify the Docker build locally**: Run `docker build -f function/Dockerfile .` to confirm the GraalVM-based build produces `/workspace/dist/function.jar` without missing classes. Inspect the multi-stage build logs for compilation errors.
 
 2. **Verify the correct structure is created locally**:
    ```bash
-   ./mvnw -pl function -am clean package -DskipTests
+   ./mvnw -pl function -am clean package -DskipTests -Dspring-boot.repackage.skip=false
 
    # Check function class is in the compiled JAR
-   jar tf function/target/responsive-auth-function-0.0.1-SNAPSHOT.jar | grep ReceiptProcessingFunction
+   jar tf target/responsive-auth-0.0.1-SNAPSHOT.jar | grep ReceiptProcessingFunction
 
-   # Check dependencies are in function/target/dependency/
-   ls function/target/dependency/ | head -5
+   # Confirm dependencies are bundled into the Spring Boot fat JAR
+   jar tf target/responsive-auth-0.0.1-SNAPSHOT.jar | grep "BOOT-INF/lib" | head -5
 
-   # Test the same command the buildpack uses
-   javap -classpath function/target/responsive-auth-function-0.0.1-SNAPSHOT.jar:function/target/dependency/* dev.pekelund.pklnd.function.ReceiptProcessingFunction
+   # Spot-check bytecode availability with the same classpath layout the container uses
+   javap -classpath target/responsive-auth-0.0.1-SNAPSHOT.jar dev.pekelund.pklnd.function.ReceiptProcessingFunction
    ```
 
 #### 2. Region Mismatch Error

@@ -2,6 +2,3 @@
 name = "GOOGLE_FUNCTION_TARGET"
 value = "dev.pekelund.pklnd.function.ReceiptProcessingFunction"
 
-[[build.env]]
-name = "MAVEN_BUILD_ARGUMENTS"
-value = "-pl function -am -DskipTests package"

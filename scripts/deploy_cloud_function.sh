@@ -66,7 +66,7 @@ else
     echo "📍 Using Vertex AI location $VERTEX_AI_LOCATION"
 fi
 
-FUNCTION_ENV_VARS="VERTEX_AI_PROJECT_ID=$PROJECT_ID,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=$RECEIPT_FIRESTORE_PROJECT_ID,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction"
+FUNCTION_ENV_VARS="VERTEX_AI_PROJECT_ID=$PROJECT_ID,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=$RECEIPT_FIRESTORE_PROJECT_ID,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction,FUNCTION_TARGET=dev.pekelund.pklnd.function.ReceiptProcessingFunction"
 
 # Enable required APIs
 echo "🔧 Enabling required Google Cloud APIs..."
@@ -131,7 +131,7 @@ fi
 
 # Build and stage the function artifact so the deployment always uses the latest sources
 echo "🛠️  Building function module..."
-./mvnw -q -pl function -am -DskipTests clean package
+./mvnw -q -pl function -am -DskipTests -Dspring-boot.repackage.skip=false clean package
 
 # Deploy the Cloud Function using the full multi-module source
 echo "🏗️  Deploying Cloud Function..."
@@ -139,16 +139,14 @@ echo "🧾 Cloud Function name: $CLOUD_FUNCTION_NAME"
 
 gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
     --gen2 \
-    --runtime=java21 \
     --region="$REGION" \
     --source=. \
-    --entry-point=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
+    --dockerfile=function/Dockerfile \
     --memory=1Gi \
     --timeout=300s \
     --max-instances=10 \
     --service-account="$FUNCTION_SA" \
     --trigger-bucket="$GCS_BUCKET" \
-    --set-build-env-vars="MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests -Dmdep.skip=true package" \
     --set-env-vars="$FUNCTION_ENV_VARS"
 
 if [ $? -ne 0 ]; then

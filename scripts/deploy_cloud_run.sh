@@ -226,9 +226,18 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 
 # Build and push the image
 IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${SERVICE_NAME}:$(date +%Y%m%d-%H%M%S)"
+DOCKERFILE_PATH="${DOCKERFILE_PATH:-Dockerfile}"
+
+if [[ ! -f "$DOCKERFILE_PATH" ]]; then
+  echo "Dockerfile path ${DOCKERFILE_PATH} does not exist" >&2
+  exit 1
+fi
+
+echo "🏗️  Building container image with ${DOCKERFILE_PATH} (GraalVM base)."
 
 gcloud builds submit \
-  --tag "$IMAGE_URI"
+  --tag "$IMAGE_URI" \
+  --file "$DOCKERFILE_PATH"
 
 # Deploy to Cloud Run
 ALLOW_FLAG="--no-allow-unauthenticated"

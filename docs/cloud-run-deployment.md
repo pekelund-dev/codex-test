@@ -159,7 +159,9 @@ Cloud Run automatically injects the attached service account as [Application Def
 
 1. Open **Cloud Build** → **Builds** → **Create build**.
 2. Configure a build trigger or run a manual build pointing to the repository.
-3. Ensure the `Dockerfile` is located at the repo root or provide the correct path.
+3. Ensure the `Dockerfile` is located at the repo root or provide the correct path. The provided definition builds with
+   GraalVM images (`ghcr.io/graalvm/jdk:21`) to keep the resulting container layers small while still running on a
+   full Java 21 runtime.
 4. Set the Artifact Registry repository as the build output.
 
 ### CLI
@@ -179,12 +181,18 @@ gcloud artifacts repositories create web \
   --description="Container images for Cloud Run" 2>/dev/null || true
 
 # Build and push with Cloud Build
- gcloud builds submit \
+DOCKERFILE_PATH="Dockerfile"
+
+gcloud builds submit \
   --tag "$IMAGE_TAG" \
-  --project "$PROJECT_ID"
+  --project "$PROJECT_ID" \
+  --file "$DOCKERFILE_PATH"
 ```
 
 > Replace the build command if you prefer using `docker build` and `docker push`.
+
+> Set `DOCKERFILE_PATH` if you keep an alternate GraalVM-based Dockerfile outside the repository root. The deployment script
+> (`scripts/deploy_cloud_run.sh`) honours the same variable, so local and scripted deploys stay aligned.
 
 ---
 
