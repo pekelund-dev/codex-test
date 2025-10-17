@@ -133,15 +133,39 @@ fi
 echo "🛠️  Building function module..."
 ./mvnw -q -pl function -am -DskipTests -Dspring-boot.repackage.skip=false clean package
 
-# Deploy the Cloud Function using the full multi-module source
+# Deploy the Cloud Function using a GraalVM-based container image
 echo "🏗️  Deploying Cloud Function..."
 echo "🧾 Cloud Function name: $CLOUD_FUNCTION_NAME"
 
+BUILD_CONTEXT_DIR="$(mktemp -d)"
+cleanup() {
+    rm -rf "$BUILD_CONTEXT_DIR"
+}
+trap cleanup EXIT
+
+echo "📦 Preparing Docker build context at $BUILD_CONTEXT_DIR"
+if ! command -v rsync >/dev/null 2>&1; then
+    echo "❌ rsync is required to prepare the Docker build context. Please install rsync and retry."
+    exit 1
+fi
+rsync -a --delete \
+    --include '.mvn/***' \
+    --include 'mvnw' \
+    --include 'mvnw.cmd' \
+    --include 'pom.xml' \
+    --include 'core/***' \
+    --include 'function/***' \
+    --exclude '*' \
+    "$REPO_ROOT"/ "$BUILD_CONTEXT_DIR"/
+
+cp "$REPO_ROOT/function/Dockerfile" "$BUILD_CONTEXT_DIR/Dockerfile"
+chmod +x "$BUILD_CONTEXT_DIR/mvnw"
+
 gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
     --gen2 \
+    --runtime=custom \
     --region="$REGION" \
-    --source=. \
-    --dockerfile=function/Dockerfile \
+    --source="$BUILD_CONTEXT_DIR" \
     --memory=1Gi \
     --timeout=300s \
     --max-instances=10 \

@@ -228,19 +228,36 @@ gcloud services enable cloudfunctions.googleapis.com \
     # Use the same region as your bucket (for example, us-east1 or us-central1)
     REGION=us-east1  # Replace with your bucket's region
     FUNCTION_NAME=receiptProcessingFunction
+    BUILD_CONTEXT="$(mktemp -d)"
+    trap 'rm -rf "${BUILD_CONTEXT}"' EXIT
+    rsync -a --delete \
+      --include '.mvn/***' \
+      --include 'mvnw' \
+      --include 'mvnw.cmd' \
+      --include 'pom.xml' \
+      --include 'core/***' \
+      --include 'function/***' \
+      --exclude '*' \
+      . "${BUILD_CONTEXT}"/
+    cp function/Dockerfile "${BUILD_CONTEXT}/Dockerfile"
+    chmod +x "${BUILD_CONTEXT}/mvnw"
+
     gcloud functions deploy "${FUNCTION_NAME}" \
       --gen2 \
+      --runtime=custom \
       --region="${REGION}" \
-      --source=. \
-      --dockerfile=function/Dockerfile \
+      --source="${BUILD_CONTEXT}" \
       --service-account="${FUNCTION_SA}" \
       --trigger-bucket=$(basename "${BUCKET}") \
       --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash, \
         RECEIPT_FIRESTORE_PROJECT_ID=${RECEIPT_FIRESTORE_PROJECT_ID},RECEIPT_FIRESTORE_COLLECTION=receiptExtractions, \
         SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction,FUNCTION_TARGET=dev.pekelund.pklnd.function.ReceiptProcessingFunction
+
+    rm -rf "${BUILD_CONTEXT}"
+    trap - EXIT
     ```
 
-    > The multi-stage Dockerfile builds the function module inside a GraalVM JDK 21 image and publishes a slim GraalVM runtime layer. Artifact Registry stores the resulting container image, which keeps Cloud Functions deploys aligned with the Cloud Run images.
+    > The deployment copies only the files required by the multi-module Maven build into a temporary Cloud Build context. The GraalVM Dockerfile then builds the function module and publishes a slim runtime layer, keeping Cloud Functions aligned with the Cloud Run images without bloating the Artifact Registry.
 
 4. **Verify the lifecycle**
 
