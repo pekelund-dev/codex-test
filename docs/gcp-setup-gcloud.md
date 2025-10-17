@@ -228,36 +228,22 @@ gcloud services enable cloudfunctions.googleapis.com \
     # Use the same region as your bucket (for example, us-east1 or us-central1)
     REGION=us-east1  # Replace with your bucket's region
     FUNCTION_NAME=receiptProcessingFunction
-    BUILD_CONTEXT="$(mktemp -d)"
-    trap 'rm -rf "${BUILD_CONTEXT}"' EXIT
-    rsync -a --delete \
-      --include '.mvn/***' \
-      --include 'mvnw' \
-      --include 'mvnw.cmd' \
-      --include 'pom.xml' \
-      --include 'core/***' \
-      --include 'function/***' \
-      --exclude '*' \
-      . "${BUILD_CONTEXT}"/
-    cp function/Dockerfile "${BUILD_CONTEXT}/Dockerfile"
-    chmod +x "${BUILD_CONTEXT}/mvnw"
 
     gcloud functions deploy "${FUNCTION_NAME}" \
       --gen2 \
-      --runtime=custom \
+      --runtime=java21 \
       --region="${REGION}" \
-      --source="${BUILD_CONTEXT}" \
+      --source=. \
+      --entry-point=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
       --service-account="${FUNCTION_SA}" \
       --trigger-bucket=$(basename "${BUCKET}") \
+      --set-build-env-vars=MAVEN_BUILD_ARGUMENTS=-pl\ function\ -am\ -DskipTests\ -Dspring-boot.repackage.skip=false\ package,BP_NATIVE_IMAGE=true,BP_JVM_VERSION=21 \
       --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash, \
         RECEIPT_FIRESTORE_PROJECT_ID=${RECEIPT_FIRESTORE_PROJECT_ID},RECEIPT_FIRESTORE_COLLECTION=receiptExtractions, \
         SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction,FUNCTION_TARGET=dev.pekelund.pklnd.function.ReceiptProcessingFunction
-
-    rm -rf "${BUILD_CONTEXT}"
-    trap - EXIT
     ```
 
-    > The deployment copies only the files required by the multi-module Maven build into a temporary Cloud Build context. The GraalVM Dockerfile then builds the function module and publishes a slim runtime layer, keeping Cloud Functions aligned with the Cloud Run images without bloating the Artifact Registry.
+    > The deployment relies on the Paketo native-image buildpack. Setting `BP_NATIVE_IMAGE=true` triggers a GraalVM build so the uploaded artifact matches the slim Cloud Run container without managing Dockerfiles or Artifact Registry images manually.
 
 4. **Verify the lifecycle**
 
@@ -284,12 +270,12 @@ gcloud services enable cloudfunctions.googleapis.com \
 When you run `gcloud functions deploy`, the following process occurs:
 
 1. **Source Upload**: Your entire project directory (excluding `.gcloudignore` files) is packaged and uploaded to Google Cloud Storage
-2. **Cloud Build**: Google Cloud Build downloads the source code and runs the Docker build defined in `function/Dockerfile`
-3. **GraalVM Build Stage**: Maven executes inside the GraalVM builder image to compile the multi-module project and assemble a runnable fat JAR
-4. **Container Creation**: The runtime layer copies the GraalVM-built artifact into a slim GraalVM Java 21 base image and pushes it to Artifact Registry
-5. **Function Deployment**: The container is deployed as a Cloud Function with the specified triggers
+2. **Cloud Build**: Google Cloud Build downloads the source code and executes the Paketo buildpacks specified in `project.toml`
+3. **GraalVM Build Stage**: The Paketo Native Image buildpack uses GraalVM to compile the function into a native binary, honoring the `BP_NATIVE_IMAGE` flag supplied during deployment
+4. **Container Creation**: The buildpacks assemble a slim runtime image that contains the native binary and supporting layers, then push it to Artifact Registry
+5. **Function Deployment**: The generated container image is deployed as a Cloud Function with the specified triggers
 
-**Important**: Your local `target/` directory is not directly used—Cloud Build reproduces the Maven build inside the GraalVM container using the repository sources.
+**Important**: Your local `target/` directory is not directly used—Cloud Build rebuilds the module with Maven according to `MAVEN_BUILD_ARGUMENTS` before producing the native image.
 
 ### Common Issues and Solutions
 
@@ -302,7 +288,7 @@ When you run `gcloud functions deploy`, the following process occurs:
 
 **Solutions**:
 
-1. **Verify the Docker build locally**: Run `docker build -f function/Dockerfile .` to confirm the GraalVM-based build produces `/workspace/dist/function.jar` without missing classes. Inspect the multi-stage build logs for compilation errors.
+1. **Verify the Maven build locally**: Run `./mvnw -pl function -am -DskipTests -Dspring-boot.repackage.skip=false clean package` to ensure the module compiles and produces the Spring Boot fat JAR before relying on the remote native-image build.
 
 2. **Verify the correct structure is created locally**:
    ```bash

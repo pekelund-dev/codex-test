@@ -2,3 +2,11 @@
 name = "GOOGLE_FUNCTION_TARGET"
 value = "dev.pekelund.pklnd.function.ReceiptProcessingFunction"
 
+[[build.env]]
+name = "BP_NATIVE_IMAGE"
+value = "true"
+
+[[build.env]]
+name = "BP_JVM_VERSION"
+value = "21"
+
