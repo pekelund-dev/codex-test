@@ -131,11 +131,12 @@ fi
 
 # Build and stage the function artifact so the deployment always uses the latest sources
 echo "🛠️  Building function module..."
-./mvnw -q -pl function -am -DskipTests clean package
+./mvnw -q -pl function -am -DskipTests -Dspring-boot.repackage.skip=false clean package
 
-# Deploy the Cloud Function using the full multi-module source
+# Deploy the Cloud Function using GraalVM native-image buildpacks
 echo "🏗️  Deploying Cloud Function..."
 echo "🧾 Cloud Function name: $CLOUD_FUNCTION_NAME"
+GRAAL_BUILD_VARS="MAVEN_BUILD_ARGUMENTS=-pl\\ function\\ -am\\ -DskipTests\\ -Dspring-boot.repackage.skip=false\\ package,BP_NATIVE_IMAGE=true,BP_JVM_VERSION=21"
 
 gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
     --gen2 \
@@ -148,7 +149,7 @@ gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
     --max-instances=10 \
     --service-account="$FUNCTION_SA" \
     --trigger-bucket="$GCS_BUCKET" \
-    --set-build-env-vars="MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests -Dmdep.skip=true package" \
+    --set-build-env-vars="$GRAAL_BUILD_VARS" \
     --set-env-vars="$FUNCTION_ENV_VARS"
 
 if [ $? -ne 0 ]; then

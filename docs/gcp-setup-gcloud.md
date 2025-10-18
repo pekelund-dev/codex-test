@@ -228,17 +228,23 @@ gcloud services enable cloudfunctions.googleapis.com \
     # Use the same region as your bucket (for example, us-east1 or us-central1)
     REGION=us-east1  # Replace with your bucket's region
     FUNCTION_NAME=receiptProcessingFunction
+
     gcloud functions deploy "${FUNCTION_NAME}" \
       --gen2 \
-      --region="${REGION}" \
       --runtime=java21 \
-      --entry-point=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
+      --region="${REGION}" \
       --source=. \
-      --set-build-env-vars=MAVEN_BUILD_ARGUMENTS="-pl function -am -DskipTests package" \
+      --entry-point=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
       --service-account="${FUNCTION_SA}" \
       --trigger-bucket=$(basename "${BUCKET}") \
-      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=${RECEIPT_FIRESTORE_PROJECT_ID},RECEIPT_FIRESTORE_COLLECTION=receiptExtractions
+      --set-build-env-vars=MAVEN_BUILD_ARGUMENTS=-pl\ function\ -am\ -DskipTests\ -Dspring-boot.repackage.skip=false\ package,BP_NATIVE_IMAGE=true,BP_JVM_VERSION=21 \
+      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash, \
+        RECEIPT_FIRESTORE_PROJECT_ID=${RECEIPT_FIRESTORE_PROJECT_ID},RECEIPT_FIRESTORE_COLLECTION=receiptExtractions, \
+        SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction
     ```
+
+> The deployment relies on the Paketo native-image buildpack. Setting `BP_NATIVE_IMAGE=true` triggers a GraalVM build so the uploaded artifact matches the slim Cloud Run container (native executable + distroless base image) without managing Dockerfiles or Artifact Registry images manually.
+    > Keep the `FUNCTION_TARGET` unset—Spring Cloud Function's `GcfJarLauncher` bootstraps the `receiptProcessingFunction` bean as long as `SPRING_CLOUD_FUNCTION_DEFINITION` is provided.
 
 4. **Verify the lifecycle**
 
@@ -265,12 +271,12 @@ gcloud services enable cloudfunctions.googleapis.com \
 When you run `gcloud functions deploy`, the following process occurs:
 
 1. **Source Upload**: Your entire project directory (excluding `.gcloudignore` files) is packaged and uploaded to Google Cloud Storage
-2. **Cloud Build**: Google Cloud Build downloads the source code and initiates the build process  
-3. **Buildpack Processing**: The Java buildpack runs Maven in the cloud environment to compile and package your application
-4. **Container Creation**: A container image is created and stored in Google Cloud's Artifact Registry
-5. **Function Deployment**: The container is deployed as a Cloud Function with the specified triggers
+2. **Cloud Build**: Google Cloud Build downloads the source code and executes the Paketo buildpacks specified in `project.toml`
+3. **GraalVM Build Stage**: The Paketo Native Image buildpack uses GraalVM to compile the function into a native binary, honoring the `BP_NATIVE_IMAGE` flag supplied during deployment
+4. **Container Creation**: The buildpacks assemble a slim runtime image that contains the native binary and supporting layers, then push it to Artifact Registry
+5. **Function Deployment**: The generated container image is deployed as a Cloud Function with the specified triggers
 
-**Important**: Your local `target/` directory is not directly used - Google Cloud rebuilds everything from source code in the cloud environment.
+**Important**: Your local `target/` directory is not directly used—Cloud Build rebuilds the module with Maven according to `MAVEN_BUILD_ARGUMENTS` before producing the native image.
 
 ### Common Issues and Solutions
 
@@ -283,20 +289,20 @@ When you run `gcloud functions deploy`, the following process occurs:
 
 **Solutions**:
 
-1. **Match the Cloud Build arguments**: Set `MAVEN_BUILD_ARGUMENTS="-pl function -am -DskipTests package"` when deploying (for example with `--set-build-env-vars` or via `project.toml`). This ensures the buildpack compiles the multi-module project and produces the Cloud Function JAR under `function/target`.
+1. **Verify the Maven build locally**: Run `./mvnw -pl function -am -DskipTests -Dspring-boot.repackage.skip=false clean package` to ensure the module compiles and produces the Spring Boot fat JAR before relying on the remote native-image build.
 
 2. **Verify the correct structure is created locally**:
    ```bash
-   ./mvnw -pl function -am clean package -DskipTests
+   ./mvnw -pl function -am clean package -DskipTests -Dspring-boot.repackage.skip=false
 
    # Check function class is in the compiled JAR
-   jar tf function/target/responsive-auth-function-0.0.1-SNAPSHOT.jar | grep ReceiptProcessingFunction
+   jar tf target/responsive-auth-0.0.1-SNAPSHOT.jar | grep ReceiptProcessingFunction
 
-   # Check dependencies are in function/target/dependency/
-   ls function/target/dependency/ | head -5
+   # Confirm dependencies are bundled into the Spring Boot fat JAR
+   jar tf target/responsive-auth-0.0.1-SNAPSHOT.jar | grep "BOOT-INF/lib" | head -5
 
-   # Test the same command the buildpack uses
-   javap -classpath function/target/responsive-auth-function-0.0.1-SNAPSHOT.jar:function/target/dependency/* dev.pekelund.pklnd.function.ReceiptProcessingFunction
+   # Spot-check bytecode availability with the same classpath layout the container uses
+   javap -classpath target/responsive-auth-0.0.1-SNAPSHOT.jar dev.pekelund.pklnd.function.ReceiptProcessingFunction
    ```
 
 #### 2. Region Mismatch Error
