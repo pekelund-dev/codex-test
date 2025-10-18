@@ -4,6 +4,9 @@ FROM ghcr.io/graalvm/jdk:21 AS build
 
 WORKDIR /workspace
 
+# Install the GraalVM native-image toolchain
+RUN gu install native-image
+
 # Pre-fetch dependencies for faster incremental builds
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
@@ -19,16 +22,15 @@ COPY function function
 COPY web web
 
 RUN ./mvnw -Pinclude-web -pl web -am -DskipTests package \
+    && ./mvnw -Pinclude-web -pl web -am -Pnative -DskipTests -DskipNativeTests native:compile-no-fork \
     && mkdir -p /workspace/dist \
-    && JAR_PATH=$(find web/target -maxdepth 1 -type f -name '*SNAPSHOT.jar' ! -name '*original*' | head -n 1) \
-    && cp "$JAR_PATH" /workspace/dist/app.jar
+    && cp web/target/responsive-auth-web /workspace/dist/responsive-auth-web
 
-FROM gcr.io/distroless/java21-debian12:nonroot AS runtime
+FROM gcr.io/distroless/cc-debian12:nonroot AS runtime
 
-ENV JAVA_TOOL_OPTIONS="-XX:+UseSerialGC -XX:MaxRAMPercentage=75"
 WORKDIR /app
 
-COPY --from=build /workspace/dist/app.jar /app/app.jar
+COPY --from=build --chown=nonroot:nonroot /workspace/dist/responsive-auth-web /app/app
 
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+ENTRYPOINT ["/app/app"]

@@ -233,7 +233,7 @@ if [[ ! -f "$DOCKERFILE_PATH" ]]; then
   exit 1
 fi
 
-echo "🏗️  Building container image with ${DOCKERFILE_PATH} (GraalVM build stage + distroless runtime)."
+echo "🏗️  Building container image with ${DOCKERFILE_PATH} (GraalVM native build + distroless base runtime)."
 
 gcloud builds submit \
   --tag "$IMAGE_URI" \
