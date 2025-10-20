@@ -14,11 +14,6 @@ clear && source ./setup-env.sh && \
 clear && git pull && ./scripts/deploy_cloud_function.sh && \
     gsutil cp ./test-receipt.pdf "gs://$GCS_BUCKET/receipts/large-test-receipt.pdf"
 
-clear && git pull && ./mvnw -pl function -am spring-boot:run \
-    -Dspring-boot.run.profiles=local-receipt-test
-
-clear && curl -F "file=@test-receipt.pdf" http://localhost:8080/local-receipts/parse | jq
-
 # Local-only workflow (run the emulator in its own terminal)
 ./scripts/start_firestore_emulator.sh
 

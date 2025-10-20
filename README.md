@@ -90,7 +90,7 @@ The helper infers `FIRESTORE_CREDENTIALS=file:/...` and extracts `GOOGLE_CLIENT_
 
 - **Cloud Run / Google-managed runtimes** – The deployment script (and the console walkthrough) attaches the `cloud-run-runtime` service account directly to the Cloud Run service. Google automatically exchanges that identity for short-lived tokens through [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc), so the container never needs a JSON key file. Leave `FIRESTORE_CREDENTIALS` unset in these environments; the Firestore client uses the attached service account transparently.
 - **Local development / other hosts** – Provide your own credentials via `FIRESTORE_CREDENTIALS_FILE` and source `./scripts/load_local_secrets.sh`, or point the application at the Firestore emulator with `scripts/source_local_env.sh`. These helpers export `FIRESTORE_CREDENTIALS=file:/…` only when you intentionally supply a downloaded key.
-- **Cloud Function** – The deployment script grants the same Firestore permissions to the function’s runtime identity. Like Cloud Run, the managed function never needs a downloaded key unless you run it on your own infrastructure.
+- **Cloud Function** – The deployment script now grants Pub/Sub publish access to the function’s runtime identity. Like Cloud Run, the managed function never needs a downloaded key unless you run it on your own infrastructure.
 
 ### Google Cloud Storage configuration
 
@@ -105,93 +105,64 @@ After completing either path, restart the application and visit <http://localhos
 > leave `GCS_CREDENTIALS` unset. The application will fall back to Application Default Credentials if the
 > configured resource is missing, allowing you to keep downloaded JSON keys strictly for local development.
 
-### Receipt parsing Cloud Function (Vertex AI Gemini)
+### Receipt ingestion pipeline (Cloud Function + Pub/Sub)
 
-The `function` module processes finalized uploads from the receipts bucket, extracts structured data with Gemini, and stores the result in Firestore. The `web` module hosts the interactive UI, while shared storage components live in the `core` module.
+The `function` module now acts as a lightweight bridge: it listens for finalize events from the receipts bucket, enriches the payload, and publishes a `ReceiptProcessingMessage` to Pub/Sub. The bridge is implemented with the Functions Framework only—no Spring context is loaded—so the cold-start footprint stays minimal. The Cloud Run–hosted web application receives those messages through a Pub/Sub push subscription and performs the actual parsing and Firestore persistence.
 
-#### Quick Deployment
+#### Quick deployment
 
-Use the automated deployment script for a streamlined setup:
+Use the deployment helper to provision the Pub/Sub topic, build the function, and deploy it with the correct entry point and environment variables:
 
 ```bash
-# Deploy the Cloud Function with all required configurations
+# Deploy the Cloud Function and ensure the Pub/Sub topic exists
 ./scripts/deploy_cloud_function.sh
 ```
 
-This script automatically:
-- Enables all required Google Cloud APIs
-- Creates and configures service accounts with proper IAM roles
-- Detects the correct region for your Cloud Storage bucket
-- Builds and deploys the function with optimal settings
-- Provides comprehensive error handling and troubleshooting
+The script automatically:
+- Enables the Cloud Functions, Pub/Sub, Eventarc, and Cloud Storage APIs
+- Creates (or reuses) the service account with the required Pub/Sub publisher permissions
+- Detects the storage bucket region so the function is deployed in the correct location
+- Builds the function module and deploys it as a Java 21 second-generation function
+- Ensures the Pub/Sub topic exists and injects the topic configuration via environment variables
+
+After the function is deployed, run `./scripts/deploy_cloud_run.sh` to build and deploy the web application. The script wires the Pub/Sub push subscription to `/internal/pubsub/receipt-processing` and prints the verification token that must be stored in Secret Manager or an environment variable.
 
 #### Teardown
 
-When you're finished testing, run the teardown helper to remove the Cloud Run service, Cloud Function, and related IAM bindings.
-The script is safe to execute multiple times; it only deletes resources that still exist.
+When you're finished testing, run the teardown helper to remove the Cloud Run service, Cloud Function, and related IAM bindings. The script is safe to execute multiple times; it only deletes resources that still exist.
 
 ```bash
 ./scripts/teardown_gcp_resources.sh
 ```
 
-Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` if you also want to delete the identities or container
-registry created during deployment.
+Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` if you also want to delete the identities or container registry created during deployment.
 
-#### Manual Deployment
+#### Manual deployment
 
-Select the deployment style you prefer:
+Prefer running the commands yourself? Follow one of the walkthroughs:
 
 - [Deploy the function with the gcloud CLI](docs/gcp-setup-gcloud.md#deploy-the-receipt-processing-function)
 - [Deploy the function with the Cloud Console](docs/gcp-setup-cloud-console.md#deploy-the-receipt-processing-function)
 
-Both documents describe prerequisites, metadata expectations, status updates, verification steps, and comprehensive troubleshooting guides for the Gemini-powered pipeline.
+Both guides explain the storage event trigger, Pub/Sub topic requirements, verification token handling, and the push subscription that targets the Cloud Run service.
 
 #### Local smoke testing
 
-You can exercise the Cloud Function without waiting for a new deployment by running it locally through the Functions Framework Maven plugin:
-
-1. Export credentials that allow the function to reach your Cloud Storage bucket, Firestore database, and Vertex AI project. At minimum you need `GOOGLE_APPLICATION_CREDENTIALS`, `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION`, `RECEIPT_FIRESTORE_PROJECT_ID`, and `RECEIPT_FIRESTORE_COLLECTION`.
-2. Start the Functions Framework on a local port:
-
-   ```bash
-   ./mvnw -pl function -am -DskipTests function:run \
-       -Drun.functions.target=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
-       -Drun.functions.port=8081
-   ```
-
-3. Upload a PDF to your receipts bucket (for example `gsutil cp test-receipt.pdf gs://your-receipts-bucket/receipts/sample-receipt.pdf`).
-4. In another terminal, send a Cloud Storage finalize event payload to the locally running function:
-
-   ```bash
-   curl -X POST -H "Content-Type: application/json" \
-     --data-binary @docs/sample-storage-event.json \
-     http://localhost:8081
-   ```
-
-Update `docs/sample-storage-event.json` with the bucket and object key you uploaded in step 3. The local instance uses the same code path as the deployed function, so Firestore documents and Gemini calls are executed exactly once the event is received.
-
-#### Local parsing test server (no cloud dependencies)
-
-When you only need to validate how the legacy PDF parser interprets a document, start the lightweight test server profile. It only
-boots the legacy extractor, so no Firestore, Cloud Storage, or Vertex AI credentials are required:
+You can exercise the publisher locally with the Functions Framework Maven plugin. Point the function at the Pub/Sub emulator or a real topic (credentials required) and send a sample Cloud Storage event:
 
 ```bash
-# run from the repository root so the parent pom is picked up but only the
-# function module executes
-./mvnw -pl function -am spring-boot:run \
-    -Dspring-boot.run.profiles=local-receipt-test
+# Start the Functions Framework on port 8081
+./mvnw -pl function -am -DskipTests function:run \
+    -Drun.functions.target=dev.pekelund.pklnd.function.ReceiptEventPublisher \
+    -Drun.functions.port=8081
+
+# In another terminal, send a storage event payload
+curl -X POST -H "Content-Type: application/json" \
+  --data-binary @docs/sample-storage-event.json \
+  http://localhost:8081
 ```
 
-Once the server reports that Tomcat started on port 8080, submit a PDF for parsing with `curl` (replace the sample file with your
-own receipt as needed):
-
-```bash
-curl -F "file=@test-receipt.pdf" http://localhost:8080/local-receipts/parse | jq
-```
-
-The response contains the structured data map emitted by the legacy parser along with the raw JSON string that mirrors what the
-cloud function would store. Errors such as unsupported file formats are returned with HTTP status `422` and a JSON payload with an
-`error` message. Stop the server with `Ctrl+C` when you are finished.
+The function logs the publish attempt and uses the configured Pub/Sub credentials. When pointed at the emulator the message appears immediately; when targeting Google Cloud you can monitor the Pub/Sub topic to confirm the published payload.
 
 ### Fallback credentials
 
@@ -227,9 +198,10 @@ To enable Google sign-in, create OAuth credentials in the Google Cloud Console a
 
 ## Project structure
 
-- `core` – Shared storage services and configuration reused by both the web and function modules.
+- `messaging` – Shared message contracts used by both the Cloud Function and the web service.
+- `core` – Shared storage services and configuration reused by the web module.
 - `web` – Spring MVC application with security, Firestore integration, templates, and static assets.
-- `function` – Cloud Function implementation that processes receipts with Gemini and persists the output.
+- `function` – Plain Java Cloud Function publisher that forwards Cloud Storage events to Pub/Sub for the web service to process.
 
 ## License
 

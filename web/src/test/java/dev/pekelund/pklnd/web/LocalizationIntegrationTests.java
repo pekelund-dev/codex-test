@@ -6,15 +6,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import dev.pekelund.pklnd.support.TestReceiptProcessingConfiguration;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+    "gcs.bucket=test-bucket",
+    "receipt.processing.pubsub-verification-token=test-token"
+})
 @AutoConfigureMockMvc
+@Import(TestReceiptProcessingConfiguration.class)
 class LocalizationIntegrationTests {
 
     @Autowired

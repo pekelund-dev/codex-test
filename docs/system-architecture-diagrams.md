@@ -32,6 +32,10 @@ flowchart LR
     subgraph Functions["Receipt Processing"]
         GCF["Cloud Function\nreceipt-parser"]
     end
+    subgraph PubSub["Pub/Sub"]
+        Topic["Topic\nreceipt-processing"]
+        Subscription["Push subscription"]
+    end
 
     subgraph VertexAI["Vertex AI\n(PROJECT_ID/REGION)"]
         Gemini["Gemini API"]
@@ -42,16 +46,19 @@ flowchart LR
     WebApp -->|Runtime SA| Firestore
     WebApp --> Secrets
     WebApp -->|Signed upload URLs| Bucket
+    WebApp -->|Pub/Sub push endpoint| Subscription
+    Subscription -->|deliver message| WebApp
     Bucket -->|Finalize event| GCF
-    GCF -->|Download object| Bucket
-    GCF -->|Parse receipt| Gemini
-    GCF -->|Write parsed data| Firestore
-    WebApp -->|Query receipts & users| Firestore
+    GCF -->|Publish message| Topic
+    Topic --> Subscription
+    WebApp -->|Fetch receipt| Bucket
+    WebApp -->|Parse receipt| Gemini
+    WebApp -->|Persist data| Firestore
 ```
 
 **Key points**
 
-- The Cloud Run service and Cloud Function both use identities with the `roles/datastore.user` role against the shared Firestore project so user profiles and receipt documents live in the same database.
+- The Cloud Run service owns Firestore access while the Cloud Function only requires Pub/Sub publish permissions, keeping the event bridge lightweight.
 - Custom domain traffic (`DOMAIN`) is routed through Porkbun DNS to the Cloud Run HTTPS endpoint created by the Cloud Run domain mapping workflow.
 - Secrets, OAuth credentials, and API keys should be stored in Secret Manager and referenced through environment variables rather than being hard-coded.
 
@@ -65,6 +72,7 @@ sequenceDiagram
     participant CloudRun as Cloud Run Web App
     participant Storage as Cloud Storage Bucket
     participant GCF as Receipt Cloud Function
+    participant PubSub as Pub/Sub Topic
     participant Firestore
     participant Gemini as Vertex AI Gemini
 
@@ -72,19 +80,21 @@ sequenceDiagram
     CloudRun->>Storage: PUT object using signed URL
     Storage-->>CloudRun: Upload success
     Storage-->>GCF: Trigger finalize event
-    GCF->>Storage: Download PDF/image
-    GCF->>Gemini: Request structured extraction
-    Gemini-->>GCF: Parsed receipt data
-    GCF->>Firestore: Upsert receiptExtractions document
+    GCF->>PubSub: Publish ReceiptProcessingMessage
+    PubSub-->>CloudRun: Push delivery to internal endpoint
+    CloudRun->>Storage: Download PDF/image
+    CloudRun->>Gemini: Request structured extraction
+    Gemini-->>CloudRun: Parsed receipt data
+    CloudRun->>Firestore: Upsert receipt document
     User->>CloudRun: View receipt dashboard
-    CloudRun->>Firestore: Query receiptExtractions & users
+    CloudRun->>Firestore: Query receipts & users
     Firestore-->>CloudRun: Return documents
     CloudRun-->>User: Render combined view
 ```
 
 **Notes**
 
-- The Cloud Function and Cloud Run service share the same Firestore collections. Environment variables such as `FIRESTORE_PROJECT_ID`, `RECEIPT_FIRESTORE_PROJECT_ID`, and `RECEIPT_FIRESTORE_COLLECTION` must point to the shared project and collection names.
+- The Cloud Run service persists parsed receipts in Firestore using the `FIRESTORE_PROJECT_ID` / `RECEIPT_FIRESTORE_COLLECTION` configuration. The Cloud Function simply publishes to Pub/Sub and runs without Spring or additional frameworks.
 - The signed URL upload pattern prevents the Cloud Run service from proxying large files, while still enforcing authenticated access and storage permissions.
 
 ---

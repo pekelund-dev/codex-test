@@ -19,6 +19,7 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 public class SecurityConfig {
@@ -45,7 +46,8 @@ public class SecurityConfig {
                     "/webjars/**",
                     "/oauth2/**",
                     "/favicon.ico",
-                    "/error"
+                    "/error",
+                    "/internal/pubsub/**"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
@@ -58,7 +60,9 @@ public class SecurityConfig {
                 .logoutSuccessUrl("/")
                 .permitAll()
             )
-            .csrf(Customizer.withDefaults());
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers(new AntPathRequestMatcher("/internal/pubsub/**"))
+            );
 
         ClientRegistrationRepository clientRegistrationRepository =
             clientRegistrationRepositoryProvider.getIfAvailable();
