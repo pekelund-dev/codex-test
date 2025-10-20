@@ -91,12 +91,12 @@ else
 fi
 
 echo "🛠️  Building function module..."
-./mvnw -q -pl function -am -DskipTests clean package
+./mvnw -q -pl function -am -DskipTests clean install
 
 ENV_VARS="RECEIPT_PUBSUB_TOPIC=${RECEIPT_PUBSUB_TOPIC},RECEIPT_PUBSUB_PROJECT_ID=${RECEIPT_PUBSUB_PROJECT_ID}"
-BUILD_ARGS="-pl function -am -DskipTests clean package"
-BUILD_ARGS_ESCAPED=$(printf '%s' "$BUILD_ARGS" | sed 's/ /\\\\ /g')
-BUILD_ENV_FLAG="--set-build-env-vars=BP_MAVEN_BUILD_ARGUMENTS=${BUILD_ARGS_ESCAPED}"
+BUILD_ARGS="-pl function -am -DskipTests clean install"
+BUILD_ARGS_ESCAPED=${BUILD_ARGS// /\\ }
+BUILD_ENV_FLAG=("--set-build-env-vars=BP_MAVEN_BUILD_ARGUMENTS=${BUILD_ARGS_ESCAPED}")
 
 echo "🧰  Configured Cloud Build to run: $BUILD_ARGS"
 
@@ -113,7 +113,7 @@ gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
   --service-account="$FUNCTION_SA" \
   --trigger-bucket="$GCS_BUCKET" \
   --set-env-vars="$ENV_VARS" \
-  "$BUILD_ENV_FLAG"
+  "${BUILD_ENV_FLAG[@]}"
 
 echo "🎉 Cloud Function deployed successfully!"
 echo

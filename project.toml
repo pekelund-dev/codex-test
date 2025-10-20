@@ -8,5 +8,5 @@ value = "21"
 
 [[build.env]]
 name = "BP_MAVEN_BUILD_ARGUMENTS"
-value = "-pl function -am -DskipTests clean package"
+value = "-pl function -am -DskipTests clean install"
 
