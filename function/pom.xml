@@ -62,7 +62,7 @@
             <plugin>
                 <groupId>com.google.cloud.functions</groupId>
                 <artifactId>function-maven-plugin</artifactId>
-                <version>${google-cloud-functions-framework.version}</version>
+                <version>${google-cloud-function-plugin.version}</version>
                 <configuration>
                     <functionTarget>dev.pekelund.pklnd.function.ReceiptEventPublisher</functionTarget>
                 </configuration>
