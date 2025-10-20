@@ -17,7 +17,7 @@
     <dependencies>
         <dependency>
             <groupId>dev.pekelund</groupId>
-            <artifactId>responsive-auth-core</artifactId>
+            <artifactId>responsive-auth-messaging</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.cloud.functions</groupId>

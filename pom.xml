@@ -19,6 +19,7 @@
     <description>Responsive authentication sample with web UI and receipt processing function</description>
 
     <modules>
+        <module>messaging</module>
         <module>core</module>
         <module>function</module>
     </modules>
@@ -55,6 +56,11 @@
             <dependency>
                 <groupId>dev.pekelund</groupId>
                 <artifactId>responsive-auth-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.pekelund</groupId>
+                <artifactId>responsive-auth-messaging</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

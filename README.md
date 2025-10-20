@@ -90,7 +90,7 @@ The helper infers `FIRESTORE_CREDENTIALS=file:/...` and extracts `GOOGLE_CLIENT_
 
 - **Cloud Run / Google-managed runtimes** – The deployment script (and the console walkthrough) attaches the `cloud-run-runtime` service account directly to the Cloud Run service. Google automatically exchanges that identity for short-lived tokens through [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc), so the container never needs a JSON key file. Leave `FIRESTORE_CREDENTIALS` unset in these environments; the Firestore client uses the attached service account transparently.
 - **Local development / other hosts** – Provide your own credentials via `FIRESTORE_CREDENTIALS_FILE` and source `./scripts/load_local_secrets.sh`, or point the application at the Firestore emulator with `scripts/source_local_env.sh`. These helpers export `FIRESTORE_CREDENTIALS=file:/…` only when you intentionally supply a downloaded key.
-- **Cloud Function** – The deployment script grants the same Firestore permissions to the function’s runtime identity. Like Cloud Run, the managed function never needs a downloaded key unless you run it on your own infrastructure.
+- **Cloud Function** – The deployment script now grants Pub/Sub publish access to the function’s runtime identity. Like Cloud Run, the managed function never needs a downloaded key unless you run it on your own infrastructure.
 
 ### Google Cloud Storage configuration
 
@@ -107,7 +107,7 @@ After completing either path, restart the application and visit <http://localhos
 
 ### Receipt ingestion pipeline (Cloud Function + Pub/Sub)
 
-The `function` module now acts as a lightweight bridge: it listens for finalize events from the receipts bucket, enriches the payload, and publishes a `ReceiptProcessingMessage` to Pub/Sub. The Cloud Run–hosted web application receives those messages through a Pub/Sub push subscription and performs the actual parsing and Firestore persistence.
+The `function` module now acts as a lightweight bridge: it listens for finalize events from the receipts bucket, enriches the payload, and publishes a `ReceiptProcessingMessage` to Pub/Sub. The bridge is implemented with the Functions Framework only—no Spring context is loaded—so the cold-start footprint stays minimal. The Cloud Run–hosted web application receives those messages through a Pub/Sub push subscription and performs the actual parsing and Firestore persistence.
 
 #### Quick deployment
 
@@ -198,9 +198,10 @@ To enable Google sign-in, create OAuth credentials in the Google Cloud Console a
 
 ## Project structure
 
-- `core` – Shared storage services and configuration reused by both the web and function modules.
+- `messaging` – Shared message contracts used by both the Cloud Function and the web service.
+- `core` – Shared storage services and configuration reused by the web module.
 - `web` – Spring MVC application with security, Firestore integration, templates, and static assets.
-- `function` – Cloud Function publisher that forwards Cloud Storage events to Pub/Sub for the web service to process.
+- `function` – Plain Java Cloud Function publisher that forwards Cloud Storage events to Pub/Sub for the web service to process.
 
 ## License
 
