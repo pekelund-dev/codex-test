@@ -3,7 +3,7 @@ package dev.pekelund.pklnd.function;
 import java.util.Map;
 
 /**
- * Configuration values resolved for the receipt parsing Cloud Function.
+ * Configuration values resolved for the receipt parsing Cloud Run service.
  * Vertex AI settings are handled by Spring AI auto-configuration.
  */
 public record ReceiptProcessingSettings(

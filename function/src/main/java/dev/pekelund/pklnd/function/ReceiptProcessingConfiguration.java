@@ -7,7 +7,6 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.vertexai.VertexAI;
 import io.micrometer.observation.ObservationRegistry;
-import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
@@ -27,11 +26,14 @@ import org.springframework.retry.support.RetryTemplate;
 import org.springframework.util.StringUtils;
 import dev.pekelund.pklnd.function.legacy.LegacyPdfReceiptExtractor;
 
+/**
+ * Service configuration for the receipt processing Cloud Run workload.
+ */
 @Configuration
 @Profile("!local-receipt-test")
-public class FunctionConfiguration {
+public class ReceiptProcessingConfiguration {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FunctionConfiguration.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptProcessingConfiguration.class);
 
     @Bean(destroyMethod = "close")
     @Primary
@@ -139,13 +141,5 @@ public class FunctionConfiguration {
     public ReceiptParsingHandler receiptParsingHandler(Storage storage, ReceiptExtractionRepository receiptExtractionRepository,
         ReceiptDataExtractor receiptDataExtractor) {
         return new ReceiptParsingHandler(storage, receiptExtractionRepository, receiptDataExtractor);
-    }
-
-    @Bean("receiptProcessingFunction")
-    public Consumer<String> receiptProcessingFunction(ObjectMapper objectMapper, ReceiptParsingHandler handler) {
-        ReceiptProcessingFunction function = new ReceiptProcessingFunction(objectMapper, handler);
-        LOGGER.info("Exposing receiptProcessingFunction bean backed by ReceiptProcessingFunction instance id {}",
-            System.identityHashCode(function));
-        return function;
     }
 }

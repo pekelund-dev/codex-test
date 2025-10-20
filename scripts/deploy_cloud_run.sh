@@ -9,7 +9,7 @@ REGION="${REGION:-europe-north1}"
 SERVICE_NAME="${SERVICE_NAME:-pklnd-web}"
 SA_NAME="${SA_NAME:-cloud-run-runtime}"
 ARTIFACT_REPO="${ARTIFACT_REPO:-web}"
-# Firestore is shared between the Cloud Run app, the Cloud Function and the user registration flow.
+# Firestore is shared between the Cloud Run web app, the receipt processor, and the user registration flow.
 # Default the shared project to the deployment project, but allow overrides when the
 # Firestore database lives in a different project.
 SHARED_FIRESTORE_PROJECT_ID="${SHARED_FIRESTORE_PROJECT_ID:-${PROJECT_ID}}"
@@ -225,7 +225,8 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --role "roles/secretmanager.secretAccessor" --condition=None || true
 
 # Build and push the image
-IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${SERVICE_NAME}:$(date +%Y%m%d-%H%M%S)"
+IMAGE_RESOURCE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${SERVICE_NAME}"
+IMAGE_URI="${IMAGE_RESOURCE}:$(date +%Y%m%d-%H%M%S)"
 
 gcloud builds submit \
   --tag "$IMAGE_URI"
@@ -245,6 +246,27 @@ gcloud run deploy "$SERVICE_NAME" \
   --set-env-vars "${ENV_VARS_ARG}" \
   --min-instances 0 \
   --max-instances 10
+
+IMAGE_DIGEST_OUTPUT="$(gcloud artifacts docker images list "$IMAGE_RESOURCE" \
+  --sort-by=~UPDATE_TIME \
+  --format="get(digest)")"
+
+if [[ -n "$IMAGE_DIGEST_OUTPUT" ]]; then
+  SKIP_FIRST=true
+  while IFS= read -r digest; do
+    if [[ -z "$digest" ]]; then
+      continue
+    fi
+    if [[ "$SKIP_FIRST" == true ]]; then
+      SKIP_FIRST=false
+      continue
+    fi
+    gcloud artifacts docker images delete "${IMAGE_RESOURCE}@${digest}" \
+      --quiet \
+      --delete-tags \
+      || true
+  done <<< "$IMAGE_DIGEST_OUTPUT"
+fi
 
 # Configure custom domain mapping
 if [[ -n "$DOMAIN" ]]; then

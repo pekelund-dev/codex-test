@@ -12,19 +12,19 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
- * Emits diagnostic logging when the Cloud Function boots so we can verify the
+ * Emits diagnostic logging when the Cloud Run service boots so we can verify the
  * deployed artifact and configuration.
  */
 @Component
-public class FunctionDiagnostics implements ApplicationRunner {
+public class ReceiptProcessorDiagnostics implements ApplicationRunner {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FunctionDiagnostics.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptProcessorDiagnostics.class);
 
     private final Environment environment;
     private final ObjectProvider<VertexAiGeminiChatOptions> chatOptionsProvider;
     private final ObjectProvider<ChatModel> chatModelProvider;
 
-    public FunctionDiagnostics(Environment environment,
+    public ReceiptProcessorDiagnostics(Environment environment,
         ObjectProvider<VertexAiGeminiChatOptions> chatOptionsProvider,
         ObjectProvider<ChatModel> chatModelProvider) {
         this.environment = environment;
@@ -34,7 +34,7 @@ public class FunctionDiagnostics implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        LOGGER.info("ResponsiveAuth receipt function diagnostics starting");
+        LOGGER.info("ResponsiveAuth receipt processor diagnostics starting");
         LOGGER.info("Active Spring profiles: {}", Arrays.toString(environment.getActiveProfiles()));
         LOGGER.info("Resolved Vertex AI configuration - project: {}, location: {}, model: {}",
             environment.getProperty("spring.ai.vertex.ai.gemini.project-id", "(unset)"),

@@ -93,34 +93,26 @@ To pre-create admin or demo accounts without hitting Firestore you can still con
 fallback users through `application.yml`. When Firestore is enabled those fallback users are
 ignored, so the emulator behaves just like the managed service.
 
-## 4. Exercise the receipt parsing function locally
+## 4. Exercise the receipt processing service locally
 
 Two options exist depending on how closely you need to mirror production:
 
-### Option A: Functions Framework (full pipeline)
+### Option A: Full Cloud Run pipeline
 
-When you want to execute the same code that runs in Cloud Functions—including Vertex AI
-requests—use the Functions Framework Maven plugin. Make sure the emulator is running and
-source the local environment helper in the same shell, then add the extra environment
-variables that Vertex AI requires:
+When you want to execute the same code that runs on Cloud Run—including Vertex AI requests—start the service locally with Spring Boot. Make sure the Firestore emulator is running and source the local environment helper in the same shell, then add the extra environment variables that Vertex AI requires:
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/a/service-account.json
 export VERTEX_AI_PROJECT_ID=my-vertex-project
 export VERTEX_AI_LOCATION=us-east1
-./mvnw -pl function -am -DskipTests function:run \
-    -Drun.functions.target=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
-    -Drun.functions.port=8081
+./mvnw -pl function -am spring-boot:run
 ```
 
-Send a Cloud Storage finalize event payload to <http://localhost:8081>. The Firestore
-emulator receives all writes automatically because the `FIRESTORE_EMULATOR_HOST` environment
-variable is already exported.
+Send a Cloud Storage finalize event payload to <http://localhost:8080/events/storage>. The Firestore emulator receives all writes automatically because the `FIRESTORE_EMULATOR_HOST` environment variable is already exported.
 
 ### Option B: Local receipt test profile (emulator only)
 
-If you only need to evaluate the legacy PDF extractor and Firestore writes—without incurring
-Vertex AI costs—start the lightweight Spring profile:
+If you only need to evaluate the legacy PDF extractor and Firestore writes—without incurring Vertex AI costs—start the lightweight Spring profile:
 
 ```bash
 ./mvnw -pl function -am spring-boot:run \

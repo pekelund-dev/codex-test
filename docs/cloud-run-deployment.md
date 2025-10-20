@@ -28,7 +28,7 @@ Replace the placeholders below with your values when following the steps:
 | `IMAGE_URI` | Fully qualified container image reference (e.g., `europe-north1-docker.pkg.dev/PROJECT_ID/web/app:latest`). |
 | `DOMAIN` | Fully qualified domain to map (e.g., `pklnd.pekelund.dev`). |
 | `SA_NAME` | Service account name (e.g., `cloud-run-runtime`). |
-| `SHARED_FIRESTORE_PROJECT_ID` | Project that hosts the single Firestore database used by Cloud Run, Cloud Functions, and user registration. Defaults to `PROJECT_ID`. |
+| `SHARED_FIRESTORE_PROJECT_ID` | Project that hosts the single Firestore database used by Cloud Run services and user registration. Defaults to `PROJECT_ID`. |
 
 ---
 
@@ -36,9 +36,9 @@ Replace the placeholders below with your values when following the steps:
 
 Prefer the repository scripts when you want a repeatable, idempotent rollout:
 
-- `scripts/deploy_cloud_run.sh` provisions APIs, Artifact Registry, Firestore, the runtime service account, and the Cloud Run service. It skips resource creation when assets already exist so re-running the script keeps the current state intact.
-- `scripts/deploy_cloud_function.sh` packages the function with Maven, enables every dependency, and aligns IAM permissions with the shared Firestore project. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely.
-- `scripts/teardown_gcp_resources.sh` removes the Cloud Run service, Cloud Function, IAM bindings, and optional supporting infrastructure. It tolerates partially deleted projects and only removes what is present. Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` when you also want to purge the associated identities or container registry.
+- `scripts/deploy_cloud_run.sh` provisions APIs, Artifact Registry, Firestore, the runtime service account, and the Cloud Run service. It skips resource creation when assets already exist and prunes older container images so Artifact Registry only keeps the latest build.
+- `scripts/deploy_receipt_processor.sh` provisions the receipt processor Cloud Run service, configures Eventarc, aligns IAM permissions with the shared Firestore project, and prunes older container images so Artifact Registry only keeps the newest build. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely.
+- `scripts/teardown_gcp_resources.sh` removes both Cloud Run services, the Eventarc trigger, IAM bindings, and optional supporting infrastructure. It tolerates partially deleted projects and only removes what is present. Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` when you also want to purge the associated identities or container registry.
 
 The rest of this document mirrors what the scripts perform under the hood if you prefer to click through the console or run individual `gcloud` commands.
 
@@ -91,12 +91,12 @@ gcloud firestore databases create --region=REGION --type=firestore-native
 
 ### Share the database across all components
 
-The same Firestore database stores both the **user registration** data managed by the Cloud Run web application and the **receipt extraction** documents persisted by the Cloud Function. To keep data consistent:
+The same Firestore database stores both the **user registration** data managed by the Cloud Run web application and the **receipt extraction** documents persisted by the receipt processor service. To keep data consistent:
 
 1. Use the same `PROJECT_ID` (or explicitly set `SHARED_FIRESTORE_PROJECT_ID`) for every deployment script and console workflow.
 2. Keep the `users` collection for authentication data and `receiptExtractions` for parsed receipts in the same database.
-3. Reuse the runtime service accounts created in this guide (or grant them `roles/datastore.user`) so the Cloud Run service, Cloud Function, and any local admin scripts can all read/write the shared documents.
-4. When setting environment variables, ensure `FIRESTORE_PROJECT_ID` (Cloud Run) and `RECEIPT_FIRESTORE_PROJECT_ID` (Cloud Function) point to this project. If you override collection names, update both components accordingly.
+3. Reuse the runtime service accounts created in this guide (or grant them `roles/datastore.user`) so both Cloud Run services and any local admin scripts can all read/write the shared documents.
+4. When setting environment variables, ensure `FIRESTORE_PROJECT_ID` (Cloud Run) and `RECEIPT_FIRESTORE_PROJECT_ID` (receipt processor) point to this project. If you override collection names, update both components accordingly.
 
 > 💡 **No service-account keys needed on Cloud Run:** the deployed service automatically authenticates with Firestore through its runtime service account. Leave `FIRESTORE_CREDENTIALS` unset when running on Cloud Run or other Google Cloud hosts that support [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc). Only create JSON keys for local development or third-party platforms that cannot use Workload Identity.
 

@@ -6,7 +6,7 @@ package dev.pekelund.pklnd.function;
 public enum ReceiptProcessingStatus {
 
     /**
-     * The receipt was uploaded and the parsing function has acknowledged the event.
+     * The receipt was uploaded and the parsing service has acknowledged the event.
      */
     RECEIVED,
 

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 
 /**
- * Minimal representation of the Cloud Storage event payload used by the function.
+ * Minimal representation of the Cloud Storage event payload used by the receipt processor.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class StorageObjectEvent {

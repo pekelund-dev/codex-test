@@ -4,12 +4,12 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * Spring Boot application for Cloud Function auto-configuration.
+ * Spring Boot application entry point for the receipt processing service.
  */
 @SpringBootApplication
-public class FunctionApplication {
-    
+public class ReceiptProcessorApplication {
+
     public static void main(String[] args) {
-        SpringApplication.run(FunctionApplication.class, args);
+        SpringApplication.run(ReceiptProcessorApplication.class, args);
     }
 }

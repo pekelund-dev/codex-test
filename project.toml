@@ -1,6 +1,10 @@
 [[build.env]]
-name = "GOOGLE_FUNCTION_TARGET"
-value = "dev.pekelund.pklnd.function.ReceiptProcessingFunction"
+name = "GOOGLE_BUILDABLE"
+value = "function"
+
+[[build.env]]
+name = "GOOGLE_RUNTIME_VERSION"
+value = "21"
 
 [[build.env]]
 name = "MAVEN_BUILD_ARGUMENTS"
