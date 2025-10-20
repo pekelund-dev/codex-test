@@ -149,6 +149,8 @@ Before deploying, make sure the receipt processor module builds cleanly and that
     gcloud projects add-iam-policy-binding "${PROJECT_ID}" \n      --member="serviceAccount:${RECEIPT_SA}" \n      --role="roles/datastore.user"
 
     gcloud projects add-iam-policy-binding "${PROJECT_ID}" \n      --member="serviceAccount:${RECEIPT_SA}" \n      --role="roles/aiplatform.user"
+
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \n      --member="serviceAccount:${RECEIPT_SA}" \n      --role="roles/eventarc.eventReceiver"
     ```
 
 3. **Grant the Eventarc service agent permission to impersonate the service account** (required for trigger deliveries):
@@ -261,6 +263,9 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${RECEIPT_SA}" \
   --role="roles/aiplatform.user"
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${RECEIPT_SA}" \
+  --role="roles/eventarc.eventReceiver"
 gcloud storage buckets add-iam-policy-binding gs://your-bucket \
   --member="serviceAccount:${RECEIPT_SA}" \
   --role="roles/storage.objectAdmin"

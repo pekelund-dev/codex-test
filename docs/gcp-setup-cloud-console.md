@@ -93,6 +93,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
      - **Storage Object Admin** on the receipts bucket.
      - **Datastore User** for Firestore access.
      - **Vertex AI User** to invoke Gemini models.
+     - **Eventarc Event Receiver** so triggers can deliver storage events.
 
 3. **Build and publish the container image**
    - Open **Cloud Build → Builds → Create** and select **Container image**.

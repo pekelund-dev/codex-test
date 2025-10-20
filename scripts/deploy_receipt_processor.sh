@@ -143,6 +143,10 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:${SA_EMAIL}" \
   --role "roles/aiplatform.user" --condition=None || true
 
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:${SA_EMAIL}" \
+  --role "roles/eventarc.eventReceiver" --condition=None || true
+
 gcloud storage buckets add-iam-policy-binding "gs://${GCS_BUCKET}" \
   --member "serviceAccount:${SA_EMAIL}" \
   --role "roles/storage.objectAdmin" \
