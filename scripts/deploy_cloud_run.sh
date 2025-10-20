@@ -259,7 +259,6 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances 10
 
 if ! IMAGE_DIGEST_OUTPUT="$(gcloud artifacts docker images list "$IMAGE_RESOURCE" \
-  --location="$REGION" \
   --sort-by=~UPDATE_TIME \
   --format="get(digest)")"; then
   echo "Failed to list existing image digests; skipping Artifact Registry cleanup." >&2
@@ -277,7 +276,6 @@ if [[ -n "$IMAGE_DIGEST_OUTPUT" ]]; then
       continue
     fi
     gcloud artifacts docker images delete "${IMAGE_RESOURCE}@${digest}" \
-      --location="$REGION" \
       --quiet \
       --delete-tags \
       || true
