@@ -184,14 +184,7 @@ Before deploying, make sure the receipt processor module builds cleanly and that
 3. **Prune older container images** so Artifact Registry keeps only the latest build.
 
     ```bash
-    IMAGE_RESOURCE=${IMAGE_REPO}/pklnd-receipts
-    for digest in $(gcloud artifacts docker images list "${IMAGE_RESOURCE}" \
-      --sort-by=~UPDATE_TIME \
-      --format="get(digest)" | tail -n +2); do
-      gcloud artifacts docker images delete "${IMAGE_RESOURCE}@${digest}" \
-        --quiet \
-        --delete-tags
-    done
+    ./scripts/cleanup_artifact_repos.sh
     ```
 
 ### Configure the Eventarc trigger

@@ -49,7 +49,7 @@ The `setup-env.sh` script automatically configures:
    > automatically append `oauth` to `SPRING_PROFILES_ACTIVE`. For manual runs add `SPRING_PROFILES_ACTIVE=local,oauth` (or
    > `prod,oauth` in production).
 
-   The `scripts/deploy_cloud_run.sh` helper builds a timestamped container image and deletes older revisions so Artifact Registry only keeps the most recent web application build. It relies on the repository’s multi-stage `Dockerfile` (located at the project root by default); export `BUILD_CONTEXT` when you keep the Dockerfile in another directory.
+   The `scripts/deploy_cloud_run.sh` helper builds a timestamped container image ready for Cloud Run deployments. Run `./scripts/cleanup_artifact_repos.sh` after deployments to prune older revisions so Artifact Registry only keeps the most recent web application and receipt processor builds. The deploy script relies on the repository’s multi-stage `Dockerfile` (located at the project root by default); export `BUILD_CONTEXT` when you keep the Dockerfile in another directory.
 
 3. Configure Firestore if you want to enable user self-registration (see [Firestore configuration](#firestore-configuration)).
 4. (Optional) Configure Google Cloud Storage to enable the receipts upload page (see
@@ -125,7 +125,7 @@ This script automatically:
 - Creates and configures the dedicated receipt processor service account with the correct IAM roles
 - Detects the Cloud Storage bucket region and deploys the Cloud Run service there
 - Builds and deploys the container image via Cloud Build
-- Removes older container images so Artifact Registry only retains the most recent build
+- Can be paired with `./scripts/cleanup_artifact_repos.sh` to remove older container images so Artifact Registry only retains the most recent builds
 - Configures an Eventarc trigger so Storage finalize events invoke the service
 
 #### Teardown

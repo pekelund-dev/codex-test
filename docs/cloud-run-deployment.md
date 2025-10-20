@@ -36,8 +36,9 @@ Replace the placeholders below with your values when following the steps:
 
 Prefer the repository scripts when you want a repeatable, idempotent rollout:
 
-- `scripts/deploy_cloud_run.sh` provisions APIs, Artifact Registry, Firestore, the runtime service account, and the Cloud Run service. It skips resource creation when assets already exist, prunes older container images so Artifact Registry only keeps the latest build, and expects the repository `Dockerfile` at the project root (set `BUILD_CONTEXT` if you store it elsewhere).
-- `scripts/deploy_receipt_processor.sh` provisions the receipt processor Cloud Run service, configures Eventarc, aligns IAM permissions with the shared Firestore project, and prunes older container images so Artifact Registry only keeps the newest build. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely.
+- `scripts/deploy_cloud_run.sh` provisions APIs, Artifact Registry, Firestore, the runtime service account, and the Cloud Run service. It skips resource creation when assets already exist and expects the repository `Dockerfile` at the project root (set `BUILD_CONTEXT` if you store it elsewhere).
+- `scripts/deploy_receipt_processor.sh` provisions the receipt processor Cloud Run service, configures Eventarc, and aligns IAM permissions with the shared Firestore project. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely.
+- `scripts/cleanup_artifact_repos.sh` prunes older container images from both Artifact Registry repositories, keeping only the newest build for each Cloud Run service.
 - `scripts/teardown_gcp_resources.sh` removes both Cloud Run services, the Eventarc trigger, IAM bindings, and optional supporting infrastructure. It tolerates partially deleted projects and only removes what is present. Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` when you also want to purge the associated identities or container registry.
 
 The rest of this document mirrors what the scripts perform under the hood if you prefer to click through the console or run individual `gcloud` commands.

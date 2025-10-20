@@ -258,30 +258,6 @@ gcloud run deploy "$SERVICE_NAME" \
   --min-instances 0 \
   --max-instances 10
 
-if ! IMAGE_DIGEST_OUTPUT="$(gcloud artifacts docker images list "$IMAGE_RESOURCE" \
-  --sort-by=~UPDATE_TIME \
-  --format="get(digest)")"; then
-  echo "Failed to list existing image digests; skipping Artifact Registry cleanup." >&2
-  IMAGE_DIGEST_OUTPUT=""
-fi
-
-if [[ -n "$IMAGE_DIGEST_OUTPUT" ]]; then
-  SKIP_FIRST=true
-  while IFS= read -r digest; do
-    if [[ -z "$digest" ]]; then
-      continue
-    fi
-    if [[ "$SKIP_FIRST" == true ]]; then
-      SKIP_FIRST=false
-      continue
-    fi
-    gcloud artifacts docker images delete "${IMAGE_RESOURCE}@${digest}" \
-      --quiet \
-      --delete-tags \
-      || true
-  done <<< "$IMAGE_DIGEST_OUTPUT"
-fi
-
 # Configure custom domain mapping
 if [[ -n "$DOMAIN" ]]; then
   if gcloud beta run domain-mappings describe \

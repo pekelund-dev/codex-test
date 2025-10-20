@@ -4,7 +4,8 @@
 # Bootstrap the entire GCP environment from scratch
 clear && source ./setup-env.sh && \
     ./scripts/deploy_cloud_run.sh && \
-    ./scripts/deploy_receipt_processor.sh
+    ./scripts/deploy_receipt_processor.sh && \
+    ./scripts/cleanup_artifact_repos.sh
 
 # Tear everything down (set DELETE_* flags if you also want service accounts or
 # Artifact Registry repositories removed)
