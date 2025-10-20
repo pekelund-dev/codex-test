@@ -138,6 +138,11 @@ gcloud services enable
 ./mvnw -pl function -am clean package -DskipTests
 ```
 
+> The repository's `project.toml` sets `BP_MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests clean package`
+> so Cloud Build executes the same multi-module command during `gcloud functions deploy`.
+> Keep that override in sync with the local build steps to ensure the messaging jar is
+> available when the Functions Framework stages dependencies.
+
 ### Create a minimal service account
 
 ```bash

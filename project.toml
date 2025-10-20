@@ -6,3 +6,7 @@ value = "true"
 name = "BP_JVM_VERSION"
 value = "21"
 
+[[build.env]]
+name = "BP_MAVEN_BUILD_ARGUMENTS"
+value = "-pl function -am -DskipTests clean package"
+
