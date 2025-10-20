@@ -94,9 +94,10 @@ echo "🛠️  Building function module..."
 ./mvnw -q -pl function -am -DskipTests clean package
 
 ENV_VARS="RECEIPT_PUBSUB_TOPIC=${RECEIPT_PUBSUB_TOPIC},RECEIPT_PUBSUB_PROJECT_ID=${RECEIPT_PUBSUB_PROJECT_ID}"
-BUILD_ENV_VARS="BP_MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests clean package"
+BUILD_ARGS="-pl function -am -DskipTests clean package"
+BUILD_ENV_FLAG="--set-build-env-vars=^:^BP_MAVEN_BUILD_ARGUMENTS=${BUILD_ARGS}"
 
-echo "🧰  Configured Cloud Build to run: ${BUILD_ENV_VARS#BP_MAVEN_BUILD_ARGUMENTS=}"
+echo "🧰  Configured Cloud Build to run: $BUILD_ARGS"
 
 echo "🏗️  Deploying Cloud Function..."
 gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
@@ -111,7 +112,7 @@ gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
   --service-account="$FUNCTION_SA" \
   --trigger-bucket="$GCS_BUCKET" \
   --set-env-vars="$ENV_VARS" \
-  --build-env-vars="$BUILD_ENV_VARS"
+  "$BUILD_ENV_FLAG"
 
 echo "🎉 Cloud Function deployed successfully!"
 echo
