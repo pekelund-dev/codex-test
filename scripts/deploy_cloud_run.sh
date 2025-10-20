@@ -258,25 +258,36 @@ gcloud run deploy "$SERVICE_NAME" \
   --min-instances 0 \
   --max-instances 10
 
-IMAGE_DIGEST_OUTPUT="$(gcloud artifacts docker images list "$IMAGE_RESOURCE" \
-  --sort-by=~UPDATE_TIME \
-  --format="get(digest)")"
+if ! TAG_DIGESTS="$(gcloud artifacts docker tags list "$IMAGE_RESOURCE" \
+  --sort-by=~updateTime \
+  --format="get(digest)")"; then
+  echo "Failed to list existing image digests; skipping Artifact Registry cleanup." >&2
+  TAG_DIGESTS=""
+fi
 
-if [[ -n "$IMAGE_DIGEST_OUTPUT" ]]; then
-  SKIP_FIRST=true
-  while IFS= read -r digest; do
-    if [[ -z "$digest" ]]; then
-      continue
-    fi
-    if [[ "$SKIP_FIRST" == true ]]; then
-      SKIP_FIRST=false
-      continue
-    fi
-    gcloud artifacts docker images delete "${IMAGE_RESOURCE}@${digest}" \
+mapfile -t _raw_digests <<<"$TAG_DIGESTS"
+
+declare -A _seen_digests=()
+declare -a IMAGE_DIGESTS=()
+
+for digest in "${_raw_digests[@]}"; do
+  if [[ -z "$digest" ]]; then
+    continue
+  fi
+  if [[ -z "${_seen_digests[$digest]:-}" ]]; then
+    _seen_digests["$digest"]=1
+    IMAGE_DIGESTS+=("$digest")
+  fi
+done
+
+if (( ${#IMAGE_DIGESTS[@]} > 1 )); then
+  for ((i = 1; i < ${#IMAGE_DIGESTS[@]}; i++)); do
+    old_digest="${IMAGE_DIGESTS[i]}"
+    gcloud artifacts docker images delete "${IMAGE_RESOURCE}@${old_digest}" \
       --quiet \
       --delete-tags \
       || true
-  done <<< "$IMAGE_DIGEST_OUTPUT"
+  done
 fi
 
 # Configure custom domain mapping
