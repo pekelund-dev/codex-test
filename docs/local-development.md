@@ -51,7 +51,7 @@ source ./scripts/source_local_env.sh
 The script performs the following configuration:
 
 - Sets `FIRESTORE_ENABLED=true` so the web app uses Firestore instead of the in-memory fallback.
-- Points `FIRESTORE_PROJECT_ID`, `RECEIPT_FIRESTORE_PROJECT_ID`, and `GOOGLE_CLOUD_PROJECT`
+- Points `FIRESTORE_PROJECT_ID` and `GOOGLE_CLOUD_PROJECT`
   to the local logical project (`responsive-auth-local` by default).
 - Publishes `FIRESTORE_EMULATOR_HOST=localhost:8085` and clears credential variables so the
   Firestore SDK automatically targets the emulator with anonymous authentication.
@@ -97,44 +97,24 @@ ignored, so the emulator behaves just like the managed service.
 
 Two options exist depending on how closely you need to mirror production:
 
-### Option A: Functions Framework (full pipeline)
+### Option A: Functions Framework (publish-only simulation)
 
-When you want to execute the same code that runs in Cloud Functions—including Vertex AI
-requests—use the Functions Framework Maven plugin. Make sure the emulator is running and
-source the local environment helper in the same shell, then add the extra environment
-variables that Vertex AI requires:
+When you want to emulate the Cloud Function that publishes Pub/Sub notifications, run the
+Functions Framework Maven plugin. Make sure the emulator is running and source the local
+environment helper in the same shell. Provide credentials that allow the function to read
+from Cloud Storage and publish to Pub/Sub if you are not using the emulators:
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/a/service-account.json
-export VERTEX_AI_PROJECT_ID=my-vertex-project
-export VERTEX_AI_LOCATION=us-east1
+export RECEIPT_PUBSUB_TOPIC=${RECEIPT_PUBSUB_TOPIC:-receipt-processing}
 ./mvnw -pl function -am -DskipTests function:run \
-    -Drun.functions.target=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
+    -Drun.functions.target=dev.pekelund.pklnd.function.ReceiptEventPublisher \
     -Drun.functions.port=8081
 ```
 
-Send a Cloud Storage finalize event payload to <http://localhost:8081>. The Firestore
-emulator receives all writes automatically because the `FIRESTORE_EMULATOR_HOST` environment
-variable is already exported.
-
-### Option B: Local receipt test profile (emulator only)
-
-If you only need to evaluate the legacy PDF extractor and Firestore writes—without incurring
-Vertex AI costs—start the lightweight Spring profile:
-
-```bash
-./mvnw -pl function -am spring-boot:run \
-    -Dspring-boot.run.profiles=local-receipt-test
-```
-
-Submit a PDF for parsing:
-
-```bash
-curl -F "file=@test-receipt.pdf" http://localhost:8080/local-receipts/parse | jq
-```
-
-The handler writes the structured output to the Firestore emulator so you can review it in
-another terminal or export it later.
+Send a Cloud Storage finalize event payload to <http://localhost:8081>. The web application
+running locally (or in Cloud Run) consumes the Pub/Sub message and stores the parsed
+receipts in Firestore.
 
 ## 5. Inspecting emulator data
 
@@ -148,7 +128,7 @@ curl "http://${FIRESTORE_EMULATOR_HOST}/v1/projects/${FIRESTORE_PROJECT_ID}/data
 Or query receipt extraction results:
 
 ```bash
-curl "http://${FIRESTORE_EMULATOR_HOST}/v1/projects/${RECEIPT_FIRESTORE_PROJECT_ID}/databases/(default)/documents/${RECEIPT_FIRESTORE_COLLECTION}"
+curl "http://${FIRESTORE_EMULATOR_HOST}/v1/projects/${FIRESTORE_PROJECT_ID}/databases/(default)/documents/${RECEIPT_FIRESTORE_COLLECTION}"
 ```
 
 Because the emulator does not enforce authentication, these endpoints are reachable without

@@ -9,6 +9,10 @@ REGION="${REGION:-europe-north1}"
 SERVICE_NAME="${SERVICE_NAME:-pklnd-web}"
 SA_NAME="${SA_NAME:-cloud-run-runtime}"
 ARTIFACT_REPO="${ARTIFACT_REPO:-web}"
+# Pub/Sub topic and subscription used for receipt processing requests.
+RECEIPT_PUBSUB_TOPIC="${RECEIPT_PUBSUB_TOPIC:-receipt-processing}"
+RECEIPT_PUBSUB_PROJECT_ID="${RECEIPT_PUBSUB_PROJECT_ID:-${PROJECT_ID}}"
+RECEIPT_PUBSUB_SUBSCRIPTION="${RECEIPT_PUBSUB_SUBSCRIPTION:-receipt-processing-web}"
 # Firestore is shared between the Cloud Run app, the Cloud Function and the user registration flow.
 # Default the shared project to the deployment project, but allow overrides when the
 # Firestore database lives in a different project.
@@ -99,6 +103,15 @@ if [[ -z "${GCS_BUCKET:-}" ]]; then
   exit 1
 fi
 
+if [[ -z "${RECEIPT_PROCESSING_PUBSUB_VERIFICATION_TOKEN:-}" ]]; then
+  RECEIPT_PROCESSING_PUBSUB_VERIFICATION_TOKEN="$(python3 - <<'PY'
+import secrets
+print(secrets.token_urlsafe(32))
+PY
+)"
+  echo "🔑 Generated Pub/Sub verification token for receipt processing endpoint"
+fi
+
 ACTIVE_PROFILES="${SPRING_PROFILES_ACTIVE:-prod}"
 if [[ ",${ACTIVE_PROFILES}," != *",oauth,"* ]]; then
   ACTIVE_PROFILES="${ACTIVE_PROFILES},oauth"
@@ -115,6 +128,7 @@ append_env_var "GCS_ENABLED" "${GCS_ENABLED:-true}"
 append_env_var "GCS_PROJECT_ID" "${SHARED_GCS_PROJECT_ID:-}"
 append_env_var "GCS_BUCKET" "${GCS_BUCKET:-}"
 append_env_var "GCS_CREDENTIALS" "${GCS_CREDENTIALS:-}"
+append_env_var "RECEIPT_PROCESSING_PUBSUB_VERIFICATION_TOKEN" "${RECEIPT_PROCESSING_PUBSUB_VERIFICATION_TOKEN:-}"
 
 choose_env_delimiter() {
   local candidates=("|" "@" ":" ";" "#" "+" "~" "^" "%" "?")
@@ -167,6 +181,7 @@ gcloud services enable \
   artifactregistry.googleapis.com \
   firestore.googleapis.com \
   storage.googleapis.com \
+  pubsub.googleapis.com \
   secretmanager.googleapis.com \
   --quiet
 
@@ -223,6 +238,14 @@ fi
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:${SA_EMAIL}" \
   --role "roles/secretmanager.secretAccessor" --condition=None || true
+
+PUBSUB_TOPIC_PATH="projects/${RECEIPT_PUBSUB_PROJECT_ID}/topics/${RECEIPT_PUBSUB_TOPIC}"
+echo "📬 Ensuring Pub/Sub topic $PUBSUB_TOPIC_PATH exists..."
+if ! gcloud pubsub topics describe "$PUBSUB_TOPIC_PATH" --format="value(name)" >/dev/null 2>&1; then
+  gcloud pubsub topics create "$PUBSUB_TOPIC_PATH"
+else
+  echo "Pub/Sub topic already present"
+fi
 
 # Build and push the image
 IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${SERVICE_NAME}:$(date +%Y%m%d-%H%M%S)"
@@ -290,6 +313,22 @@ SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
   --format "value(status.url)")
 
 echo "Service deployed: ${SERVICE_URL}"
+
+PUSH_ENDPOINT="${SERVICE_URL}/internal/pubsub/receipt-processing"
+SUBSCRIPTION_PATH="projects/${RECEIPT_PUBSUB_PROJECT_ID}/subscriptions/${RECEIPT_PUBSUB_SUBSCRIPTION}"
+echo "📨 Configuring Pub/Sub push subscription ${SUBSCRIPTION_PATH} -> ${PUSH_ENDPOINT}"
+if gcloud pubsub subscriptions describe "$SUBSCRIPTION_PATH" --format="value(name)" >/dev/null 2>&1; then
+  gcloud pubsub subscriptions update "$SUBSCRIPTION_PATH" \
+    --push-endpoint="$PUSH_ENDPOINT" \
+    --push-token="$RECEIPT_PROCESSING_PUBSUB_VERIFICATION_TOKEN"
+else
+  gcloud pubsub subscriptions create "$SUBSCRIPTION_PATH" \
+    --topic="$PUBSUB_TOPIC_PATH" \
+    --push-endpoint="$PUSH_ENDPOINT" \
+    --push-token="$RECEIPT_PROCESSING_PUBSUB_VERIFICATION_TOKEN"
+fi
+
+echo "Pub/Sub verification token: ${RECEIPT_PROCESSING_PUBSUB_VERIFICATION_TOKEN}"
 
 gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=${SERVICE_NAME}" \
   --limit 20 \

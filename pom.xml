@@ -37,7 +37,8 @@
         <google-cloud-firestore.version>3.33.0</google-cloud-firestore.version>
         <google-cloud-storage.version>2.40.1</google-cloud-storage.version>
         <google-cloud-vertexai.version>1.35.0</google-cloud-vertexai.version>
-        <google-cloud-functions-framework.version>1.1.0</google-cloud-functions-framework.version>
+        <google-cloud-functions-framework.version>1.1.4</google-cloud-functions-framework.version>
+        <google-cloud-pubsub.version>1.99.0</google-cloud-pubsub.version>
         <spring-ai.version>1.0.2</spring-ai.version>
         <spring-cloud-function.version>4.1.2</spring-cloud-function.version>
     </properties>

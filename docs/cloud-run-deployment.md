@@ -37,7 +37,7 @@ Replace the placeholders below with your values when following the steps:
 Prefer the repository scripts when you want a repeatable, idempotent rollout:
 
 - `scripts/deploy_cloud_run.sh` provisions APIs, Artifact Registry, Firestore, the runtime service account, and the Cloud Run service. It skips resource creation when assets already exist so re-running the script keeps the current state intact.
-- `scripts/deploy_cloud_function.sh` packages the function with Maven, enables every dependency, and aligns IAM permissions with the shared Firestore project. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely.
+- `scripts/deploy_cloud_function.sh` builds the lightweight Cloud Storage trigger, provisions the Pub/Sub topic used to fan out receipt work, and grants the function publish permissions. Existing buckets, topics, and bindings are detected so the script can be executed multiple times safely.
 - `scripts/teardown_gcp_resources.sh` removes the Cloud Run service, Cloud Function, IAM bindings, and optional supporting infrastructure. It tolerates partially deleted projects and only removes what is present. Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` when you also want to purge the associated identities or container registry.
 
 The rest of this document mirrors what the scripts perform under the hood if you prefer to click through the console or run individual `gcloud` commands.
@@ -55,6 +55,7 @@ The rest of this document mirrors what the scripts perform under the hood if you
    - Artifact Registry API (or Container Registry if you still use it)
    - Firestore API
    - Cloud Storage API (required for receipt uploads)
+   - Pub/Sub API (connects the Cloud Function publisher with the Cloud Run subscriber)
    - Secret Manager API (if the app reads secrets)
 
 ### CLI
@@ -65,6 +66,7 @@ gcloud services enable \
   cloudbuild.googleapis.com \
   artifactregistry.googleapis.com \
   firestore.googleapis.com \
+  pubsub.googleapis.com \
   secretmanager.googleapis.com
 ```
 
@@ -91,12 +93,12 @@ gcloud firestore databases create --region=REGION --type=firestore-native
 
 ### Share the database across all components
 
-The same Firestore database stores both the **user registration** data managed by the Cloud Run web application and the **receipt extraction** documents persisted by the Cloud Function. To keep data consistent:
+The same Firestore database stores both the **user registration** data managed by the Cloud Run web application and the **receipt extraction** documents written after the web service processes Pub/Sub notifications from the Cloud Function. To keep data consistent:
 
 1. Use the same `PROJECT_ID` (or explicitly set `SHARED_FIRESTORE_PROJECT_ID`) for every deployment script and console workflow.
 2. Keep the `users` collection for authentication data and `receiptExtractions` for parsed receipts in the same database.
-3. Reuse the runtime service accounts created in this guide (or grant them `roles/datastore.user`) so the Cloud Run service, Cloud Function, and any local admin scripts can all read/write the shared documents.
-4. When setting environment variables, ensure `FIRESTORE_PROJECT_ID` (Cloud Run) and `RECEIPT_FIRESTORE_PROJECT_ID` (Cloud Function) point to this project. If you override collection names, update both components accordingly.
+3. Reuse the runtime service accounts created in this guide (or grant them `roles/datastore.user`) so the Cloud Run service and any local admin scripts can all read/write the shared documents.
+4. When setting environment variables, ensure `FIRESTORE_PROJECT_ID` (Cloud Run) points to this project. The Cloud Function only needs permission to publish to the Pub/Sub topic and no longer accesses Firestore directly.
 
 > 💡 **No service-account keys needed on Cloud Run:** the deployed service automatically authenticates with Firestore through its runtime service account. Leave `FIRESTORE_CREDENTIALS` unset when running on Cloud Run or other Google Cloud hosts that support [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc). Only create JSON keys for local development or third-party platforms that cannot use Workload Identity.
 
@@ -153,7 +155,58 @@ Cloud Run automatically injects the attached service account as [Application Def
 
 ---
 
-## 4. Build and Push the Container Image
+## 4. Configure the Receipt Processing Pub/Sub Pipeline
+
+The Cloud Function no longer parses receipts directly. Instead it publishes a compact
+message describing the uploaded object to a Pub/Sub topic. The Cloud Run service
+subscribes to that topic, downloads the receipt, and persists the parsed data. Keep
+the topic name consistent between the function and Cloud Run deployments so the
+bridge remains connected.
+
+### Create the topic
+
+Use the same project that hosts the Cloud Run deployment (override if you keep topics
+in a central messaging project):
+
+```bash
+gcloud pubsub topics create projects/${RECEIPT_PUBSUB_PROJECT_ID}/topics/${RECEIPT_PUBSUB_TOPIC}
+```
+
+If the topic already exists, the command prints an error you can safely ignore.
+
+### Configure the push subscription
+
+After Cloud Run is deployed you will know the service URL. Point a push subscription at
+`https://SERVICE_URL/internal/pubsub/receipt-processing` so Pub/Sub can deliver messages.
+The deployment script generates and injects a shared secret
+(`RECEIPT_PROCESSING_PUBSUB_VERIFICATION_TOKEN`) that must match the `--push-token`
+value. To create or update the subscription manually:
+
+```bash
+SERVICE_URL="$(gcloud run services describe ${SERVICE_NAME} --region=${REGION} --format='value(status.url)')"
+PUSH_ENDPOINT="${SERVICE_URL}/internal/pubsub/receipt-processing"
+SUBSCRIPTION_PATH="projects/${RECEIPT_PUBSUB_PROJECT_ID}/subscriptions/${RECEIPT_PUBSUB_SUBSCRIPTION}"
+
+# Create or update the subscription depending on whether it already exists
+if gcloud pubsub subscriptions describe "${SUBSCRIPTION_PATH}" --format='value(name)' >/dev/null 2>&1; then
+  gcloud pubsub subscriptions update "${SUBSCRIPTION_PATH}" \
+    --push-endpoint="${PUSH_ENDPOINT}" \
+    --push-token="${RECEIPT_PROCESSING_PUBSUB_VERIFICATION_TOKEN}"
+else
+  gcloud pubsub subscriptions create "${SUBSCRIPTION_PATH}" \
+    --topic="projects/${RECEIPT_PUBSUB_PROJECT_ID}/topics/${RECEIPT_PUBSUB_TOPIC}" \
+    --push-endpoint="${PUSH_ENDPOINT}" \
+    --push-token="${RECEIPT_PROCESSING_PUBSUB_VERIFICATION_TOKEN}"
+fi
+```
+
+If you rotate the verification token, redeploy Cloud Run with the new environment
+variable and re-run the subscription command so Pub/Sub sends the updated token in the
+`Ce-Token` header.
+
+---
+
+## 5. Build and Push the Container Image
 
 ### Console (Cloud Build)
 

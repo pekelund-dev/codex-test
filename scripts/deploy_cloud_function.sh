@@ -1,11 +1,5 @@
-#!/bin/bash
-
-# Cloud Function Deployment Script for Receipt Processing
-# This script automates the deployment of the receiptProcessingFunction
-# incorporating all the troubleshooting steps and best practices
-
-set -euo pipefail  # Exit on any error and propagate pipe failures
-IFS=$'\n\t'
+#!/usr/bin/env bash
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -14,191 +8,112 @@ cd "$REPO_ROOT"
 
 echo "🚀 Starting Cloud Function deployment..."
 
-# Source environment variables
-if [ -f "$REPO_ROOT/setup-env.sh" ]; then
-    # shellcheck source=/dev/null
-    source "$REPO_ROOT/setup-env.sh"
+if [[ -f "$REPO_ROOT/setup-env.sh" ]]; then
+  # shellcheck source=/dev/null
+  source "$REPO_ROOT/setup-env.sh"
 else
-    echo "❌ setup-env.sh not found in $REPO_ROOT. Please create it before running this script."
-    exit 1
+  echo "❌ setup-env.sh not found in $REPO_ROOT. Please create it before running this script." >&2
+  exit 1
 fi
 
-# Ensure CLOUD_FUNCTION_NAME is always set to a sensible default
 : "${CLOUD_FUNCTION_NAME:=receiptProcessingFunction}"
+: "${RECEIPT_PUBSUB_TOPIC:=receipt-processing}"
+: "${RECEIPT_PUBSUB_PROJECT_ID:=${PROJECT_ID:-$(gcloud config get-value project)}}"
 
-if [ -z "$CLOUD_FUNCTION_NAME" ]; then
-    echo "❌ CLOUD_FUNCTION_NAME must be set before deploying."
-    exit 1
+if [[ -z "${PROJECT_ID:-}" ]]; then
+  PROJECT_ID="$(gcloud config get-value project)"
 fi
 
-# Check if we're in the correct project and make sure every component points to the same Firestore database
-PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project)}"
-CURRENT_PROJECT=$(gcloud config get-value project)
-if [ "$CURRENT_PROJECT" != "$PROJECT_ID" ]; then
-    echo "⚠️  Switching to project: $PROJECT_ID"
-    gcloud config set project "$PROJECT_ID"
+if [[ -z "$PROJECT_ID" ]]; then
+  echo "❌ PROJECT_ID must be set before deploying." >&2
+  exit 1
+fi
+
+gcloud config set project "$PROJECT_ID" >/dev/null
+
+if [[ -z "${GCS_BUCKET:-}" ]]; then
+  echo "❌ GCS_BUCKET must be defined so the function can listen for uploads." >&2
+  exit 1
 fi
 
 FUNCTION_SA=${FUNCTION_SA:-"receipt-parser@${PROJECT_ID}.iam.gserviceaccount.com"}
-: "${RECEIPT_FIRESTORE_PROJECT_ID:=$PROJECT_ID}"
+
 echo "👤 Using service account: $FUNCTION_SA"
 
-# Check bucket region
 echo "📍 Checking bucket region..."
-BUCKET_REGION=$(gcloud storage buckets describe gs://$GCS_BUCKET --format="value(location)" 2>/dev/null || echo "")
-
-if [ -z "$BUCKET_REGION" ]; then
-    echo "❌ Could not determine bucket region for gs://$GCS_BUCKET"
-    echo "Please ensure the bucket exists and you have access to it."
-    exit 1
+BUCKET_REGION=$(gcloud storage buckets describe "gs://$GCS_BUCKET" --format="value(location)" 2>/dev/null || true)
+if [[ -z "$BUCKET_REGION" ]]; then
+  echo "❌ Could not determine region for gs://$GCS_BUCKET" >&2
+  exit 1
 fi
 
-echo "✅ Bucket $GCS_BUCKET is in region: $BUCKET_REGION"
-
-# Use bucket region for function deployment
-REGION=$(echo $BUCKET_REGION | tr '[:upper:]' '[:lower:]')
+REGION="${BUCKET_REGION,,}"
 echo "📍 Using region $REGION for function deployment"
 
-if [ -z "${VERTEX_AI_LOCATION:-}" ]; then
-    VERTEX_AI_LOCATION="$REGION"
-    echo "ℹ️  Defaulting Vertex AI location to $VERTEX_AI_LOCATION to match the deployment region"
-else
-    echo "📍 Using Vertex AI location $VERTEX_AI_LOCATION"
-fi
-
-FUNCTION_ENV_VARS="VERTEX_AI_PROJECT_ID=$PROJECT_ID,VERTEX_AI_LOCATION=$VERTEX_AI_LOCATION,VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=$RECEIPT_FIRESTORE_PROJECT_ID,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,SPRING_CLOUD_FUNCTION_DEFINITION=receiptProcessingFunction"
-
-# Enable required APIs
 echo "🔧 Enabling required Google Cloud APIs..."
 gcloud services enable \
-    cloudfunctions.googleapis.com \
-    cloudbuild.googleapis.com \
-    artifactregistry.googleapis.com \
-    run.googleapis.com \
-    aiplatform.googleapis.com \
-    eventarc.googleapis.com \
-    firestore.googleapis.com \
-    storage.googleapis.com \
-    pubsub.googleapis.com \
-    --quiet
-
+  cloudfunctions.googleapis.com \
+  cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com \
+  eventarc.googleapis.com \
+  storage.googleapis.com \
+  pubsub.googleapis.com \
+  run.googleapis.com \
+  --quiet
 echo "✅ APIs enabled successfully"
 
-# Create service account if it doesn't exist
-echo "👤 Setting up service account..."
-SA_EXISTS=$(gcloud iam service-accounts list --filter="email:$FUNCTION_SA" --format="value(email)" | wc -l)
-
-if [ "$SA_EXISTS" -eq 0 ]; then
-    echo "Creating service account: $FUNCTION_SA"
-    gcloud iam service-accounts create receipt-parser \
-        --display-name="Receipt parsing Cloud Function" \
-        --project "$PROJECT_ID"
+echo "👤 Ensuring service account exists..."
+if ! gcloud iam service-accounts describe "$FUNCTION_SA" >/dev/null 2>&1; then
+  gcloud iam service-accounts create "${FUNCTION_SA%%@*}" \
+    --display-name="Receipt processing Cloud Function" \
+    --project "$PROJECT_ID"
 else
-    echo "✅ Service account already exists: $FUNCTION_SA"
+  echo "✅ Service account already exists"
 fi
 
-# Grant required permissions
 echo "🔐 Granting IAM permissions..."
-
-# Storage permissions
 gcloud storage buckets add-iam-policy-binding "gs://$GCS_BUCKET" \
-    --member="serviceAccount:$FUNCTION_SA" \
-    --role="roles/storage.objectAdmin" \
-    --quiet || true
+  --member="serviceAccount:$FUNCTION_SA" \
+  --role="roles/storage.objectViewer" \
+  --quiet || true
 
-# Firestore permissions
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:$FUNCTION_SA" \
-    --role="roles/datastore.user" \
-    --quiet || true
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$FUNCTION_SA" \
+  --role="roles/pubsub.publisher" \
+  --quiet || true
 
-# Vertex AI permissions
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:$FUNCTION_SA" \
-    --role="roles/aiplatform.user" \
-    --quiet || true
-
-echo "✅ IAM permissions configured"
-
-# Ensure Firestore database exists
-echo "🗄️  Setting up Firestore..."
-if gcloud firestore databases describe --database="(default)" --format="value(name)" --project="$PROJECT_ID" >/dev/null 2>&1; then
-    echo "✅ Firestore database already exists"
+PUBSUB_TOPIC_PATH="projects/${RECEIPT_PUBSUB_PROJECT_ID}/topics/${RECEIPT_PUBSUB_TOPIC}"
+echo "📬 Ensuring Pub/Sub topic $PUBSUB_TOPIC_PATH exists..."
+if ! gcloud pubsub topics describe "$PUBSUB_TOPIC_PATH" --format="value(name)" >/dev/null 2>&1; then
+  gcloud pubsub topics create "$PUBSUB_TOPIC_PATH"
 else
-    echo "Creating Firestore database..."
-    gcloud firestore databases create --location=$REGION --type=firestore-native --project="$PROJECT_ID"
+  echo "✅ Pub/Sub topic already exists"
 fi
 
-# Build and stage the function artifact so the deployment always uses the latest sources
 echo "🛠️  Building function module..."
-./mvnw -q -pl function -am -DskipTests -Dspring-boot.repackage.skip=false clean package
+./mvnw -q -pl function -am -DskipTests clean package
 
-# Deploy the Cloud Function using GraalVM native-image buildpacks
+ENV_VARS="RECEIPT_PUBSUB_TOPIC=${RECEIPT_PUBSUB_TOPIC},RECEIPT_PUBSUB_PROJECT_ID=${RECEIPT_PUBSUB_PROJECT_ID}"
+
 echo "🏗️  Deploying Cloud Function..."
-echo "🧾 Cloud Function name: $CLOUD_FUNCTION_NAME"
-GRAAL_BUILD_VARS="MAVEN_BUILD_ARGUMENTS=-pl\\ function\\ -am\\ -DskipTests\\ -Dspring-boot.repackage.skip=false\\ package,BP_NATIVE_IMAGE=true,BP_JVM_VERSION=21"
-
 gcloud functions deploy "$CLOUD_FUNCTION_NAME" \
-    --gen2 \
-    --runtime=java21 \
-    --region="$REGION" \
-    --source=. \
-    --entry-point=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
-    --memory=1Gi \
-    --timeout=300s \
-    --max-instances=10 \
-    --service-account="$FUNCTION_SA" \
-    --trigger-bucket="$GCS_BUCKET" \
-    --set-build-env-vars="$GRAAL_BUILD_VARS" \
-    --set-env-vars="$FUNCTION_ENV_VARS"
-
-if [ $? -ne 0 ]; then
-    echo "❌ Cloud Function deployment failed. Please check the error messages above."
-    exit 1
-fi
-
-# Allow unauthenticated invocations for Eventarc triggers
-echo "🔓 Configuring Cloud Run service for unauthenticated invocations..."
-RUN_SERVICE_RESOURCE=$(gcloud functions describe "$CLOUD_FUNCTION_NAME" \
-    --gen2 \
-    --region="$REGION" \
-    --format="value(serviceConfig.service)" 2>/dev/null || true)
-
-if [ -z "$RUN_SERVICE_RESOURCE" ]; then
-    RUN_SERVICE_NAME=$(echo "$CLOUD_FUNCTION_NAME" | tr '[:upper:]' '[:lower:]')
-else
-    RUN_SERVICE_NAME="${RUN_SERVICE_RESOURCE##*/}"
-fi
-
-if gcloud run services describe "$RUN_SERVICE_NAME" --region="$REGION" --quiet >/dev/null 2>&1; then
-    gcloud run services add-iam-policy-binding "$RUN_SERVICE_NAME" \
-        --region="$REGION" \
-        --member="allUsers" \
-        --role="roles/run.invoker" \
-        --quiet || true
-else
-    echo "⚠️  Unable to configure unauthenticated access for Cloud Run service '$RUN_SERVICE_NAME'."
-    echo "    The service may not expose an HTTP endpoint (e.g., event-triggered Cloud Function)."
-fi
+  --gen2 \
+  --runtime=java21 \
+  --region="$REGION" \
+  --source=. \
+  --entry-point=dev.pekelund.pklnd.function.ReceiptEventPublisher \
+  --memory=512Mi \
+  --timeout=120s \
+  --max-instances=5 \
+  --service-account="$FUNCTION_SA" \
+  --trigger-bucket="$GCS_BUCKET" \
+  --set-env-vars="$ENV_VARS"
 
 echo "🎉 Cloud Function deployed successfully!"
-
-# Display useful information
-echo ""
+echo
 echo "📋 Deployment Summary:"
 echo "  Function Name: $CLOUD_FUNCTION_NAME"
 echo "  Region: $REGION"
-echo "  Trigger: Cloud Storage bucket gs://$GCS_BUCKET"
+echo "  Trigger Bucket: gs://$GCS_BUCKET"
+echo "  Pub/Sub Topic: $PUBSUB_TOPIC_PATH"
 echo "  Service Account: $FUNCTION_SA"
-echo "  Vertex AI Location: $VERTEX_AI_LOCATION"
-echo "  Vertex AI Model: gemini-2.0-flash"
-echo ""
-echo "📝 To view logs:"
-echo "  gcloud functions logs read $CLOUD_FUNCTION_NAME --region=$REGION --gen2 --limit=10"
-echo ""
-echo "🧪 To test the function:"
-echo "  Upload a PDF file to gs://$GCS_BUCKET/receipts/"
-echo "  gsutil cp your-receipt.pdf gs://$GCS_BUCKET/receipts/"
-echo ""
-echo "🗂️  Sample receipt PDFs for local testing are available in function/src/test/resources/dev/pekelund/pklnd/files/"
-echo "  (e.g., 'ICA Kvantum Malmborgs Caroli 2025-08-26.pdf', 'ICA Supermarket Hansa 2025-08-20.pdf')"

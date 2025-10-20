@@ -7,8 +7,9 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 - `VERTEX_AI_PROJECT_ID` — defaults to the Cloud Function project ID.
 - `VERTEX_AI_LOCATION` — defaults to `us-east1`.
 - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
-- `RECEIPT_FIRESTORE_PROJECT_ID` — defaults to the Cloud Function project ID.
-- `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
+- `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions` and is used by the Cloud Run service when storing parsed receipts.
+- `RECEIPT_PUBSUB_TOPIC` — defaults to `receipt-processing` and connects the Cloud Function publisher with the Cloud Run subscriber.
+- `RECEIPT_PROCESSING_PUBSUB_VERIFICATION_TOKEN` — random shared secret that Pub/Sub sends in the `Ce-Token` header when pushing messages to Cloud Run.
 
 ## Firestore configuration in the Console
 
@@ -42,7 +43,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
      export FIRESTORE_PROJECT_ID=your-project-id              # Optional when derived from the key
      export FIRESTORE_USERS_COLLECTION=users                  # Optional override
      export FIRESTORE_DEFAULT_ROLE=ROLE_USER                  # Optional override
-     export RECEIPT_FIRESTORE_PROJECT_ID=$FIRESTORE_PROJECT_ID # Keep Cloud Run + Cloud Function aligned
+     export RECEIPT_PUBSUB_TOPIC=${RECEIPT_PUBSUB_TOPIC:-receipt-processing}
      ```
 
    - Restart the application to pick up the Firestore integration. Visit `/register` to create your first account and sign in on `/login`.
@@ -98,17 +99,14 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    - Go to **Cloud Functions → Create Function** and choose **2nd gen**.
    - Specify:
      - **Name**: `receiptProcessingFunction` (or another identifier used by your triggers).
-     - **Region**: the same region as your bucket and Firestore database.
+     - **Region**: the same region as your bucket.
      - **Trigger**: **Cloud Storage** with the **Finalized/Created** event and select your receipts bucket.
      - **Runtime**: Java 21.
-     - **Entry point**: `org.springframework.cloud.function.adapter.gcp.GcfJarLauncher`.
+     - **Entry point**: `dev.pekelund.pklnd.function.ReceiptEventPublisher`.
      - **Service account**: the `receipt-parser` account created earlier.
    - Expand **Runtime, build, connections and security settings → Environment variables** and define:
-     - `VERTEX_AI_PROJECT_ID` — defaults to the function project if omitted.
-     - `VERTEX_AI_LOCATION` — Vertex AI region that offers Gemini (for example `us-east1` or `us-central1`).
-     - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
-     - `RECEIPT_FIRESTORE_PROJECT_ID` — reuse the same project ID exported for the web app to keep all components on one database.
-     - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
+     - `RECEIPT_PUBSUB_TOPIC` — defaults to `receipt-processing`.
+     - `RECEIPT_PUBSUB_PROJECT_ID` — optional override when the topic lives in another project.
    - Upload the source from your local machine or connect the repository, then click **Deploy**.
 
 4. **Observe the lifecycle**

@@ -84,7 +84,7 @@ sequenceDiagram
 
 **Notes**
 
-- The Cloud Function and Cloud Run service share the same Firestore collections. Environment variables such as `FIRESTORE_PROJECT_ID`, `RECEIPT_FIRESTORE_PROJECT_ID`, and `RECEIPT_FIRESTORE_COLLECTION` must point to the shared project and collection names.
+- The Cloud Run service persists parsed receipts in Firestore using the `FIRESTORE_PROJECT_ID` / `RECEIPT_FIRESTORE_COLLECTION` configuration. The Cloud Function only publishes to Pub/Sub and no longer touches Firestore directly.
 - The signed URL upload pattern prevents the Cloud Run service from proxying large files, while still enforcing authenticated access and storage permissions.
 
 ---
