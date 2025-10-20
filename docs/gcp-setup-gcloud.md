@@ -138,11 +138,11 @@ gcloud services enable
 ./mvnw -pl function -am clean package -DskipTests
 ```
 
-> The deployment commands below pass `--set-build-env-vars=^:^BP_MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests clean package`
+> The deployment commands below pass `--set-build-env-vars=BP_MAVEN_BUILD_ARGUMENTS=-pl\ function\ -am\ -DskipTests\ clean\ package`
 > so Cloud Build executes the same multi-module command during `gcloud functions deploy`.
-> The `^:^` prefix switches the separator character, which lets us keep the spaces inside the Maven argument string.
-> Keep that override in sync with the local build steps to ensure the messaging jar is
-> available when the Functions Framework stages dependencies.
+> The backslashes escape spaces so the argument string reaches Maven intact. Keep that
+> override in sync with the local build steps to ensure the messaging jar is available
+> when the Functions Framework stages dependencies.
 
 ### Create a minimal service account
 
@@ -183,7 +183,7 @@ gcloud functions deploy "${FUNCTION_NAME}"
   --service-account="${FUNCTION_SA}"
   --trigger-bucket=$(basename "${BUCKET}")
   --set-env-vars="RECEIPT_PUBSUB_TOPIC=${RECEIPT_PUBSUB_TOPIC},RECEIPT_PUBSUB_PROJECT_ID=${RECEIPT_PUBSUB_PROJECT_ID}"
-  --set-build-env-vars=^:^BP_MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests clean package
+  --set-build-env-vars=BP_MAVEN_BUILD_ARGUMENTS=-pl\ function\ -am\ -DskipTests\ clean\ package
   --memory=512Mi
   --timeout=120s
 ```

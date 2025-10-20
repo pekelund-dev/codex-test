@@ -95,7 +95,8 @@ echo "🛠️  Building function module..."
 
 ENV_VARS="RECEIPT_PUBSUB_TOPIC=${RECEIPT_PUBSUB_TOPIC},RECEIPT_PUBSUB_PROJECT_ID=${RECEIPT_PUBSUB_PROJECT_ID}"
 BUILD_ARGS="-pl function -am -DskipTests clean package"
-BUILD_ENV_FLAG="--set-build-env-vars=^:^BP_MAVEN_BUILD_ARGUMENTS=${BUILD_ARGS}"
+BUILD_ARGS_ESCAPED=$(printf '%s' "$BUILD_ARGS" | sed 's/ /\\\\ /g')
+BUILD_ENV_FLAG="--set-build-env-vars=BP_MAVEN_BUILD_ARGUMENTS=${BUILD_ARGS_ESCAPED}"
 
 echo "🧰  Configured Cloud Build to run: $BUILD_ARGS"
 
