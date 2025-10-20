@@ -138,7 +138,7 @@ gcloud services enable
 ./mvnw -pl function -am clean package -DskipTests
 ```
 
-> The repository's `project.toml` sets `BP_MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests clean package`
+> The deployment commands below pass `--build-env-vars="BP_MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests clean package"`
 > so Cloud Build executes the same multi-module command during `gcloud functions deploy`.
 > Keep that override in sync with the local build steps to ensure the messaging jar is
 > available when the Functions Framework stages dependencies.
@@ -178,11 +178,12 @@ gcloud functions deploy "${FUNCTION_NAME}"
   --runtime=java21 
   --region="${REGION}" 
   --source=. 
-  --entry-point=dev.pekelund.pklnd.function.ReceiptEventPublisher 
-  --service-account="${FUNCTION_SA}" 
-  --trigger-bucket=$(basename "${BUCKET}") 
-  --set-env-vars="RECEIPT_PUBSUB_TOPIC=${RECEIPT_PUBSUB_TOPIC},RECEIPT_PUBSUB_PROJECT_ID=${RECEIPT_PUBSUB_PROJECT_ID}" 
-  --memory=512Mi 
+  --entry-point=dev.pekelund.pklnd.function.ReceiptEventPublisher
+  --service-account="${FUNCTION_SA}"
+  --trigger-bucket=$(basename "${BUCKET}")
+  --set-env-vars="RECEIPT_PUBSUB_TOPIC=${RECEIPT_PUBSUB_TOPIC},RECEIPT_PUBSUB_PROJECT_ID=${RECEIPT_PUBSUB_PROJECT_ID}"
+  --build-env-vars="BP_MAVEN_BUILD_ARGUMENTS=-pl function -am -DskipTests clean package"
+  --memory=512Mi
   --timeout=120s
 ```
 
