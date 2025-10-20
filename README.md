@@ -49,7 +49,7 @@ The `setup-env.sh` script automatically configures:
    > automatically append `oauth` to `SPRING_PROFILES_ACTIVE`. For manual runs add `SPRING_PROFILES_ACTIVE=local,oauth` (or
    > `prod,oauth` in production).
 
-   The `scripts/deploy_cloud_run.sh` helper builds a timestamped container image and deletes older revisions so Artifact Registry only keeps the most recent web application build.
+   The `scripts/deploy_cloud_run.sh` helper builds a timestamped container image and deletes older revisions so Artifact Registry only keeps the most recent web application build. It relies on the repository’s multi-stage `Dockerfile` (located at the project root by default); export `BUILD_CONTEXT` when you keep the Dockerfile in another directory.
 
 3. Configure Firestore if you want to enable user self-registration (see [Firestore configuration](#firestore-configuration)).
 4. (Optional) Configure Google Cloud Storage to enable the receipts upload page (see

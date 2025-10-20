@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "$REPO_ROOT"
+
 # This script provisions and deploys the web application to Cloud Run.
 # Configure the environment variables below before running the script.
 
@@ -9,6 +13,7 @@ REGION="${REGION:-europe-north1}"
 SERVICE_NAME="${SERVICE_NAME:-pklnd-web}"
 SA_NAME="${SA_NAME:-cloud-run-runtime}"
 ARTIFACT_REPO="${ARTIFACT_REPO:-web}"
+BUILD_CONTEXT="${BUILD_CONTEXT:-.}"
 # Firestore is shared between the Cloud Run web app, the receipt processor, and the user registration flow.
 # Default the shared project to the deployment project, but allow overrides when the
 # Firestore database lives in a different project.
@@ -228,7 +233,13 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 IMAGE_RESOURCE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${SERVICE_NAME}"
 IMAGE_URI="${IMAGE_RESOURCE}:$(date +%Y%m%d-%H%M%S)"
 
-gcloud builds submit \
+if [[ ! -f "${BUILD_CONTEXT%/}/Dockerfile" ]]; then
+  printf '%s\n' \
+    "Dockerfile not found in build context '${BUILD_CONTEXT}'. Set BUILD_CONTEXT to a directory containing the web Dockerfile." >&2
+  exit 1
+fi
+
+gcloud builds submit "$BUILD_CONTEXT" \
   --tag "$IMAGE_URI"
 
 # Deploy to Cloud Run
