@@ -189,12 +189,12 @@ Before deploying, make sure the receipt processor module builds cleanly and that
 
 ### Configure the Eventarc trigger
 
-1. **Create (or update) the trigger** so Cloud Storage finalize events invoke the service. Replace the bucket name with your own if different from the earlier example.
+1. **Create (or update) the trigger** so Cloud Storage finalize events invoke the service. Replace the bucket name with your own if different from the earlier example. Set the Cloud Run path to `/events/storage`; Eventarc defaults to `/`, which would miss the Spring controller mapped specifically for storage callbacks.
 
     ```bash
     BUCKET_NAME=$(basename "${BUCKET}")
-    gcloud eventarc triggers create receipt-processing-trigger \n      --location "${REGION}" \n      --destination-run-service pklnd-receipts \n      --destination-run-region "${REGION}" \n      --event-filters type=google.cloud.storage.object.v1.finalized \n      --event-filters bucket="${BUCKET_NAME}" \n      --service-account "${RECEIPT_SA}" || \
-    gcloud eventarc triggers update receipt-processing-trigger \n      --location "${REGION}" \n      --destination-run-service pklnd-receipts \n      --destination-run-region "${REGION}" \n      --event-filters type=google.cloud.storage.object.v1.finalized \n      --event-filters bucket="${BUCKET_NAME}" \n      --service-account "${RECEIPT_SA}"
+    gcloud eventarc triggers create receipt-processing-trigger \n      --location "${REGION}" \n      --destination-run-service pklnd-receipts \n      --destination-run-region "${REGION}" \n      --destination-run-path "/events/storage" \n      --event-filters type=google.cloud.storage.object.v1.finalized \n      --event-filters bucket="${BUCKET_NAME}" \n      --service-account "${RECEIPT_SA}" || \
+    gcloud eventarc triggers update receipt-processing-trigger \n      --location "${REGION}" \n      --destination-run-service pklnd-receipts \n      --destination-run-region "${REGION}" \n      --destination-run-path "/events/storage" \n      --event-filters type=google.cloud.storage.object.v1.finalized \n      --event-filters bucket="${BUCKET_NAME}" \n      --service-account "${RECEIPT_SA}"
     ```
 
 2. **Verify the deployment**

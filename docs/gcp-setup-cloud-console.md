@@ -118,6 +118,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    - Go to **Eventarc → Triggers → Create trigger**.
    - Select **Cloud Storage** as the source, choose the **Finalized/Created** event, and specify your receipts bucket.
    - Set the destination to the `pklnd-receipts` Cloud Run service in the same region.
+   - Expand the Cloud Run destination settings and set the **Path** to `/events/storage` so Eventarc reaches the HTTP controller.
    - Choose the `receipt-processor` service account for invocation and create the trigger.
 
 6. **Observe the lifecycle**

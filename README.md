@@ -127,6 +127,7 @@ This script automatically:
 - Builds and deploys the container image via Cloud Build
 - Can be paired with `./scripts/cleanup_artifact_repos.sh` to remove older container images so Artifact Registry only retains the most recent builds
 - Configures an Eventarc trigger so Storage finalize events invoke the service
+- Points the trigger at `/events/storage` so Cloud Storage callbacks reach the Spring controller
 
 #### Teardown
 

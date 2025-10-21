@@ -8,6 +8,7 @@ SERVICE_NAME="${RECEIPT_SERVICE_NAME:-pklnd-receipts}"
 SA_NAME="${RECEIPT_SA_NAME:-receipt-processor}"
 ARTIFACT_REPO="${RECEIPT_ARTIFACT_REPO:-receipts}"
 TRIGGER_NAME="${RECEIPT_TRIGGER_NAME:-receipt-processing-trigger}"
+DESTINATION_RUN_PATH="${RECEIPT_EVENT_PATH:-/events/storage}"
 GCS_BUCKET="${GCS_BUCKET:-}"
 
 if [[ -z "${PROJECT_ID}" ]]; then
@@ -193,6 +194,7 @@ if gcloud eventarc triggers describe "$TRIGGER_NAME" --location "$REGION" >/dev/
     --location "$REGION" \
     --destination-run-service "$SERVICE_NAME" \
     --destination-run-region "$REGION" \
+    --destination-run-path "$DESTINATION_RUN_PATH" \
     --event-filters type=google.cloud.storage.object.v1.finalized \
     --event-filters bucket="$GCS_BUCKET" \
     --service-account "$SA_EMAIL"
@@ -201,6 +203,7 @@ else
     --location "$REGION" \
     --destination-run-service "$SERVICE_NAME" \
     --destination-run-region "$REGION" \
+    --destination-run-path "$DESTINATION_RUN_PATH" \
     --event-filters type=google.cloud.storage.object.v1.finalized \
     --event-filters bucket="$GCS_BUCKET" \
     --service-account "$SA_EMAIL"
