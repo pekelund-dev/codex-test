@@ -56,13 +56,23 @@ The `setup-env.sh` script automatically configures:
    uploads are routed to the right bucket. Leave `GCS_CREDENTIALS` unset when deploying to Google Cloud
    managed runtimes—the attached service account provides Application Default Credentials automatically.
 
-5. Build and run the web application module (remember to enable the `include-web` profile):
+5. Export the receipt processor configuration so uploads can trigger parsing downstream:
+
+   ```bash
+   export RECEIPT_PROCESSOR_BASE_URL=https://receipt-processor-your-team.example.com   # Replace with your processor endpoint
+   export RECEIPT_PROCESSOR_AUDIENCE=projects/1234567890/locations/global/workloadIdentityPools/pool/providers/provider   # Replace with the audience expected by the processor
+   ```
+
+   > 🚨 Both values are required in Cloud Run and other production deployments. The automation scripts abort if either is
+   > missing, and the Spring Boot app logs a warning when the properties are unset.
+
+6. Build and run the web application module (remember to enable the `include-web` profile):
 
    ```bash
 ./mvnw -Pinclude-web -pl web -am spring-boot:run
    ```
 
-6. Navigate to <http://localhost:8080> to explore the experience.
+7. Navigate to <http://localhost:8080> to explore the experience.
 
 ### Firestore configuration
 

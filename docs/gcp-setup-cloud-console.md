@@ -76,7 +76,12 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    export GCS_BUCKET=responsive-auth-receipts           # Replace with your bucket name
    export GCS_CREDENTIALS=file:/home/user/secrets/gcs-receipts.json  # Optional; omit on Cloud Run
    export GCS_PROJECT_ID=your-project-id                # Optional if derived from credentials
+   export RECEIPT_PROCESSOR_BASE_URL=https://receipt-processor-your-team.example.com   # Replace with your processor endpoint
+   export RECEIPT_PROCESSOR_AUDIENCE=projects/1234567890/locations/global/workloadIdentityPools/pool/providers/provider   # Replace with the audience expected by the processor
    ```
+
+   Provide both receipt processor variables before continuing—the deployment scripts and application startup checks rely on
+   them to invoke the processor securely.
 
 7. **Test the receipts UI**
    - Restart the Spring Boot app and navigate to <http://localhost:8080/receipts> to upload and list files stored in the bucket.
