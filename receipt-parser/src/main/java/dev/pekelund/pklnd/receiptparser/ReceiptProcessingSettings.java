@@ -19,7 +19,7 @@ public record ReceiptProcessingSettings(
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptProcessingSettings.class);
     private static final String DEFAULT_COLLECTION = "receiptExtractions";
-    private static final String LOCAL_PROJECT_ID = "responsive-auth-local";
+    private static final String DEFAULT_LOCAL_PROJECT_ID = "pklnd-local";
 
     public static ReceiptProcessingSettings fromEnvironment() {
         return fromEnvironment(System.getenv(), ServiceOptions::getDefaultProjectId);
@@ -40,9 +40,11 @@ public record ReceiptProcessingSettings(
             env.get("PROJECT_ID"),
             defaultProjectSupplier.get());
 
-        if (LOCAL_PROJECT_ID.equals(projectId) && isRunningOnCloudRun(env)) {
+        String localProjectId = env.getOrDefault("LOCAL_PROJECT_ID", DEFAULT_LOCAL_PROJECT_ID);
+
+        if (StringUtils.hasText(localProjectId) && localProjectId.equals(projectId) && isRunningOnCloudRun(env)) {
             String fallbackProject = defaultProjectSupplier.get();
-            if (StringUtils.hasText(fallbackProject) && !LOCAL_PROJECT_ID.equals(fallbackProject)) {
+            if (StringUtils.hasText(fallbackProject) && !localProjectId.equals(fallbackProject)) {
                 LOGGER.warn("Resolved Firestore project id '{}' from environment, but the service is running on Cloud Run. "
                         + "Falling back to metadata project id '{}'.", projectId, fallbackProject);
                 projectId = fallbackProject;

@@ -12,7 +12,7 @@ if ! command -v gcloud >/dev/null 2>&1; then
 fi
 
 HOST_PORT="${FIRESTORE_EMULATOR_HOST:-localhost:8085}"
-PROJECT_ID="${FIRESTORE_EMULATOR_PROJECT_ID:-responsive-auth-local}"
+PROJECT_ID="${FIRESTORE_EMULATOR_PROJECT_ID:-pklnd-local}"
 DATA_DIR="${FIRESTORE_EMULATOR_DATA_DIR:-.local/firestore}"
 ADDITIONAL_ARGS=()
 

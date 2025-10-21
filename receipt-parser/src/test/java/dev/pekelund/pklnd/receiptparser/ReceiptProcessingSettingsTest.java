@@ -25,9 +25,21 @@ class ReceiptProcessingSettingsTest {
     }
 
     @Test
-    void fromEnvironmentFallsBackToMetadataOnCloudRunWhenLocalProjectDetected() {
+    void fromEnvironmentFallsBackToMetadataOnCloudRunWhenDefaultLocalProjectDetected() {
         Map<String, String> env = new HashMap<>();
-        env.put("RECEIPT_FIRESTORE_PROJECT_ID", "responsive-auth-local");
+        env.put("RECEIPT_FIRESTORE_PROJECT_ID", "pklnd-local");
+        env.put("K_SERVICE", "pklnd-receipts");
+
+        ReceiptProcessingSettings settings = ReceiptProcessingSettings.fromEnvironment(env, () -> "codex-test-473008");
+
+        assertThat(settings.projectId()).isEqualTo("codex-test-473008");
+    }
+
+    @Test
+    void fromEnvironmentFallsBackToMetadataOnCloudRunWhenCustomLocalProjectDetected() {
+        Map<String, String> env = new HashMap<>();
+        env.put("LOCAL_PROJECT_ID", "custom-local");
+        env.put("RECEIPT_FIRESTORE_PROJECT_ID", "custom-local");
         env.put("K_SERVICE", "pklnd-receipts");
 
         ReceiptProcessingSettings settings = ReceiptProcessingSettings.fromEnvironment(env, () -> "codex-test-473008");

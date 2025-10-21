@@ -52,7 +52,7 @@ The script performs the following configuration:
 
 - Sets `FIRESTORE_ENABLED=true` so the web app uses Firestore instead of the in-memory fallback.
 - Points `FIRESTORE_PROJECT_ID`, `RECEIPT_FIRESTORE_PROJECT_ID`, and `GOOGLE_CLOUD_PROJECT`
-  to the local logical project (`responsive-auth-local` by default).
+  to the local logical project (`pklnd-local` by default).
 - Publishes `FIRESTORE_EMULATOR_HOST=localhost:8085` and clears credential variables so the
   Firestore SDK automatically targets the emulator with anonymous authentication.
 - Disables Google Cloud Storage integration (`GCS_ENABLED=false`) because the emulator flow

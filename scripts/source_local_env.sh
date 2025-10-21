@@ -6,7 +6,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   exit 1
 fi
 
-LOCAL_PROJECT_ID="${LOCAL_PROJECT_ID:-responsive-auth-local}"
+LOCAL_PROJECT_ID="${LOCAL_PROJECT_ID:-pklnd-local}"
 LOCAL_FIRESTORE_HOST="${FIRESTORE_EMULATOR_HOST:-localhost:8085}"
 
 export SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-local}"
