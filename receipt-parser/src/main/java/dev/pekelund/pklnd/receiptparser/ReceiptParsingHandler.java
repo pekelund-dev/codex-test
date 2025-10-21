@@ -50,22 +50,32 @@ public class ReceiptParsingHandler {
 
         LOGGER.info("ReceiptParsingHandler processing object gs://{}/{} with extractor instance id {}", bucket, objectName,
             System.identityHashCode(extractor));
+        ReceiptProcessingMdc.setStage("VALIDATE_EVENT");
 
         if (!StringUtils.hasText(bucket) || !StringUtils.hasText(objectName)) {
             LOGGER.warn("Storage event missing bucket ({}) or object name ({})", bucket, objectName);
             return;
         }
 
+        ReceiptProcessingMdc.setStage("FETCH_BLOB");
+        LOGGER.info("Fetching blob metadata from Cloud Storage for gs://{}/{}", bucket, objectName);
         Blob blob = storage.get(BlobId.of(bucket, objectName));
         if (blob == null) {
             LOGGER.warn("Blob not found for gs://{}/{}", bucket, objectName);
             return;
         }
 
+        ReceiptProcessingMdc.setStage("MERGE_METADATA");
         Map<String, String> metadata = new HashMap<>(Optional.ofNullable(blob.getMetadata()).orElse(Map.of()));
         Map<String, String> eventMetadata = storageObjectEvent.getMetadata();
         if (eventMetadata != null && !eventMetadata.isEmpty()) {
             metadata.putAll(eventMetadata);
+        }
+        LOGGER.info("Merged metadata for gs://{}/{} (blob keys: {}, event keys: {}, combined keys: {})", bucket, objectName,
+            blob.getMetadata() != null ? blob.getMetadata().size() : 0,
+            eventMetadata != null ? eventMetadata.size() : 0, metadata.size());
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Combined metadata for gs://{}/{}: {}", bucket, objectName, metadata);
         }
 
         ReceiptOwner owner = ReceiptOwner.fromMetadata(metadata);
@@ -78,26 +88,34 @@ public class ReceiptParsingHandler {
         }
         if (owner != null) {
             metadata.putAll(owner.toMetadata());
+            LOGGER.info("Resolved receipt owner for gs://{}/{} -> id={} email={}", bucket, objectName, owner.id(), owner.email());
         } else {
             LOGGER.warn("No owner metadata found for gs://{}/{}; receipt will be stored without owner linkage", bucket,
                 objectName);
         }
+        ReceiptProcessingMdc.attachOwner(owner);
 
+        ReceiptProcessingMdc.setStage("STATUS_RECEIVED");
         repository.markStatus(bucket, objectName, owner, ReceiptProcessingStatus.RECEIVED, "Storage event received");
         blob = updateProcessingMetadata(blob, ReceiptProcessingStatus.RECEIVED, "Storage event received", metadata);
 
         try {
+            ReceiptProcessingMdc.setStage("STATUS_PARSING");
             repository.markStatus(bucket, objectName, owner, ReceiptProcessingStatus.PARSING, "Receipt parsing started");
             blob = updateProcessingMetadata(blob, ReceiptProcessingStatus.PARSING, "Receipt parsing started", metadata);
 
             if (!isPdf(blob)) {
                 String message = "Only PDF receipts are processed";
+                ReceiptProcessingMdc.setStage("STATUS_SKIPPED");
                 repository.markStatus(bucket, objectName, owner, ReceiptProcessingStatus.SKIPPED, message);
                 blob = updateProcessingMetadata(blob, ReceiptProcessingStatus.SKIPPED, message, metadata);
                 return;
             }
 
+            ReceiptProcessingMdc.setStage("READ_CONTENT");
             byte[] pdfBytes = blob.getContent();
+            LOGGER.info("Downloaded {} bytes for gs://{}/{}", pdfBytes != null ? pdfBytes.length : 0, bucket, objectName);
+            ReceiptProcessingMdc.setStage("EXTRACT");
             ReceiptExtractionResult extractionResult = extractor.extract(pdfBytes, blob.getName());
             int itemsCount = countItems(extractionResult);
             int topLevelKeys = extractionResult.structuredData() != null
@@ -108,15 +126,19 @@ public class ReceiptParsingHandler {
                 : 0;
             LOGGER.info("ReceiptParsingHandler extracted {} top-level fields and {} items (raw response length {} characters) for gs://{}/{}",
                 topLevelKeys, itemsCount, rawResponseLength, bucket, objectName);
+            ReceiptProcessingMdc.setStage("STATUS_COMPLETED");
             repository.saveExtraction(bucket, objectName, owner, extractionResult, "Receipt parsing completed");
             updateProcessingMetadata(blob, ReceiptProcessingStatus.COMPLETED, "Receipt parsing completed", metadata);
             LOGGER.info("ReceiptParsingHandler successfully completed extraction for gs://{}/{}", bucket, objectName);
+            ReceiptProcessingMdc.setStage("DONE");
         } catch (ReceiptParsingException ex) {
+            ReceiptProcessingMdc.setStage("FAILED");
             LOGGER.error("Receipt parsing failed for gs://{}/{}", bucket, objectName, ex);
             repository.markFailure(bucket, objectName, owner, "Receipt parsing failed", ex);
             updateProcessingMetadata(blob, ReceiptProcessingStatus.FAILED, "Receipt parsing failed", metadata);
             throw ex;
         } catch (RuntimeException ex) {
+            ReceiptProcessingMdc.setStage("FAILED");
             LOGGER.error("Unexpected error while parsing receipt gs://{}/{}", bucket, objectName, ex);
             repository.markFailure(bucket, objectName, owner, "Unexpected error during receipt parsing", ex);
             updateProcessingMetadata(blob, ReceiptProcessingStatus.FAILED, "Unexpected error during receipt parsing",

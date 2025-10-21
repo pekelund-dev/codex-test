@@ -48,11 +48,14 @@ public class ReceiptProcessingController {
             return ResponseEntity.badRequest().build();
         }
 
-        StorageObjectEvent storageObjectEvent = parseStorageObject(payload);
-        LOGGER.info("Delegating storage event for bucket {} object {} to handler instance {}", storageObjectEvent.getBucket(),
-            storageObjectEvent.getName(), System.identityHashCode(handler));
-        handler.handle(storageObjectEvent);
-        return ResponseEntity.accepted().build();
+        try (ReceiptProcessingMdc.Context ignored = ReceiptProcessingMdc.open(cloudEventId)) {
+            StorageObjectEvent storageObjectEvent = parseStorageObject(payload);
+            ReceiptProcessingMdc.attachEvent(storageObjectEvent);
+            LOGGER.info("Delegating storage event for bucket {} object {} to handler instance {}", storageObjectEvent.getBucket(),
+                storageObjectEvent.getName(), System.identityHashCode(handler));
+            handler.handle(storageObjectEvent);
+            return ResponseEntity.accepted().build();
+        }
     }
 
     private StorageObjectEvent parseStorageObject(String payload) {

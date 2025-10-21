@@ -4,7 +4,7 @@
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} - %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} [event=%X{receipt.eventId:-} bucket=%X{receipt.bucket:-} object=%X{receipt.object:-} stage=%X{receipt.stage:-} owner=%X{receipt.ownerId:-}] - %msg%n</pattern>
         </encoder>
     </appender>
 
