@@ -52,7 +52,11 @@ class ReceiptProcessingClientTest {
                 "\"metadata\":{" +
                 "\"receipt.owner.id\":\"user-123\"," +
                 "\"receipt.owner.displayName\":\"Anna Andersson\"," +
-                "\"receipt.owner.email\":\"anna@example.com\"}}"))
+                "\"receipt.owner.email\":\"anna@example.com\"}," +
+                "\"owner\":{" +
+                "\"id\":\"user-123\"," +
+                "\"displayName\":\"Anna Andersson\"," +
+                "\"email\":\"anna@example.com\"}}"))
             .andExpect(MockRestRequestMatchers.header("ce-type", "google.cloud.storage.object.v1.finalized"))
             .andRespond(MockRestResponseCreators.withSuccess());
 

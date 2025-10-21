@@ -2,6 +2,7 @@ package dev.pekelund.pklnd.receiptparser;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import dev.pekelund.pklnd.storage.ReceiptOwner;
 import java.util.Map;
 
 /**
@@ -17,6 +18,8 @@ public class StorageObjectEvent {
     private String contentType;
 
     private Map<String, String> metadata;
+
+    private Map<String, String> owner;
 
     public String getBucket() {
         return bucket;
@@ -48,5 +51,17 @@ public class StorageObjectEvent {
 
     public void setMetadata(Map<String, String> metadata) {
         this.metadata = metadata;
+    }
+
+    public Map<String, String> getOwner() {
+        return owner;
+    }
+
+    public void setOwner(Map<String, String> owner) {
+        this.owner = owner;
+    }
+
+    public ReceiptOwner resolveOwner() {
+        return ReceiptOwner.fromAttributes(owner);
     }
 }

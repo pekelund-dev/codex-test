@@ -86,6 +86,10 @@ public class ReceiptProcessingClient {
         ReceiptOwner owner = reference.owner();
         if (owner != null && owner.hasValues()) {
             payload.put("metadata", owner.toMetadata());
+            Map<String, String> ownerAttributes = owner.toAttributes();
+            if (!ownerAttributes.isEmpty()) {
+                payload.put("owner", ownerAttributes);
+            }
         }
 
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);

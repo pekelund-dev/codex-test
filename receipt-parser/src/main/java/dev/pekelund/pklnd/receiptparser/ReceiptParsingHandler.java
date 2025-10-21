@@ -69,6 +69,13 @@ public class ReceiptParsingHandler {
         }
 
         ReceiptOwner owner = ReceiptOwner.fromMetadata(metadata);
+        if (owner == null) {
+            ReceiptOwner fallbackOwner = storageObjectEvent.resolveOwner();
+            if (fallbackOwner != null) {
+                owner = fallbackOwner;
+                metadata.putAll(fallbackOwner.toMetadata());
+            }
+        }
         if (owner != null) {
             metadata.putAll(owner.toMetadata());
         } else {

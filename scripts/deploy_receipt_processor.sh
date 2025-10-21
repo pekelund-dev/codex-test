@@ -71,11 +71,11 @@ cleanup_bucket_notifications() {
     if [[ -z "${notification_id}" ]]; then
       continue
     fi
-    if gcloud storage buckets notifications delete "${notification_id}" --bucket="gs://${GCS_BUCKET}" --quiet >/dev/null 2>&1; then
+    if gcloud storage buckets notifications delete "${notification_id}" --bucket="${GCS_BUCKET}" --quiet >/dev/null 2>&1; then
       echo "Deleted notification ${notification_id} from gs://${GCS_BUCKET}."
       continue
     fi
-    gcloud storage buckets notifications delete "${notification_id}" --bucket="${GCS_BUCKET}" --quiet >/dev/null 2>&1 || \
+    gcloud storage buckets notifications delete "${notification_id}" --bucket="gs://${GCS_BUCKET}" --quiet >/dev/null 2>&1 || \
       echo "Warning: Failed to delete notification ${notification_id}; remove it manually if it still exists."
   done <<< "${notifications}"
 }
