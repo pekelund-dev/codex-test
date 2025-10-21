@@ -99,6 +99,18 @@ if [[ -z "${GCS_BUCKET:-}" ]]; then
   exit 1
 fi
 
+if [[ -z "${RECEIPT_PROCESSOR_BASE_URL:-}" ]]; then
+  printf '%s\n' \
+    'RECEIPT_PROCESSOR_BASE_URL must be provided so the web app can invoke the receipt processor.' >&2
+  exit 1
+fi
+
+if [[ -z "${RECEIPT_PROCESSOR_AUDIENCE:-}" ]]; then
+  printf '%s\n' \
+    'RECEIPT_PROCESSOR_AUDIENCE must be provided so ID tokens target the correct receipt processor audience.' >&2
+  exit 1
+fi
+
 ACTIVE_PROFILES="${SPRING_PROFILES_ACTIVE:-prod}"
 if [[ ",${ACTIVE_PROFILES}," != *",oauth,"* ]]; then
   ACTIVE_PROFILES="${ACTIVE_PROFILES},oauth"
@@ -115,6 +127,8 @@ append_env_var "GCS_ENABLED" "${GCS_ENABLED:-true}"
 append_env_var "GCS_PROJECT_ID" "${SHARED_GCS_PROJECT_ID:-}"
 append_env_var "GCS_BUCKET" "${GCS_BUCKET:-}"
 append_env_var "GCS_CREDENTIALS" "${GCS_CREDENTIALS:-}"
+append_env_var "RECEIPT_PROCESSOR_BASE_URL" "${RECEIPT_PROCESSOR_BASE_URL:-}"
+append_env_var "RECEIPT_PROCESSOR_AUDIENCE" "${RECEIPT_PROCESSOR_AUDIENCE:-}"
 
 choose_env_delimiter() {
   local candidates=("|" "@" ":" ";" "#" "+" "~" "^" "%" "?")

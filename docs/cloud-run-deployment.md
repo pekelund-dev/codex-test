@@ -198,7 +198,7 @@ gcloud artifacts repositories create web \
 4. Set the service name (`SERVICE_NAME`) and region (`REGION`).
 5. Under **Authentication**, choose whether to allow unauthenticated invocations.
 6. Expand **Security** → **Service account** and select the runtime service account (`SA_EMAIL`).
-7. Set environment variables (at a minimum `FIRESTORE_ENABLED=true`, `FIRESTORE_PROJECT_ID`, `SPRING_PROFILES_ACTIVE=prod,oauth`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GCS_ENABLED=true`, `GCS_PROJECT_ID`, and `GCS_BUCKET`).
+7. Set environment variables (at a minimum `FIRESTORE_ENABLED=true`, `FIRESTORE_PROJECT_ID`, `SPRING_PROFILES_ACTIVE=prod,oauth`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GCS_ENABLED=true`, `GCS_PROJECT_ID`, `GCS_BUCKET`, `RECEIPT_PROCESSOR_BASE_URL`, and `RECEIPT_PROCESSOR_AUDIENCE`).
 8. Configure CPU/Memory limits and concurrency as required.
 9. Click **Create** to deploy.
 
@@ -215,9 +215,9 @@ export GOOGLE_CLIENT_SECRET="your-oauth-client-secret"
 IMAGE_URI="${IMAGE_TAG}"
 SPRING_PROFILES="prod"
 SPRING_PROFILES="${SPRING_PROFILES},oauth"
-ENV_VARS="SPRING_PROFILES_ACTIVE=${SPRING_PROFILES},FIRESTORE_ENABLED=true,FIRESTORE_PROJECT_ID=${PROJECT_ID},GCS_ENABLED=true,GCS_PROJECT_ID=${PROJECT_ID},GCS_BUCKET=${GCS_BUCKET},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
+ENV_VARS="SPRING_PROFILES_ACTIVE=${SPRING_PROFILES},FIRESTORE_ENABLED=true,FIRESTORE_PROJECT_ID=${PROJECT_ID},GCS_ENABLED=true,GCS_PROJECT_ID=${PROJECT_ID},GCS_BUCKET=${GCS_BUCKET},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET},RECEIPT_PROCESSOR_BASE_URL=${RECEIPT_PROCESSOR_BASE_URL},RECEIPT_PROCESSOR_AUDIENCE=${RECEIPT_PROCESSOR_AUDIENCE}"
 
- gcloud run deploy "$SERVICE_NAME" \
+gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_URI" \
   --service-account "$SA_EMAIL" \
   --region "$REGION" \
@@ -227,6 +227,9 @@ ENV_VARS="SPRING_PROFILES_ACTIVE=${SPRING_PROFILES},FIRESTORE_ENABLED=true,FIRES
   --min-instances 0 \
   --max-instances 10
 ```
+
+The automation scripts exit immediately if `RECEIPT_PROCESSOR_BASE_URL` or `RECEIPT_PROCESSOR_AUDIENCE` are missing. Supply both
+values before invoking the deployment so the web service can hand off uploads to the processor reliably.
 
 Adjust min/max instances, authentication, and environment variables as necessary. If access should be restricted, remove `--allow-unauthenticated` and grant IAM access explicitly. Keep `FIRESTORE_ENABLED=true` so self-registration remains available.
 

@@ -79,6 +79,9 @@ export FIRESTORE_USERS_COLLECTION=users             # Optional override
 export FIRESTORE_DEFAULT_ROLE=ROLE_USER             # Optional override
 # Cloud Run and the Cloud Function reuse this value so every component talks to the same database
 export RECEIPT_FIRESTORE_PROJECT_ID=${FIRESTORE_PROJECT_ID}
+# Required: the web tier calls the receipt processor with this endpoint and audience
+export RECEIPT_PROCESSOR_BASE_URL=https://receipt-processor-your-team.example.com   # Replace with your processor endpoint
+export RECEIPT_PROCESSOR_AUDIENCE=projects/1234567890/locations/global/workloadIdentityPools/pool/providers/provider   # Replace with the audience expected by the processor
     ```
 
 ## Configure Cloud Storage via gcloud

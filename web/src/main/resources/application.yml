@@ -23,3 +23,7 @@ gcs:
   project-id: ${GCS_PROJECT_ID:}
   bucket: ${GCS_BUCKET:}
 
+receipt-processor:
+  base-url: ${RECEIPT_PROCESSOR_BASE_URL:}
+  audience: ${RECEIPT_PROCESSOR_AUDIENCE:}
+
