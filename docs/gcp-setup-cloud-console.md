@@ -85,7 +85,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 
 1. **Review prerequisites**
    - Ensure the following APIs are enabled in your project: Cloud Run, Cloud Build, Artifact Registry, Vertex AI, Cloud Storage, and Firestore.
-   - (Optional) Build the receipt processor module locally (`./mvnw -pl function -am -DskipTests package`) to verify dependencies before deploying.
+   - (Optional) Build the receipt processor module locally (`./mvnw -pl receipt-parser -am -DskipTests package`) to verify dependencies before deploying.
 
 2. **Create or reuse a runtime service account**
    - In **IAM & Admin → Service Accounts**, create `receipt-processor` (or reuse an existing service account).

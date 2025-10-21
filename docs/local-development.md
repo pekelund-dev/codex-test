@@ -105,7 +105,7 @@ When you want to execute the same code that runs on Cloud Run—including Vertex
 export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/a/service-account.json
 export VERTEX_AI_PROJECT_ID=my-vertex-project
 export VERTEX_AI_LOCATION=us-east1
-./mvnw -pl function -am spring-boot:run
+./mvnw -pl receipt-parser -am spring-boot:run
 ```
 
 Send a Cloud Storage finalize event payload to <http://localhost:8080/events/storage>. The Firestore emulator receives all writes automatically because the `FIRESTORE_EMULATOR_HOST` environment variable is already exported.
@@ -115,7 +115,7 @@ Send a Cloud Storage finalize event payload to <http://localhost:8080/events/sto
 If you only need to evaluate the legacy PDF extractor and Firestore writes—without incurring Vertex AI costs—start the lightweight Spring profile:
 
 ```bash
-./mvnw -pl function -am spring-boot:run \
+./mvnw -pl receipt-parser -am spring-boot:run \
     -Dspring-boot.run.profiles=local-receipt-test
 ```
 

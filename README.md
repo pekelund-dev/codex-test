@@ -109,7 +109,7 @@ After completing either path, restart the application and visit <http://localhos
 
 ### Receipt parsing Cloud Run service (Vertex AI Gemini)
 
-The `function` module now packages the receipt processor as a standalone Spring Boot web application that runs on Cloud Run. The web frontend calls this service after each successful upload, allowing the processor to download the receipt, extract structured data with Gemini, and persist the results to Firestore. The `web` module still hosts the interactive UI, while shared storage components live in the `core` module.
+The `receipt-parser` module now packages the receipt processor as a standalone Spring Boot web application that runs on Cloud Run. The web frontend calls this service after each successful upload, allowing the processor to download the receipt, extract structured data with Gemini, and persist the results to Firestore. The `web` module still hosts the interactive UI, while shared storage components live in the `core` module.
 
 #### Quick Deployment
 
@@ -156,7 +156,7 @@ You can exercise the Cloud Run service locally without waiting for a new deploym
 2. Start the service on a local port:
 
    ```bash
-   ./mvnw -pl function -am spring-boot:run
+   ./mvnw -pl receipt-parser -am spring-boot:run
    ```
 
 3. Upload a PDF to your receipts bucket (for example `gsutil cp test-receipt.pdf gs://your-receipts-bucket/receipts/sample-receipt.pdf`).
@@ -177,8 +177,8 @@ boots the legacy extractor, so no Firestore, Cloud Storage, or Vertex AI credent
 
 ```bash
 # run from the repository root so the parent pom is picked up but only the
-# function module executes
-./mvnw -pl function -am spring-boot:run \
+# receipt-parser module executes
+./mvnw -pl receipt-parser -am spring-boot:run \
     -Dspring-boot.run.profiles=local-receipt-test
 ```
 
@@ -227,9 +227,9 @@ To enable Google sign-in, create OAuth credentials in the Google Cloud Console a
 
 ## Project structure
 
-- `core` – Shared storage services and configuration reused by both the web and function modules.
+- `core` – Shared storage services and configuration reused by both the web and receipt-parser modules.
 - `web` – Spring MVC application with security, Firestore integration, templates, and static assets.
-- `function` – Cloud Run receipt processor that extracts receipts with Gemini and persists the output.
+- `receipt-parser` – Cloud Run receipt processor that extracts receipts with Gemini and persists the output.
 
 ## License
 

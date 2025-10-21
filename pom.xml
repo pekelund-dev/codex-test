@@ -20,7 +20,7 @@
 
     <modules>
         <module>core</module>
-        <module>function</module>
+        <module>receipt-parser</module>
     </modules>
 
     <profiles>

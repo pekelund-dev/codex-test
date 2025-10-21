@@ -122,7 +122,7 @@ export RECEIPT_FIRESTORE_PROJECT_ID=${FIRESTORE_PROJECT_ID}
 Before deploying, make sure the receipt processor module builds cleanly and that your Maven configuration includes the Spring Boot plugin (the parent `pom.xml` already provides this setup):
 
 ```bash
-./mvnw -pl function -am clean package -DskipTests
+./mvnw -pl receipt-parser -am clean package -DskipTests
 ```
 
 ### Provision runtime infrastructure
@@ -223,8 +223,8 @@ Before deploying, make sure the receipt processor module builds cleanly and that
 **Fix**: Build the module locally to surface compiler errors early and ensure the boot JAR is produced.
 
 ```bash
-./mvnw -pl function -am clean package -DskipTests
-ls function/target
+./mvnw -pl receipt-parser -am clean package -DskipTests
+ls receipt-parser/target
 ```
 
 If the image still fails to boot, run it locally with `spring-boot:run` to inspect stack traces before re-deploying.

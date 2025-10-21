@@ -1,6 +1,6 @@
 [[build.env]]
 name = "GOOGLE_BUILDABLE"
-value = "function"
+value = "receipt-parser"
 
 [[build.env]]
 name = "GOOGLE_RUNTIME_VERSION"
@@ -8,4 +8,4 @@ value = "21"
 
 [[build.env]]
 name = "MAVEN_BUILD_ARGUMENTS"
-value = "-pl function -am -DskipTests package"
+value = "-pl receipt-parser -am -DskipTests package"

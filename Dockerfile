@@ -5,7 +5,7 @@ WORKDIR /workspace
 
 COPY pom.xml .
 COPY core/pom.xml core/pom.xml
-COPY function/pom.xml function/pom.xml
+COPY receipt-parser/pom.xml receipt-parser/pom.xml
 COPY web/pom.xml web/pom.xml
 
 RUN mvn -B -Pinclude-web -pl web -am -DskipTests dependency:go-offline
