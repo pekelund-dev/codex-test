@@ -11,7 +11,7 @@ server:
 firestore:
   enabled: ${FIRESTORE_ENABLED:false}
   credentials: ${FIRESTORE_CREDENTIALS:}
-  project-id: ${FIRESTORE_PROJECT_ID:}
+  project-id: ${FIRESTORE_PROJECT_ID:${PROJECT_ID:}}
   emulator-host: ${FIRESTORE_EMULATOR_HOST:}
   users-collection: ${FIRESTORE_USERS_COLLECTION:users}
   receipts-collection: ${RECEIPT_FIRESTORE_COLLECTION:receiptExtractions}
@@ -20,7 +20,7 @@ firestore:
 gcs:
   enabled: ${GCS_ENABLED:false}
   credentials: ${GCS_CREDENTIALS:}
-  project-id: ${GCS_PROJECT_ID:}
+  project-id: ${GCS_PROJECT_ID:${PROJECT_ID:}}
   bucket: ${GCS_BUCKET:}
 
 receipt:

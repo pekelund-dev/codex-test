@@ -97,7 +97,7 @@ The same Firestore database stores both the **user registration** data managed b
 1. Use the same `PROJECT_ID` (or explicitly set `SHARED_FIRESTORE_PROJECT_ID`) for every deployment script and console workflow.
 2. Keep the `users` collection for authentication data and `receiptExtractions` for parsed receipts in the same database.
 3. Reuse the runtime service accounts created in this guide (or grant them `roles/datastore.user`) so both Cloud Run services and any local admin scripts can all read/write the shared documents.
-4. When setting environment variables, ensure `FIRESTORE_PROJECT_ID` (Cloud Run) and `RECEIPT_FIRESTORE_PROJECT_ID` (receipt processor) point to this project. If you override collection names, update both components accordingly.
+4. When setting environment variables, ensure both services share the same `PROJECT_ID` and `RECEIPT_FIRESTORE_COLLECTION`. If you override collection names, update both components accordingly.
 
 > 💡 **No service-account keys needed on Cloud Run:** the deployed service automatically authenticates with Firestore through its runtime service account. Leave `FIRESTORE_CREDENTIALS` unset when running on Cloud Run or other Google Cloud hosts that support [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc). Only create JSON keys for local development or third-party platforms that cannot use Workload Identity.
 

@@ -23,7 +23,6 @@ fi
 VERTEX_AI_PROJECT_ID="${VERTEX_AI_PROJECT_ID:-${PROJECT_ID}}"
 VERTEX_AI_LOCATION="${VERTEX_AI_LOCATION:-${REGION}}"
 VERTEX_AI_GEMINI_MODEL="${VERTEX_AI_GEMINI_MODEL:-gemini-2.0-flash}"
-RECEIPT_FIRESTORE_PROJECT_ID="${RECEIPT_FIRESTORE_PROJECT_ID:-${PROJECT_ID}}"
 RECEIPT_FIRESTORE_COLLECTION="${RECEIPT_FIRESTORE_COLLECTION:-receiptExtractions}"
 SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-prod}"
 
@@ -54,7 +53,7 @@ append_env_var "SPRING_PROFILES_ACTIVE" "$SPRING_PROFILES_ACTIVE"
 append_env_var "VERTEX_AI_PROJECT_ID" "$VERTEX_AI_PROJECT_ID"
 append_env_var "VERTEX_AI_LOCATION" "$VERTEX_AI_LOCATION"
 append_env_var "VERTEX_AI_GEMINI_MODEL" "$VERTEX_AI_GEMINI_MODEL"
-append_env_var "RECEIPT_FIRESTORE_PROJECT_ID" "$RECEIPT_FIRESTORE_PROJECT_ID"
+append_env_var "PROJECT_ID" "$PROJECT_ID"
 append_env_var "RECEIPT_FIRESTORE_COLLECTION" "$RECEIPT_FIRESTORE_COLLECTION"
 append_env_var "LOGGING_PROJECT_ID" "${LOGGING_PROJECT_ID:-${PROJECT_ID}}"
 
@@ -115,11 +114,11 @@ if ! gcloud artifacts repositories describe "$ARTIFACT_REPO" --location="$REGION
     --description="Container images for receipt processor"
 fi
 
-if ! gcloud firestore databases describe --database="(default)" --project="$RECEIPT_FIRESTORE_PROJECT_ID" --format="value(name)" >/dev/null 2>&1; then
+if ! gcloud firestore databases describe --database="(default)" --project="$PROJECT_ID" --format="value(name)" >/dev/null 2>&1; then
   gcloud firestore databases create \
     --location="$REGION" \
     --type=firestore-native \
-    --project="$RECEIPT_FIRESTORE_PROJECT_ID"
+    --project="$PROJECT_ID"
 fi
 
 if ! gcloud iam service-accounts describe "$SA_EMAIL" >/dev/null 2>&1; then

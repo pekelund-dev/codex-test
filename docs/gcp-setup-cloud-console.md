@@ -4,10 +4,10 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 
 ### Default environment variables
 
+- `PROJECT_ID` — shared by the web app and receipt processor.
 - `VERTEX_AI_PROJECT_ID` — defaults to the receipt processor project ID.
 - `VERTEX_AI_LOCATION` — defaults to `us-east1`.
 - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
-- `RECEIPT_FIRESTORE_PROJECT_ID` — defaults to the receipt processor project ID.
 - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
 
 ## Firestore configuration in the Console
@@ -39,10 +39,11 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 
      export FIRESTORE_ENABLED=true
      # Leave FIRESTORE_CREDENTIALS unset on Cloud Run; ADC handles authentication automatically.
-     export FIRESTORE_PROJECT_ID=your-project-id              # Optional when derived from the key
+     export PROJECT_ID=your-project-id                        # Shared by both Cloud Run services
+     export FIRESTORE_PROJECT_ID=${FIRESTORE_PROJECT_ID:-$PROJECT_ID}
      export FIRESTORE_USERS_COLLECTION=users                  # Optional override
      export FIRESTORE_DEFAULT_ROLE=ROLE_USER                  # Optional override
-     export RECEIPT_FIRESTORE_PROJECT_ID=$FIRESTORE_PROJECT_ID # Keep the two Cloud Run services aligned
+     export RECEIPT_FIRESTORE_COLLECTION=${RECEIPT_FIRESTORE_COLLECTION:-receiptExtractions}
      ```
 
    - Restart the application to pick up the Firestore integration. Visit `/register` to create your first account and sign in on `/login`.
@@ -106,11 +107,11 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    - Set the service name to `pklnd-receipts`, pick the region that matches your bucket, and select the `receipt-processor` service account.
    - Under **Security**, keep **Allow unauthenticated invocations** disabled.
    - Expand **Variables & Secrets → Environment variables** and define:
-     - `VERTEX_AI_PROJECT_ID` — defaults to the service project if omitted.
-     - `VERTEX_AI_LOCATION` — Vertex AI region that offers Gemini (for example `us-east1`).
-     - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
-     - `RECEIPT_FIRESTORE_PROJECT_ID` — reuse the same project ID exported for the web app to keep all components on one database.
-     - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
+    - `PROJECT_ID` — ensure the service uses the shared Firestore project.
+    - `VERTEX_AI_PROJECT_ID` — defaults to the service project if omitted.
+    - `VERTEX_AI_LOCATION` — Vertex AI region that offers Gemini (for example `us-east1`).
+    - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
+    - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
      - `RECEIPT_PROCESSOR_BASE_URL` — set to the Cloud Run URL noted after deployment.
    - Leave `RECEIPT_PROCESSOR_USE_ID_TOKEN` enabled so the web application authenticates with the processor automatically.
    - Deploy the service and note the HTTPS URL; you will reference it when configuring the web application.

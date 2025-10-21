@@ -13,9 +13,9 @@ class ReceiptProcessingSettingsTest {
     private static final Supplier<String> NO_PROJECT = () -> null;
 
     @Test
-    void fromEnvironmentUsesExplicitProjectId() {
+    void fromEnvironmentUsesProjectIdEnv() {
         Map<String, String> env = new HashMap<>();
-        env.put("RECEIPT_FIRESTORE_PROJECT_ID", "explicit-project");
+        env.put("PROJECT_ID", "explicit-project");
         env.put("RECEIPT_FIRESTORE_COLLECTION", "custom-collection");
 
         ReceiptProcessingSettings settings = ReceiptProcessingSettings.fromEnvironment(env, NO_PROJECT);
@@ -27,7 +27,7 @@ class ReceiptProcessingSettingsTest {
     @Test
     void fromEnvironmentThrowsWhenDefaultLocalProjectDetectedOnCloudRun() {
         Map<String, String> env = new HashMap<>();
-        env.put("RECEIPT_FIRESTORE_PROJECT_ID", "pklnd-local");
+        env.put("PROJECT_ID", "pklnd-local");
         env.put("K_SERVICE", "pklnd-receipts");
 
         assertThatThrownBy(() -> ReceiptProcessingSettings.fromEnvironment(env, () -> "codex-test-473008"))
@@ -39,12 +39,22 @@ class ReceiptProcessingSettingsTest {
     void fromEnvironmentThrowsWhenCustomLocalProjectDetectedOnCloudRun() {
         Map<String, String> env = new HashMap<>();
         env.put("LOCAL_PROJECT_ID", "custom-local");
-        env.put("RECEIPT_FIRESTORE_PROJECT_ID", "custom-local");
+        env.put("PROJECT_ID", "custom-local");
         env.put("K_SERVICE", "pklnd-receipts");
 
         assertThatThrownBy(() -> ReceiptProcessingSettings.fromEnvironment(env, () -> "codex-test-473008"))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("local project 'custom-local'");
+    }
+
+    @Test
+    void fromEnvironmentFallsBackToFirestoreProjectId() {
+        Map<String, String> env = new HashMap<>();
+        env.put("FIRESTORE_PROJECT_ID", "firestore-project");
+
+        ReceiptProcessingSettings settings = ReceiptProcessingSettings.fromEnvironment(env, NO_PROJECT);
+
+        assertThat(settings.projectId()).isEqualTo("firestore-project");
     }
 
     @Test

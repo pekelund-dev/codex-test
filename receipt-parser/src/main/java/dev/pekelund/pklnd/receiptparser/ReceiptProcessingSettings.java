@@ -30,11 +30,11 @@ public record ReceiptProcessingSettings(
 
         String collection = env.getOrDefault("RECEIPT_FIRESTORE_COLLECTION", DEFAULT_COLLECTION);
         String projectId = firstNonEmpty(
-            env.get("RECEIPT_FIRESTORE_PROJECT_ID"),
+            env.get("PROJECT_ID"),
+            env.get("FIRESTORE_PROJECT_ID"),
             env.get("GOOGLE_CLOUD_PROJECT"),
             env.get("GCLOUD_PROJECT"),
             env.get("GCP_PROJECT"),
-            env.get("PROJECT_ID"),
             defaultProjectSupplier.get());
 
         String localProjectId = env.getOrDefault("LOCAL_PROJECT_ID", DEFAULT_LOCAL_PROJECT_ID);
@@ -44,7 +44,7 @@ public record ReceiptProcessingSettings(
         }
 
         if (!StringUtils.hasText(projectId)) {
-            throw new IllegalStateException("Firestore project id must be configured via RECEIPT_FIRESTORE_PROJECT_ID "
+            throw new IllegalStateException("Firestore project id must be configured via PROJECT_ID "
                 + "or available from the Cloud environment.");
         }
 

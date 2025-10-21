@@ -84,7 +84,7 @@ sequenceDiagram
 
 **Notes**
 
-- The two Cloud Run services share the same Firestore collections. Environment variables such as `FIRESTORE_PROJECT_ID`, `RECEIPT_FIRESTORE_PROJECT_ID`, and `RECEIPT_FIRESTORE_COLLECTION` must point to the shared project and collection names.
+- The two Cloud Run services share the same Firestore collections. Environment variables such as `PROJECT_ID`, `FIRESTORE_PROJECT_ID`, and `RECEIPT_FIRESTORE_COLLECTION` must point to the shared project and collection names.
 - The signed URL upload pattern prevents the Cloud Run service from proxying large files, while still enforcing authenticated access and storage permissions.
 
 ---
