@@ -109,7 +109,7 @@ After completing either path, restart the application and visit <http://localhos
 
 ### Receipt parsing Cloud Run service (Vertex AI Gemini)
 
-The `function` module now packages the receipt processor as a standalone Spring Boot web application that runs on Cloud Run. Eventarc forwards Cloud Storage finalize events to the service, which downloads the receipt, extracts structured data with Gemini, and persists the results to Firestore. The `web` module still hosts the interactive UI, while shared storage components live in the `core` module.
+The `function` module now packages the receipt processor as a standalone Spring Boot web application that runs on Cloud Run. The web frontend calls this service after each successful upload, allowing the processor to download the receipt, extract structured data with Gemini, and persist the results to Firestore. The `web` module still hosts the interactive UI, while shared storage components live in the `core` module.
 
 #### Quick Deployment
 
@@ -126,12 +126,12 @@ This script automatically:
 - Detects the Cloud Storage bucket region and deploys the Cloud Run service there
 - Builds and deploys the container image via Cloud Build
 - Can be paired with `./scripts/cleanup_artifact_repos.sh` to remove older container images so Artifact Registry only retains the most recent builds
-- Configures an Eventarc trigger so Storage finalize events invoke the service
-- Points the trigger at `/events/storage` so Cloud Storage callbacks reach the Spring controller
+- Grants the runtime service account access to the receipt bucket and Firestore collection
+- Accepts an optional list of additional service accounts that should be allowed to invoke the processor (for example the Cloud Run web app)
 
 #### Teardown
 
-When you're finished testing, run the teardown helper to remove both Cloud Run services, the Eventarc trigger, and related IAM bindings. The script is safe to execute multiple times; it only deletes resources that still exist.
+When you're finished testing, run the teardown helper to remove both Cloud Run services and related IAM bindings. The script is safe to execute multiple times; it only deletes resources that still exist.
 
 ```bash
 ./scripts/teardown_gcp_resources.sh

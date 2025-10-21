@@ -84,7 +84,8 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
     }
 
     @Override
-    public void uploadFiles(List<MultipartFile> files, ReceiptOwner owner) {
+    public List<StoredReceiptReference> uploadFiles(List<MultipartFile> files, ReceiptOwner owner) {
+        List<StoredReceiptReference> uploaded = new ArrayList<>();
         for (MultipartFile file : files) {
             if (file == null || file.isEmpty()) {
                 continue;
@@ -102,11 +103,14 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
 
             try (InputStream inputStream = file.getInputStream()) {
                 storage.createFrom(blobInfo, inputStream);
+                uploaded.add(new StoredReceiptReference(properties.getBucket(), objectName));
             } catch (IOException | StorageException ex) {
                 String displayName = StringUtils.hasText(originalFilename) ? originalFilename : objectName;
                 throw new ReceiptStorageException("Failed to upload file '%s'".formatted(displayName), ex);
             }
         }
+
+        return List.copyOf(uploaded);
     }
 
     @Override

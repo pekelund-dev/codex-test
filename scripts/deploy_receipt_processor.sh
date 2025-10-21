@@ -7,9 +7,8 @@ REGION="${REGION:-europe-north1}"
 SERVICE_NAME="${RECEIPT_SERVICE_NAME:-pklnd-receipts}"
 SA_NAME="${RECEIPT_SA_NAME:-receipt-processor}"
 ARTIFACT_REPO="${RECEIPT_ARTIFACT_REPO:-receipts}"
-TRIGGER_NAME="${RECEIPT_TRIGGER_NAME:-receipt-processing-trigger}"
-DESTINATION_RUN_PATH="${RECEIPT_EVENT_PATH:-/events/storage}"
 GCS_BUCKET="${GCS_BUCKET:-}"
+ADDITIONAL_INVOKER_SERVICE_ACCOUNTS="${ADDITIONAL_INVOKER_SERVICE_ACCOUNTS:-}"
 
 if [[ -z "${PROJECT_ID}" ]]; then
   echo "PROJECT_ID must be set or configured with 'gcloud config set project'." >&2
@@ -17,7 +16,7 @@ if [[ -z "${PROJECT_ID}" ]]; then
 fi
 
 if [[ -z "${GCS_BUCKET}" ]]; then
-  echo "GCS_BUCKET must be provided so Eventarc can subscribe to finalize events." >&2
+  echo "GCS_BUCKET must be provided so the service account can access uploaded receipts." >&2
   exit 1
 fi
 
@@ -93,7 +92,7 @@ fi
 REGION=$(echo "$REGION" | tr '[:upper:]' '[:lower:]')
 BUCKET_REGION_LOWER=$(echo "$BUCKET_REGION" | tr '[:upper:]' '[:lower:]')
 if [[ "$REGION" != "$BUCKET_REGION_LOWER" ]]; then
-  echo "Using Cloud Run region ${REGION}, bucket is in ${BUCKET_REGION_LOWER}. Eventarc supports cross-region delivery but consider aligning regions for latency." >&2
+  echo "Using Cloud Run region ${REGION}, bucket is in ${BUCKET_REGION_LOWER}. Consider aligning regions for lower latency." >&2
 fi
 
 set -x
@@ -102,12 +101,10 @@ gcloud config set project "$PROJECT_ID"
 
 gcloud services enable \
   run.googleapis.com \
-  eventarc.googleapis.com \
   cloudbuild.googleapis.com \
   artifactregistry.googleapis.com \
   firestore.googleapis.com \
   storage.googleapis.com \
-  pubsub.googleapis.com \
   aiplatform.googleapis.com \
   --quiet
 
@@ -144,10 +141,6 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:${SA_EMAIL}" \
   --role "roles/aiplatform.user" --condition=None || true
 
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member "serviceAccount:${SA_EMAIL}" \
-  --role "roles/eventarc.eventReceiver" --condition=None || true
-
 gcloud storage buckets add-iam-policy-binding "gs://${GCS_BUCKET}" \
   --member "serviceAccount:${SA_EMAIL}" \
   --role "roles/storage.objectAdmin" \
@@ -175,38 +168,19 @@ gcloud run services add-iam-policy-binding "$SERVICE_NAME" \
   --role "roles/run.invoker" \
   --quiet || true
 
-PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
-EVENTARC_AGENT="service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com"
-
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member "serviceAccount:${EVENTARC_AGENT}" \
-  --role "roles/eventarc.eventReceiver" \
-  --quiet || true
-
-gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" \
-  --member "serviceAccount:${EVENTARC_AGENT}" \
-  --role "roles/iam.serviceAccountTokenCreator" \
-  --project "$PROJECT_ID" \
-  --quiet || true
-
-if gcloud eventarc triggers describe "$TRIGGER_NAME" --location "$REGION" >/dev/null 2>&1; then
-  gcloud eventarc triggers update "$TRIGGER_NAME" \
-    --location "$REGION" \
-    --destination-run-service "$SERVICE_NAME" \
-    --destination-run-region "$REGION" \
-    --destination-run-path "$DESTINATION_RUN_PATH" \
-    --event-filters type=google.cloud.storage.object.v1.finalized \
-    --event-filters bucket="$GCS_BUCKET" \
-    --service-account "$SA_EMAIL"
-else
-  gcloud eventarc triggers create "$TRIGGER_NAME" \
-    --location "$REGION" \
-    --destination-run-service "$SERVICE_NAME" \
-    --destination-run-region "$REGION" \
-    --destination-run-path "$DESTINATION_RUN_PATH" \
-    --event-filters type=google.cloud.storage.object.v1.finalized \
-    --event-filters bucket="$GCS_BUCKET" \
-    --service-account "$SA_EMAIL"
+if [[ -n "$ADDITIONAL_INVOKER_SERVICE_ACCOUNTS" ]]; then
+  IFS=',' read -ra EXTRA_INVOKERS <<< "$ADDITIONAL_INVOKER_SERVICE_ACCOUNTS"
+  for invoker in "${EXTRA_INVOKERS[@]}"; do
+    trimmed="$(echo "$invoker" | xargs)"
+    if [[ -z "$trimmed" ]]; then
+      continue
+    fi
+    gcloud run services add-iam-policy-binding "$SERVICE_NAME" \
+      --region "$REGION" \
+      --member "serviceAccount:${trimmed}" \
+      --role "roles/run.invoker" \
+      --quiet || true
+  done
 fi
 
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --format "value(status.url)")

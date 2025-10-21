@@ -120,6 +120,8 @@ append_env_var "GCS_ENABLED" "${GCS_ENABLED:-true}"
 append_env_var "GCS_PROJECT_ID" "${SHARED_GCS_PROJECT_ID:-}"
 append_env_var "GCS_BUCKET" "${GCS_BUCKET:-}"
 append_env_var "GCS_CREDENTIALS" "${GCS_CREDENTIALS:-}"
+append_env_var "RECEIPT_PROCESSOR_BASE_URL" "${RECEIPT_PROCESSOR_BASE_URL:-}"
+append_env_var "RECEIPT_PROCESSOR_AUDIENCE" "${RECEIPT_PROCESSOR_AUDIENCE:-}"
 
 choose_env_delimiter() {
   local candidates=("|" "@" ":" ";" "#" "+" "~" "^" "%" "?")

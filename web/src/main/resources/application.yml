@@ -23,3 +23,13 @@ gcs:
   project-id: ${GCS_PROJECT_ID:}
   bucket: ${GCS_BUCKET:}
 
+receipt:
+  processing:
+    enabled: ${RECEIPT_PROCESSOR_ENABLED:true}
+    base-url: ${RECEIPT_PROCESSOR_BASE_URL:}
+    event-path: ${RECEIPT_PROCESSOR_EVENT_PATH:/events/storage}
+    use-id-token: ${RECEIPT_PROCESSOR_USE_ID_TOKEN:true}
+    audience: ${RECEIPT_PROCESSOR_AUDIENCE:}
+    connect-timeout: ${RECEIPT_PROCESSOR_CONNECT_TIMEOUT:5s}
+    read-timeout: ${RECEIPT_PROCESSOR_READ_TIMEOUT:30s}
+

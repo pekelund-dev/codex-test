@@ -15,11 +15,10 @@ gcloud services enable \
     run.googleapis.com \
     cloudbuild.googleapis.com \
     artifactregistry.googleapis.com \
-    eventarc.googleapis.com \
-    pubsub.googleapis.com \
     aiplatform.googleapis.com \
     storage.googleapis.com \
-    firestore.googleapis.com
+    firestore.googleapis.com \
+    secretmanager.googleapis.com
 ```
 
 ## Configure Firestore via gcloud
@@ -146,22 +145,13 @@ Before deploying, make sure the receipt processor module builds cleanly and that
     BUCKET=gs://responsive-auth-receipts-${PROJECT_ID}  # Replace if you use a custom bucket
     gcloud storage buckets add-iam-policy-binding "${BUCKET}" \n      --member="serviceAccount:${RECEIPT_SA}" \n      --role="roles/storage.objectAdmin"
 
-    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \n      --member="serviceAccount:${RECEIPT_SA}" \n      --role="roles/datastore.user"
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+      --member="serviceAccount:${RECEIPT_SA}" \
+      --role="roles/datastore.user"
 
-    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \n      --member="serviceAccount:${RECEIPT_SA}" \n      --role="roles/aiplatform.user"
-
-    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \n      --member="serviceAccount:${RECEIPT_SA}" \n      --role="roles/eventarc.eventReceiver"
-    ```
-
-3. **Grant the Eventarc service agent permission to impersonate the service account** (required for trigger deliveries):
-
-    ```bash
-    PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
-    EVENTARC_AGENT=service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com
-
-    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \n      --member="serviceAccount:${EVENTARC_AGENT}" \n      --role="roles/eventarc.eventReceiver"
-
-    gcloud iam service-accounts add-iam-policy-binding "${RECEIPT_SA}" \n      --member="serviceAccount:${EVENTARC_AGENT}" \n      --role="roles/iam.serviceAccountTokenCreator"
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+      --member="serviceAccount:${RECEIPT_SA}" \
+      --role="roles/aiplatform.user"
     ```
 
 ### Build and deploy the container
@@ -187,17 +177,28 @@ Before deploying, make sure the receipt processor module builds cleanly and that
     ./scripts/cleanup_artifact_repos.sh
     ```
 
-### Configure the Eventarc trigger
+### Allow the web application to invoke the processor
 
-1. **Create (or update) the trigger** so Cloud Storage finalize events invoke the service. Replace the bucket name with your own if different from the earlier example. Set the Cloud Run path to `/events/storage`; Eventarc defaults to `/`, which would miss the Spring controller mapped specifically for storage callbacks.
+1. **Grant the web service account invocation rights** so uploads can trigger parsing. Replace the example identity if your Cloud Run web app uses a different service account.
 
     ```bash
-    BUCKET_NAME=$(basename "${BUCKET}")
-    gcloud eventarc triggers create receipt-processing-trigger \n      --location "${REGION}" \n      --destination-run-service pklnd-receipts \n      --destination-run-region "${REGION}" \n      --destination-run-path "/events/storage" \n      --event-filters type=google.cloud.storage.object.v1.finalized \n      --event-filters bucket="${BUCKET_NAME}" \n      --service-account "${RECEIPT_SA}" || \
-    gcloud eventarc triggers update receipt-processing-trigger \n      --location "${REGION}" \n      --destination-run-service pklnd-receipts \n      --destination-run-region "${REGION}" \n      --destination-run-path "/events/storage" \n      --event-filters type=google.cloud.storage.object.v1.finalized \n      --event-filters bucket="${BUCKET_NAME}" \n      --service-account "${RECEIPT_SA}"
+    WEB_APP_SA=responsive-auth-run-sa@${PROJECT_ID}.iam.gserviceaccount.com
+    gcloud run services add-iam-policy-binding pklnd-receipts \
+      --region "${REGION}" \
+      --member="serviceAccount:${WEB_APP_SA}" \
+      --role="roles/run.invoker"
     ```
 
-2. **Verify the deployment**
+2. **Capture the Cloud Run URL**. You'll supply this value to the web deployment so it can call the processor directly.
+
+    ```bash
+    PROCESSOR_URL=$(gcloud run services describe pklnd-receipts --region "${REGION}" --format="value(status.url)")
+    echo "Set RECEIPT_PROCESSOR_BASE_URL=${PROCESSOR_URL} when deploying the web application"
+    ```
+
+3. **Deploy or update the web application** with the new environment variables. Set `RECEIPT_PROCESSOR_BASE_URL` (and optionally `RECEIPT_PROCESSOR_AUDIENCE` if you use a custom hostname) when running `scripts/deploy_cloud_run.sh` or `gcloud run deploy`. Provide the web service account via `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` when re-running the receipt processor script if you prefer automation.
+
+### Verify the deployment
 
     ```bash
     # Upload a PDF and ensure metadata includes receipt owner information
@@ -228,10 +229,10 @@ ls function/target
 
 If the image still fails to boot, run it locally with `spring-boot:run` to inspect stack traces before re-deploying.
 
-#### 2. Region mismatch errors
-**Symptom**: Eventarc reports trigger validation errors.
+#### 2. Region mismatch warnings
+**Symptom**: Receipts take noticeably longer to parse after upload.
 
-**Fix**: Deploy the Cloud Run service and create the trigger in the same region as your Cloud Storage bucket.
+**Fix**: Keep the Cloud Run service and the storage bucket in nearby regions to reduce latency.
 
 ```bash
 # Check bucket region
@@ -239,43 +240,22 @@ gcloud storage buckets describe gs://your-bucket-name --format="value(location)"
 ```
 
 #### 3. Permission denied errors
-**Symptom**: Eventarc cannot deliver events or Cloud Run returns HTTP 403.
+**Symptom**: Cloud Run logs HTTP 403 when the web app uploads receipts.
 
-**Fix**: Ensure both the receipt processor service account and the Eventarc service agent have the required roles.
+**Fix**: Grant the web application service account `roles/run.invoker` on the processor and confirm the web deployment sets `RECEIPT_PROCESSOR_BASE_URL` (and optional `RECEIPT_PROCESSOR_AUDIENCE`).
 
 ```bash
 PROJECT_ID=$(gcloud config get-value project)
-PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
-RECEIPT_SA=receipt-processor@${PROJECT_ID}.iam.gserviceaccount.com
-EVENTARC_AGENT=service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com
+WEB_APP_SA=responsive-auth-run-sa@${PROJECT_ID}.iam.gserviceaccount.com
 
-# Receipt processor roles
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${RECEIPT_SA}" \
-  --role="roles/datastore.user"
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${RECEIPT_SA}" \
-  --role="roles/aiplatform.user"
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${RECEIPT_SA}" \
-  --role="roles/eventarc.eventReceiver"
-gcloud storage buckets add-iam-policy-binding gs://your-bucket \
-  --member="serviceAccount:${RECEIPT_SA}" \
-  --role="roles/storage.objectAdmin"
-
-# Eventarc service agent permissions
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${EVENTARC_AGENT}" \
-  --role="roles/eventarc.eventReceiver"
-gcloud iam service-accounts add-iam-policy-binding "${RECEIPT_SA}" \
-  --member="serviceAccount:${EVENTARC_AGENT}" \
-  --role="roles/iam.serviceAccountTokenCreator"
+# Allow the web app to call the receipt processor
+gcloud run services add-iam-policy-binding pklnd-receipts   --region "${REGION}"   --member="serviceAccount:${WEB_APP_SA}"   --role="roles/run.invoker"
 ```
 
 #### 4. API not enabled errors
 **Symptom**: Deployment fails with `API [...] not enabled on project`.
 
-**Fix**: Re-run the core `gcloud services enable` command listed earlier so Cloud Run, Artifact Registry, Eventarc, and Vertex AI are active.
+**Fix**: Re-run the core `gcloud services enable` command listed earlier so Cloud Run, Artifact Registry, and Vertex AI are active.
 
 #### 5. Environment variable issues
 **Symptom**: The service deploys but fails to read Firestore or Vertex AI.

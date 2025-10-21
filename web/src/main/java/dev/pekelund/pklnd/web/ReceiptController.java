@@ -5,11 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionAccessException;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
+import dev.pekelund.pklnd.receipts.ReceiptProcessingClient;
+import dev.pekelund.pklnd.receipts.ReceiptProcessingClient.ProcessingFailure;
+import dev.pekelund.pklnd.receipts.ReceiptProcessingClient.ProcessingResult;
 import dev.pekelund.pklnd.storage.ReceiptFile;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
 import dev.pekelund.pklnd.storage.ReceiptStorageException;
 import dev.pekelund.pklnd.storage.ReceiptStorageService;
+import dev.pekelund.pklnd.storage.StoredReceiptReference;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -81,15 +85,18 @@ public class ReceiptController {
     private final Optional<ReceiptStorageService> receiptStorageService;
     private final Optional<ReceiptExtractionService> receiptExtractionService;
     private final ReceiptOwnerResolver receiptOwnerResolver;
+    private final Optional<ReceiptProcessingClient> receiptProcessingClient;
 
     public ReceiptController(
         @Autowired(required = false) ReceiptStorageService receiptStorageService,
         @Autowired(required = false) ReceiptExtractionService receiptExtractionService,
-        ReceiptOwnerResolver receiptOwnerResolver
+        ReceiptOwnerResolver receiptOwnerResolver,
+        @Autowired(required = false) ReceiptProcessingClient receiptProcessingClient
     ) {
         this.receiptStorageService = Optional.ofNullable(receiptStorageService);
         this.receiptExtractionService = Optional.ofNullable(receiptExtractionService);
         this.receiptOwnerResolver = receiptOwnerResolver;
+        this.receiptProcessingClient = Optional.ofNullable(receiptProcessingClient);
     }
 
     @GetMapping("/receipts")
@@ -861,32 +868,65 @@ public class ReceiptController {
 
         if (storage == null) {
             return new UploadOutcome(null,
-                "Receipt uploads are disabled. Configure Google Cloud Storage to enable this feature.");
+                "Uppladdning av kvitton är inaktiverad. Konfigurera Google Cloud Storage för att aktivera funktionen.");
         }
 
         List<MultipartFile> sanitizedFiles = files == null ? List.of()
             : files.stream().filter(file -> file != null && !file.isEmpty()).toList();
 
         if (sanitizedFiles.isEmpty()) {
-            return new UploadOutcome(null, "Please choose at least one file to upload.");
+            return new UploadOutcome(null, "Välj minst en fil att ladda upp.");
         }
 
         if (sanitizedFiles.size() > MAX_UPLOAD_FILES) {
             return new UploadOutcome(null,
-                "You can upload up to %d files at a time.".formatted(MAX_UPLOAD_FILES));
+                "Du kan ladda upp högst %d filer åt gången.".formatted(MAX_UPLOAD_FILES));
         }
 
         ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
 
         try {
-            storage.uploadFiles(sanitizedFiles, owner);
-            int count = sanitizedFiles.size();
-            String successMessage = "%d file%s uploaded successfully.".formatted(count, count == 1 ? "" : "s");
-            return new UploadOutcome(successMessage, null);
+            List<StoredReceiptReference> uploadedReferences = storage.uploadFiles(sanitizedFiles, owner);
+            int uploadedCount = uploadedReferences.size();
+            String successMessage = uploadedCount == 1
+                ? "1 fil laddades upp."
+                : "%d filer laddades upp.".formatted(uploadedCount);
+            String errorMessage = null;
+
+            if (uploadedCount > 0 && receiptProcessingClient.isPresent()) {
+                ProcessingResult processingResult = receiptProcessingClient.get().notifyUploads(uploadedReferences);
+                if (processingResult.succeededCount() > 0) {
+                    int queued = processingResult.succeededCount();
+                    successMessage = queued == 1
+                        ? "1 fil laddades upp och köades för tolkning."
+                        : "%d filer laddades upp och köades för tolkning.".formatted(queued);
+                }
+                if (!processingResult.failures().isEmpty()) {
+                    errorMessage = formatProcessingFailure(processingResult.failures());
+                    LOGGER.warn("Failed to queue {} receipt(s) for parsing", processingResult.failures().size());
+                }
+            }
+
+            return new UploadOutcome(successMessage, errorMessage);
         } catch (ReceiptStorageException ex) {
             LOGGER.error("Failed to upload receipts", ex);
             return new UploadOutcome(null, ex.getMessage());
         }
+    }
+
+    private String formatProcessingFailure(List<ProcessingFailure> failures) {
+        if (failures == null || failures.isEmpty()) {
+            return null;
+        }
+
+        String joined = failures.stream()
+            .map(failure -> failure.reference().objectName())
+            .limit(3)
+            .collect(Collectors.joining(", "));
+        if (failures.size() > 3) {
+            joined = joined + " …";
+        }
+        return "Vissa uppladdningar kunde inte köas för tolkning: %s.".formatted(joined);
     }
 
     @PostMapping("/receipts/upload")

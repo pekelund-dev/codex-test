@@ -3,8 +3,8 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # Teardown script for the Responsive Receipts infrastructure.
-# Removes Cloud Run services, Eventarc triggers, IAM bindings, and optionally supporting
-# resources while tolerating partially created or already deleted assets.
+# Removes Cloud Run services, IAM bindings, and optionally supporting resources while
+# tolerating partially created or already deleted assets.
 
 PROJECT_ID="${PROJECT_ID:-}"
 REGION="${REGION:-europe-north1}"
@@ -12,7 +12,6 @@ SERVICE_NAME="${SERVICE_NAME:-pklnd-web}"
 SA_NAME="${SA_NAME:-cloud-run-runtime}"
 RECEIPT_SERVICE_NAME="${RECEIPT_SERVICE_NAME:-pklnd-receipts}"
 RECEIPT_SA_NAME="${RECEIPT_SA_NAME:-receipt-processor}"
-RECEIPT_TRIGGER_NAME="${RECEIPT_TRIGGER_NAME:-receipt-processing-trigger}"
 DOMAIN="${DOMAIN:-pklnd.pekelund.dev}"
 ARTIFACT_REPO="${ARTIFACT_REPO:-web}"
 RECEIPT_ARTIFACT_REPO="${RECEIPT_ARTIFACT_REPO:-receipts}"
@@ -56,15 +55,6 @@ if gcloud run services describe "$RECEIPT_SERVICE_NAME" --region "$REGION" --qui
     --quiet
 else
   echo "Cloud Run service ${RECEIPT_SERVICE_NAME} not found; skipping deletion."
-fi
-
-# Delete the Eventarc trigger if present.
-if gcloud eventarc triggers describe "$RECEIPT_TRIGGER_NAME" --location "$REGION" --quiet >/dev/null 2>&1; then
-  gcloud eventarc triggers delete "$RECEIPT_TRIGGER_NAME" \
-    --location "$REGION" \
-    --quiet
-else
-  echo "Eventarc trigger ${RECEIPT_TRIGGER_NAME} not found; skipping deletion."
 fi
 
 # Remove IAM bindings for the receipt processor service account.

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * HTTP controller that receives Cloud Storage events forwarded by Eventarc.
+ * HTTP controller that receives Cloud Storage style events forwarded by the web application.
  */
 @RestController
 @RequestMapping(path = "/events/storage")

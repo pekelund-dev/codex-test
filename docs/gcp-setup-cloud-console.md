@@ -84,7 +84,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 ## Deploy the receipt-processing Cloud Run service
 
 1. **Review prerequisites**
-   - Ensure the following APIs are enabled in your project: Cloud Run, Cloud Build, Artifact Registry, Eventarc, Pub/Sub, Vertex AI, Cloud Storage, and Firestore.
+   - Ensure the following APIs are enabled in your project: Cloud Run, Cloud Build, Artifact Registry, Vertex AI, Cloud Storage, and Firestore.
    - (Optional) Build the receipt processor module locally (`./mvnw -pl function -am -DskipTests package`) to verify dependencies before deploying.
 
 2. **Create or reuse a runtime service account**
@@ -93,7 +93,6 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
      - **Storage Object Admin** on the receipts bucket.
      - **Datastore User** for Firestore access.
      - **Vertex AI User** to invoke Gemini models.
-     - **Eventarc Event Receiver** so triggers can deliver storage events.
 
 3. **Build and publish the container image**
    - Open **Cloud Build → Builds → Create** and select **Container image**.
@@ -112,14 +111,14 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
      - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
      - `RECEIPT_FIRESTORE_PROJECT_ID` — reuse the same project ID exported for the web app to keep all components on one database.
      - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
-   - Deploy the service and note the HTTPS URL (Eventarc uses the internal address, so you do not need to expose it publicly).
+     - `RECEIPT_PROCESSOR_BASE_URL` — set to the Cloud Run URL noted after deployment.
+   - Leave `RECEIPT_PROCESSOR_USE_ID_TOKEN` enabled so the web application authenticates with the processor automatically.
+   - Deploy the service and note the HTTPS URL; you will reference it when configuring the web application.
 
-5. **Configure the Eventarc trigger**
-   - Go to **Eventarc → Triggers → Create trigger**.
-   - Select **Cloud Storage** as the source, choose the **Finalized/Created** event, and specify your receipts bucket.
-   - Set the destination to the `pklnd-receipts` Cloud Run service in the same region.
-   - Expand the Cloud Run destination settings and set the **Path** to `/events/storage` so Eventarc reaches the HTTP controller.
-   - Choose the `receipt-processor` service account for invocation and create the trigger.
+5. **Allow the web application to invoke the processor**
+   - In **Cloud Run → pklnd-receipts → Permissions**, add the web service account (for example `responsive-auth-run-sa@PROJECT_ID.iam.gserviceaccount.com`) with the **Cloud Run Invoker** role.
+   - From the service detail page copy the service URL and configure the web application deployment with `RECEIPT_PROCESSOR_BASE_URL`.
+   - If you deploy via `scripts/deploy_cloud_run.sh`, set `RECEIPT_PROCESSOR_BASE_URL` before running the script and re-run `scripts/deploy_receipt_processor.sh` with `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` so the permission remains in sync.
 
 6. **Observe the lifecycle**
    - Upload a PDF receipt to the bucket and include optional metadata keys:

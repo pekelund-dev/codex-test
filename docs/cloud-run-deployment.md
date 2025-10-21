@@ -37,9 +37,9 @@ Replace the placeholders below with your values when following the steps:
 Prefer the repository scripts when you want a repeatable, idempotent rollout:
 
 - `scripts/deploy_cloud_run.sh` provisions APIs, Artifact Registry, Firestore, the runtime service account, and the Cloud Run service. It skips resource creation when assets already exist and expects the repository `Dockerfile` at the project root (set `BUILD_CONTEXT` if you store it elsewhere).
-- `scripts/deploy_receipt_processor.sh` provisions the receipt processor Cloud Run service, configures Eventarc, and aligns IAM permissions with the shared Firestore project. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely.
+- `scripts/deploy_receipt_processor.sh` provisions the receipt processor Cloud Run service, grants it access to the receipt bucket and Firestore, and aligns IAM permissions with the shared Firestore project. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely. Provide `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` when other services (such as the web frontend) should be allowed to trigger processing.
 - `scripts/cleanup_artifact_repos.sh` prunes older container images from both Artifact Registry repositories, keeping only the newest build for each Cloud Run service.
-- `scripts/teardown_gcp_resources.sh` removes both Cloud Run services, the Eventarc trigger, IAM bindings, and optional supporting infrastructure. It tolerates partially deleted projects and only removes what is present. Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` when you also want to purge the associated identities or container registry.
+- `scripts/teardown_gcp_resources.sh` removes both Cloud Run services, IAM bindings, and optional supporting infrastructure. It tolerates partially deleted projects and only removes what is present. Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` when you also want to purge the associated identities or container registry.
 
 The rest of this document mirrors what the scripts perform under the hood if you prefer to click through the console or run individual `gcloud` commands.
 
@@ -199,7 +199,7 @@ gcloud artifacts repositories create web \
 4. Set the service name (`SERVICE_NAME`) and region (`REGION`).
 5. Under **Authentication**, choose whether to allow unauthenticated invocations.
 6. Expand **Security** → **Service account** and select the runtime service account (`SA_EMAIL`).
-7. Set environment variables (at a minimum `FIRESTORE_ENABLED=true`, `FIRESTORE_PROJECT_ID`, `SPRING_PROFILES_ACTIVE=prod,oauth`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GCS_ENABLED=true`, `GCS_PROJECT_ID`, and `GCS_BUCKET`).
+7. Set environment variables (at a minimum `FIRESTORE_ENABLED=true`, `FIRESTORE_PROJECT_ID`, `SPRING_PROFILES_ACTIVE=prod,oauth`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GCS_ENABLED=true`, `GCS_PROJECT_ID`, `GCS_BUCKET`, and `RECEIPT_PROCESSOR_BASE_URL` pointing to the Cloud Run receipt processor URL). Keep `RECEIPT_PROCESSOR_USE_ID_TOKEN=true` so the web app authenticates with the processor automatically.
 8. Configure CPU/Memory limits and concurrency as required.
 9. Click **Create** to deploy.
 
@@ -216,7 +216,9 @@ export GOOGLE_CLIENT_SECRET="your-oauth-client-secret"
 IMAGE_URI="${IMAGE_TAG}"
 SPRING_PROFILES="prod"
 SPRING_PROFILES="${SPRING_PROFILES},oauth"
-ENV_VARS="SPRING_PROFILES_ACTIVE=${SPRING_PROFILES},FIRESTORE_ENABLED=true,FIRESTORE_PROJECT_ID=${PROJECT_ID},GCS_ENABLED=true,GCS_PROJECT_ID=${PROJECT_ID},GCS_BUCKET=${GCS_BUCKET},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
+RECEIPT_PROCESSOR_BASE_URL="https://RECEIPT_SERVICE_HOSTNAME"  # Replace with the Cloud Run receipt processor URL
+RECEIPT_PROCESSOR_AUDIENCE="${RECEIPT_PROCESSOR_BASE_URL}"
+ENV_VARS="SPRING_PROFILES_ACTIVE=${SPRING_PROFILES},FIRESTORE_ENABLED=true,FIRESTORE_PROJECT_ID=${PROJECT_ID},GCS_ENABLED=true,GCS_PROJECT_ID=${PROJECT_ID},GCS_BUCKET=${GCS_BUCKET},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET},RECEIPT_PROCESSOR_BASE_URL=${RECEIPT_PROCESSOR_BASE_URL},RECEIPT_PROCESSOR_AUDIENCE=${RECEIPT_PROCESSOR_AUDIENCE}"
 
  gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_URI" \
@@ -225,11 +227,13 @@ ENV_VARS="SPRING_PROFILES_ACTIVE=${SPRING_PROFILES},FIRESTORE_ENABLED=true,FIRES
   --platform managed \
   --allow-unauthenticated \
   --set-env-vars "$ENV_VARS" \
-  --min-instances 0 \
+ --min-instances 0 \
   --max-instances 10
 ```
 
 Adjust min/max instances, authentication, and environment variables as necessary. If access should be restricted, remove `--allow-unauthenticated` and grant IAM access explicitly. Keep `FIRESTORE_ENABLED=true` so self-registration remains available.
+
+> Ensure the receipt processor service trusts this Cloud Run identity. Re-run `scripts/deploy_receipt_processor.sh` with `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` set to the web app's service account (for example `responsive-auth-run-sa@PROJECT_ID.iam.gserviceaccount.com`) so the upload workflow can trigger parsing.
 
 ---
 
