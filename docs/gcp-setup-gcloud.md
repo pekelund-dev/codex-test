@@ -267,6 +267,9 @@ gcloud run services add-iam-policy-binding pklnd-receipts   --region "${REGION}"
 - `RECEIPT_FIRESTORE_PROJECT_ID` – project hosting the `receiptExtractions` collection
 - `RECEIPT_FIRESTORE_COLLECTION` – usually `receiptExtractions`
 
+Cloud Run deployments fail fast if `RECEIPT_FIRESTORE_PROJECT_ID` resolves to the local emulator id (for example, `pklnd-local`).
+Remove any lingering `LOCAL_PROJECT_ID` exports or set `RECEIPT_FIRESTORE_PROJECT_ID` explicitly to your production project before redeploying.
+
 ### Monitoring and Debugging
 
 1. **View build logs** – Cloud Build prints a logs URL after each submission.

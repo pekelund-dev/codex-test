@@ -4,8 +4,6 @@ import com.google.cloud.ServiceOptions;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
 /**
@@ -17,7 +15,6 @@ public record ReceiptProcessingSettings(
     String receiptsCollection
 ) {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptProcessingSettings.class);
     private static final String DEFAULT_COLLECTION = "receiptExtractions";
     private static final String DEFAULT_LOCAL_PROJECT_ID = "pklnd-local";
 
@@ -43,12 +40,7 @@ public record ReceiptProcessingSettings(
         String localProjectId = env.getOrDefault("LOCAL_PROJECT_ID", DEFAULT_LOCAL_PROJECT_ID);
 
         if (StringUtils.hasText(localProjectId) && localProjectId.equals(projectId) && isRunningOnCloudRun(env)) {
-            String fallbackProject = defaultProjectSupplier.get();
-            if (StringUtils.hasText(fallbackProject) && !localProjectId.equals(fallbackProject)) {
-                LOGGER.warn("Resolved Firestore project id '{}' from environment, but the service is running on Cloud Run. "
-                        + "Falling back to metadata project id '{}'.", projectId, fallbackProject);
-                projectId = fallbackProject;
-            }
+            throw new IllegalStateException(String.format("Firestore project id resolved to local project '%s' while running on Cloud Run. Update the deployment environment to use the production project id.", projectId));
         }
 
         if (!StringUtils.hasText(projectId)) {

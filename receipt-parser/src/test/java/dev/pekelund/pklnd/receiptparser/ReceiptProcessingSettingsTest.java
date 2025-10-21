@@ -25,22 +25,31 @@ class ReceiptProcessingSettingsTest {
     }
 
     @Test
-    void fromEnvironmentFallsBackToMetadataOnCloudRunWhenDefaultLocalProjectDetected() {
+    void fromEnvironmentThrowsWhenDefaultLocalProjectDetectedOnCloudRun() {
         Map<String, String> env = new HashMap<>();
         env.put("RECEIPT_FIRESTORE_PROJECT_ID", "pklnd-local");
         env.put("K_SERVICE", "pklnd-receipts");
 
-        ReceiptProcessingSettings settings = ReceiptProcessingSettings.fromEnvironment(env, () -> "codex-test-473008");
-
-        assertThat(settings.projectId()).isEqualTo("codex-test-473008");
+        assertThatThrownBy(() -> ReceiptProcessingSettings.fromEnvironment(env, () -> "codex-test-473008"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("local project 'pklnd-local'");
     }
 
     @Test
-    void fromEnvironmentFallsBackToMetadataOnCloudRunWhenCustomLocalProjectDetected() {
+    void fromEnvironmentThrowsWhenCustomLocalProjectDetectedOnCloudRun() {
         Map<String, String> env = new HashMap<>();
         env.put("LOCAL_PROJECT_ID", "custom-local");
         env.put("RECEIPT_FIRESTORE_PROJECT_ID", "custom-local");
         env.put("K_SERVICE", "pklnd-receipts");
+
+        assertThatThrownBy(() -> ReceiptProcessingSettings.fromEnvironment(env, () -> "codex-test-473008"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("local project 'custom-local'");
+    }
+
+    @Test
+    void fromEnvironmentUsesMetadataProjectWhenAvailable() {
+        Map<String, String> env = new HashMap<>();
 
         ReceiptProcessingSettings settings = ReceiptProcessingSettings.fromEnvironment(env, () -> "codex-test-473008");
 
