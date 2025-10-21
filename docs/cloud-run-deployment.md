@@ -37,7 +37,7 @@ Replace the placeholders below with your values when following the steps:
 Prefer the repository scripts when you want a repeatable, idempotent rollout:
 
 - `scripts/deploy_cloud_run.sh` provisions APIs, Artifact Registry, Firestore, the runtime service account, and the Cloud Run service. It skips resource creation when assets already exist and expects the repository `Dockerfile` at the project root (set `BUILD_CONTEXT` if you store it elsewhere).
-- `scripts/deploy_receipt_processor.sh` provisions the receipt processor Cloud Run service, grants it access to the receipt bucket and Firestore, and aligns IAM permissions with the shared Firestore project. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely. Provide `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` when other services (such as the web frontend) should be allowed to trigger processing. The script also removes any legacy Cloud Storage notifications on the receipt bucket so only the web application’s authenticated callbacks reach the processor.
+- `scripts/deploy_receipt_processor.sh` provisions the receipt processor Cloud Run service, grants it access to the receipt bucket and Firestore, and aligns IAM permissions with the shared Firestore project. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely. The script automatically grants the default web runtime service account (`cloud-run-runtime@PROJECT_ID.iam.gserviceaccount.com`) the `roles/run.invoker` permission; set `WEB_SERVICE_ACCOUNT` to target a different identity and use `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` for any extra callers. It also removes any legacy Cloud Storage notifications on the receipt bucket so only the web application’s authenticated callbacks reach the processor.
 - `scripts/cleanup_artifact_repos.sh` prunes older container images from both Artifact Registry repositories, keeping only the newest build for each Cloud Run service.
 - `scripts/teardown_gcp_resources.sh` removes both Cloud Run services, IAM bindings, and optional supporting infrastructure. It tolerates partially deleted projects and only removes what is present. Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` when you also want to purge the associated identities or container registry.
 
@@ -233,7 +233,7 @@ ENV_VARS="SPRING_PROFILES_ACTIVE=${SPRING_PROFILES},FIRESTORE_ENABLED=true,FIRES
 
 Adjust min/max instances, authentication, and environment variables as necessary. If access should be restricted, remove `--allow-unauthenticated` and grant IAM access explicitly. Keep `FIRESTORE_ENABLED=true` so self-registration remains available.
 
-> Ensure the receipt processor service trusts this Cloud Run identity. Re-run `scripts/deploy_receipt_processor.sh` with `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` set to the web app's service account (for example `responsive-auth-run-sa@PROJECT_ID.iam.gserviceaccount.com`) so the upload workflow can trigger parsing.
+> The deployment script automatically ensures the web runtime service account can invoke the receipt processor. If you use a different identity for the web service, set `WEB_SERVICE_ACCOUNT` (or `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` for multiple accounts) before running `scripts/deploy_receipt_processor.sh`.
 
 ---
 

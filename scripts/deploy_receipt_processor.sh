@@ -9,10 +9,15 @@ SA_NAME="${RECEIPT_SA_NAME:-receipt-processor}"
 ARTIFACT_REPO="${RECEIPT_ARTIFACT_REPO:-receipts}"
 GCS_BUCKET="${GCS_BUCKET:-}"
 ADDITIONAL_INVOKER_SERVICE_ACCOUNTS="${ADDITIONAL_INVOKER_SERVICE_ACCOUNTS:-}"
+WEB_SERVICE_ACCOUNT="${WEB_SERVICE_ACCOUNT:-}"
 
 if [[ -z "${PROJECT_ID}" ]]; then
   echo "PROJECT_ID must be set or configured with 'gcloud config set project'." >&2
   exit 1
+fi
+
+if [[ -z "${WEB_SERVICE_ACCOUNT}" ]]; then
+  WEB_SERVICE_ACCOUNT="cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
 fi
 
 if [[ -z "${GCS_BUCKET}" ]]; then
@@ -189,6 +194,14 @@ gcloud run services add-iam-policy-binding "$SERVICE_NAME" \
   --member "serviceAccount:${SA_EMAIL}" \
   --role "roles/run.invoker" \
   --quiet || true
+
+if [[ -n "$WEB_SERVICE_ACCOUNT" ]]; then
+  gcloud run services add-iam-policy-binding "$SERVICE_NAME" \
+    --region "$REGION" \
+    --member "serviceAccount:${WEB_SERVICE_ACCOUNT}" \
+    --role "roles/run.invoker" \
+    --quiet || true
+fi
 
 if [[ -n "$ADDITIONAL_INVOKER_SERVICE_ACCOUNTS" ]]; then
   IFS=',' read -ra EXTRA_INVOKERS <<< "$ADDITIONAL_INVOKER_SERVICE_ACCOUNTS"

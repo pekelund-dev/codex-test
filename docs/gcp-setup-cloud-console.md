@@ -119,7 +119,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 5. **Allow the web application to invoke the processor**
    - In **Cloud Run → pklnd-receipts → Permissions**, add the web service account (for example `responsive-auth-run-sa@PROJECT_ID.iam.gserviceaccount.com`) with the **Cloud Run Invoker** role.
    - From the service detail page copy the service URL and configure the web application deployment with `RECEIPT_PROCESSOR_BASE_URL`.
-   - If you deploy via `scripts/deploy_cloud_run.sh`, set `RECEIPT_PROCESSOR_BASE_URL` before running the script and re-run `scripts/deploy_receipt_processor.sh` with `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` so the permission remains in sync.
+   - If you deploy via `scripts/deploy_cloud_run.sh`, set `RECEIPT_PROCESSOR_BASE_URL` before running the script. `scripts/deploy_receipt_processor.sh` now grants the default web runtime service account (`cloud-run-runtime@PROJECT_ID.iam.gserviceaccount.com`) the **Cloud Run Invoker** role automatically; set `WEB_SERVICE_ACCOUNT` (or `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS`) when you need to authorize different callers.
 
 6. **Observe the lifecycle**
    - Upload a PDF receipt to the bucket and include optional metadata keys:
