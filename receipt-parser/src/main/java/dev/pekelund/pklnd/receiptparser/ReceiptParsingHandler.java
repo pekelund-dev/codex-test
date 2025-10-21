@@ -62,18 +62,31 @@ public class ReceiptParsingHandler {
             return;
         }
 
-        ReceiptOwner owner = ReceiptOwner.fromMetadata(blob.getMetadata());
+        Map<String, String> metadata = new HashMap<>(Optional.ofNullable(blob.getMetadata()).orElse(Map.of()));
+        Map<String, String> eventMetadata = storageObjectEvent.getMetadata();
+        if (eventMetadata != null && !eventMetadata.isEmpty()) {
+            metadata.putAll(eventMetadata);
+        }
+
+        ReceiptOwner owner = ReceiptOwner.fromMetadata(metadata);
+        if (owner != null) {
+            metadata.putAll(owner.toMetadata());
+        } else {
+            LOGGER.warn("No owner metadata found for gs://{}/{}; receipt will be stored without owner linkage", bucket,
+                objectName);
+        }
+
         repository.markStatus(bucket, objectName, owner, ReceiptProcessingStatus.RECEIVED, "Storage event received");
-        blob = updateProcessingMetadata(blob, ReceiptProcessingStatus.RECEIVED, "Storage event received");
+        blob = updateProcessingMetadata(blob, ReceiptProcessingStatus.RECEIVED, "Storage event received", metadata);
 
         try {
             repository.markStatus(bucket, objectName, owner, ReceiptProcessingStatus.PARSING, "Receipt parsing started");
-            blob = updateProcessingMetadata(blob, ReceiptProcessingStatus.PARSING, "Receipt parsing started");
+            blob = updateProcessingMetadata(blob, ReceiptProcessingStatus.PARSING, "Receipt parsing started", metadata);
 
             if (!isPdf(blob)) {
                 String message = "Only PDF receipts are processed";
                 repository.markStatus(bucket, objectName, owner, ReceiptProcessingStatus.SKIPPED, message);
-                blob = updateProcessingMetadata(blob, ReceiptProcessingStatus.SKIPPED, message);
+                blob = updateProcessingMetadata(blob, ReceiptProcessingStatus.SKIPPED, message, metadata);
                 return;
             }
 
@@ -89,17 +102,18 @@ public class ReceiptParsingHandler {
             LOGGER.info("ReceiptParsingHandler extracted {} top-level fields and {} items (raw response length {} characters) for gs://{}/{}",
                 topLevelKeys, itemsCount, rawResponseLength, bucket, objectName);
             repository.saveExtraction(bucket, objectName, owner, extractionResult, "Receipt parsing completed");
-            updateProcessingMetadata(blob, ReceiptProcessingStatus.COMPLETED, "Receipt parsing completed");
+            updateProcessingMetadata(blob, ReceiptProcessingStatus.COMPLETED, "Receipt parsing completed", metadata);
             LOGGER.info("ReceiptParsingHandler successfully completed extraction for gs://{}/{}", bucket, objectName);
         } catch (ReceiptParsingException ex) {
             LOGGER.error("Receipt parsing failed for gs://{}/{}", bucket, objectName, ex);
             repository.markFailure(bucket, objectName, owner, "Receipt parsing failed", ex);
-            updateProcessingMetadata(blob, ReceiptProcessingStatus.FAILED, "Receipt parsing failed");
+            updateProcessingMetadata(blob, ReceiptProcessingStatus.FAILED, "Receipt parsing failed", metadata);
             throw ex;
         } catch (RuntimeException ex) {
             LOGGER.error("Unexpected error while parsing receipt gs://{}/{}", bucket, objectName, ex);
             repository.markFailure(bucket, objectName, owner, "Unexpected error during receipt parsing", ex);
-            updateProcessingMetadata(blob, ReceiptProcessingStatus.FAILED, "Unexpected error during receipt parsing");
+            updateProcessingMetadata(blob, ReceiptProcessingStatus.FAILED, "Unexpected error during receipt parsing",
+                metadata);
             throw ex;
         }
     }
@@ -116,8 +130,8 @@ public class ReceiptParsingHandler {
         return name != null && name.toLowerCase(Locale.US).endsWith(".pdf");
     }
 
-    private Blob updateProcessingMetadata(Blob blob, ReceiptProcessingStatus status, String message) {
-        Map<String, String> metadata = new HashMap<>(Optional.ofNullable(blob.getMetadata()).orElse(Map.of()));
+    private Blob updateProcessingMetadata(Blob blob, ReceiptProcessingStatus status, String message,
+        Map<String, String> metadata) {
         metadata.put(METADATA_STATUS, status.name());
         metadata.put(METADATA_MESSAGE, message);
         metadata.put(METADATA_UPDATED, Instant.now().toString());

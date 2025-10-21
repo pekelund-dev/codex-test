@@ -128,6 +128,7 @@ This script automatically:
 - Can be paired with `./scripts/cleanup_artifact_repos.sh` to remove older container images so Artifact Registry only retains the most recent builds
 - Grants the runtime service account access to the receipt bucket and Firestore collection
 - Accepts an optional list of additional service accounts that should be allowed to invoke the processor (for example the Cloud Run web app)
+- Removes legacy Cloud Storage notifications from the receipt bucket so only authenticated callbacks from the web application reach the processor
 
 #### Teardown
 

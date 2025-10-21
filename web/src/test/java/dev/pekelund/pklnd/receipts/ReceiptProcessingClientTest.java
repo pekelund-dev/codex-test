@@ -2,6 +2,7 @@ package dev.pekelund.pklnd.receipts;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.StoredReceiptReference;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,14 +40,19 @@ class ReceiptProcessingClientTest {
 
     @Test
     void notifiesProcessorForEachUploadedReceipt() {
-        StoredReceiptReference first = new StoredReceiptReference("bucket", "one.pdf");
+        ReceiptOwner owner = new ReceiptOwner("user-123", "Anna Andersson", "anna@example.com");
+        StoredReceiptReference first = new StoredReceiptReference("bucket", "one.pdf", owner);
         StoredReceiptReference second = new StoredReceiptReference("bucket", "two.pdf");
 
         server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost/events/storage"))
             .andExpect(MockRestRequestMatchers.method(HttpMethod.POST))
             .andExpect(MockRestRequestMatchers.content().json("{" +
                 "\"bucket\":\"bucket\"," +
-                "\"name\":\"one.pdf\"}"))
+                "\"name\":\"one.pdf\"," +
+                "\"metadata\":{" +
+                "\"receipt.owner.id\":\"user-123\"," +
+                "\"receipt.owner.displayName\":\"Anna Andersson\"," +
+                "\"receipt.owner.email\":\"anna@example.com\"}}"))
             .andExpect(MockRestRequestMatchers.header("ce-type", "google.cloud.storage.object.v1.finalized"))
             .andRespond(MockRestResponseCreators.withSuccess());
 

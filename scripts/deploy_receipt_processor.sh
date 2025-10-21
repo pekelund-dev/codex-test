@@ -57,6 +57,29 @@ append_env_var "PROJECT_ID" "$PROJECT_ID"
 append_env_var "RECEIPT_FIRESTORE_COLLECTION" "$RECEIPT_FIRESTORE_COLLECTION"
 append_env_var "LOGGING_PROJECT_ID" "${LOGGING_PROJECT_ID:-${PROJECT_ID}}"
 
+cleanup_bucket_notifications() {
+  local notifications notification_id
+  notifications="$(gcloud storage buckets notifications list "gs://${GCS_BUCKET}" --format="value(id)" 2>/dev/null || true)"
+
+  if [[ -z "${notifications}" ]]; then
+    echo "No Cloud Storage notifications to remove for gs://${GCS_BUCKET}."
+    return
+  fi
+
+  echo "Removing legacy Cloud Storage notifications from gs://${GCS_BUCKET} to prevent orphaned push attempts."
+  while IFS= read -r notification_id; do
+    if [[ -z "${notification_id}" ]]; then
+      continue
+    fi
+    if gcloud storage buckets notifications delete "${notification_id}" --bucket="gs://${GCS_BUCKET}" --quiet >/dev/null 2>&1; then
+      echo "Deleted notification ${notification_id} from gs://${GCS_BUCKET}."
+      continue
+    fi
+    gcloud storage buckets notifications delete "${notification_id}" --bucket="${GCS_BUCKET}" --quiet >/dev/null 2>&1 || \
+      echo "Warning: Failed to delete notification ${notification_id}; remove it manually if it still exists."
+  done <<< "${notifications}"
+}
+
 choose_env_delimiter() {
   local candidates=("|" "@" ":" ";" "#" "+" "~" "^" "%" "?")
   local candidate pair
@@ -181,6 +204,8 @@ if [[ -n "$ADDITIONAL_INVOKER_SERVICE_ACCOUNTS" ]]; then
       --quiet || true
   done
 fi
+
+cleanup_bucket_notifications
 
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --format "value(status.url)")
 

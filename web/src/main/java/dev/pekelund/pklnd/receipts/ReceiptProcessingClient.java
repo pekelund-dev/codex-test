@@ -4,11 +4,13 @@ import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.IdTokenCredentials;
 import com.google.auth.oauth2.IdTokenProvider;
+import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.StoredReceiptReference;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -77,10 +79,14 @@ public class ReceiptProcessingClient {
             headers.setBearerAuth(fetchIdToken());
         }
 
-        Map<String, Object> payload = Map.of(
-            "bucket", reference.bucket(),
-            "name", reference.objectName()
-        );
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("bucket", reference.bucket());
+        payload.put("name", reference.objectName());
+
+        ReceiptOwner owner = reference.owner();
+        if (owner != null && owner.hasValues()) {
+            payload.put("metadata", owner.toMetadata());
+        }
 
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
         restTemplate.exchange(uri, HttpMethod.POST, requestEntity, Void.class);

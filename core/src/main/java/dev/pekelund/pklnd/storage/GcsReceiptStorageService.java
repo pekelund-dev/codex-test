@@ -103,7 +103,7 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
 
             try (InputStream inputStream = file.getInputStream()) {
                 storage.createFrom(blobInfo, inputStream);
-                uploaded.add(new StoredReceiptReference(properties.getBucket(), objectName));
+                uploaded.add(new StoredReceiptReference(properties.getBucket(), objectName, owner));
             } catch (IOException | StorageException ex) {
                 String displayName = StringUtils.hasText(originalFilename) ? originalFilename : objectName;
                 throw new ReceiptStorageException("Failed to upload file '%s'".formatted(displayName), ex);
