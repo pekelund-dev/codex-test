@@ -21,6 +21,13 @@ class ReceiptOverviewController {
         this.root = root;
         this.overviewUrl = root.getAttribute('data-overview-url');
         this.scope = root.getAttribute('data-scope') || '';
+        this.defaultPeriodType = root.getAttribute('data-default-period-type') || '';
+        this.defaultPrimaryWeek = root.getAttribute('data-default-primary-week') || '';
+        this.defaultPrimaryMonth = root.getAttribute('data-default-primary-month') || '';
+        this.defaultCompareWeek = root.getAttribute('data-default-compare-week') || '';
+        this.defaultCompareMonth = root.getAttribute('data-default-compare-month') || '';
+        this.supportsAbortController =
+            typeof window !== 'undefined' && typeof window.AbortController === 'function';
 
         this.periodTypeSelect = root.querySelector('[data-overview-period-type]');
         this.primaryWeekInput = root.querySelector('[data-overview-primary-week]');
@@ -50,7 +57,7 @@ class ReceiptOverviewController {
             this.panels[key] = new PeriodPanel(panelElement);
         });
 
-        this.pendingRequest = null;
+        this.activeRequest = null;
         this.receiptDateSet = new Set();
         this.weekIndicatorItems = [];
         this.monthIndicatorItems = [];
@@ -58,33 +65,28 @@ class ReceiptOverviewController {
 
     init() {
         if (this.periodTypeSelect) {
-            const defaultType = this.root.getAttribute('data-default-period-type');
-            if (defaultType) {
-                this.periodTypeSelect.value = defaultType;
+            if (this.defaultPeriodType) {
+                this.periodTypeSelect.value = this.defaultPeriodType;
             }
         }
         if (this.primaryWeekInput) {
-            const defaultWeek = this.root.getAttribute('data-default-primary-week');
-            if (defaultWeek) {
-                this.primaryWeekInput.value = defaultWeek;
+            if (this.defaultPrimaryWeek) {
+                this.primaryWeekInput.value = this.defaultPrimaryWeek;
             }
         }
         if (this.primaryMonthInput) {
-            const defaultMonth = this.root.getAttribute('data-default-primary-month');
-            if (defaultMonth) {
-                this.primaryMonthInput.value = defaultMonth;
+            if (this.defaultPrimaryMonth) {
+                this.primaryMonthInput.value = this.defaultPrimaryMonth;
             }
         }
         if (this.compareWeekInput) {
-            const defaultCompareWeek = this.root.getAttribute('data-default-compare-week');
-            if (defaultCompareWeek) {
-                this.compareWeekInput.value = defaultCompareWeek;
+            if (this.defaultCompareWeek) {
+                this.compareWeekInput.value = this.defaultCompareWeek;
             }
         }
         if (this.compareMonthInput) {
-            const defaultCompareMonth = this.root.getAttribute('data-default-compare-month');
-            if (defaultCompareMonth) {
-                this.compareMonthInput.value = defaultCompareMonth;
+            if (this.defaultCompareMonth) {
+                this.compareMonthInput.value = this.defaultCompareMonth;
             }
         }
         if (this.compareToggle) {
@@ -132,11 +134,26 @@ class ReceiptOverviewController {
         const periodType = this.getPeriodType();
         const showingWeek = periodType === 'week';
 
+        if (showingWeek && this.primaryWeekInput && !this.primaryWeekInput.value && this.defaultPrimaryWeek) {
+            this.primaryWeekInput.value = this.defaultPrimaryWeek;
+        }
+        if (!showingWeek && this.primaryMonthInput && !this.primaryMonthInput.value && this.defaultPrimaryMonth) {
+            this.primaryMonthInput.value = this.defaultPrimaryMonth;
+        }
+
         if (this.weekPicker) {
-            this.weekPicker.classList.toggle('d-none', !showingWeek);
+            if (showingWeek) {
+                this.weekPicker.classList.remove('d-none');
+            } else {
+                this.weekPicker.classList.add('d-none');
+            }
         }
         if (this.monthPicker) {
-            this.monthPicker.classList.toggle('d-none', showingWeek);
+            if (showingWeek) {
+                this.monthPicker.classList.add('d-none');
+            } else {
+                this.monthPicker.classList.remove('d-none');
+            }
         }
         if (this.primaryWeekInput) {
             this.primaryWeekInput.disabled = !showingWeek;
@@ -149,11 +166,26 @@ class ReceiptOverviewController {
         const showCompareWeek = showCompare && showingWeek;
         const showCompareMonth = showCompare && !showingWeek;
 
+        if (showCompareWeek && this.compareWeekInput && !this.compareWeekInput.value && this.defaultCompareWeek) {
+            this.compareWeekInput.value = this.defaultCompareWeek;
+        }
+        if (showCompareMonth && this.compareMonthInput && !this.compareMonthInput.value && this.defaultCompareMonth) {
+            this.compareMonthInput.value = this.defaultCompareMonth;
+        }
+
         if (this.compareWeekPicker) {
-            this.compareWeekPicker.classList.toggle('d-none', !showCompareWeek);
+            if (showCompareWeek) {
+                this.compareWeekPicker.classList.remove('d-none');
+            } else {
+                this.compareWeekPicker.classList.add('d-none');
+            }
         }
         if (this.compareMonthPicker) {
-            this.compareMonthPicker.classList.toggle('d-none', !showCompareMonth);
+            if (showCompareMonth) {
+                this.compareMonthPicker.classList.remove('d-none');
+            } else {
+                this.compareMonthPicker.classList.add('d-none');
+            }
         }
         if (this.compareWeekInput) {
             this.compareWeekInput.disabled = !showCompareWeek;
@@ -187,6 +219,7 @@ class ReceiptOverviewController {
             this.updateSelectionIndicators(periodType, null);
             this.showError(message);
             this.setLoadingState(false);
+            this.updatePanelsLoading(false);
             this.updatePanels(null, null, message);
             return;
         }
@@ -210,19 +243,27 @@ class ReceiptOverviewController {
         this.setLoadingState(true);
         this.updatePanelsLoading(true);
 
-        if (this.pendingRequest) {
-            this.pendingRequest.abort();
-            this.pendingRequest = null;
+        if (this.activeRequest && this.activeRequest.controller
+            && typeof this.activeRequest.controller.abort === 'function') {
+            this.activeRequest.controller.abort();
         }
 
-        const controller = new AbortController();
-        this.pendingRequest = controller;
+        const requestToken = {
+            controller: this.supportsAbortController ? new AbortController() : null,
+        };
+        this.activeRequest = requestToken;
 
-        fetch(url, {
+        const fetchOptions = {
             headers: { Accept: 'application/json' },
             credentials: 'same-origin',
-            signal: controller.signal,
-        })
+        };
+        if (requestToken.controller) {
+            fetchOptions.signal = requestToken.controller.signal;
+        }
+
+        let settled = false;
+
+        fetch(url, fetchOptions)
             .then(async (response) => {
                 let payload = null;
                 try {
@@ -239,14 +280,22 @@ class ReceiptOverviewController {
                 return payload;
             })
             .then((data) => {
-                this.pendingRequest = null;
-                this.handleData(data);
-            })
-            .catch((error) => {
-                if (controller.signal.aborted) {
+                if (this.activeRequest !== requestToken) {
                     return;
                 }
-                this.pendingRequest = null;
+                this.activeRequest = null;
+                this.handleData(data);
+                settled = true;
+            })
+            .catch((error) => {
+                const controller = requestToken.controller;
+                if (controller && controller.signal && controller.signal.aborted) {
+                    return;
+                }
+                if (this.activeRequest !== requestToken) {
+                    return;
+                }
+                this.activeRequest = null;
                 const message = error && error.message
                     ? error.message
                     : 'Det gick inte att läsa in översikten just nu.';
@@ -254,13 +303,16 @@ class ReceiptOverviewController {
                 this.setReceiptDates(null);
                 this.updateIndicators();
                 this.updatePanels(null, null, message);
+                settled = true;
             })
             .finally(() => {
-                if (this.pendingRequest === controller) {
-                    this.pendingRequest = null;
+                if (this.activeRequest === requestToken) {
+                    this.activeRequest = null;
                 }
-                this.setLoadingState(false);
-                this.updatePanelsLoading(false);
+                if (settled || this.activeRequest === null) {
+                    this.setLoadingState(false);
+                    this.updatePanelsLoading(false);
+                }
             });
     }
 
@@ -322,7 +374,11 @@ class ReceiptOverviewController {
 
     setLoadingState(isLoading) {
         if (this.loadingIndicator) {
-            this.loadingIndicator.classList.toggle('d-none', !isLoading);
+            if (isLoading) {
+                this.loadingIndicator.classList.remove('d-none');
+            } else {
+                this.loadingIndicator.classList.add('d-none');
+            }
         }
     }
 
@@ -486,7 +542,11 @@ class ReceiptOverviewController {
                 return;
             }
             const hasReceipt = this.receiptDateSet.has(iso);
-            item.classList.toggle('has-receipt', hasReceipt);
+            if (hasReceipt) {
+                item.classList.add('has-receipt');
+            } else {
+                item.classList.remove('has-receipt');
+            }
             item.setAttribute('data-date', iso);
             const dayName = item.getAttribute('data-day-name') || '';
             const message = `${dayName} (${iso}) ${hasReceipt ? 'har kvitto' : 'inget kvitto'}`;
@@ -552,7 +612,11 @@ class ReceiptOverviewController {
             const iso = `${year}-${this.padNumber(month)}-${this.padNumber(day)}`;
             const hasReceipt = this.receiptDateSet.has(iso);
             item.classList.remove('outside-range');
-            item.classList.toggle('has-receipt', hasReceipt);
+            if (hasReceipt) {
+                item.classList.add('has-receipt');
+            } else {
+                item.classList.remove('has-receipt');
+            }
             item.setAttribute('data-date', iso);
             const message = `Dag ${day} (${iso}) ${hasReceipt ? 'har kvitto' : 'inget kvitto'}`;
             item.setAttribute('aria-label', message);
@@ -601,26 +665,61 @@ class ReceiptOverviewController {
 
     buildOverviewUrl(config) {
         const base = this.overviewUrl || '';
-        const url = new URL(base, window.location.origin);
+        let path = base;
+        let queryString = '';
+        const questionIndex = base.indexOf('?');
+        if (questionIndex >= 0) {
+            path = base.slice(0, questionIndex);
+            queryString = base.slice(questionIndex + 1);
+        }
+
+        const params = {};
+        if (queryString) {
+            queryString.split('&').forEach((pair) => {
+                if (!pair) {
+                    return;
+                }
+                const [rawKey, rawValue] = pair.split('=', 2);
+                const normalizedKey = rawKey ? rawKey.replace(/\+/g, ' ') : '';
+                const key = normalizedKey ? decodeURIComponent(normalizedKey) : '';
+                if (!key) {
+                    return;
+                }
+                const normalizedValue = rawValue !== undefined ? rawValue.replace(/\+/g, ' ') : undefined;
+                const value = normalizedValue !== undefined ? decodeURIComponent(normalizedValue) : '';
+                params[key] = value;
+            });
+        }
+
         if (config && config.periodType) {
-            url.searchParams.set('periodType', config.periodType);
+            params.periodType = config.periodType;
         } else {
-            url.searchParams.delete('periodType');
+            delete params.periodType;
         }
         if (config && config.primary) {
-            url.searchParams.set('primary', config.primary);
+            params.primary = config.primary;
         } else {
-            url.searchParams.delete('primary');
+            delete params.primary;
         }
         if (config && config.compare && config.compare.trim().length > 0) {
-            url.searchParams.set('compare', config.compare);
+            params.compare = config.compare;
         } else {
-            url.searchParams.delete('compare');
+            delete params.compare;
         }
         if (this.scope) {
-            url.searchParams.set('scope', this.scope);
+            params.scope = this.scope;
+        } else {
+            delete params.scope;
         }
-        return url.toString();
+
+        const entries = Object.keys(params)
+            .filter((key) => params[key] !== undefined && params[key] !== null && String(params[key]).length > 0)
+            .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(String(params[key]))}`);
+
+        if (entries.length === 0) {
+            return path;
+        }
+        return `${path}?${entries.join('&')}`;
     }
 }
 
@@ -700,12 +799,20 @@ class PeriodPanel {
     }
 
     setVisible(isVisible) {
-        this.element.classList.toggle('d-none', !isVisible);
+        if (isVisible) {
+            this.element.classList.remove('d-none');
+        } else {
+            this.element.classList.add('d-none');
+        }
     }
 
     setLoading(isLoading) {
         if (this.loadingIndicator) {
-            this.loadingIndicator.classList.toggle('d-none', !isLoading);
+            if (isLoading) {
+                this.loadingIndicator.classList.remove('d-none');
+            } else {
+                this.loadingIndicator.classList.add('d-none');
+            }
         }
     }
 
@@ -832,7 +939,11 @@ class PeriodPanel {
                 return;
             }
             const isActive = key === this.sortKey;
-            button.classList.toggle('text-primary', isActive);
+            if (isActive) {
+                button.classList.add('text-primary');
+            } else {
+                button.classList.remove('text-primary');
+            }
             button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
             button.setAttribute('data-sort-direction', isActive ? this.sortDirection : 'none');
         });
