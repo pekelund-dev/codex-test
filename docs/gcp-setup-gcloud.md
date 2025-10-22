@@ -5,21 +5,20 @@ This guide collects the command-line steps required to run ResponsiveAuthApp end
 ## Prerequisites
 
 - A Google Cloud project with billing enabled and [gcloud](https://cloud.google.com/sdk/docs/install) ≥ 430.0.0 authenticated against it (`gcloud auth login`).
-- Java 21 and Maven installed locally to package the Cloud Function artifact.
+- Java 21 and Maven installed locally to package the receipt processor service.
 - The `gcloud` CLI configured with your target project (`gcloud config set project YOUR_PROJECT_ID`).
 
 Enable the core services once per project:
 
 ```bash
 gcloud services enable \
-    cloudfunctions.googleapis.com \
+    run.googleapis.com \
     cloudbuild.googleapis.com \
     artifactregistry.googleapis.com \
-    eventarc.googleapis.com \
-    pubsub.googleapis.com \
     aiplatform.googleapis.com \
     storage.googleapis.com \
-    firestore.googleapis.com
+    firestore.googleapis.com \
+    secretmanager.googleapis.com
 ```
 
 ## Configure Firestore via gcloud
@@ -74,11 +73,12 @@ source ./scripts/load_local_secrets.sh
 
 export FIRESTORE_ENABLED=true
 # Leave FIRESTORE_CREDENTIALS unset on Cloud Run; ADC handles authentication automatically.
-export FIRESTORE_PROJECT_ID=$(gcloud config get-value project)
+export PROJECT_ID=$(gcloud config get-value project)
+export FIRESTORE_PROJECT_ID=${FIRESTORE_PROJECT_ID:-$PROJECT_ID}
 export FIRESTORE_USERS_COLLECTION=users             # Optional override
 export FIRESTORE_DEFAULT_ROLE=ROLE_USER             # Optional override
-# Cloud Run and the Cloud Function reuse this value so every component talks to the same database
-export RECEIPT_FIRESTORE_PROJECT_ID=${FIRESTORE_PROJECT_ID}
+# Cloud Run services reuse these values so every component talks to the same database
+export RECEIPT_FIRESTORE_COLLECTION=${RECEIPT_FIRESTORE_COLLECTION:-receiptExtractions}
     ```
 
 ## Configure Cloud Storage via gcloud
@@ -116,136 +116,100 @@ export RECEIPT_FIRESTORE_PROJECT_ID=${FIRESTORE_PROJECT_ID}
     export GCS_CREDENTIALS=file:/home/$USER/secrets/gcs-receipts.json  # Optional; omit on Cloud Run
     ```
 
-## Deploy the receipt-processing function
+## Deploy the receipt-processing Cloud Run service
 
 ### Prerequisites
 
-Before deploying the Cloud Function, ensure you have the proper Maven configuration in your `pom.xml`:
-
-```xml
-<build>
-    <plugins>
-        <plugin>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-maven-plugin</artifactId>
-        </plugin>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.13.0</version>
-            <configuration>
-                <source>21</source>
-                <target>21</target>
-            </configuration>
-        </plugin>
-        <plugin>
-            <groupId>com.google.cloud.functions</groupId>
-            <artifactId>function-maven-plugin</artifactId>
-            <version>0.10.1</version>
-            <configuration>
-                <functionTarget>dev.pekelund.pklnd.function.ReceiptProcessingFunction</functionTarget>
-            </configuration>
-        </plugin>
-    </plugins>
-</build>
-
-<!-- Function module inherits the parent POM and does not need extra profiles -->
-```
-
-### Enable Required Google Cloud APIs
-
-Before deployment, ensure all required APIs are enabled:
+Before deploying, make sure the receipt processor module builds cleanly and that your Maven configuration includes the Spring Boot plugin (the parent `pom.xml` already provides this setup):
 
 ```bash
-gcloud services enable cloudfunctions.googleapis.com \
-  cloudbuild.googleapis.com \
-  artifactregistry.googleapis.com \
-  run.googleapis.com \
-  aiplatform.googleapis.com \
-  eventarc.googleapis.com
+./mvnw -pl receipt-parser -am clean package -DskipTests
 ```
 
-1. **Package the code**
+### Provision runtime infrastructure
 
-    Build only the Cloud Function module (which also compiles its shared dependencies) to verify the sources locally:
+1. **Create the Artifact Registry repository** (skip if it already exists):
 
     ```bash
-    ./mvnw -pl function -am clean package -DskipTests
+    REGION=us-east1  # Use the same region as your receipts bucket when possible
+    PROJECT_ID=$(gcloud config get-value project)
+    REPO=receipts
+    gcloud artifacts repositories create "${REPO}" \n      --repository-format=docker \n      --location="${REGION}" \n      --description="Container images for the receipt processor" || true
     ```
 
-2. **Create a runtime service account**
+2. **Create the receipt processor service account** and grant required roles:
 
     ```bash
-    FUNCTION_SA=receipt-parser@$(gcloud config get-value project).iam.gserviceaccount.com
-    gcloud iam service-accounts create receipt-parser \
-      --display-name="Receipt parsing Cloud Function"
+    RECEIPT_SA=receipt-processor@${PROJECT_ID}.iam.gserviceaccount.com
+    gcloud iam service-accounts create receipt-processor \n      --display-name="Receipt processor Cloud Run service" || true
 
-    gcloud storage buckets add-iam-policy-binding "${BUCKET}" \
-      --member="serviceAccount:${FUNCTION_SA}" \
-      --role="roles/storage.objectViewer"
+    BUCKET=gs://responsive-auth-receipts-${PROJECT_ID}  # Replace if you use a custom bucket
+    gcloud storage buckets add-iam-policy-binding "${BUCKET}" \n      --member="serviceAccount:${RECEIPT_SA}" \n      --role="roles/storage.objectAdmin"
 
-    gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-      --member="serviceAccount:${FUNCTION_SA}" \
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+      --member="serviceAccount:${RECEIPT_SA}" \
       --role="roles/datastore.user"
 
-    gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-      --member="serviceAccount:${FUNCTION_SA}" \
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+      --member="serviceAccount:${RECEIPT_SA}" \
       --role="roles/aiplatform.user"
-
-    # Required for Eventarc triggers
-    gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-      --member="serviceAccount:${FUNCTION_SA}" \
-      --role="roles/eventarc.eventReceiver"
     ```
 
-3. **Configure Eventarc Service Agent (if not already done)**
+### Build and deploy the container
+
+1. **Build and push the image with Cloud Build** (run from the repository root so the command can load the `receipt-parser` build context)
 
     ```bash
-    # Get your project number
-    PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format="value(projectNumber)")
-    
-    # Grant required roles to Eventarc service agent
-    gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-      --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com" \
-      --role="roles/eventarc.serviceAgent"
+    IMAGE_REPO=${REGION}-docker.pkg.dev/${PROJECT_ID}/receipts
+    IMAGE_URI=${IMAGE_REPO}/pklnd-receipts:$(date +%Y%m%d-%H%M%S)
 
-    gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-      --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com" \
+    gcloud builds submit . \
+      --config receipt-parser/cloudbuild.yaml \
+      --substitutions _IMAGE_URI="${IMAGE_URI}",_DOCKERFILE=receipt-parser/Dockerfile
+    ```
+
+    The Cloud Build configuration expects the Dockerfile to live within the
+    chosen build context. If you keep it elsewhere, adjust `_DOCKERFILE`,
+    `RECEIPT_BUILD_CONTEXT`, or `RECEIPT_CLOUD_BUILD_CONFIG` when using the
+    deployment script so Cloud Build targets the right file.
+
+2. **Deploy the Cloud Run service**
+
+    ```bash
+    gcloud run deploy pklnd-receipts \n      --image "${IMAGE_URI}" \n      --region "${REGION}" \n      --service-account "${RECEIPT_SA}" \n      --no-allow-unauthenticated \n      --set-env-vars "SPRING_PROFILES_ACTIVE=prod,PROJECT_ID=${PROJECT_ID},VERTEX_AI_PROJECT_ID=${PROJECT_ID},VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions" \n      --min-instances 0 \n      --max-instances 5
+    ```
+
+3. **Prune older container images** so Artifact Registry keeps only the latest build.
+
+    ```bash
+    ./scripts/cleanup_artifact_repos.sh
+    ```
+
+### Allow the web application to invoke the processor
+
+1. **Grant the web service account invocation rights** so uploads can trigger parsing. Replace the example identity if your Cloud Run web app uses a different service account.
+
+    ```bash
+    WEB_APP_SA=responsive-auth-run-sa@${PROJECT_ID}.iam.gserviceaccount.com
+    gcloud run services add-iam-policy-binding pklnd-receipts \
+      --region "${REGION}" \
+      --member="serviceAccount:${WEB_APP_SA}" \
       --role="roles/run.invoker"
     ```
 
-4. **Deploy the Cloud Function (2nd gen)**
-
-    **Important**: The function must be deployed in the same region as your Cloud Storage bucket. Check your bucket region first:
+2. **Capture the Cloud Run URL**. You'll supply this value to the web deployment so it can call the processor directly.
 
     ```bash
-    gcloud storage buckets describe "${BUCKET}" --format="value(location)"
+    PROCESSOR_URL=$(gcloud run services describe pklnd-receipts --region "${REGION}" --format="value(status.url)")
+    echo "Set RECEIPT_PROCESSOR_BASE_URL=${PROCESSOR_URL} when deploying the web application"
     ```
 
-    Then deploy with the correct region:
+3. **Deploy or update the web application** with the new environment variables. Set `RECEIPT_PROCESSOR_BASE_URL` (and optionally `RECEIPT_PROCESSOR_AUDIENCE` if you use a custom hostname) when running `scripts/deploy_cloud_run.sh` or `gcloud run deploy`. The receipt processor script reads the deployed web service configuration (override with `WEB_SERVICE_NAME`/`WEB_SERVICE_REGION`) and grants that runtime account the invoker role automatically; set `WEB_SERVICE_ACCOUNT` or `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` before re-running the receipt processor script if you need to authorize different callers explicitly.
+
+### Verify the deployment
 
     ```bash
-    # Use the same region as your bucket (for example, us-east1 or us-central1)
-    REGION=us-east1  # Replace with your bucket's region
-    FUNCTION_NAME=receiptProcessingFunction
-    gcloud functions deploy "${FUNCTION_NAME}" \
-      --gen2 \
-      --region="${REGION}" \
-      --runtime=java21 \
-      --entry-point=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
-      --source=. \
-      --set-build-env-vars=MAVEN_BUILD_ARGUMENTS="-pl function -am -DskipTests package" \
-      --service-account="${FUNCTION_SA}" \
-      --trigger-bucket=$(basename "${BUCKET}") \
-      --set-env-vars=VERTEX_AI_PROJECT_ID=$(gcloud config get-value project),VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_PROJECT_ID=${RECEIPT_FIRESTORE_PROJECT_ID},RECEIPT_FIRESTORE_COLLECTION=receiptExtractions
-    ```
-
-4. **Verify the lifecycle**
-
-    ```bash
-    # Upload a PDF and include owner metadata
-    # Ensure you have a sample PDF available (for example, download https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
-    # and rename it to receipt.pdf, or supply the path to a PDF you already have).
+    # Upload a PDF and ensure metadata includes receipt owner information
     OBJECT=receipts/sample.pdf
     gsutil cp path/to/your/receipt.pdf "${BUCKET}/${OBJECT}"
     gsutil setmeta \
@@ -254,105 +218,71 @@ gcloud services enable cloudfunctions.googleapis.com \
       -h "x-goog-meta-receipt.owner.email=jane@example.com" \
       "${BUCKET}/${OBJECT}"
 
-    # Stream function logs
-    gcloud functions logs read "${FUNCTION_NAME}" --region="${REGION}" --gen2
+    # Tail recent logs from the receipt processor
+    gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=pklnd-receipts" \
+      --limit 20 \
+      --format="table(timestamp, textPayload)"
     ```
 
-## Troubleshooting Cloud Function Deployment
+## Troubleshooting receipt processor deployment
+#### 1. Build or packaging failures
+**Symptom**: Cloud Build fails to stage the application or the deployed container cannot start.
 
-### Understanding Code Upload and Build Process
+**Fix**: Build the module locally to surface compiler errors early and ensure the boot JAR is produced.
 
-When you run `gcloud functions deploy`, the following process occurs:
+```bash
+./mvnw -pl receipt-parser -am clean package -DskipTests
+ls receipt-parser/target
+```
 
-1. **Source Upload**: Your entire project directory (excluding `.gcloudignore` files) is packaged and uploaded to Google Cloud Storage
-2. **Cloud Build**: Google Cloud Build downloads the source code and initiates the build process  
-3. **Buildpack Processing**: The Java buildpack runs Maven in the cloud environment to compile and package your application
-4. **Container Creation**: A container image is created and stored in Google Cloud's Artifact Registry
-5. **Function Deployment**: The container is deployed as a Cloud Function with the specified triggers
+If the image still fails to boot, run it locally with `spring-boot:run` to inspect stack traces before re-deploying.
 
-**Important**: Your local `target/` directory is not directly used - Google Cloud rebuilds everything from source code in the cloud environment.
+#### 2. Region mismatch warnings
+**Symptom**: Receipts take noticeably longer to parse after upload.
 
-### Common Issues and Solutions
+**Fix**: Keep the Cloud Run service and the storage bucket in nearby regions to reduce latency.
 
-### Common Issues and Solutions
-
-#### 1. "class not found" Error
-**Error**: `Build failed with status: FAILURE and message: build succeeded but did not produce the class "dev.pekelund.pklnd.function.ReceiptProcessingFunction"`
-
-**Root Cause**: Cloud Functions buildpack runs `javap -classpath target/[jar]:target/dependency/*` but finds classes in different locations than expected.
-
-**Solutions**:
-
-1. **Match the Cloud Build arguments**: Set `MAVEN_BUILD_ARGUMENTS="-pl function -am -DskipTests package"` when deploying (for example with `--set-build-env-vars` or via `project.toml`). This ensures the buildpack compiles the multi-module project and produces the Cloud Function JAR under `function/target`.
-
-2. **Verify the correct structure is created locally**:
-   ```bash
-   ./mvnw -pl function -am clean package -DskipTests
-
-   # Check function class is in the compiled JAR
-   jar tf function/target/responsive-auth-function-0.0.1-SNAPSHOT.jar | grep ReceiptProcessingFunction
-
-   # Check dependencies are in function/target/dependency/
-   ls function/target/dependency/ | head -5
-
-   # Test the same command the buildpack uses
-   javap -classpath function/target/responsive-auth-function-0.0.1-SNAPSHOT.jar:function/target/dependency/* dev.pekelund.pklnd.function.ReceiptProcessingFunction
-   ```
-
-#### 2. Region Mismatch Error
-**Error**: Function deployment fails with trigger validation errors
-
-**Solution**: Ensure the function is deployed in the same region as your Cloud Storage bucket:
 ```bash
 # Check bucket region
 gcloud storage buckets describe gs://your-bucket-name --format="value(location)"
-# Use the same region for function deployment
 ```
 
-#### 3. Permission Denied Errors
-**Error**: `Permission denied while using the Eventarc Service Agent` or `Permission "eventarc.events.receiveEvent" denied`
+#### 3. Permission denied errors
+**Symptom**: Cloud Run logs HTTP 403 when the web app uploads receipts.
 
-**Solution**: Grant required permissions to service accounts:
+**Fix**: Grant the web application service account `roles/run.invoker` on the processor and confirm the web deployment sets `RECEIPT_PROCESSOR_BASE_URL` (and optional `RECEIPT_PROCESSOR_AUDIENCE`).
+
 ```bash
-# For Eventarc Service Agent
-PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format="value(projectNumber)")
-gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-  --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com" \
-  --role="roles/eventarc.serviceAgent"
+PROJECT_ID=$(gcloud config get-value project)
+WEB_APP_SA=responsive-auth-run-sa@${PROJECT_ID}.iam.gserviceaccount.com
 
-# For Function Service Account
-gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-  --member="serviceAccount:receipt-parser@$(gcloud config get-value project).iam.gserviceaccount.com" \
-  --role="roles/eventarc.eventReceiver"
+# Allow the web app to call the receipt processor
+gcloud run services add-iam-policy-binding pklnd-receipts   --region "${REGION}"   --member="serviceAccount:${WEB_APP_SA}"   --role="roles/run.invoker"
 ```
 
-#### 4. API Not Enabled Errors
-**Error**: `API [...] not enabled on project`
+#### 4. API not enabled errors
+**Symptom**: Deployment fails with `API [...] not enabled on project`.
 
-**Solution**: Enable all required APIs before deployment:
-```bash
-gcloud services enable cloudfunctions.googleapis.com \
-  cloudbuild.googleapis.com \
-  artifactregistry.googleapis.com \
-  run.googleapis.com \
-  aiplatform.googleapis.com \
-  eventarc.googleapis.com
-```
+**Fix**: Re-run the core `gcloud services enable` command listed earlier so Cloud Run, Artifact Registry, and Vertex AI are active.
 
-#### 5. Environment Variable Issues
-**Error**: Function runs but fails to connect to services
+#### 5. Environment variable issues
+**Symptom**: The service deploys but fails to read Firestore or Vertex AI.
 
-**Solution**: Verify environment variables are set correctly in the deployment command:
-- `VERTEX_AI_PROJECT_ID`: Should match your current project
-- `VERTEX_AI_LOCATION`: Should match your function deployment region
-- `VERTEX_AI_GEMINI_MODEL`: Use `gemini-2.0-flash`
-- `RECEIPT_FIRESTORE_PROJECT_ID`: Project that hosts the Firestore database storing receipt extractions (defaults to the function project)
-- `RECEIPT_FIRESTORE_COLLECTION`: Use `receiptExtractions`
+**Fix**: Confirm the deployment includes the correct variables:
+- `PROJECT_ID` – project hosting the Firestore database and Vertex AI resources
+- `VERTEX_AI_PROJECT_ID` – typically your current project
+- `VERTEX_AI_LOCATION` – must match the chosen Vertex AI region
+- `VERTEX_AI_GEMINI_MODEL` – default `gemini-2.0-flash`
+- `RECEIPT_FIRESTORE_COLLECTION` – usually `receiptExtractions`
+
+Cloud Run deployments fail fast if `PROJECT_ID` resolves to the local emulator id (for example, `pklnd-local`).
+Remove any lingering `LOCAL_PROJECT_ID` exports or update `PROJECT_ID` before redeploying.
 
 ### Monitoring and Debugging
 
-1. **View build logs**: The deployment command provides a Cloud Build logs URL
-2. **Stream function logs**: Use `gcloud functions logs read FUNCTION_NAME --region=REGION --gen2`
-3. **Check function status**: Use `gcloud functions describe FUNCTION_NAME --region=REGION --gen2`
+1. **View build logs** – Cloud Build prints a logs URL after each submission.
+2. **Stream Cloud Run logs** – use `gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=pklnd-receipts" --limit 50`.
+3. **Inspect service status** – `gcloud run services describe pklnd-receipts --region=REGION`.
 
-The Firestore document created for the receipt mirrors the storage status fields (`RECEIVED`, `PARSING`, `COMPLETED`, `FAILED`, or `SKIPPED`) and stores Gemini's structured JSON in the `data` field. Consult the [Cloud Console setup](gcp-setup-cloud-console.md#deploy-the-receipt-processing-function) guide for screenshots and UI navigation paths.
+The Firestore document created for the receipt mirrors the storage status fields (`RECEIVED`, `PARSING`, `COMPLETED`, `FAILED`, or `SKIPPED`) and stores Gemini's structured JSON in the `data` field. Consult the [Cloud Console setup](gcp-setup-cloud-console.md#deploy-the-receipt-processing-service) guide for screenshots and UI navigation paths.
+

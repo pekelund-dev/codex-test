@@ -3,7 +3,7 @@
 These instructions apply to the entire repository. Create additional `AGENTS.md` files in subdirectories if you need module-specific guidance that overrides the advice here.
 
 ## Development practices
-- Prefer incremental Maven builds. When changing backend code, run the narrowest test scope that covers your changes, e.g. `./mvnw -pl web -am test` for web updates or `./mvnw -pl function -am test` for Cloud Function work. Use `./mvnw verify` only when you need a full reactor build.
+- Prefer incremental Maven builds. When changing backend code, run the narrowest test scope that covers your changes, e.g. `./mvnw -pl web -am test` for web updates or `./mvnw -pl receipt-parser -am test` for receipt processor work. Use `./mvnw verify` only when you need a full reactor build.
 - Keep configuration in sync with the documentation. If you change environment variables, startup scripts, or expected commands, update the relevant files in `docs/` or the `README` in the same change.
 - When you modify behavior or interfaces, update accompanying documentation (READMEs, guides, diagrams) in the same PR so everything stays current.
 - Update or extend automated tests alongside code changes to prevent regressions and demonstrate coverage for the new behavior.

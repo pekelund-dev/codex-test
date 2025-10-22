@@ -33,6 +33,20 @@ public record ReceiptOwner(String id, String displayName, String email) {
         return metadata;
     }
 
+    public Map<String, String> toAttributes() {
+        Map<String, String> attributes = new HashMap<>();
+        if (id != null) {
+            attributes.put("id", id);
+        }
+        if (displayName != null) {
+            attributes.put("displayName", displayName);
+        }
+        if (email != null) {
+            attributes.put("email", email);
+        }
+        return attributes;
+    }
+
     public static ReceiptOwner fromMetadata(Map<String, String> metadata) {
         if (metadata == null || metadata.isEmpty()) {
             return null;
@@ -42,6 +56,18 @@ public record ReceiptOwner(String id, String displayName, String email) {
             metadata.get(METADATA_OWNER_ID),
             metadata.get(METADATA_OWNER_DISPLAY_NAME),
             metadata.get(METADATA_OWNER_EMAIL));
+        return owner.hasValues() ? owner : null;
+    }
+
+    public static ReceiptOwner fromAttributes(Map<String, String> attributes) {
+        if (attributes == null || attributes.isEmpty()) {
+            return null;
+        }
+
+        ReceiptOwner owner = new ReceiptOwner(
+            attributes.get("id"),
+            attributes.get("displayName"),
+            attributes.get("email"));
         return owner.hasValues() ? owner : null;
     }
 

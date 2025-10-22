@@ -51,8 +51,8 @@ source ./scripts/source_local_env.sh
 The script performs the following configuration:
 
 - Sets `FIRESTORE_ENABLED=true` so the web app uses Firestore instead of the in-memory fallback.
-- Points `FIRESTORE_PROJECT_ID`, `RECEIPT_FIRESTORE_PROJECT_ID`, and `GOOGLE_CLOUD_PROJECT`
-  to the local logical project (`responsive-auth-local` by default).
+- Points `PROJECT_ID`, `FIRESTORE_PROJECT_ID`, and `GOOGLE_CLOUD_PROJECT`
+  to the local logical project (`pklnd-local` by default).
 - Publishes `FIRESTORE_EMULATOR_HOST=localhost:8085` and clears credential variables so the
   Firestore SDK automatically targets the emulator with anonymous authentication.
 - Disables Google Cloud Storage integration (`GCS_ENABLED=false`) because the emulator flow
@@ -93,37 +93,29 @@ To pre-create admin or demo accounts without hitting Firestore you can still con
 fallback users through `application.yml`. When Firestore is enabled those fallback users are
 ignored, so the emulator behaves just like the managed service.
 
-## 4. Exercise the receipt parsing function locally
+## 4. Exercise the receipt processing service locally
 
 Two options exist depending on how closely you need to mirror production:
 
-### Option A: Functions Framework (full pipeline)
+### Option A: Full Cloud Run pipeline
 
-When you want to execute the same code that runs in Cloud Functions—including Vertex AI
-requests—use the Functions Framework Maven plugin. Make sure the emulator is running and
-source the local environment helper in the same shell, then add the extra environment
-variables that Vertex AI requires:
+When you want to execute the same code that runs on Cloud Run—including Vertex AI requests—start the service locally with Spring Boot. Make sure the Firestore emulator is running and source the local environment helper in the same shell, then add the extra environment variables that Vertex AI requires:
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/a/service-account.json
 export VERTEX_AI_PROJECT_ID=my-vertex-project
 export VERTEX_AI_LOCATION=us-east1
-./mvnw -pl function -am -DskipTests function:run \
-    -Drun.functions.target=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
-    -Drun.functions.port=8081
+./mvnw -pl receipt-parser -am spring-boot:run
 ```
 
-Send a Cloud Storage finalize event payload to <http://localhost:8081>. The Firestore
-emulator receives all writes automatically because the `FIRESTORE_EMULATOR_HOST` environment
-variable is already exported.
+Send a Cloud Storage finalize event payload to <http://localhost:8080/events/storage>. The Firestore emulator receives all writes automatically because the `FIRESTORE_EMULATOR_HOST` environment variable is already exported.
 
 ### Option B: Local receipt test profile (emulator only)
 
-If you only need to evaluate the legacy PDF extractor and Firestore writes—without incurring
-Vertex AI costs—start the lightweight Spring profile:
+If you only need to evaluate the legacy PDF extractor and Firestore writes—without incurring Vertex AI costs—start the lightweight Spring profile:
 
 ```bash
-./mvnw -pl function -am spring-boot:run \
+./mvnw -pl receipt-parser -am spring-boot:run \
     -Dspring-boot.run.profiles=local-receipt-test
 ```
 
@@ -148,7 +140,7 @@ curl "http://${FIRESTORE_EMULATOR_HOST}/v1/projects/${FIRESTORE_PROJECT_ID}/data
 Or query receipt extraction results:
 
 ```bash
-curl "http://${FIRESTORE_EMULATOR_HOST}/v1/projects/${RECEIPT_FIRESTORE_PROJECT_ID}/databases/(default)/documents/${RECEIPT_FIRESTORE_COLLECTION}"
+curl "http://${FIRESTORE_EMULATOR_HOST}/v1/projects/${PROJECT_ID}/databases/(default)/documents/${RECEIPT_FIRESTORE_COLLECTION}"
 ```
 
 Because the emulator does not enforce authentication, these endpoints are reachable without

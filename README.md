@@ -33,7 +33,7 @@ The `setup-env.sh` script automatically configures:
 - Firestore database connection
 - Google Cloud Storage bucket access
 - OAuth2 credentials
-- Cloud Function environment variables
+- Receipt processor service environment variables
 
 ### Manual Setup
 
@@ -48,6 +48,8 @@ The `setup-env.sh` script automatically configures:
    > ℹ️ Google sign-in is enabled by activating the `oauth` Spring profile. When these variables are present the helper scripts
    > automatically append `oauth` to `SPRING_PROFILES_ACTIVE`. For manual runs add `SPRING_PROFILES_ACTIVE=local,oauth` (or
    > `prod,oauth` in production).
+
+   The `scripts/deploy_cloud_run.sh` helper builds a timestamped container image ready for Cloud Run deployments. Run `./scripts/cleanup_artifact_repos.sh` after deployments to prune older revisions so Artifact Registry only keeps the most recent web application and receipt processor builds. The deploy script relies on the repository’s multi-stage `Dockerfile` (located at the project root by default); export `BUILD_CONTEXT` when you keep the Dockerfile in another directory. The receipt processor deployment helper builds from `receipt-parser/Dockerfile` via the accompanying Cloud Build configuration so the Cloud Run service always packages the parser instead of the secured web UI—override this path with `RECEIPT_DOCKERFILE` and adjust `RECEIPT_BUILD_CONTEXT` or `RECEIPT_CLOUD_BUILD_CONFIG` when using a custom image definition. Ensure the Dockerfile remains inside the selected build context so Cloud Build can resolve it.
 
 3. Configure Firestore if you want to enable user self-registration (see [Firestore configuration](#firestore-configuration)).
 4. (Optional) Configure Google Cloud Storage to enable the receipts upload page (see
@@ -90,7 +92,7 @@ The helper infers `FIRESTORE_CREDENTIALS=file:/...` and extracts `GOOGLE_CLIENT_
 
 - **Cloud Run / Google-managed runtimes** – The deployment script (and the console walkthrough) attaches the `cloud-run-runtime` service account directly to the Cloud Run service. Google automatically exchanges that identity for short-lived tokens through [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc), so the container never needs a JSON key file. Leave `FIRESTORE_CREDENTIALS` unset in these environments; the Firestore client uses the attached service account transparently.
 - **Local development / other hosts** – Provide your own credentials via `FIRESTORE_CREDENTIALS_FILE` and source `./scripts/load_local_secrets.sh`, or point the application at the Firestore emulator with `scripts/source_local_env.sh`. These helpers export `FIRESTORE_CREDENTIALS=file:/…` only when you intentionally supply a downloaded key.
-- **Cloud Function** – The deployment script grants the same Firestore permissions to the function’s runtime identity. Like Cloud Run, the managed function never needs a downloaded key unless you run it on your own infrastructure.
+- **Receipt processor Cloud Run service** – The deployment helper provisions a dedicated service account, attaches it to the receipt processor, and grants Firestore, Vertex AI, and Cloud Storage permissions. Like the main web service, the managed runtime exchanges that identity for short-lived tokens so no JSON key files are required on Google Cloud.
 
 ### Google Cloud Storage configuration
 
@@ -105,70 +107,70 @@ After completing either path, restart the application and visit <http://localhos
 > leave `GCS_CREDENTIALS` unset. The application will fall back to Application Default Credentials if the
 > configured resource is missing, allowing you to keep downloaded JSON keys strictly for local development.
 
-### Receipt parsing Cloud Function (Vertex AI Gemini)
+### Receipt parsing Cloud Run service (Vertex AI Gemini)
 
-The `function` module processes finalized uploads from the receipts bucket, extracts structured data with Gemini, and stores the result in Firestore. The `web` module hosts the interactive UI, while shared storage components live in the `core` module.
+The `receipt-parser` module now packages the receipt processor as a standalone Spring Boot web application that runs on Cloud Run. The web frontend calls this service after each successful upload, allowing the processor to download the receipt, extract structured data with Gemini, and persist the results to Firestore. The `web` module still hosts the interactive UI, while shared storage components live in the `core` module.
 
 #### Quick Deployment
 
 Use the automated deployment script for a streamlined setup:
 
 ```bash
-# Deploy the Cloud Function with all required configurations
-./scripts/deploy_cloud_function.sh
+# Deploy the Cloud Run receipt processor with all required configurations
+./scripts/deploy_receipt_processor.sh
 ```
 
 This script automatically:
 - Enables all required Google Cloud APIs
-- Creates and configures service accounts with proper IAM roles
-- Detects the correct region for your Cloud Storage bucket
-- Builds and deploys the function with optimal settings
-- Provides comprehensive error handling and troubleshooting
+- Creates and configures the dedicated receipt processor service account with the correct IAM roles
+- Detects the Cloud Storage bucket region and deploys the Cloud Run service there
+- Builds and deploys the container image via Cloud Build
+- Uses `receipt-parser/Dockerfile` by default to package the correct Spring Boot application (set `RECEIPT_DOCKERFILE`, tweak `RECEIPT_BUILD_CONTEXT`, or provide a custom `RECEIPT_CLOUD_BUILD_CONFIG` if you maintain alternate layouts—keep the Dockerfile within the chosen build context so Cloud Build can locate it)
+- Can be paired with `./scripts/cleanup_artifact_repos.sh` to remove older container images so Artifact Registry only retains the most recent builds
+- Grants the runtime service account access to the receipt bucket and Firestore collection
+- Accepts an optional list of additional service accounts that should be allowed to invoke the processor (for example the Cloud Run web app)
+- Removes legacy Cloud Storage notifications from the receipt bucket so only authenticated callbacks from the web application reach the processor
 
 #### Teardown
 
-When you're finished testing, run the teardown helper to remove the Cloud Run service, Cloud Function, and related IAM bindings.
-The script is safe to execute multiple times; it only deletes resources that still exist.
+When you're finished testing, run the teardown helper to remove both Cloud Run services and related IAM bindings. The script is safe to execute multiple times; it only deletes resources that still exist.
 
 ```bash
 ./scripts/teardown_gcp_resources.sh
 ```
 
-Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` if you also want to delete the identities or container
-registry created during deployment.
+Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` if you also want to delete the identities or container registries created during deployment.
 
 #### Manual Deployment
 
 Select the deployment style you prefer:
 
-- [Deploy the function with the gcloud CLI](docs/gcp-setup-gcloud.md#deploy-the-receipt-processing-function)
-- [Deploy the function with the Cloud Console](docs/gcp-setup-cloud-console.md#deploy-the-receipt-processing-function)
+- [Deploy the receipt processor with the gcloud CLI](docs/gcp-setup-gcloud.md#deploy-the-receipt-processing-service)
+- [Deploy the receipt processor with the Cloud Console](docs/gcp-setup-cloud-console.md#deploy-the-receipt-processing-service)
 
 Both documents describe prerequisites, metadata expectations, status updates, verification steps, and comprehensive troubleshooting guides for the Gemini-powered pipeline.
 
 #### Local smoke testing
 
-You can exercise the Cloud Function without waiting for a new deployment by running it locally through the Functions Framework Maven plugin:
+You can exercise the Cloud Run service locally without waiting for a new deployment by running it with Spring Boot:
 
-1. Export credentials that allow the function to reach your Cloud Storage bucket, Firestore database, and Vertex AI project. At minimum you need `GOOGLE_APPLICATION_CREDENTIALS`, `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION`, `RECEIPT_FIRESTORE_PROJECT_ID`, and `RECEIPT_FIRESTORE_COLLECTION`.
-2. Start the Functions Framework on a local port:
+1. Export credentials that allow the service to reach your Cloud Storage bucket, Firestore database, and Vertex AI project. At minimum you need `GOOGLE_APPLICATION_CREDENTIALS`, `PROJECT_ID`, `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION`, and `RECEIPT_FIRESTORE_COLLECTION`.
+2. Start the service on a local port:
 
    ```bash
-   ./mvnw -pl function -am -DskipTests function:run \
-       -Drun.functions.target=org.springframework.cloud.function.adapter.gcp.GcfJarLauncher \
-       -Drun.functions.port=8081
+   ./mvnw -pl receipt-parser -am spring-boot:run
    ```
 
 3. Upload a PDF to your receipts bucket (for example `gsutil cp test-receipt.pdf gs://your-receipts-bucket/receipts/sample-receipt.pdf`).
-4. In another terminal, send a Cloud Storage finalize event payload to the locally running function:
+4. In another terminal, send the Cloud Storage finalize event payload to the locally running service:
 
    ```bash
    curl -X POST -H "Content-Type: application/json" \
      --data-binary @docs/sample-storage-event.json \
-     http://localhost:8081
+     http://localhost:8080/events/storage
    ```
 
-Update `docs/sample-storage-event.json` with the bucket and object key you uploaded in step 3. The local instance uses the same code path as the deployed function, so Firestore documents and Gemini calls are executed exactly once the event is received.
+Update `docs/sample-storage-event.json` with the bucket and object key you uploaded in step 3. The local instance uses the same code path as the deployed service, so Firestore documents and Gemini calls are executed exactly once the event is received.
 
 #### Local parsing test server (no cloud dependencies)
 
@@ -177,8 +179,8 @@ boots the legacy extractor, so no Firestore, Cloud Storage, or Vertex AI credent
 
 ```bash
 # run from the repository root so the parent pom is picked up but only the
-# function module executes
-./mvnw -pl function -am spring-boot:run \
+# receipt-parser module executes
+./mvnw -pl receipt-parser -am spring-boot:run \
     -Dspring-boot.run.profiles=local-receipt-test
 ```
 
@@ -190,7 +192,7 @@ curl -F "file=@test-receipt.pdf" http://localhost:8080/local-receipts/parse | jq
 ```
 
 The response contains the structured data map emitted by the legacy parser along with the raw JSON string that mirrors what the
-cloud function would store. Errors such as unsupported file formats are returned with HTTP status `422` and a JSON payload with an
+Cloud Run service would store. Errors such as unsupported file formats are returned with HTTP status `422` and a JSON payload with an
 `error` message. Stop the server with `Ctrl+C` when you are finished.
 
 ### Fallback credentials
@@ -227,9 +229,9 @@ To enable Google sign-in, create OAuth credentials in the Google Cloud Console a
 
 ## Project structure
 
-- `core` – Shared storage services and configuration reused by both the web and function modules.
+- `core` – Shared storage services and configuration reused by both the web and receipt-parser modules.
 - `web` – Spring MVC application with security, Firestore integration, templates, and static assets.
-- `function` – Cloud Function implementation that processes receipts with Gemini and persists the output.
+- `receipt-parser` – Cloud Run receipt processor that extracts receipts with Gemini and persists the output.
 
 ## License
 

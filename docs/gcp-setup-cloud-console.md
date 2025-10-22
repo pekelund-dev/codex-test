@@ -4,10 +4,10 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 
 ### Default environment variables
 
-- `VERTEX_AI_PROJECT_ID` — defaults to the Cloud Function project ID.
+- `PROJECT_ID` — shared by the web app and receipt processor.
+- `VERTEX_AI_PROJECT_ID` — defaults to the receipt processor project ID.
 - `VERTEX_AI_LOCATION` — defaults to `us-east1`.
 - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
-- `RECEIPT_FIRESTORE_PROJECT_ID` — defaults to the Cloud Function project ID.
 - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
 
 ## Firestore configuration in the Console
@@ -39,10 +39,11 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 
      export FIRESTORE_ENABLED=true
      # Leave FIRESTORE_CREDENTIALS unset on Cloud Run; ADC handles authentication automatically.
-     export FIRESTORE_PROJECT_ID=your-project-id              # Optional when derived from the key
+     export PROJECT_ID=your-project-id                        # Shared by both Cloud Run services
+     export FIRESTORE_PROJECT_ID=${FIRESTORE_PROJECT_ID:-$PROJECT_ID}
      export FIRESTORE_USERS_COLLECTION=users                  # Optional override
      export FIRESTORE_DEFAULT_ROLE=ROLE_USER                  # Optional override
-     export RECEIPT_FIRESTORE_PROJECT_ID=$FIRESTORE_PROJECT_ID # Keep Cloud Run + Cloud Function aligned
+     export RECEIPT_FIRESTORE_COLLECTION=${RECEIPT_FIRESTORE_COLLECTION:-receiptExtractions}
      ```
 
    - Restart the application to pick up the Firestore integration. Visit `/register` to create your first account and sign in on `/login`.
@@ -81,46 +82,55 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 7. **Test the receipts UI**
    - Restart the Spring Boot app and navigate to <http://localhost:8080/receipts> to upload and list files stored in the bucket.
 
-## Deploy the receipt-processing function
+## Deploy the receipt-processing Cloud Run service
 
 1. **Review prerequisites**
-   - Ensure the following APIs are enabled in your project: Cloud Functions, Cloud Build, Artifact Registry, Eventarc, Pub/Sub, Vertex AI, Cloud Storage, and Firestore.
-   - Build the Cloud Function module locally (`./mvnw -pl function -am -DskipTests package`) to verify dependencies before deployment.
+   - Ensure the following APIs are enabled in your project: Cloud Run, Cloud Build, Artifact Registry, Vertex AI, Cloud Storage, and Firestore.
+   - (Optional) Build the receipt processor module locally (`./mvnw -pl receipt-parser -am -DskipTests package`) to verify dependencies before deploying.
 
 2. **Create or reuse a runtime service account**
-   - In **IAM & Admin → Service Accounts**, create `receipt-parser` (or reuse an existing service account).
+   - In **IAM & Admin → Service Accounts**, create `receipt-processor` (or reuse an existing service account).
    - Grant it the following roles:
-     - **Storage Object Viewer** on the receipts bucket (or a custom role with `storage.objects.get` and `storage.objects.update`).
-     - **Datastore User** (or equivalent) for Firestore access.
+     - **Storage Object Admin** on the receipts bucket.
+     - **Datastore User** for Firestore access.
      - **Vertex AI User** to invoke Gemini models.
 
-3. **Deploy with the Cloud Console**
-   - Go to **Cloud Functions → Create Function** and choose **2nd gen**.
-   - Specify:
-     - **Name**: `receiptProcessingFunction` (or another identifier used by your triggers).
-     - **Region**: the same region as your bucket and Firestore database.
-     - **Trigger**: **Cloud Storage** with the **Finalized/Created** event and select your receipts bucket.
-     - **Runtime**: Java 21.
-     - **Entry point**: `org.springframework.cloud.function.adapter.gcp.GcfJarLauncher`.
-     - **Service account**: the `receipt-parser` account created earlier.
-   - Expand **Runtime, build, connections and security settings → Environment variables** and define:
-     - `VERTEX_AI_PROJECT_ID` — defaults to the function project if omitted.
-     - `VERTEX_AI_LOCATION` — Vertex AI region that offers Gemini (for example `us-east1` or `us-central1`).
-     - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
-     - `RECEIPT_FIRESTORE_PROJECT_ID` — reuse the same project ID exported for the web app to keep all components on one database.
-     - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
-   - Upload the source from your local machine or connect the repository, then click **Deploy**.
+3. **Build and publish the container image**
+   - Open **Cloud Build → Builds → Create** and select **Container image**.
+   - Point the source to your repository or upload the current directory (ensure it includes `project.toml`).
+   - Set the destination image to `REGION-docker.pkg.dev/PROJECT_ID/receipts/pklnd-receipts`.
+   - Run the build and wait for the success status.
 
-4. **Observe the lifecycle**
+4. **Deploy the Cloud Run service**
+   - Navigate to **Cloud Run → Deploy service**.
+   - Choose the image produced in step 3.
+   - Set the service name to `pklnd-receipts`, pick the region that matches your bucket, and select the `receipt-processor` service account.
+   - Under **Security**, keep **Allow unauthenticated invocations** disabled.
+   - Expand **Variables & Secrets → Environment variables** and define:
+    - `PROJECT_ID` — ensure the service uses the shared Firestore project.
+    - `VERTEX_AI_PROJECT_ID` — defaults to the service project if omitted.
+    - `VERTEX_AI_LOCATION` — Vertex AI region that offers Gemini (for example `us-east1`).
+    - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
+    - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
+     - `RECEIPT_PROCESSOR_BASE_URL` — set to the Cloud Run URL noted after deployment.
+   - Leave `RECEIPT_PROCESSOR_USE_ID_TOKEN` enabled so the web application authenticates with the processor automatically.
+   - Deploy the service and note the HTTPS URL; you will reference it when configuring the web application.
+
+5. **Allow the web application to invoke the processor**
+   - In **Cloud Run → pklnd-receipts → Permissions**, add the web service account (for example `responsive-auth-run-sa@PROJECT_ID.iam.gserviceaccount.com`) with the **Cloud Run Invoker** role.
+   - From the service detail page copy the service URL and configure the web application deployment with `RECEIPT_PROCESSOR_BASE_URL`.
+   - If you deploy via `scripts/deploy_cloud_run.sh`, set `RECEIPT_PROCESSOR_BASE_URL` before running the script. `scripts/deploy_receipt_processor.sh` inspects the existing web service (override with `WEB_SERVICE_NAME`/`WEB_SERVICE_REGION`) and grants that runtime service account the **Cloud Run Invoker** role automatically; set `WEB_SERVICE_ACCOUNT` (or `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS`) when you need to authorize different callers directly.
+
+6. **Observe the lifecycle**
    - Upload a PDF receipt to the bucket and include optional metadata keys:
      - `receipt.owner.id`
      - `receipt.owner.displayName`
      - `receipt.owner.email`
-   - Watch the function logs from **Cloud Functions → Logs** or via `gcloud functions logs read`.
+   - Watch the logs from **Cloud Run → pklnd-receipts → Logs** or via `gcloud logging read`.
    - Inspect the Firestore collection to confirm the document status transitions (`RECEIVED`, `PARSING`, `COMPLETED`, `FAILED`, or `SKIPPED`) and review the parsed JSON stored in the `data` field.
 
-5. **Troubleshooting**
+7. **Troubleshooting**
    - Non-PDF files remain in `SKIPPED` status so you can audit unsupported uploads without invoking Gemini.
    - Errors (for example, Gemini timeouts) set the status to `FAILED` and store the message in both Firestore and the object metadata. Resolve the issue and retry by re-uploading the file.
 
-Cross-check the [gcloud CLI instructions](gcp-setup-gcloud.md#deploy-the-receipt-processing-function) for equivalent commands when you need to automate the deployment.
+Cross-check the [gcloud CLI instructions](gcp-setup-gcloud.md#deploy-the-receipt-processing-cloud-run-service) for equivalent commands when you need to automate the deployment.

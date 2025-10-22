@@ -9,7 +9,7 @@ public interface ReceiptStorageService {
 
     List<ReceiptFile> listReceipts();
 
-    void uploadFiles(List<MultipartFile> files, ReceiptOwner owner);
+    List<StoredReceiptReference> uploadFiles(List<MultipartFile> files, ReceiptOwner owner);
 
     void deleteReceiptsForOwner(ReceiptOwner owner);
 }
