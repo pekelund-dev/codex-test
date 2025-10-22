@@ -121,6 +121,38 @@ details.receipt-table[open] .details-toggle-icon {
     height: 100% !important;
 }
 
+.table-group-summary {
+    background-color: #f1f5f9;
+}
+
+.table-group-summary td {
+    border-top: none;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.table-group-summary .btn {
+    font-weight: 600;
+}
+
+.table-group-item td {
+    border-top: none;
+}
+
+.table-group-item td:first-child {
+    position: relative;
+}
+
+.table-group-item td:first-child::before {
+    content: '';
+    position: absolute;
+    left: 0.75rem;
+    top: 0.75rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background-color: rgba(13, 110, 253, 0.4);
+}
+
 @media (max-width: 767.98px) {
     .user-avatar,
     .user-badge {
