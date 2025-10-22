@@ -2,6 +2,10 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "$REPO_ROOT"
+
 PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null)}"
 REGION="${REGION:-europe-north1}"
 SERVICE_NAME="${RECEIPT_SERVICE_NAME:-pklnd-receipts}"
@@ -12,6 +16,7 @@ ADDITIONAL_INVOKER_SERVICE_ACCOUNTS="${ADDITIONAL_INVOKER_SERVICE_ACCOUNTS:-}"
 WEB_SERVICE_ACCOUNT="${WEB_SERVICE_ACCOUNT:-}"
 WEB_SERVICE_NAME="${WEB_SERVICE_NAME:-pklnd-web}"
 WEB_SERVICE_REGION="${WEB_SERVICE_REGION:-${REGION}}"
+DOCKERFILE_PATH="${RECEIPT_DOCKERFILE:-receipt-parser/Dockerfile}"
 
 if [[ -z "${PROJECT_ID}" ]]; then
   echo "PROJECT_ID must be set or configured with 'gcloud config set project'." >&2
@@ -37,6 +42,11 @@ fi
 
 if [[ -z "${GCS_BUCKET}" ]]; then
   echo "GCS_BUCKET must be provided so the service account can access uploaded receipts." >&2
+  exit 1
+fi
+
+if [[ ! -f "${DOCKERFILE_PATH}" ]]; then
+  echo "Receipt processor Dockerfile not found at ${DOCKERFILE_PATH}. Set RECEIPT_DOCKERFILE when using a custom location." >&2
   exit 1
 fi
 
@@ -192,7 +202,9 @@ IMAGE_RESOURCE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${SERVIC
 IMAGE_URI="${IMAGE_RESOURCE}:$(date +%Y%m%d-%H%M%S)"
 
 gcloud builds submit \
-  --tag "$IMAGE_URI"
+  --tag "$IMAGE_URI" \
+  --file "$DOCKERFILE_PATH" \
+  .
 
 gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_URI" \
