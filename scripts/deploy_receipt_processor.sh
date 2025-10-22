@@ -10,6 +10,8 @@ ARTIFACT_REPO="${RECEIPT_ARTIFACT_REPO:-receipts}"
 GCS_BUCKET="${GCS_BUCKET:-}"
 ADDITIONAL_INVOKER_SERVICE_ACCOUNTS="${ADDITIONAL_INVOKER_SERVICE_ACCOUNTS:-}"
 WEB_SERVICE_ACCOUNT="${WEB_SERVICE_ACCOUNT:-}"
+WEB_SERVICE_NAME="${WEB_SERVICE_NAME:-pklnd-web}"
+WEB_SERVICE_REGION="${WEB_SERVICE_REGION:-${REGION}}"
 
 if [[ -z "${PROJECT_ID}" ]]; then
   echo "PROJECT_ID must be set or configured with 'gcloud config set project'." >&2
@@ -17,7 +19,20 @@ if [[ -z "${PROJECT_ID}" ]]; then
 fi
 
 if [[ -z "${WEB_SERVICE_ACCOUNT}" ]]; then
+  detected_service_account=$(gcloud run services describe "${WEB_SERVICE_NAME}" \
+    --region "${WEB_SERVICE_REGION}" \
+    --project "${PROJECT_ID}" \
+    --format "value(spec.template.spec.serviceAccount)" 2>/dev/null || true)
+
+  if [[ -n "${detected_service_account}" && "${detected_service_account}" != "-" ]]; then
+    WEB_SERVICE_ACCOUNT="${detected_service_account}"
+    echo "Detected web runtime service account ${WEB_SERVICE_ACCOUNT} from ${WEB_SERVICE_NAME} in ${WEB_SERVICE_REGION}."
+  fi
+fi
+
+if [[ -z "${WEB_SERVICE_ACCOUNT}" ]]; then
   WEB_SERVICE_ACCOUNT="cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
+  echo "Defaulting WEB_SERVICE_ACCOUNT to ${WEB_SERVICE_ACCOUNT}."
 fi
 
 if [[ -z "${GCS_BUCKET}" ]]; then

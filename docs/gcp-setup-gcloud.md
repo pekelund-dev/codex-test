@@ -197,7 +197,7 @@ Before deploying, make sure the receipt processor module builds cleanly and that
     echo "Set RECEIPT_PROCESSOR_BASE_URL=${PROCESSOR_URL} when deploying the web application"
     ```
 
-3. **Deploy or update the web application** with the new environment variables. Set `RECEIPT_PROCESSOR_BASE_URL` (and optionally `RECEIPT_PROCESSOR_AUDIENCE` if you use a custom hostname) when running `scripts/deploy_cloud_run.sh` or `gcloud run deploy`. The automation script grants the default web runtime service account (`cloud-run-runtime@PROJECT_ID.iam.gserviceaccount.com`) the invoker role automatically; set `WEB_SERVICE_ACCOUNT` or `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` before re-running the receipt processor script if you need to authorize different callers.
+3. **Deploy or update the web application** with the new environment variables. Set `RECEIPT_PROCESSOR_BASE_URL` (and optionally `RECEIPT_PROCESSOR_AUDIENCE` if you use a custom hostname) when running `scripts/deploy_cloud_run.sh` or `gcloud run deploy`. The receipt processor script reads the deployed web service configuration (override with `WEB_SERVICE_NAME`/`WEB_SERVICE_REGION`) and grants that runtime account the invoker role automatically; set `WEB_SERVICE_ACCOUNT` or `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` before re-running the receipt processor script if you need to authorize different callers explicitly.
 
 ### Verify the deployment
 
