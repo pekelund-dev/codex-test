@@ -1,11 +1,3 @@
-(function () {
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initReceiptOverview);
-    } else {
-        initReceiptOverview();
-    }
-})();
-
 function initReceiptOverview() {
     const root = document.querySelector('[data-overview-root]');
     if (!root) {
@@ -1232,4 +1224,10 @@ function formatPeriodRange(data) {
 function formatItemCount(count) {
     const total = Number.isFinite(count) ? count : 0;
     return total === 1 ? '1 artikel' : `${total} artiklar`;
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initReceiptOverview);
+} else {
+    initReceiptOverview();
 }
