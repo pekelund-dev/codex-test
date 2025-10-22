@@ -756,7 +756,9 @@ class PeriodPanel {
                     this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
                 } else {
                     this.sortKey = key;
-                    this.sortDirection = key === 'date' || key === 'price' ? 'desc' : 'asc';
+                    const defaultDescending =
+                        key === 'date' || key === 'totalPrice' || key === 'unitPrice' || key === 'price';
+                    this.sortDirection = defaultDescending ? 'desc' : 'asc';
                 }
                 this.render();
             });
@@ -975,10 +977,15 @@ function buildItemRow(item, isGroupedChild = false) {
 
     row.appendChild(nameCell);
 
-    const priceCell = document.createElement('td');
-    priceCell.className = 'text-end';
-    priceCell.textContent = formatCurrency(item ? item.priceValue : null);
-    row.appendChild(priceCell);
+    const unitPriceCell = document.createElement('td');
+    unitPriceCell.className = 'text-end';
+    unitPriceCell.textContent = formatCurrency(item ? item.unitPriceValue : null);
+    row.appendChild(unitPriceCell);
+
+    const totalPriceCell = document.createElement('td');
+    totalPriceCell.className = 'text-end';
+    totalPriceCell.textContent = formatCurrency(item ? item.totalPriceValue : null);
+    row.appendChild(totalPriceCell);
 
     const quantityCell = document.createElement('td');
     quantityCell.className = 'text-end';
@@ -1022,10 +1029,15 @@ function buildGroupSummaryRow(summary, ean, itemCount, expanded) {
 
     row.appendChild(nameCell);
 
-    const priceCell = document.createElement('td');
-    priceCell.className = 'text-end';
-    priceCell.textContent = formatGroupPriceRange(summary);
-    row.appendChild(priceCell);
+    const unitPriceCell = document.createElement('td');
+    unitPriceCell.className = 'text-end';
+    unitPriceCell.textContent = formatGroupUnitPriceRange(summary);
+    row.appendChild(unitPriceCell);
+
+    const totalPriceCell = document.createElement('td');
+    totalPriceCell.className = 'text-end';
+    totalPriceCell.textContent = formatGroupTotalPriceRange(summary);
+    row.appendChild(totalPriceCell);
 
     const quantityCell = document.createElement('td');
     quantityCell.className = 'text-end';
@@ -1070,8 +1082,11 @@ function getSortValue(item, sortKey) {
     switch (sortKey) {
         case 'name':
             return item.name ? item.name.toString().toLowerCase() : '';
+        case 'unitPrice':
+            return Number.isFinite(item.unitPriceValue) ? item.unitPriceValue : -Infinity;
+        case 'totalPrice':
         case 'price':
-            return Number.isFinite(item.priceValue) ? item.priceValue : -Infinity;
+            return Number.isFinite(item.totalPriceValue) ? item.totalPriceValue : -Infinity;
         case 'quantity':
             return Number.isFinite(item.quantityValue) ? item.quantityValue : -Infinity;
         case 'store':
@@ -1093,12 +1108,23 @@ function formatCurrency(value) {
     return currencyFormatter.format(value);
 }
 
-function formatGroupPriceRange(summary) {
+function formatGroupUnitPriceRange(summary) {
     if (!summary) {
         return '—';
     }
-    const min = Number.isFinite(summary.minPriceValue) ? summary.minPriceValue : null;
-    const max = Number.isFinite(summary.maxPriceValue) ? summary.maxPriceValue : null;
+    return formatPriceRange(summary.minUnitPriceValue, summary.maxUnitPriceValue);
+}
+
+function formatGroupTotalPriceRange(summary) {
+    if (!summary) {
+        return '—';
+    }
+    return formatPriceRange(summary.minTotalPriceValue, summary.maxTotalPriceValue);
+}
+
+function formatPriceRange(minValue, maxValue) {
+    const min = Number.isFinite(minValue) ? minValue : null;
+    const max = Number.isFinite(maxValue) ? maxValue : null;
     if (min === null && max === null) {
         return '—';
     }

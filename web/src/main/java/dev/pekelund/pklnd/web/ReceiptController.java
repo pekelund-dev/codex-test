@@ -515,11 +515,14 @@ public class ReceiptController {
 
                 String itemName = extractDisplayName(item.get("name"));
                 String ean = extractItemEan(item);
-                BigDecimal priceValue = resolveTotalPrice(item);
-                if (priceValue != null) {
-                    priceValue = priceValue.setScale(2, RoundingMode.HALF_UP);
+                BigDecimal totalPriceValue = resolveTotalPrice(item);
+                if (totalPriceValue != null) {
+                    totalPriceValue = totalPriceValue.setScale(2, RoundingMode.HALF_UP);
                 }
-
+                BigDecimal unitPriceValue = resolveUnitPrice(item, totalPriceValue);
+                if (unitPriceValue != null) {
+                    unitPriceValue = unitPriceValue.setScale(2, RoundingMode.HALF_UP);
+                }
                 BigDecimal quantityValue = parseQuantityValue(item.get("displayQuantity"));
                 if (quantityValue == null) {
                     quantityValue = parseQuantityValue(item.get("quantity"));
@@ -539,7 +542,8 @@ public class ReceiptController {
                     dateLabel,
                     dateIso,
                     sortTimestamp,
-                    priceValue,
+                    unitPriceValue,
+                    totalPriceValue,
                     quantityValue,
                     quantityLabel
                 ));
@@ -792,7 +796,8 @@ public class ReceiptController {
         String dateLabel,
         String dateIso,
         Long sortTimestamp,
-        BigDecimal priceValue,
+        BigDecimal unitPriceValue,
+        BigDecimal totalPriceValue,
         BigDecimal quantityValue,
         String quantityLabel
     ) {
@@ -802,8 +807,10 @@ public class ReceiptController {
         String ean,
         String displayName,
         int itemCount,
-        BigDecimal minPriceValue,
-        BigDecimal maxPriceValue,
+        BigDecimal minUnitPriceValue,
+        BigDecimal maxUnitPriceValue,
+        BigDecimal minTotalPriceValue,
+        BigDecimal maxTotalPriceValue,
         BigDecimal totalQuantityValue,
         int storeCount,
         String earliestDateIso,
@@ -830,8 +837,10 @@ public class ReceiptController {
         private final String ean;
         private String displayName;
         private int itemCount;
-        private BigDecimal minPrice;
-        private BigDecimal maxPrice;
+        private BigDecimal minUnitPrice;
+        private BigDecimal maxUnitPrice;
+        private BigDecimal minTotalPrice;
+        private BigDecimal maxTotalPrice;
         private BigDecimal quantityTotal;
         private final Set<String> stores = new HashSet<>();
         private Long earliestTimestamp;
@@ -853,12 +862,23 @@ public class ReceiptController {
                 displayName = item.name();
             }
 
-            if (item.priceValue() != null) {
-                if (minPrice == null || item.priceValue().compareTo(minPrice) < 0) {
-                    minPrice = item.priceValue();
+            BigDecimal unitPrice = item.unitPriceValue();
+            if (unitPrice != null) {
+                if (minUnitPrice == null || unitPrice.compareTo(minUnitPrice) < 0) {
+                    minUnitPrice = unitPrice;
                 }
-                if (maxPrice == null || item.priceValue().compareTo(maxPrice) > 0) {
-                    maxPrice = item.priceValue();
+                if (maxUnitPrice == null || unitPrice.compareTo(maxUnitPrice) > 0) {
+                    maxUnitPrice = unitPrice;
+                }
+            }
+
+            BigDecimal totalPrice = item.totalPriceValue();
+            if (totalPrice != null) {
+                if (minTotalPrice == null || totalPrice.compareTo(minTotalPrice) < 0) {
+                    minTotalPrice = totalPrice;
+                }
+                if (maxTotalPrice == null || totalPrice.compareTo(maxTotalPrice) > 0) {
+                    maxTotalPrice = totalPrice;
                 }
             }
 
@@ -893,15 +913,19 @@ public class ReceiptController {
         }
 
         GroupSummaryEntry toSummary() {
-            BigDecimal min = minPrice != null ? minPrice.setScale(2, RoundingMode.HALF_UP) : null;
-            BigDecimal max = maxPrice != null ? maxPrice.setScale(2, RoundingMode.HALF_UP) : null;
+            BigDecimal minUnit = minUnitPrice != null ? minUnitPrice.setScale(2, RoundingMode.HALF_UP) : null;
+            BigDecimal maxUnit = maxUnitPrice != null ? maxUnitPrice.setScale(2, RoundingMode.HALF_UP) : null;
+            BigDecimal minTotal = minTotalPrice != null ? minTotalPrice.setScale(2, RoundingMode.HALF_UP) : null;
+            BigDecimal maxTotal = maxTotalPrice != null ? maxTotalPrice.setScale(2, RoundingMode.HALF_UP) : null;
             BigDecimal totalQuantity = quantityTotal != null ? quantityTotal : null;
             return new GroupSummaryEntry(
                 ean,
                 displayName,
                 itemCount,
-                min,
-                max,
+                minUnit,
+                maxUnit,
+                minTotal,
+                maxTotal,
                 totalQuantity,
                 stores.size(),
                 earliestDateIso,
