@@ -83,7 +83,9 @@ class ReceiptOverviewControllerTests {
             .andExpect(jsonPath("$.primary.totalItems").value(2))
             .andExpect(jsonPath("$.primary.items[0].name").value("Bröd"))
             .andExpect(jsonPath("$.primary.items[1].name").value("Mjölk"))
-            .andExpect(jsonPath("$.primary.groups[0].ean").value("7355550002222"));
+            .andExpect(jsonPath("$.primary.groups[0].ean").value("7355550002222"))
+            .andExpect(jsonPath("$.receiptDates[0]").value("2024-05-06"))
+            .andExpect(jsonPath("$.receiptDates[2]").value("2024-05-18"));
     }
 
     @Test
@@ -136,7 +138,9 @@ class ReceiptOverviewControllerTests {
             .andExpect(jsonPath("$.comparison.month").value(4))
             .andExpect(jsonPath("$.comparison.year").value(2024))
             .andExpect(jsonPath("$.comparison.totalItems").value(1))
-            .andExpect(jsonPath("$.comparison.groups[0].ean").value("7355550002222"));
+            .andExpect(jsonPath("$.comparison.groups[0].ean").value("7355550002222"))
+            .andExpect(jsonPath("$.receiptDates[0]").value("2024-03-04"))
+            .andExpect(jsonPath("$.receiptDates[2]").value("2024-05-08"));
     }
 
     private ParsedReceipt createReceipt(

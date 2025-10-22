@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -233,7 +234,8 @@ public class ReceiptController {
                     null,
                     null,
                     toScopeParameter(scope),
-                    pageData.viewingAll()
+                    pageData.viewingAll(),
+                    List.of()
                 )
             );
         }
@@ -247,7 +249,8 @@ public class ReceiptController {
                     null,
                     null,
                     toScopeParameter(scope),
-                    pageData.viewingAll()
+                    pageData.viewingAll(),
+                    List.of()
                 )
             );
         }
@@ -261,7 +264,8 @@ public class ReceiptController {
                     null,
                     null,
                     toScopeParameter(scope),
-                    pageData.viewingAll()
+                    pageData.viewingAll(),
+                    List.of()
                 )
             );
         }
@@ -277,7 +281,8 @@ public class ReceiptController {
                         null,
                         null,
                         toScopeParameter(scope),
-                        pageData.viewingAll()
+                        pageData.viewingAll(),
+                        List.of()
                     )
                 );
             }
@@ -298,7 +303,8 @@ public class ReceiptController {
                 primaryOverview,
                 comparisonOverview,
                 scopeValue,
-                pageData.viewingAll()
+                pageData.viewingAll(),
+                collectReceiptDates(receipts)
             )
         );
     }
@@ -569,6 +575,29 @@ public class ReceiptController {
         );
     }
 
+    private List<String> collectReceiptDates(List<ParsedReceipt> receipts) {
+        if (receipts == null || receipts.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> dates = new TreeSet<>();
+        for (ParsedReceipt receipt : receipts) {
+            if (receipt == null) {
+                continue;
+            }
+            List<Map<String, Object>> displayItems = receipt.displayItems();
+            if (displayItems == null || displayItems.isEmpty()) {
+                continue;
+            }
+            LocalDate date = resolveEntryDate(receipt);
+            if (date == null) {
+                continue;
+            }
+            dates.add(date.toString());
+        }
+        return List.copyOf(dates);
+    }
+
     private LocalDate resolveEntryDate(ParsedReceipt receipt) {
         if (receipt == null) {
             return null;
@@ -732,7 +761,8 @@ public class ReceiptController {
         PeriodOverview primary,
         PeriodOverview comparison,
         String scope,
-        boolean viewingAll
+        boolean viewingAll,
+        List<String> receiptDates
     ) {
     }
 
