@@ -49,7 +49,7 @@ The `setup-env.sh` script automatically configures:
    > automatically append `oauth` to `SPRING_PROFILES_ACTIVE`. For manual runs add `SPRING_PROFILES_ACTIVE=local,oauth` (or
    > `prod,oauth` in production).
 
-   The `scripts/deploy_cloud_run.sh` helper builds a timestamped container image ready for Cloud Run deployments. Run `./scripts/cleanup_artifact_repos.sh` after deployments to prune older revisions so Artifact Registry only keeps the most recent web application and receipt processor builds. The deploy script relies on the repository’s multi-stage `Dockerfile` (located at the project root by default); export `BUILD_CONTEXT` when you keep the Dockerfile in another directory. The receipt processor deployment helper builds from `receipt-parser/Dockerfile` so the Cloud Run service always packages the parser instead of the secured web UI—override this path with `RECEIPT_DOCKERFILE` (and, if needed, `RECEIPT_BUILD_CONTEXT`) when using a custom image definition. The Dockerfile must retain the name `Dockerfile` so Cloud Build can detect it within the selected context.
+   The `scripts/deploy_cloud_run.sh` helper builds a timestamped container image ready for Cloud Run deployments. Run `./scripts/cleanup_artifact_repos.sh` after deployments to prune older revisions so Artifact Registry only keeps the most recent web application and receipt processor builds. The deploy script relies on the repository’s multi-stage `Dockerfile` (located at the project root by default); export `BUILD_CONTEXT` when you keep the Dockerfile in another directory. The receipt processor deployment helper builds from `receipt-parser/Dockerfile` via the accompanying Cloud Build configuration so the Cloud Run service always packages the parser instead of the secured web UI—override this path with `RECEIPT_DOCKERFILE` and adjust `RECEIPT_BUILD_CONTEXT` or `RECEIPT_CLOUD_BUILD_CONFIG` when using a custom image definition. Ensure the Dockerfile remains inside the selected build context so Cloud Build can resolve it.
 
 3. Configure Firestore if you want to enable user self-registration (see [Firestore configuration](#firestore-configuration)).
 4. (Optional) Configure Google Cloud Storage to enable the receipts upload page (see
@@ -125,7 +125,7 @@ This script automatically:
 - Creates and configures the dedicated receipt processor service account with the correct IAM roles
 - Detects the Cloud Storage bucket region and deploys the Cloud Run service there
 - Builds and deploys the container image via Cloud Build
-- Uses `receipt-parser/Dockerfile` by default to package the correct Spring Boot application (set `RECEIPT_DOCKERFILE` and/or `RECEIPT_BUILD_CONTEXT` if you store the Dockerfile elsewhere—the file must still be named `Dockerfile`)
+- Uses `receipt-parser/Dockerfile` by default to package the correct Spring Boot application (set `RECEIPT_DOCKERFILE`, tweak `RECEIPT_BUILD_CONTEXT`, or provide a custom `RECEIPT_CLOUD_BUILD_CONFIG` if you maintain alternate layouts—keep the Dockerfile within the chosen build context so Cloud Build can locate it)
 - Can be paired with `./scripts/cleanup_artifact_repos.sh` to remove older container images so Artifact Registry only retains the most recent builds
 - Grants the runtime service account access to the receipt bucket and Firestore collection
 - Accepts an optional list of additional service accounts that should be allowed to invoke the processor (for example the Cloud Run web app)

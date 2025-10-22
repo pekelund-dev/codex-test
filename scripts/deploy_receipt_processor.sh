@@ -17,7 +17,8 @@ WEB_SERVICE_ACCOUNT="${WEB_SERVICE_ACCOUNT:-}"
 WEB_SERVICE_NAME="${WEB_SERVICE_NAME:-pklnd-web}"
 WEB_SERVICE_REGION="${WEB_SERVICE_REGION:-${REGION}}"
 DOCKERFILE_PATH="${RECEIPT_DOCKERFILE:-receipt-parser/Dockerfile}"
-BUILD_CONTEXT="${RECEIPT_BUILD_CONTEXT:-$(dirname "${DOCKERFILE_PATH}")}"
+BUILD_CONTEXT="${RECEIPT_BUILD_CONTEXT:-${REPO_ROOT}}"
+CLOUD_BUILD_CONFIG="${RECEIPT_CLOUD_BUILD_CONFIG:-receipt-parser/cloudbuild.yaml}"
 
 if [[ -z "${PROJECT_ID}" ]]; then
   echo "PROJECT_ID must be set or configured with 'gcloud config set project'." >&2
@@ -51,13 +52,54 @@ if [[ ! -f "${DOCKERFILE_PATH}" ]]; then
   exit 1
 fi
 
-if [[ "$(basename "${DOCKERFILE_PATH}")" != "Dockerfile" ]]; then
-  echo "Receipt processor Dockerfile must be named 'Dockerfile'. Rename the file or adjust RECEIPT_DOCKERFILE to point at a Dockerfile." >&2
+if [[ ! -d "${BUILD_CONTEXT}" ]]; then
+  echo "Receipt processor build context not found at ${BUILD_CONTEXT}. Set RECEIPT_BUILD_CONTEXT when using a custom directory." >&2
   exit 1
 fi
 
-if [[ ! -d "${BUILD_CONTEXT}" ]]; then
-  echo "Receipt processor build context not found at ${BUILD_CONTEXT}. Set RECEIPT_BUILD_CONTEXT when using a custom directory." >&2
+if [[ ! -f "${CLOUD_BUILD_CONFIG}" ]]; then
+  echo "Cloud Build configuration not found at ${CLOUD_BUILD_CONFIG}. Set RECEIPT_CLOUD_BUILD_CONFIG when using a custom file." >&2
+  exit 1
+fi
+
+DOCKERFILE_ABS=$(DOCKERFILE_PATH="${DOCKERFILE_PATH}" python3 - <<'PY'
+import os
+from pathlib import Path
+
+dockerfile = Path(os.environ["DOCKERFILE_PATH"]).expanduser().resolve()
+print(dockerfile)
+PY
+)
+
+BUILD_CONTEXT_ABS=$(BUILD_CONTEXT="${BUILD_CONTEXT}" python3 - <<'PY'
+import os
+from pathlib import Path
+
+context = Path(os.environ["BUILD_CONTEXT"]).expanduser().resolve()
+print(context)
+PY
+)
+
+if [[ "${DOCKERFILE_ABS}" != "${BUILD_CONTEXT_ABS}"* ]]; then
+  echo "Dockerfile ${DOCKERFILE_PATH} must reside inside the build context ${BUILD_CONTEXT}. Adjust RECEIPT_DOCKERFILE or RECEIPT_BUILD_CONTEXT." >&2
+  exit 1
+fi
+
+DOCKERFILE_RELATIVE=$(DOCKERFILE_ABS="${DOCKERFILE_ABS}" BUILD_CONTEXT_ABS="${BUILD_CONTEXT_ABS}" python3 - <<'PY'
+import os
+from pathlib import Path
+
+dockerfile = Path(os.environ["DOCKERFILE_ABS"])
+context = Path(os.environ["BUILD_CONTEXT_ABS"])
+try:
+    print(dockerfile.relative_to(context))
+except ValueError as exc:
+    raise SystemExit(f"Dockerfile {dockerfile} is not within build context {context}: {exc}")
+PY
+)
+
+if [[ -z "${DOCKERFILE_RELATIVE}" ]]; then
+  echo "Failed to derive Dockerfile path relative to build context. Ensure ${DOCKERFILE_PATH} is within ${BUILD_CONTEXT}." >&2
   exit 1
 fi
 
@@ -213,7 +255,8 @@ IMAGE_RESOURCE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${SERVIC
 IMAGE_URI="${IMAGE_RESOURCE}:$(date +%Y%m%d-%H%M%S)"
 
 gcloud builds submit "$BUILD_CONTEXT" \
-  --tag "$IMAGE_URI"
+  --config "$CLOUD_BUILD_CONFIG" \
+  --substitutions "_IMAGE_URI=${IMAGE_URI},_DOCKERFILE=${DOCKERFILE_RELATIVE}"
 
 gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_URI" \
