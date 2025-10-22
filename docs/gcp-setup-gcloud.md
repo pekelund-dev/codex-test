@@ -157,17 +157,19 @@ Before deploying, make sure the receipt processor module builds cleanly and that
 
 ### Build and deploy the container
 
-1. **Build and push the image with Cloud Build** (run from the repository root so the command can load `receipt-parser/Dockerfile`)
+1. **Build and push the image with Cloud Build** (run from the repository root so the command can load the `receipt-parser` build context)
 
     ```bash
     IMAGE_REPO=${REGION}-docker.pkg.dev/${PROJECT_ID}/receipts
     IMAGE_URI=${IMAGE_REPO}/pklnd-receipts:$(date +%Y%m%d-%H%M%S)
 
-    gcloud builds submit \
-      --tag "${IMAGE_URI}" \
-      --file receipt-parser/Dockerfile \
-      .
+    gcloud builds submit receipt-parser \
+      --tag "${IMAGE_URI}"
     ```
+
+    The Dockerfile must be named `Dockerfile`. If you keep it in a different
+    directory, adjust the command (or set `RECEIPT_DOCKERFILE`/`RECEIPT_BUILD_CONTEXT`
+    when using the deployment script) so Cloud Build picks up the correct context.
 
 2. **Deploy the Cloud Run service**
 

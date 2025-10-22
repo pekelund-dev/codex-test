@@ -17,6 +17,7 @@ WEB_SERVICE_ACCOUNT="${WEB_SERVICE_ACCOUNT:-}"
 WEB_SERVICE_NAME="${WEB_SERVICE_NAME:-pklnd-web}"
 WEB_SERVICE_REGION="${WEB_SERVICE_REGION:-${REGION}}"
 DOCKERFILE_PATH="${RECEIPT_DOCKERFILE:-receipt-parser/Dockerfile}"
+BUILD_CONTEXT="${RECEIPT_BUILD_CONTEXT:-$(dirname "${DOCKERFILE_PATH}")}"
 
 if [[ -z "${PROJECT_ID}" ]]; then
   echo "PROJECT_ID must be set or configured with 'gcloud config set project'." >&2
@@ -47,6 +48,16 @@ fi
 
 if [[ ! -f "${DOCKERFILE_PATH}" ]]; then
   echo "Receipt processor Dockerfile not found at ${DOCKERFILE_PATH}. Set RECEIPT_DOCKERFILE when using a custom location." >&2
+  exit 1
+fi
+
+if [[ "$(basename "${DOCKERFILE_PATH}")" != "Dockerfile" ]]; then
+  echo "Receipt processor Dockerfile must be named 'Dockerfile'. Rename the file or adjust RECEIPT_DOCKERFILE to point at a Dockerfile." >&2
+  exit 1
+fi
+
+if [[ ! -d "${BUILD_CONTEXT}" ]]; then
+  echo "Receipt processor build context not found at ${BUILD_CONTEXT}. Set RECEIPT_BUILD_CONTEXT when using a custom directory." >&2
   exit 1
 fi
 
@@ -201,10 +212,8 @@ gcloud storage buckets add-iam-policy-binding "gs://${GCS_BUCKET}" \
 IMAGE_RESOURCE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${SERVICE_NAME}"
 IMAGE_URI="${IMAGE_RESOURCE}:$(date +%Y%m%d-%H%M%S)"
 
-gcloud builds submit \
-  --tag "$IMAGE_URI" \
-  --file "$DOCKERFILE_PATH" \
-  .
+gcloud builds submit "$BUILD_CONTEXT" \
+  --tag "$IMAGE_URI"
 
 gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_URI" \
