@@ -88,7 +88,7 @@ public class DashboardStatisticsService {
         Set<String> stores = new HashSet<>();
         for (ParsedReceipt receipt : receipts) {
             String storeName = receipt != null ? receipt.storeName() : null;
-            if (!StringUtils.hasText(storeName)) {
+            if (storeName == null) {
                 continue;
             }
             String normalizedStoreName = storeName.trim();

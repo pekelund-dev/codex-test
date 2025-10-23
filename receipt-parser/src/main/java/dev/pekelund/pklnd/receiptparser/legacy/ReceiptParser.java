@@ -31,21 +31,22 @@ public class ReceiptParser extends BaseReceiptParser {
 
     @Override
     public LegacyParsedReceipt parse(String[] pdfData, ReceiptFormat format) {
+        String[] lines = pdfData != null ? pdfData : new String[0];
         List<LegacyReceiptItem> items = new ArrayList<>();
         List<LegacyReceiptError> errors = new ArrayList<>();
         List<LegacyReceiptDiscount> generalDiscounts = new ArrayList<>();
 
-        String storeLine = pdfData != null && pdfData.length > 1 ? pdfData[1] : null;
+        String storeLine = lines.length > 1 ? lines[1] : null;
         String store = storeLine != null ? storeLine.trim() : null;
-        LocalDate receiptDate = extractDate(pdfData).orElse(null);
-        BigDecimal totalAmount = extractTotal(pdfData).orElse(null);
+        LocalDate receiptDate = extractDate(lines).orElse(null);
+        BigDecimal totalAmount = extractTotal(lines).orElse(null);
 
-        int itemsStartIndex = locateItemsStart(pdfData);
-        int itemsEndIndex = locateItemsEnd(pdfData, itemsStartIndex);
+        int itemsStartIndex = locateItemsStart(lines);
+        int itemsEndIndex = locateItemsEnd(lines, itemsStartIndex);
 
         if (itemsStartIndex >= 0 && itemsEndIndex >= itemsStartIndex) {
-            for (int index = itemsStartIndex; index <= itemsEndIndex && index < pdfData.length; index++) {
-                String line = pdfData[index];
+            for (int index = itemsStartIndex; index <= itemsEndIndex && index < lines.length; index++) {
+                String line = lines[index];
                 if (line == null || line.isBlank()) {
                     continue;
                 }
@@ -53,7 +54,7 @@ public class ReceiptParser extends BaseReceiptParser {
                 if (item.isPresent()) {
                     LegacyReceiptItem receiptItem = item.get();
                     if (index + 1 <= itemsEndIndex) {
-                        Optional<LegacyReceiptDiscount> discount = parseDiscountLine(pdfData[index + 1], DISCOUNT_PATTERN);
+                        Optional<LegacyReceiptDiscount> discount = parseDiscountLine(lines[index + 1], DISCOUNT_PATTERN);
                         if (discount.isPresent()) {
                             LegacyReceiptDiscount parsedDiscount = normalizeDiscount(discount.get());
                             if (isGeneralDiscount(receiptItem, parsedDiscount)) {
@@ -86,7 +87,7 @@ public class ReceiptParser extends BaseReceiptParser {
             }
         }
 
-        List<LegacyReceiptVat> vats = extractVatLines(pdfData, itemsEndIndex + 1);
+        List<LegacyReceiptVat> vats = extractVatLines(lines, itemsEndIndex + 1);
 
         LOGGER.debug("Parsed NEW_FORMAT receipt - store: {}, date: {}, total: {}, items: {}, vat lines: {}", store,
             receiptDate, totalAmount, items.size(), vats.size());

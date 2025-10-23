@@ -15,25 +15,27 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import java.util.Map;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 class ReceiptParsingHandlerTest {
 
+    @Mock
     private Storage storage;
-    private ReceiptExtractionRepository repository;
-    private ReceiptDataExtractor extractor;
-    private ReceiptParsingHandler handler;
 
-    @BeforeEach
-    @SuppressWarnings("unused")
-    void setUp() {
-        storage = mock(Storage.class);
-        repository = mock(ReceiptExtractionRepository.class);
-        extractor = mock(ReceiptDataExtractor.class);
-        handler = new ReceiptParsingHandler(storage, repository, extractor);
-    }
+    @Mock
+    private ReceiptExtractionRepository repository;
+
+    @Mock
+    private ReceiptDataExtractor extractor;
+
+    @InjectMocks
+    private ReceiptParsingHandler handler;
 
     @Test
     void mergesEventMetadataWhenBlobMissingOwner() {
@@ -51,9 +53,6 @@ class ReceiptParsingHandlerTest {
 
         when(storage.get(eq(BlobId.of("bucket", "receipts/sample.pdf")))).thenReturn(blob);
         when(blob.getMetadata()).thenReturn(Map.of());
-        when(blob.getContentType()).thenReturn("application/pdf");
-        when(blob.getName()).thenReturn("receipts/sample.pdf");
-        when(blob.getContent()).thenReturn(new byte[0]);
         when(blob.toBuilder()).thenReturn(builder);
 
         when(builder.setMetadata(anyMap())).thenReturn(builder);
@@ -101,9 +100,6 @@ class ReceiptParsingHandlerTest {
 
         when(storage.get(eq(BlobId.of("bucket", "receipts/missing.pdf")))).thenReturn(blob);
         when(blob.getMetadata()).thenReturn(null);
-        when(blob.getContentType()).thenReturn("application/pdf");
-        when(blob.getName()).thenReturn("receipts/missing.pdf");
-        when(blob.getContent()).thenReturn(new byte[0]);
         when(blob.toBuilder()).thenReturn(builder);
 
         when(builder.setMetadata(anyMap())).thenReturn(builder);

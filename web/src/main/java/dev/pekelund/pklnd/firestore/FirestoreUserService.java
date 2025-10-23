@@ -257,10 +257,10 @@ public class FirestoreUserService implements UserDetailsService {
             }
 
             if (StringUtils.hasText(trimmedDisplayName)) {
-                String storedDisplayName = documentSnapshot.getString("fullName");
-                String normalizedStoredDisplayName = StringUtils.hasText(storedDisplayName)
-                    ? storedDisplayName.trim()
-                    : null;
+                String normalizedStoredDisplayName = Optional.ofNullable(documentSnapshot.getString("fullName"))
+                    .map(String::trim)
+                    .filter(StringUtils::hasText)
+                    .orElse(null);
                 if (!Objects.equals(trimmedDisplayName, normalizedStoredDisplayName)) {
                     updates.put("fullName", trimmedDisplayName);
                 }
