@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : #{page.receipts.overview.title}">Kvittoöversikt</title>
+</head>
+<body>
+<section class="py-3 py-lg-4"
+         data-overview-root
+         th:attr="data-overview-url=@{/receipts/overview/data(scope=${scopeParam})},
+                  data-default-period-type=${defaultPeriodType},
+                  data-default-primary-week=${defaultPrimaryWeek},
+                  data-default-primary-month=${defaultPrimaryMonth},
+                  data-default-compare-week=${defaultCompareWeek},
+                  data-default-compare-month=${defaultCompareMonth},
+                  data-scope=${scopeParam != null ? scopeParam : ''}">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <a class="btn btn-link p-0 text-decoration-none" th:href="@{/receipts(scope=${scopeParam})}">
+            <i class="bi bi-arrow-left"></i>
+            Tillbaka till kvitton
+        </a>
+    </div>
+
+    <div th:if="${canViewAll}" class="mb-3">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Kvittoomfång">
+            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
+               th:href="@{/receipts/overview(scope='my')}">Mina kvitton</a>
+            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
+               th:href="@{/receipts/overview(scope='all')}">Alla kvitton</a>
+        </div>
+        <p class="text-muted small mb-0 mt-2"
+           th:text="${viewingAll} ? 'Visar alla tolkade kvitton.' : 'Visar endast dina tolkade kvitton.'">
+            Visar endast dina tolkade kvitton.
+        </p>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-start justify-content-between gap-3">
+                <div>
+                    <h1 class="h3 fw-semibold text-primary mb-2" th:text="#{receipts.overview.heading}">Artikelöversikt</h1>
+                    <p class="text-muted mb-0" th:text="#{receipts.overview.description}">
+                        Välj en vecka eller månad för att granska kvittoartiklar och jämföra perioder.
+                    </p>
+                </div>
+            </div>
+
+            <div class="row gy-3 mt-4" data-overview-controls>
+                <div class="col-md-4">
+                    <label for="overview-period-type" class="form-label fw-semibold"
+                           th:text="#{receipts.overview.controls.period}">Periodtyp</label>
+                    <select id="overview-period-type" class="form-select" data-overview-period-type>
+                        <option value="week" th:text="#{receipts.overview.controls.period.week}">Vecka</option>
+                        <option value="month" th:text="#{receipts.overview.controls.period.month}">Månad</option>
+                    </select>
+                </div>
+                <div class="col-md-4" data-week-picker>
+                    <label for="overview-primary-week" class="form-label fw-semibold"
+                           th:text="#{receipts.overview.controls.primary.week}">Vecka</label>
+                    <input id="overview-primary-week" type="week" class="form-control" data-overview-primary-week>
+                    <div class="overview-week-indicators d-none" data-week-indicators></div>
+                </div>
+                <div class="col-md-4 d-none" data-month-picker>
+                    <label for="overview-primary-month" class="form-label fw-semibold"
+                           th:text="#{receipts.overview.controls.primary.month}">Månad</label>
+                    <input id="overview-primary-month" type="month" class="form-control" data-overview-primary-month>
+                    <div class="overview-month-indicators d-none" data-month-indicators></div>
+                </div>
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="overview-compare-toggle"
+                               data-overview-compare-toggle>
+                        <label class="form-check-label" for="overview-compare-toggle"
+                               th:text="#{receipts.overview.controls.compare.toggle}">Jämför med en annan period</label>
+                    </div>
+                </div>
+                <div class="col-md-4 d-none" data-compare-week>
+                    <label for="overview-compare-week" class="form-label fw-semibold"
+                           th:text="#{receipts.overview.controls.compare.week}">Jämförelsevecka</label>
+                    <input id="overview-compare-week" type="week" class="form-control" data-overview-compare-week>
+                </div>
+                <div class="col-md-4 d-none" data-compare-month>
+                    <label for="overview-compare-month" class="form-label fw-semibold"
+                           th:text="#{receipts.overview.controls.compare.month}">Jämförelsemånad</label>
+                    <input id="overview-compare-month" type="month" class="form-control" data-overview-compare-month>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-warning mt-4" role="alert" data-overview-warning
+         th:text="#{receipts.overview.parsing-disabled}"
+         th:classappend="${parsedReceiptsEnabled} ? ' d-none' : ''">
+        Kvittotolkning måste vara aktiverad för att visa översikten.
+    </div>
+
+    <div class="alert alert-danger mt-4 d-none" role="alert" data-overview-error
+         th:text="#{receipts.overview.error}">Det gick inte att läsa in översikten just nu.</div>
+
+    <div class="d-flex justify-content-center py-5 d-none" data-overview-loading>
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden" th:text="#{receipts.overview.loading}">Laddar perioddata...</span>
+        </div>
+    </div>
+
+    <div class="row gy-4 mt-0 mt-lg-4" data-overview-panels>
+        <div class="col-12 col-xl-6" data-period-panel="primary">
+            <div class="card shadow-sm border-0 h-100" data-period-card>
+                <div class="card-body p-4">
+                    <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3">
+                        <div>
+                            <h2 class="h5 fw-semibold text-primary mb-1" data-period-title>—</h2>
+                            <p class="text-muted small mb-1" data-period-range>—</p>
+                            <p class="text-muted small mb-0 d-none" data-period-summary>
+                                <span class="fw-semibold me-1" th:text="#{receipts.overview.summary.label}">Sammanfattning:</span>
+                                <span data-period-summary-value>—</span>
+                            </p>
+                        </div>
+                        <div class="d-flex align-items-center gap-3 ms-xl-auto">
+                            <span class="badge bg-primary-subtle text-primary" data-period-count>0 artiklar</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="group-toggle-primary"
+                                       data-period-group-toggle>
+                                <label class="form-check-label small" for="group-toggle-primary"
+                                       th:text="#{receipts.overview.group.toggle}">Gruppera på EAN</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3 d-none" data-period-empty
+                         th:text="#{receipts.overview.empty}">Inga kvittoartiklar hittades för perioden.</div>
+
+                    <div class="alert alert-danger mt-3 d-none" data-period-panel-error></div>
+
+                    <div class="d-flex justify-content-center py-4 d-none" data-period-loading>
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden" th:text="#{receipts.overview.loading}">Laddar perioddata...</span>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mt-3 d-none" data-period-table-container>
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                            <tr>
+                                <th scope="col">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button"
+                                            data-sort-key="name">
+                                        <span th:text="#{receipts.overview.table.header.item}">Artikel</span>
+                                        <i class="bi bi-arrow-down-up ms-1" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                                <th scope="col" class="text-end">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button"
+                                            data-sort-key="unitPrice">
+                                        <span th:text="#{receipts.overview.table.header.unit-price}">Enhetspris</span>
+                                        <i class="bi bi-arrow-down-up ms-1" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                                <th scope="col" class="text-end">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button"
+                                            data-sort-key="totalPrice">
+                                        <span th:text="#{receipts.overview.table.header.total-price}">Totalt pris</span>
+                                        <i class="bi bi-arrow-down-up ms-1" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                                <th scope="col" class="text-end">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button"
+                                            data-sort-key="quantity">
+                                        <span th:text="#{receipts.overview.table.header.quantity}">Antal</span>
+                                        <i class="bi bi-arrow-down-up ms-1" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                                <th scope="col">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button"
+                                            data-sort-key="store">
+                                        <span th:text="#{receipts.overview.table.header.store}">Butik</span>
+                                        <i class="bi bi-arrow-down-up ms-1" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                                <th scope="col">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button"
+                                            data-sort-key="date">
+                                        <span th:text="#{receipts.overview.table.header.date}">Datum</span>
+                                        <i class="bi bi-arrow-down-up ms-1" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody data-period-table-body></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-6 d-none" data-period-panel="comparison">
+            <div class="card shadow-sm border-0 h-100" data-period-card>
+                <div class="card-body p-4">
+                    <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3">
+                        <div>
+                            <h2 class="h5 fw-semibold text-primary mb-1" data-period-title>—</h2>
+                            <p class="text-muted small mb-1" data-period-range>—</p>
+                            <p class="text-muted small mb-0 d-none" data-period-summary>
+                                <span class="fw-semibold me-1" th:text="#{receipts.overview.summary.label}">Sammanfattning:</span>
+                                <span data-period-summary-value>—</span>
+                            </p>
+                        </div>
+                        <div class="d-flex align-items-center gap-3 ms-xl-auto">
+                            <span class="badge bg-primary-subtle text-primary" data-period-count>0 artiklar</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="group-toggle-comparison"
+                                       data-period-group-toggle>
+                                <label class="form-check-label small" for="group-toggle-comparison"
+                                       th:text="#{receipts.overview.group.toggle}">Gruppera på EAN</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3 d-none" data-period-empty
+                         th:text="#{receipts.overview.empty}">Inga kvittoartiklar hittades för perioden.</div>
+
+                    <div class="alert alert-danger mt-3 d-none" data-period-panel-error></div>
+
+                    <div class="d-flex justify-content-center py-4 d-none" data-period-loading>
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden" th:text="#{receipts.overview.loading}">Laddar perioddata...</span>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mt-3 d-none" data-period-table-container>
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                            <tr>
+                                <th scope="col">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button"
+                                            data-sort-key="name">
+                                        <span th:text="#{receipts.overview.table.header.item}">Artikel</span>
+                                        <i class="bi bi-arrow-down-up ms-1" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                                <th scope="col" class="text-end">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button"
+                                            data-sort-key="unitPrice">
+                                        <span th:text="#{receipts.overview.table.header.unit-price}">Enhetspris</span>
+                                        <i class="bi bi-arrow-down-up ms-1" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                                <th scope="col" class="text-end">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button"
+                                            data-sort-key="totalPrice">
+                                        <span th:text="#{receipts.overview.table.header.total-price}">Totalt pris</span>
+                                        <i class="bi bi-arrow-down-up ms-1" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                                <th scope="col" class="text-end">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button"
+                                            data-sort-key="quantity">
+                                        <span th:text="#{receipts.overview.table.header.quantity}">Antal</span>
+                                        <i class="bi bi-arrow-down-up ms-1" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                                <th scope="col">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button"
+                                            data-sort-key="store">
+                                        <span th:text="#{receipts.overview.table.header.store}">Butik</span>
+                                        <i class="bi bi-arrow-down-up ms-1" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                                <th scope="col">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button"
+                                            data-sort-key="date">
+                                        <span th:text="#{receipts.overview.table.header.date}">Datum</span>
+                                        <i class="bi bi-arrow-down-up ms-1" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody data-period-table-body></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script defer th:src="@{/js/receipt-overview.js}"></script>
+</section>
+</body>
+</html>
