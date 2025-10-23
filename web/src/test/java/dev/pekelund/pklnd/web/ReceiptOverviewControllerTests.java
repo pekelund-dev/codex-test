@@ -92,6 +92,10 @@ class ReceiptOverviewControllerTests {
             .andExpect(jsonPath("$.primary.groups[0].maxUnitPriceValue").value(25.00))
             .andExpect(jsonPath("$.primary.groups[0].minTotalPriceValue").value(25.00))
             .andExpect(jsonPath("$.primary.groups[0].maxTotalPriceValue").value(25.00))
+            .andExpect(jsonPath("$.primary.summary.receiptCount").value(2))
+            .andExpect(jsonPath("$.primary.summary.storeCount").value(2))
+            .andExpect(jsonPath("$.primary.summary.totalPriceValue").value(37.50))
+            .andExpect(jsonPath("$.primary.summary.totalQuantityValue").value(2.00))
             .andExpect(jsonPath("$.receiptDates[0]").value("2024-05-06"))
             .andExpect(jsonPath("$.receiptDates[2]").value("2024-05-18"));
     }
@@ -151,12 +155,20 @@ class ReceiptOverviewControllerTests {
             .andExpect(jsonPath("$.primary.groups[0].maxUnitPriceValue").value(3.08))
             .andExpect(jsonPath("$.primary.groups[0].minTotalPriceValue").value(36.90))
             .andExpect(jsonPath("$.primary.groups[0].maxTotalPriceValue").value(36.90))
+            .andExpect(jsonPath("$.primary.summary.receiptCount").value(1))
+            .andExpect(jsonPath("$.primary.summary.storeCount").value(1))
+            .andExpect(jsonPath("$.primary.summary.totalPriceValue").value(51.80))
+            .andExpect(jsonPath("$.primary.summary.totalQuantityValue").value(14.00))
             .andExpect(jsonPath("$.comparison.month").value(4))
             .andExpect(jsonPath("$.comparison.year").value(2024))
             .andExpect(jsonPath("$.comparison.totalItems").value(1))
             .andExpect(jsonPath("$.comparison.items[0].unitPriceValue").value(8.17))
             .andExpect(jsonPath("$.comparison.items[0].totalPriceValue").value(24.50))
             .andExpect(jsonPath("$.comparison.groups[0].ean").value("7355550002222"))
+            .andExpect(jsonPath("$.comparison.summary.receiptCount").value(1))
+            .andExpect(jsonPath("$.comparison.summary.storeCount").value(1))
+            .andExpect(jsonPath("$.comparison.summary.totalPriceValue").value(24.50))
+            .andExpect(jsonPath("$.comparison.summary.totalQuantityValue").value(3.00))
             .andExpect(jsonPath("$.receiptDates[0]").value("2024-03-04"))
             .andExpect(jsonPath("$.receiptDates[2]").value("2024-05-08"));
     }

@@ -109,7 +109,11 @@
                     <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3">
                         <div>
                             <h2 class="h5 fw-semibold text-primary mb-1" data-period-title>—</h2>
-                            <p class="text-muted small mb-0" data-period-range>—</p>
+                            <p class="text-muted small mb-1" data-period-range>—</p>
+                            <p class="text-muted small mb-0 d-none" data-period-summary>
+                                <span class="fw-semibold me-1" th:text="#{receipts.overview.summary.label}">Sammanfattning:</span>
+                                <span data-period-summary-value>—</span>
+                            </p>
                         </div>
                         <div class="d-flex align-items-center gap-3 ms-xl-auto">
                             <span class="badge bg-primary-subtle text-primary" data-period-count>0 artiklar</span>
@@ -193,7 +197,11 @@
                     <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3">
                         <div>
                             <h2 class="h5 fw-semibold text-primary mb-1" data-period-title>—</h2>
-                            <p class="text-muted small mb-0" data-period-range>—</p>
+                            <p class="text-muted small mb-1" data-period-range>—</p>
+                            <p class="text-muted small mb-0 d-none" data-period-summary>
+                                <span class="fw-semibold me-1" th:text="#{receipts.overview.summary.label}">Sammanfattning:</span>
+                                <span data-period-summary-value>—</span>
+                            </p>
                         </div>
                         <div class="d-flex align-items-center gap-3 ms-xl-auto">
                             <span class="badge bg-primary-subtle text-primary" data-period-count>0 artiklar</span>

@@ -470,7 +470,8 @@ public class ReceiptController {
                 null,
                 0,
                 List.of(),
-                List.of()
+                List.of(),
+                null
             );
         }
 
@@ -564,6 +565,42 @@ public class ReceiptController {
             .map(GroupAccumulator::toSummary)
             .toList();
 
+        Set<String> receiptIds = new HashSet<>();
+        Set<String> storeNames = new HashSet<>();
+        BigDecimal totalPrice = null;
+        BigDecimal totalQuantity = null;
+
+        for (ItemOverviewEntry item : items) {
+            if (item == null) {
+                continue;
+            }
+            if (StringUtils.hasText(item.receiptId())) {
+                receiptIds.add(item.receiptId());
+            }
+            if (StringUtils.hasText(item.store())) {
+                storeNames.add(item.store());
+            }
+            if (item.totalPriceValue() != null) {
+                totalPrice = totalPrice == null ? item.totalPriceValue() : totalPrice.add(item.totalPriceValue());
+            }
+            if (item.quantityValue() != null) {
+                totalQuantity = totalQuantity == null
+                    ? item.quantityValue()
+                    : totalQuantity.add(item.quantityValue());
+            }
+        }
+
+        BigDecimal normalizedTotalPrice = totalPrice != null ? totalPrice.setScale(2, RoundingMode.HALF_UP) : null;
+        BigDecimal normalizedTotalQuantity =
+            totalQuantity != null ? totalQuantity.setScale(2, RoundingMode.HALF_UP) : null;
+
+        PeriodSummary summary = new PeriodSummary(
+            receiptIds.size(),
+            storeNames.size(),
+            normalizedTotalPrice,
+            normalizedTotalQuantity
+        );
+
         return new PeriodOverview(
             selection.type(),
             selection.identifier(),
@@ -575,7 +612,8 @@ public class ReceiptController {
             selection.year(),
             items.size(),
             List.copyOf(items),
-            List.copyOf(groupSummaries)
+            List.copyOf(groupSummaries),
+            summary
         );
     }
 
@@ -781,7 +819,16 @@ public class ReceiptController {
         Integer year,
         int totalItems,
         List<ItemOverviewEntry> items,
-        List<GroupSummaryEntry> groups
+        List<GroupSummaryEntry> groups,
+        PeriodSummary summary
+    ) {
+    }
+
+    private record PeriodSummary(
+        int receiptCount,
+        int storeCount,
+        BigDecimal totalPriceValue,
+        BigDecimal totalQuantityValue
     ) {
     }
 

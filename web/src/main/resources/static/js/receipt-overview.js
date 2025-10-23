@@ -720,6 +720,8 @@ class PeriodPanel {
         this.element = element;
         this.titleElement = element.querySelector('[data-period-title]');
         this.rangeElement = element.querySelector('[data-period-range]');
+        this.summaryElement = element.querySelector('[data-period-summary]');
+        this.summaryValueElement = element.querySelector('[data-period-summary-value]');
         this.countBadge = element.querySelector('[data-period-count]');
         this.groupToggle = element.querySelector('[data-period-group-toggle]');
         this.emptyAlert = element.querySelector('[data-period-empty]');
@@ -843,6 +845,16 @@ class PeriodPanel {
         }
         if (this.rangeElement) {
             this.rangeElement.textContent = rangeLabel || '—';
+        }
+        if (this.summaryElement && this.summaryValueElement) {
+            if (data) {
+                const summaryText = buildPeriodSummaryText(data);
+                this.summaryValueElement.textContent = summaryText || '—';
+                this.summaryElement.classList.remove('d-none');
+            } else {
+                this.summaryValueElement.textContent = '—';
+                this.summaryElement.classList.add('d-none');
+            }
         }
         if (this.countBadge) {
             this.countBadge.textContent = formatItemCount(itemCount);
@@ -1216,6 +1228,38 @@ function buildPeriodLabel(data) {
         }
     }
     return null;
+}
+
+function buildPeriodSummaryText(data) {
+    if (!data || !data.summary) {
+        return null;
+    }
+    const summary = data.summary;
+    const parts = [];
+
+    const totalPrice = Number.isFinite(summary.totalPriceValue) ? summary.totalPriceValue : null;
+    if (totalPrice !== null) {
+        parts.push(`${formatCurrency(totalPrice)} totalt belopp`);
+    }
+
+    if (Number.isFinite(summary.receiptCount)) {
+        const receipts = summary.receiptCount;
+        parts.push(`${receipts} ${receipts === 1 ? 'kvitto' : 'kvitton'}`);
+    }
+
+    if (Number.isFinite(summary.storeCount)) {
+        const stores = summary.storeCount;
+        parts.push(`${stores} ${stores === 1 ? 'butik' : 'butiker'}`);
+    }
+
+    if (Number.isFinite(summary.totalQuantityValue) && summary.totalQuantityValue > 0) {
+        parts.push(`${numberFormatter.format(summary.totalQuantityValue)} totalt antal`);
+    }
+
+    if (parts.length === 0) {
+        return '—';
+    }
+    return parts.join(' · ');
 }
 
 function formatMonthName(monthNumber) {
