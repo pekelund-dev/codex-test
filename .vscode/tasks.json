@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Maven: Clean Install",
+      "type": "shell",
+      "command": "./mvnw clean install -DskipTests",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Maven: Build Web Module",
+      "type": "shell",
+      "command": "./mvnw -Pinclude-web -pl web -am clean package -DskipTests",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Maven: Build Receipt Processor",
+      "type": "shell",
+      "command": "./mvnw -Pinclude-receipt-parser -pl receipt-parser -am clean package -DskipTests",
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}

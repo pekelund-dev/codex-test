@@ -30,11 +30,19 @@ build/
 !**/src/test/**/build/
 
 ### VS Code ###
-.vscode/
+# Ignore workspace-specific settings but keep shared project config
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+# Ignore local history
+.vscode/*.code-search
 
 ### Google Cloud Service Account Keys ###
 *.json
 !docs/sample-storage-event.json
 !package*.json
 !tsconfig*.json
+!.vscode/*.json
 setup-env.sh

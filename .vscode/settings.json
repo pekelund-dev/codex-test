@@ -1,0 +1,48 @@
+{
+    // Java Language Server settings
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.import.maven.enabled": true,
+    
+    // Ensure Java extension recognizes all source folders
+    "java.project.sourcePaths": [
+        "core/src/main/java",
+        "receipt-parser/src/main/java",
+        "web/src/main/java"
+    ],
+    
+    // Compiler settings
+    "java.compile.nullAnalysis.mode": "automatic",
+    
+    // Code completion
+    "java.completion.enabled": true,
+    "java.completion.guessMethodArguments": "auto",
+    "java.completion.importOrder": [
+        "java",
+        "javax",
+        "com",
+        "org"
+    ],
+    
+    // Exclude build artifacts from file search
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/target": true,
+        "**/.m2": true
+    },
+    
+    // File associations
+    "files.associations": {
+        "*.yml": "yaml"
+    },
+    
+    // Maven settings
+    "maven.terminal.useJavaHome": true,
+    "maven.executable.path": "./mvnw",
+    
+    // Disable certain warnings that are handled by Maven build
+    "java.errors.incompleteClasspath.severity": "ignore"
+}
