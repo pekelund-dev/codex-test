@@ -91,7 +91,11 @@ public class DashboardStatisticsService {
             if (!StringUtils.hasText(storeName)) {
                 continue;
             }
-            stores.add(storeName.trim().toLowerCase(Locale.ROOT));
+            String normalizedStoreName = storeName.trim();
+            if (!StringUtils.hasText(normalizedStoreName)) {
+                continue;
+            }
+            stores.add(normalizedStoreName.toLowerCase(Locale.ROOT));
         }
         return stores.size();
     }

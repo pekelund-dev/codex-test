@@ -14,6 +14,7 @@ class HeaderAwareCookieLocaleResolverTests {
     private HeaderAwareCookieLocaleResolver localeResolver;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         localeResolver =
             new HeaderAwareCookieLocaleResolver(

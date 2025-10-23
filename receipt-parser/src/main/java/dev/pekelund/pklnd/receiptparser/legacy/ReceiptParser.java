@@ -35,7 +35,8 @@ public class ReceiptParser extends BaseReceiptParser {
         List<LegacyReceiptError> errors = new ArrayList<>();
         List<LegacyReceiptDiscount> generalDiscounts = new ArrayList<>();
 
-        String store = pdfData != null && pdfData.length > 1 ? pdfData[1].trim() : null;
+        String storeLine = pdfData != null && pdfData.length > 1 ? pdfData[1] : null;
+        String store = storeLine != null ? storeLine.trim() : null;
         LocalDate receiptDate = extractDate(pdfData).orElse(null);
         BigDecimal totalAmount = extractTotal(pdfData).orElse(null);
 

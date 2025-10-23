@@ -27,6 +27,7 @@ class ReceiptParsingHandlerTest {
     private ReceiptParsingHandler handler;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         storage = mock(Storage.class);
         repository = mock(ReceiptExtractionRepository.class);
@@ -75,7 +76,7 @@ class ReceiptParsingHandlerTest {
         assertThat(capturedOwner.id()).isEqualTo("user-123");
         assertThat(capturedOwner.email()).isEqualTo("user@example.com");
 
-        ArgumentCaptor<Map<String, String>> metadataCaptor = ArgumentCaptor.forClass(Map.class);
+        ArgumentCaptor<Map<String, String>> metadataCaptor = ArgumentCaptor.forClass(stringStringMapClass());
         verify(builder, atLeastOnce()).setMetadata(metadataCaptor.capture());
         Map<String, String> finalMetadata = metadataCaptor.getValue();
         assertThat(finalMetadata)
@@ -126,12 +127,17 @@ class ReceiptParsingHandlerTest {
         assertThat(capturedOwner.displayName()).isEqualTo("Olle Olsson");
         assertThat(capturedOwner.email()).isEqualTo("olle@example.com");
 
-        ArgumentCaptor<Map<String, String>> metadataCaptor = ArgumentCaptor.forClass(Map.class);
+        ArgumentCaptor<Map<String, String>> metadataCaptor = ArgumentCaptor.forClass(stringStringMapClass());
         verify(builder, atLeastOnce()).setMetadata(metadataCaptor.capture());
         Map<String, String> finalMetadata = metadataCaptor.getValue();
         assertThat(finalMetadata)
             .containsEntry(ReceiptOwner.METADATA_OWNER_ID, "user-456")
             .containsEntry(ReceiptOwner.METADATA_OWNER_DISPLAY_NAME, "Olle Olsson")
             .containsEntry(ReceiptOwner.METADATA_OWNER_EMAIL, "olle@example.com");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Class<Map<String, String>> stringStringMapClass() {
+        return (Class<Map<String, String>>) (Class<?>) Map.class;
     }
 }

@@ -8,11 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
-import dev.pekelund.pklnd.receipts.ReceiptProcessingClient;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.ReceiptStorageService;
-import dev.pekelund.pklnd.web.ReceiptOwnerResolver;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -37,9 +35,6 @@ class ReceiptOverviewControllerTests {
 
     @MockitoBean
     private ReceiptOwnerResolver receiptOwnerResolver;
-
-    @MockitoBean
-    private ReceiptProcessingClient receiptProcessingClient;
 
     @Test
     void overviewDataReturnsItemsForSelectedWeek() throws Exception {
