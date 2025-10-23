@@ -18,8 +18,8 @@ public class ReceiptProcessingConfig {
     public ReceiptProcessingClient receiptProcessingClient(RestTemplateBuilder restTemplateBuilder,
         ReceiptProcessingProperties properties) {
         RestTemplate restTemplate = restTemplateBuilder
-            .setConnectTimeout(properties.getConnectTimeout())
-            .setReadTimeout(properties.getReadTimeout())
+            .connectTimeout(properties.getConnectTimeout())
+            .readTimeout(properties.getReadTimeout())
             .build();
         return new ReceiptProcessingClient(restTemplate, properties);
     }

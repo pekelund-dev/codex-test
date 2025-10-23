@@ -17,9 +17,9 @@ class HeaderAwareCookieLocaleResolverTests {
     void setUp() {
         localeResolver =
             new HeaderAwareCookieLocaleResolver(
+                "pklnd-lang",
                 List.of(Locale.forLanguageTag("sv"), Locale.ENGLISH),
                 Locale.forLanguageTag("sv"));
-        localeResolver.setCookieName("pklnd-lang");
     }
 
     @Test

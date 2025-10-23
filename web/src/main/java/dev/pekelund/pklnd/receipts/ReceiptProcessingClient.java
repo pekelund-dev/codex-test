@@ -61,7 +61,7 @@ public class ReceiptProcessingClient {
     }
 
     private void sendNotification(StoredReceiptReference reference) {
-        URI uri = UriComponentsBuilder.fromHttpUrl(properties.getBaseUrl())
+        URI uri = UriComponentsBuilder.fromUriString(properties.getBaseUrl())
             .path(properties.getEventPath())
             .build()
             .toUri();
