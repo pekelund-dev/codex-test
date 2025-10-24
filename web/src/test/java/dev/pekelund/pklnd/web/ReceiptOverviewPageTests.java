@@ -10,12 +10,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
-import dev.pekelund.pklnd.receipts.ReceiptProcessingClient;
 import dev.pekelund.pklnd.storage.ReceiptStorageService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ReceiptController.class)
@@ -24,17 +23,14 @@ class ReceiptOverviewPageTests {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private ReceiptStorageService receiptStorageService;
 
-    @MockBean
+    @MockitoBean
     private ReceiptExtractionService receiptExtractionService;
 
-    @MockBean
+    @MockitoBean
     private ReceiptOwnerResolver receiptOwnerResolver;
-
-    @MockBean
-    private ReceiptProcessingClient receiptProcessingClient;
 
     @Test
     void receiptOverviewPageIncludesSelectionScript() throws Exception {

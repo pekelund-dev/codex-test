@@ -20,9 +20,8 @@ public class LocalizationConfig implements WebMvcConfigurer {
     @Bean
     public LocaleResolver localeResolver() {
         HeaderAwareCookieLocaleResolver localeResolver =
-            new HeaderAwareCookieLocaleResolver(SUPPORTED_LOCALES, Locale.forLanguageTag("sv"));
-        localeResolver.setCookieName(LANGUAGE_COOKIE_NAME);
-        localeResolver.setCookieMaxAge((int) Duration.ofDays(365).getSeconds());
+            new HeaderAwareCookieLocaleResolver(LANGUAGE_COOKIE_NAME, SUPPORTED_LOCALES, Locale.forLanguageTag("sv"));
+        localeResolver.setCookieMaxAge(Duration.ofDays(365));
         localeResolver.setCookiePath("/");
         localeResolver.setCookieHttpOnly(true);
         return localeResolver;

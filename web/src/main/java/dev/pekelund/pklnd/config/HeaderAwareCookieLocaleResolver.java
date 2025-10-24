@@ -18,22 +18,25 @@ public class HeaderAwareCookieLocaleResolver extends CookieLocaleResolver {
 
     private final Locale fallbackLocale;
     private final List<Locale> supportedLocales;
-    private String cookieName = DEFAULT_COOKIE_NAME;
+    private final String cookieName;
 
     public HeaderAwareCookieLocaleResolver(List<Locale> supportedLocales, Locale fallbackLocale) {
+        this(DEFAULT_COOKIE_NAME, supportedLocales, fallbackLocale);
+    }
+
+    public HeaderAwareCookieLocaleResolver(String cookieName, List<Locale> supportedLocales, Locale fallbackLocale) {
+        super(Objects.requireNonNull(cookieName, "Cookie name must not be null"));
+        if (!StringUtils.hasText(cookieName)) {
+            throw new IllegalArgumentException("Cookie name must not be empty");
+        }
         this.supportedLocales = List.copyOf(Objects.requireNonNull(supportedLocales));
         if (!this.supportedLocales.contains(Objects.requireNonNull(fallbackLocale))) {
             throw new IllegalArgumentException("Fallback locale must be included in supported locales");
         }
-        this.fallbackLocale = Objects.requireNonNull(fallbackLocale);
+        this.fallbackLocale = fallbackLocale;
+        this.cookieName = cookieName;
         setDefaultLocale(fallbackLocale);
         setLanguageTagCompliant(true);
-    }
-
-    @Override
-    public void setCookieName(String cookieName) {
-        super.setCookieName(cookieName);
-        this.cookieName = cookieName;
     }
 
     @Override

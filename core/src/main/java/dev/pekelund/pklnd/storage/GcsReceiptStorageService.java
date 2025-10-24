@@ -12,6 +12,7 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -59,8 +60,9 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
                     continue;
                 }
                 ReceiptOwner owner = ReceiptOwner.fromMetadata(blob.getMetadata());
-                files.add(new ReceiptFile(blob.getName(), blob.getSize(),
-                    blob.getUpdateTime() != null ? Instant.ofEpochMilli(blob.getUpdateTime()) : null,
+                OffsetDateTime updateTime = blob.getUpdateTimeOffsetDateTime();
+                Instant updated = updateTime != null ? updateTime.toInstant() : null;
+                files.add(new ReceiptFile(blob.getName(), blob.getSize(), updated,
                     blob.getContentType(), owner));
             }
             files.sort((left, right) -> {

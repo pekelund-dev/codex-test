@@ -4,12 +4,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -22,20 +21,14 @@ class ReceiptProcessingControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private ReceiptParsingHandler receiptParsingHandler;
-
-    private StorageObjectEvent event;
-
-    @BeforeEach
-    void setUp() {
-        event = new StorageObjectEvent();
-        event.setBucket("bucket");
-        event.setName("receipts/sample.pdf");
-    }
 
     @Test
     void delegatesToHandlerWhenPayloadValid() throws Exception {
+        StorageObjectEvent event = new StorageObjectEvent();
+        event.setBucket("bucket");
+        event.setName("receipts/sample.pdf");
         String payload = objectMapper.writeValueAsString(event);
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders

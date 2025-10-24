@@ -14,6 +14,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -255,8 +257,11 @@ public class FirestoreUserService implements UserDetailsService {
             }
 
             if (StringUtils.hasText(trimmedDisplayName)) {
-                String storedDisplayName = documentSnapshot.getString("fullName");
-                if (!StringUtils.hasText(storedDisplayName) || !storedDisplayName.equals(trimmedDisplayName)) {
+                String normalizedStoredDisplayName = Optional.ofNullable(documentSnapshot.getString("fullName"))
+                    .map(String::trim)
+                    .filter(StringUtils::hasText)
+                    .orElse(null);
+                if (!Objects.equals(trimmedDisplayName, normalizedStoredDisplayName)) {
                     updates.put("fullName", trimmedDisplayName);
                 }
             }
@@ -457,8 +462,10 @@ public class FirestoreUserService implements UserDetailsService {
             email = documentSnapshot.getId();
         }
 
-        String fullName = documentSnapshot.getString("fullName");
-        String displayName = StringUtils.hasText(fullName) ? fullName.trim() : email;
+        String displayName = Optional.ofNullable(documentSnapshot.getString("fullName"))
+            .map(String::trim)
+            .filter(StringUtils::hasText)
+            .orElse(email);
 
         return new AdminUserSummary(documentSnapshot.getId(), email, displayName);
     }

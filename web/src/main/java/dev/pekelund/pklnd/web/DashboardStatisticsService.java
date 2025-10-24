@@ -88,10 +88,14 @@ public class DashboardStatisticsService {
         Set<String> stores = new HashSet<>();
         for (ParsedReceipt receipt : receipts) {
             String storeName = receipt != null ? receipt.storeName() : null;
-            if (!StringUtils.hasText(storeName)) {
+            if (storeName == null) {
                 continue;
             }
-            stores.add(storeName.trim().toLowerCase(Locale.ROOT));
+            String normalizedStoreName = storeName.trim();
+            if (!StringUtils.hasText(normalizedStoreName)) {
+                continue;
+            }
+            stores.add(normalizedStoreName.toLowerCase(Locale.ROOT));
         }
         return stores.size();
     }

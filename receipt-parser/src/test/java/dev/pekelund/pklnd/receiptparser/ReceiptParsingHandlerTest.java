@@ -15,24 +15,27 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import java.util.Map;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 class ReceiptParsingHandlerTest {
 
+    @Mock
     private Storage storage;
-    private ReceiptExtractionRepository repository;
-    private ReceiptDataExtractor extractor;
-    private ReceiptParsingHandler handler;
 
-    @BeforeEach
-    void setUp() {
-        storage = mock(Storage.class);
-        repository = mock(ReceiptExtractionRepository.class);
-        extractor = mock(ReceiptDataExtractor.class);
-        handler = new ReceiptParsingHandler(storage, repository, extractor);
-    }
+    @Mock
+    private ReceiptExtractionRepository repository;
+
+    @Mock
+    private ReceiptDataExtractor extractor;
+
+    @InjectMocks
+    private ReceiptParsingHandler handler;
 
     @Test
     void mergesEventMetadataWhenBlobMissingOwner() {
@@ -50,9 +53,6 @@ class ReceiptParsingHandlerTest {
 
         when(storage.get(eq(BlobId.of("bucket", "receipts/sample.pdf")))).thenReturn(blob);
         when(blob.getMetadata()).thenReturn(Map.of());
-        when(blob.getContentType()).thenReturn("application/pdf");
-        when(blob.getName()).thenReturn("receipts/sample.pdf");
-        when(blob.getContent()).thenReturn(new byte[0]);
         when(blob.toBuilder()).thenReturn(builder);
 
         when(builder.setMetadata(anyMap())).thenReturn(builder);
@@ -75,7 +75,7 @@ class ReceiptParsingHandlerTest {
         assertThat(capturedOwner.id()).isEqualTo("user-123");
         assertThat(capturedOwner.email()).isEqualTo("user@example.com");
 
-        ArgumentCaptor<Map<String, String>> metadataCaptor = ArgumentCaptor.forClass(Map.class);
+        ArgumentCaptor<Map<String, String>> metadataCaptor = ArgumentCaptor.forClass(stringStringMapClass());
         verify(builder, atLeastOnce()).setMetadata(metadataCaptor.capture());
         Map<String, String> finalMetadata = metadataCaptor.getValue();
         assertThat(finalMetadata)
@@ -100,9 +100,6 @@ class ReceiptParsingHandlerTest {
 
         when(storage.get(eq(BlobId.of("bucket", "receipts/missing.pdf")))).thenReturn(blob);
         when(blob.getMetadata()).thenReturn(null);
-        when(blob.getContentType()).thenReturn("application/pdf");
-        when(blob.getName()).thenReturn("receipts/missing.pdf");
-        when(blob.getContent()).thenReturn(new byte[0]);
         when(blob.toBuilder()).thenReturn(builder);
 
         when(builder.setMetadata(anyMap())).thenReturn(builder);
@@ -126,12 +123,17 @@ class ReceiptParsingHandlerTest {
         assertThat(capturedOwner.displayName()).isEqualTo("Olle Olsson");
         assertThat(capturedOwner.email()).isEqualTo("olle@example.com");
 
-        ArgumentCaptor<Map<String, String>> metadataCaptor = ArgumentCaptor.forClass(Map.class);
+        ArgumentCaptor<Map<String, String>> metadataCaptor = ArgumentCaptor.forClass(stringStringMapClass());
         verify(builder, atLeastOnce()).setMetadata(metadataCaptor.capture());
         Map<String, String> finalMetadata = metadataCaptor.getValue();
         assertThat(finalMetadata)
             .containsEntry(ReceiptOwner.METADATA_OWNER_ID, "user-456")
             .containsEntry(ReceiptOwner.METADATA_OWNER_DISPLAY_NAME, "Olle Olsson")
             .containsEntry(ReceiptOwner.METADATA_OWNER_EMAIL, "olle@example.com");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Class<Map<String, String>> stringStringMapClass() {
+        return (Class<Map<String, String>>) (Class<?>) Map.class;
     }
 }
