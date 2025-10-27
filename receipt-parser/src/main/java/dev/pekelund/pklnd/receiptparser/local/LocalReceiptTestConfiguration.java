@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.pekelund.pklnd.receiptparser.ReceiptDataExtractor;
 import dev.pekelund.pklnd.receiptparser.legacy.CodexOnlyReceiptDataExtractor;
 import dev.pekelund.pklnd.receiptparser.legacy.LegacyPdfReceiptExtractor;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -31,4 +32,9 @@ public class LocalReceiptTestConfiguration {
         return new CodexOnlyReceiptDataExtractor(objectMapper);
     }
 
+    @Bean
+    @Primary
+    public ChatModel chatModel() {
+        return new NoopChatModel();
+    }
 }

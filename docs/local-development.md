@@ -99,21 +99,37 @@ Two options exist depending on how closely you need to mirror production:
 
 ### Option A: Full Cloud Run pipeline
 
-When you want to execute the same code that runs on Cloud Run—including Gemini requests—start the service locally with Spring Boot. Make sure the Firestore emulator is running and source the local environment helper in the same shell, then add the extra environment variables that Google AI Studio requires:
+When you want to execute the same code that runs on Cloud Run—including Vertex AI requests—start the service locally with Spring Boot. Make sure the Firestore emulator is running and source the local environment helper in the same shell, then add the extra environment variables that Vertex AI requires:
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/a/service-account.json
-export AI_STUDIO_API_KEY=your-api-key-from-ai-studio
-# Optional override if you need a different model name
-export GOOGLE_AI_GEMINI_MODEL=gemini-2.0-pro-exp
+export VERTEX_AI_PROJECT_ID=my-vertex-project
+export VERTEX_AI_LOCATION=us-east1
 ./mvnw -pl receipt-parser -am spring-boot:run
 ```
 
 Send a Cloud Storage finalize event payload to <http://localhost:8080/events/storage>. The Firestore emulator receives all writes automatically because the `FIRESTORE_EMULATOR_HOST` environment variable is already exported.
 
+#### On-demand parsing API
+
+The default profile also exposes REST endpoints for parsing individual PDF receipts without touching Firestore. They are helpful
+for spot-checking output or comparing the hybrid, legacy, and Gemini extractors:
+
+```bash
+# discover the available parser identifiers
+curl http://localhost:8080/api/parsers | jq
+
+# parse a PDF with one of the listed parsers
+curl -F "file=@test-receipt.pdf" \
+     http://localhost:8080/api/parsers/hybrid/parse | jq
+```
+
+Switch the parser id in the URL to `legacy` or `gemini` to target a specific extractor. The service returns the structured data
+map and raw Gemini response (when applicable) directly in the HTTP response so you can iterate quickly during development.
+
 ### Option B: Local receipt test profile (emulator only)
 
-If you only need to evaluate the legacy PDF extractor and Firestore writes—without incurring Gemini API costs—start the lightweight Spring profile:
+If you only need to evaluate the legacy PDF extractor and Firestore writes—without incurring Vertex AI costs—start the lightweight Spring profile:
 
 ```bash
 ./mvnw -pl receipt-parser -am spring-boot:run \
@@ -128,20 +144,6 @@ curl -F "file=@test-receipt.pdf" http://localhost:8080/local-receipts/parse | jq
 
 The handler writes the structured output to the Firestore emulator so you can review it in
 another terminal or export it later.
-
-### Ad-hoc parsers without persistence
-
-When you run the receipt processor with its default profile (no `local-receipt-test` flag) you can trigger on-demand parsing
-without touching Firestore. The service exposes the same REST API that Cloud Run uses:
-
-```bash
-curl http://localhost:8080/api/parsers | jq            # list available parsers
-curl -F "file=@test-receipt.pdf" \
-  http://localhost:8080/api/parsers/gemini/parse | jq  # invoke a specific parser
-```
-
-Each response includes the parser descriptor, structured data map, and raw output. Invalid parser names, empty uploads, and
-non-PDF files receive explicit HTTP 4xx responses so you can correct the request without guessing.
 
 ## 5. Inspecting emulator data
 

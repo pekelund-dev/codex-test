@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -26,11 +27,14 @@ public class ReceiptParserRegistry {
         LegacyPdfReceiptExtractor legacyPdfReceiptExtractor, AIReceiptExtractor aiReceiptExtractor) {
 
         Map<String, ParserRegistration> mutable = new LinkedHashMap<>();
-        register(mutable, new ReceiptParserDescriptor("hybrid", "Hybrid", "Combines the legacy PDF parser with Gemini and falls back when needed"),
+        register(mutable, new ReceiptParserDescriptor("hybrid", "Hybrid",
+            "Combines the legacy PDF parser with Gemini and falls back when needed"),
             hybridReceiptExtractor);
-        register(mutable, new ReceiptParserDescriptor("legacy", "Legacy PDF", "Runs only the legacy PDF parser without Gemini"),
+        register(mutable, new ReceiptParserDescriptor("legacy", "Legacy PDF",
+            "Runs only the legacy PDF parser without Gemini"),
             legacyPdfReceiptExtractor);
-        register(mutable, new ReceiptParserDescriptor("gemini", "Gemini", "Invokes Gemini directly without the legacy pre-parser"),
+        register(mutable, new ReceiptParserDescriptor("gemini", "Gemini",
+            "Invokes Gemini directly without the legacy pre-parser"),
             aiReceiptExtractor);
         this.registrations = Collections.unmodifiableMap(mutable);
         LOGGER.info("Initialised receipt parser registry with parsers: {}", registrations.keySet());
@@ -39,7 +43,7 @@ public class ReceiptParserRegistry {
     public Collection<ReceiptParserDescriptor> listParsers() {
         return registrations.values().stream()
             .map(ParserRegistration::descriptor)
-            .collect(java.util.stream.Collectors.toList());
+            .collect(Collectors.toList());
     }
 
     public Optional<ParserRegistration> find(String parserId) {

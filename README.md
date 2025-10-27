@@ -92,7 +92,7 @@ The helper infers `FIRESTORE_CREDENTIALS=file:/...` and extracts `GOOGLE_CLIENT_
 
 - **Cloud Run / Google-managed runtimes** – The deployment script (and the console walkthrough) attaches the `cloud-run-runtime` service account directly to the Cloud Run service. Google automatically exchanges that identity for short-lived tokens through [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc), so the container never needs a JSON key file. Leave `FIRESTORE_CREDENTIALS` unset in these environments; the Firestore client uses the attached service account transparently.
 - **Local development / other hosts** – Provide your own credentials via `FIRESTORE_CREDENTIALS_FILE` and source `./scripts/load_local_secrets.sh`, or point the application at the Firestore emulator with `scripts/source_local_env.sh`. These helpers export `FIRESTORE_CREDENTIALS=file:/…` only when you intentionally supply a downloaded key.
-- **Receipt processor Cloud Run service** – The deployment helper provisions a dedicated service account, attaches it to the receipt processor, and grants Firestore and Cloud Storage permissions. Provide the Gemini API key through the `AI_STUDIO_API_KEY` environment variable (or Secret Manager reference) so the service can call Google AI Studio without embedding credentials in the image.
+- **Receipt processor Cloud Run service** – The deployment helper provisions a dedicated service account, attaches it to the receipt processor, and grants Firestore, Vertex AI, and Cloud Storage permissions. Like the main web service, the managed runtime exchanges that identity for short-lived tokens so no JSON key files are required on Google Cloud.
 
 ### Google Cloud Storage configuration
 
@@ -107,7 +107,7 @@ After completing either path, restart the application and visit <http://localhos
 > leave `GCS_CREDENTIALS` unset. The application will fall back to Application Default Credentials if the
 > configured resource is missing, allowing you to keep downloaded JSON keys strictly for local development.
 
-### Receipt parsing Cloud Run service (Google AI Gemini)
+### Receipt parsing Cloud Run service (Vertex AI Gemini)
 
 The `receipt-parser` module now packages the receipt processor as a standalone Spring Boot web application that runs on Cloud Run. The web frontend calls this service after each successful upload, allowing the processor to download the receipt, extract structured data with Gemini, and persist the results to Firestore. The `web` module still hosts the interactive UI, while shared storage components live in the `core` module.
 
@@ -130,8 +130,6 @@ This script automatically:
 - Grants the runtime service account access to the receipt bucket and Firestore collection
 - Accepts an optional list of additional service accounts that should be allowed to invoke the processor (for example the Cloud Run web app)
 - Removes legacy Cloud Storage notifications from the receipt bucket so only authenticated callbacks from the web application reach the processor
-
-> ℹ️ The receipt processor loads its Gemini credentials from `AI_STUDIO_API_KEY`. Store the key in Secret Manager and reference it from the Cloud Run deployment so you can rotate credentials without rebuilding the container image.
 
 #### Teardown
 
@@ -156,7 +154,7 @@ Both documents describe prerequisites, metadata expectations, status updates, ve
 
 You can exercise the Cloud Run service locally without waiting for a new deployment by running it with Spring Boot:
 
-1. Export credentials that allow the service to reach your Cloud Storage bucket, Firestore database, and the Gemini API. At minimum you need `GOOGLE_APPLICATION_CREDENTIALS`, `PROJECT_ID`, `RECEIPT_FIRESTORE_COLLECTION`, and `AI_STUDIO_API_KEY`.
+1. Export credentials that allow the service to reach your Cloud Storage bucket, Firestore database, and Vertex AI project. At minimum you need `GOOGLE_APPLICATION_CREDENTIALS`, `PROJECT_ID`, `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION`, and `RECEIPT_FIRESTORE_COLLECTION`.
 2. Start the service on a local port:
 
    ```bash
@@ -174,10 +172,28 @@ You can exercise the Cloud Run service locally without waiting for a new deploym
 
 Update `docs/sample-storage-event.json` with the bucket and object key you uploaded in step 3. The local instance uses the same code path as the deployed service, so Firestore documents and Gemini calls are executed exactly once the event is received.
 
+#### Ad-hoc parsing REST API
+
+When you run the receipt processor in its default profile it also exposes an HTTP API for on-demand parsing without persisting
+results. Use it to experiment with specific parsers locally or in lower environments:
+
+```bash
+# list supported parser identifiers (hybrid, legacy, gemini)
+curl http://localhost:8080/api/parsers | jq
+
+# upload a PDF using one of the parser ids returned above
+curl -F "file=@test-receipt.pdf" \
+     http://localhost:8080/api/parsers/hybrid/parse | jq
+```
+
+The response echoes the parser that handled the request, the structured receipt data, and the raw Gemini response when
+applicable. Invalid parser ids result in `404 Not Found`, non-PDF uploads return `400 Bad Request`, and extraction failures are
+reported as `422 Unprocessable Entity` with an error payload.
+
 #### Local parsing test server (no cloud dependencies)
 
 When you only need to validate how the legacy PDF parser interprets a document, start the lightweight test server profile. It only
-boots the legacy extractor, so no Firestore, Cloud Storage, or Gemini credentials are required:
+boots the legacy extractor, so no Firestore, Cloud Storage, or Vertex AI credentials are required:
 
 ```bash
 # run from the repository root so the parent pom is picked up but only the
@@ -196,24 +212,6 @@ curl -F "file=@test-receipt.pdf" http://localhost:8080/local-receipts/parse | jq
 The response contains the structured data map emitted by the legacy parser along with the raw JSON string that mirrors what the
 Cloud Run service would store. Errors such as unsupported file formats are returned with HTTP status `422` and a JSON payload with an
 `error` message. Stop the server with `Ctrl+C` when you are finished.
-
-#### Ad-hoc parsing API
-
-When the receipt processor runs with its default profile (locally or on Cloud Run) it also exposes REST endpoints for on-demand
-parsing without persisting results to Firestore. Use these endpoints to experiment with different extractors or integrate the
-service with other tooling:
-
-```bash
-# List all available parser implementations
-curl http://localhost:8080/api/parsers | jq
-
-# Parse a PDF with a specific parser (hybrid, legacy, or gemini)
-curl -F "file=@test-receipt.pdf" \
-  http://localhost:8080/api/parsers/hybrid/parse | jq
-```
-
-The JSON response includes the selected parser descriptor, the structured data map, and the raw extractor payload. Uploads must be
-PDF documents; the service rejects empty files, unsupported formats, and unknown parser identifiers with clear HTTP error codes.
 
 ### Fallback credentials
 

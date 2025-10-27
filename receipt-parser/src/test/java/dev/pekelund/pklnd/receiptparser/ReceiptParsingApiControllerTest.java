@@ -10,6 +10,7 @@ import dev.pekelund.pklnd.receiptparser.ReceiptParserRegistry.ParserRegistration
 import dev.pekelund.pklnd.receiptparser.ReceiptParserRegistry.ReceiptParserDescriptor;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +46,7 @@ class ReceiptParsingApiControllerTest {
         ReceiptParserDescriptor descriptor = new ReceiptParserDescriptor("hybrid", "Hybrid", "Combined parser");
         ReceiptDataExtractor extractor = Mockito.mock(ReceiptDataExtractor.class);
         when(extractor.extract(any(), eq("receipt.pdf"))).thenReturn(new ReceiptExtractionResult(Map.of("ok", true), "{}"));
-        when(receiptParserRegistry.find("hybrid")).thenReturn(java.util.Optional.of(new ParserRegistration(descriptor, extractor)));
+        when(receiptParserRegistry.find("hybrid")).thenReturn(Optional.of(new ParserRegistration(descriptor, extractor)));
 
         MockMultipartFile file = new MockMultipartFile("file", "receipt.pdf", "application/pdf", "test".getBytes());
 
@@ -58,7 +59,7 @@ class ReceiptParsingApiControllerTest {
 
     @Test
     void returnsNotFoundForUnknownParser() throws Exception {
-        when(receiptParserRegistry.find("unknown")).thenReturn(java.util.Optional.empty());
+        when(receiptParserRegistry.find("unknown")).thenReturn(Optional.empty());
         MockMultipartFile file = new MockMultipartFile("file", "receipt.pdf", "application/pdf", "test".getBytes());
 
         mockMvc.perform(MockMvcRequestBuilders.multipart("/api/parsers/unknown/parse")
@@ -70,7 +71,7 @@ class ReceiptParsingApiControllerTest {
     void rejectsNonPdfUploads() throws Exception {
         ReceiptParserDescriptor descriptor = new ReceiptParserDescriptor("hybrid", "Hybrid", "Combined parser");
         ReceiptDataExtractor extractor = Mockito.mock(ReceiptDataExtractor.class);
-        when(receiptParserRegistry.find("hybrid")).thenReturn(java.util.Optional.of(new ParserRegistration(descriptor, extractor)));
+        when(receiptParserRegistry.find("hybrid")).thenReturn(Optional.of(new ParserRegistration(descriptor, extractor)));
 
         MockMultipartFile file = new MockMultipartFile("file", "image.png", "image/png", "test".getBytes());
 

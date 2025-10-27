@@ -29,5 +29,10 @@
         </springProfile>
     </logger>
 
-
+    <logger name="org.springframework.ai" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <springProfile name="prod">
+            <appender-ref ref="CLOUD"/>
+        </springProfile>
+    </logger>
 </configuration>
