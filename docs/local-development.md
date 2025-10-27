@@ -129,6 +129,20 @@ curl -F "file=@test-receipt.pdf" http://localhost:8080/local-receipts/parse | jq
 The handler writes the structured output to the Firestore emulator so you can review it in
 another terminal or export it later.
 
+### Ad-hoc parsers without persistence
+
+When you run the receipt processor with its default profile (no `local-receipt-test` flag) you can trigger on-demand parsing
+without touching Firestore. The service exposes the same REST API that Cloud Run uses:
+
+```bash
+curl http://localhost:8080/api/parsers | jq            # list available parsers
+curl -F "file=@test-receipt.pdf" \
+  http://localhost:8080/api/parsers/gemini/parse | jq  # invoke a specific parser
+```
+
+Each response includes the parser descriptor, structured data map, and raw output. Invalid parser names, empty uploads, and
+non-PDF files receive explicit HTTP 4xx responses so you can correct the request without guessing.
+
 ## 5. Inspecting emulator data
 
 Use the Firestore REST API to inspect collections during development. For example, list the

@@ -197,6 +197,24 @@ The response contains the structured data map emitted by the legacy parser along
 Cloud Run service would store. Errors such as unsupported file formats are returned with HTTP status `422` and a JSON payload with an
 `error` message. Stop the server with `Ctrl+C` when you are finished.
 
+#### Ad-hoc parsing API
+
+When the receipt processor runs with its default profile (locally or on Cloud Run) it also exposes REST endpoints for on-demand
+parsing without persisting results to Firestore. Use these endpoints to experiment with different extractors or integrate the
+service with other tooling:
+
+```bash
+# List all available parser implementations
+curl http://localhost:8080/api/parsers | jq
+
+# Parse a PDF with a specific parser (hybrid, legacy, or gemini)
+curl -F "file=@test-receipt.pdf" \
+  http://localhost:8080/api/parsers/hybrid/parse | jq
+```
+
+The JSON response includes the selected parser descriptor, the structured data map, and the raw extractor payload. Uploads must be
+PDF documents; the service rejects empty files, unsupported formats, and unknown parser identifiers with clear HTTP error codes.
+
 ### Fallback credentials
 
 When Firestore integration is disabled the application falls back to an in-memory user store, but no accounts are created automatically. Configure explicit credentials for local testing by defining `firestore.fallback-users` entries in `web/src/main/resources/application.yml` (or through environment variables):

@@ -20,6 +20,7 @@ import org.springframework.util.StringUtils;
 import dev.pekelund.pklnd.receiptparser.legacy.LegacyPdfReceiptExtractor;
 import dev.pekelund.pklnd.receiptparser.googleai.GoogleAiGeminiChatModel;
 import dev.pekelund.pklnd.receiptparser.googleai.GoogleAiGeminiChatOptions;
+import dev.pekelund.pklnd.receiptparser.HybridReceiptExtractor;
 
 /**
  * Service configuration for the receipt processing Cloud Run workload.
@@ -88,10 +89,15 @@ public class ReceiptProcessingConfiguration {
     }
 
     @Bean
-    @Primary
-    public ReceiptDataExtractor receiptDataExtractor(LegacyPdfReceiptExtractor legacyPdfReceiptExtractor,
+    public HybridReceiptExtractor hybridReceiptExtractor(LegacyPdfReceiptExtractor legacyPdfReceiptExtractor,
         AIReceiptExtractor aiReceiptExtractor, ObjectMapper objectMapper) {
         return new HybridReceiptExtractor(legacyPdfReceiptExtractor, aiReceiptExtractor, objectMapper);
+    }
+
+    @Bean
+    @Primary
+    public ReceiptDataExtractor receiptDataExtractor(HybridReceiptExtractor hybridReceiptExtractor) {
+        return hybridReceiptExtractor;
     }
 
     @Bean
