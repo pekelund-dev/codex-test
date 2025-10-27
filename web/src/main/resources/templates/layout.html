@@ -65,7 +65,7 @@
             <div class="d-flex align-items-center gap-3 ms-lg-auto">
                 <div th:if="${userProfile.authenticated}" class="d-flex align-items-center gap-2 text-white">
                     <span class="badge rounded-pill bg-light text-primary firestore-read-counter"
-                          th:text="#{nav.firestoreReads(${firestoreReadCount})}">
+                          th:text="${#messages.msg('nav.firestoreReads', firestoreReadCount)}">
                         Firestore-läsningar: 0
                     </span>
                     <img th:if="${userProfile.imageUrl != null}" th:src="${userProfile.imageUrl}" alt="Profile picture"
