@@ -127,9 +127,10 @@ This script automatically:
 - Builds and deploys the container image via Cloud Build
 - Uses `receipt-parser/Dockerfile` by default to package the correct Spring Boot application (set `RECEIPT_DOCKERFILE`, tweak `RECEIPT_BUILD_CONTEXT`, or provide a custom `RECEIPT_CLOUD_BUILD_CONFIG` if you maintain alternate layouts—keep the Dockerfile within the chosen build context so Cloud Build can locate it)
 - Can be paired with `./scripts/cleanup_artifact_repos.sh` to remove older container images so Artifact Registry only retains the most recent builds
-- Grants the runtime service account access to the receipt bucket and Firestore collection
+- Grants the runtime service account access to the receipt bucket, Firestore collection, Vertex AI, and Cloud Logging so Gemini calls and optional structured logging succeed without manual IAM tweaks
 - Accepts an optional list of additional service accounts that should be allowed to invoke the processor (for example the Cloud Run web app)
 - Removes legacy Cloud Storage notifications from the receipt bucket so only authenticated callbacks from the web application reach the processor
+- Writes logs to stdout/stderr by default so Cloud Run captures them automatically; set `ENABLE_CLOUD_LOGGING=true` to mirror events to Cloud Logging with a custom log id (the deployment script now assigns the required `roles/logging.logWriter` permission)
 
 #### Teardown
 
@@ -154,7 +155,7 @@ Both documents describe prerequisites, metadata expectations, status updates, ve
 
 You can exercise the Cloud Run service locally without waiting for a new deployment by running it with Spring Boot:
 
-1. Export credentials that allow the service to reach your Cloud Storage bucket, Firestore database, and Vertex AI project. At minimum you need `GOOGLE_APPLICATION_CREDENTIALS`, `PROJECT_ID`, `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION`, and `RECEIPT_FIRESTORE_COLLECTION`.
+1. Export credentials that allow the service to reach your Cloud Storage bucket, Firestore database, and Gemini provider. If you have a Google AI Studio key, set `AI_STUDIO_API_KEY` (and optionally `GOOGLE_AI_GEMINI_MODEL`). To call Vertex AI directly, continue supplying `GOOGLE_APPLICATION_CREDENTIALS`, `PROJECT_ID`, `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION`, and `RECEIPT_FIRESTORE_COLLECTION`.
 2. Start the service on a local port:
 
    ```bash
@@ -171,6 +172,24 @@ You can exercise the Cloud Run service locally without waiting for a new deploym
    ```
 
 Update `docs/sample-storage-event.json` with the bucket and object key you uploaded in step 3. The local instance uses the same code path as the deployed service, so Firestore documents and Gemini calls are executed exactly once the event is received.
+
+#### Ad-hoc parsing REST API
+
+When you run the receipt processor in its default profile it also exposes an HTTP API for on-demand parsing without persisting
+results. Use it to experiment with specific parsers locally or in lower environments:
+
+```bash
+# list supported parser identifiers (hybrid, legacy, gemini)
+curl http://localhost:8080/api/parsers | jq
+
+# upload a PDF using one of the parser ids returned above
+curl -F "file=@test-receipt.pdf" \
+     http://localhost:8080/api/parsers/hybrid/parse | jq
+```
+
+The response echoes the parser that handled the request, the structured receipt data, and the raw Gemini response when
+applicable. Invalid parser ids result in `404 Not Found`, non-PDF uploads return `400 Bad Request`, and extraction failures are
+reported as `422 Unprocessable Entity` with an error payload.
 
 #### Local parsing test server (no cloud dependencies)
 

@@ -1,6 +1,6 @@
 <configuration>
-    <springProperty scope="context" name="projectId" source="app.logging.project-id" defaultValue=""/>
-    <springProperty scope="context" name="functionName" source="app.logging.log-name" defaultValue="receipt-processing-service"/>
+    <springProperty scope="context" name="logId" source="app.logging.log-name" defaultValue="receipt-processing-service"/>
+    <springProperty scope="context" name="cloudLoggingEnabled" source="app.logging.cloud-enabled" defaultValue="false"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -8,31 +8,40 @@
         </encoder>
     </appender>
 
-    <springProfile name="prod">
-        <appender name="CLOUD" class="com.google.cloud.logging.logback.LoggingAppender">
-            <log>projects/${projectId:-${GOOGLE_CLOUD_PROJECT:-${GCP_PROJECT:-unknown-project}}}/logs/${functionName}</log>
-            <flushLevel>WARN</flushLevel>
-        </appender>
-    </springProfile>
+    <if condition='property("cloudLoggingEnabled").equalsIgnoreCase("true")'>
+        <then>
+            <appender name="CLOUD" class="com.google.cloud.logging.logback.LoggingAppender">
+                <log>${logId}</log>
+                <flushLevel>WARN</flushLevel>
+            </appender>
 
-    <root level="INFO">
-        <appender-ref ref="CONSOLE"/>
-        <springProfile name="prod">
-            <appender-ref ref="CLOUD"/>
-        </springProfile>
-    </root>
+            <root level="INFO">
+                <appender-ref ref="CONSOLE"/>
+                <appender-ref ref="CLOUD"/>
+            </root>
 
-    <logger name="dev.pekelund.pklnd" level="INFO" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <springProfile name="prod">
-            <appender-ref ref="CLOUD"/>
-        </springProfile>
-    </logger>
+            <logger name="dev.pekelund.pklnd" level="INFO" additivity="false">
+                <appender-ref ref="CONSOLE"/>
+                <appender-ref ref="CLOUD"/>
+            </logger>
 
-    <logger name="org.springframework.ai" level="INFO" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <springProfile name="prod">
-            <appender-ref ref="CLOUD"/>
-        </springProfile>
-    </logger>
+            <logger name="org.springframework.ai" level="INFO" additivity="false">
+                <appender-ref ref="CONSOLE"/>
+                <appender-ref ref="CLOUD"/>
+            </logger>
+        </then>
+        <else>
+            <root level="INFO">
+                <appender-ref ref="CONSOLE"/>
+            </root>
+
+            <logger name="dev.pekelund.pklnd" level="INFO" additivity="false">
+                <appender-ref ref="CONSOLE"/>
+            </logger>
+
+            <logger name="org.springframework.ai" level="INFO" additivity="false">
+                <appender-ref ref="CONSOLE"/>
+            </logger>
+        </else>
+    </if>
 </configuration>

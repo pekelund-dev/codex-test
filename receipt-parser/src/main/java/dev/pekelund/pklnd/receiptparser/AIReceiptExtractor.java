@@ -9,11 +9,13 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.UserMessage;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.converter.BeanOutputConverter;
-import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 
 /**
  * Invokes Gemini through Spring AI to extract structured data from receipt documents.
@@ -33,13 +35,13 @@ public class AIReceiptExtractor implements ReceiptDataExtractor {
 
     private final ChatModel chatModel;
     private final ObjectMapper objectMapper;
-    private final VertexAiGeminiChatOptions chatOptions;
+    private final ChatOptions defaultChatOptions;
     private final BeanOutputConverter<ReceiptStructuredOutput> receiptOutputConverter;
 
-    public AIReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper, VertexAiGeminiChatOptions chatOptions) {
+    public AIReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper, ChatOptions defaultChatOptions) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
-        this.chatOptions = chatOptions;
+        this.defaultChatOptions = defaultChatOptions;
         this.receiptOutputConverter = new BeanOutputConverter<>(ReceiptStructuredOutput.class, objectMapper);
         LOGGER.info("constructing AIReceiptExtractor");
     }
@@ -55,15 +57,22 @@ public class AIReceiptExtractor implements ReceiptDataExtractor {
         String encoded = Base64.getEncoder().encodeToString(pdfBytes);
         String prompt = buildPrompt(encoded, fileName);
 
+        ChatOptions effectiveOptions = resolveChatOptions();
         LOGGER.info("AIReceiptExtractor invoking model '{}' with prompt length {} characters (base64 payload {} characters)",
-            chatOptions.getModel(), prompt.length(), encoded.length());
+            resolveModelName(effectiveOptions), prompt.length(), encoded.length());
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("AIReceiptExtractor chat options instance id {} - {}", System.identityHashCode(chatOptions),
-                chatOptions);
+            if (effectiveOptions != null) {
+                LOGGER.debug("AIReceiptExtractor chat options instance id {} - {}", System.identityHashCode(effectiveOptions),
+                    effectiveOptions);
+            } else {
+                LOGGER.debug("AIReceiptExtractor chat options are not configured; relying on model defaults");
+            }
             LOGGER.debug("AIReceiptExtractor chat model implementation: {}", chatModel.getClass().getName());
         }
 
-        Prompt request = new Prompt(new UserMessage(prompt), chatOptions);
+        Prompt request = effectiveOptions != null
+            ? new Prompt(new UserMessage(prompt), effectiveOptions)
+            : new Prompt(new UserMessage(prompt));
         ChatResponse chatResponse = chatModel.call(request);
         if (chatResponse == null || chatResponse.getResult() == null) {
             throw new ReceiptParsingException("Gemini returned an empty response");
@@ -91,6 +100,13 @@ public class AIReceiptExtractor implements ReceiptDataExtractor {
         return new ReceiptExtractionResult(structuredData, response);
     }
 
+    private ChatOptions resolveChatOptions() {
+        if (defaultChatOptions != null) {
+            return defaultChatOptions;
+        }
+        return chatModel.getDefaultOptions();
+    }
+
     private String sanitiseResponse(String response) {
         String trimmed = response.trim();
         if (trimmed.startsWith("```") && trimmed.endsWith("```")) {
@@ -112,6 +128,26 @@ public class AIReceiptExtractor implements ReceiptDataExtractor {
             LOGGER.info("Response trimmed from {} to {} characters during sanitisation", response.length(), trimmed.length());
         }
         return trimmed;
+    }
+
+    private String resolveModelName(ChatOptions chatOptions) {
+        if (chatOptions == null) {
+            return "<default>";
+        }
+        String model = chatOptions.getModel();
+        if (model != null && !model.isBlank()) {
+            return model;
+        }
+        try {
+            Method method = chatOptions.getClass().getMethod("getModel");
+            Object value = method.invoke(chatOptions);
+            if (value instanceof String str && !str.isBlank()) {
+                return str;
+            }
+        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException ex) {
+            LOGGER.debug("Unable to determine model from chat options {}", chatOptions.getClass().getName(), ex);
+        }
+        return chatOptions.getClass().getSimpleName();
     }
 
     private String buildPrompt(String encodedPdf, String fileName) {

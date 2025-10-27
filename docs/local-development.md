@@ -99,16 +99,38 @@ Two options exist depending on how closely you need to mirror production:
 
 ### Option A: Full Cloud Run pipeline
 
-When you want to execute the same code that runs on Cloud Run—including Vertex AI requests—start the service locally with Spring Boot. Make sure the Firestore emulator is running and source the local environment helper in the same shell, then add the extra environment variables that Vertex AI requires:
+When you want to execute the same code that runs on Cloud Run—including Gemini requests—start the service locally with Spring Boot. Make sure the Firestore emulator is running and source the local environment helper in the same shell, then export credentials for your preferred Gemini provider:
+
+- **Google AI Studio:** set `AI_STUDIO_API_KEY` (and optionally `GOOGLE_AI_GEMINI_MODEL`).
+- **Vertex AI:** keep using your service-account credentials plus `VERTEX_AI_PROJECT_ID` and `VERTEX_AI_LOCATION`.
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/a/service-account.json
-export VERTEX_AI_PROJECT_ID=my-vertex-project
-export VERTEX_AI_LOCATION=us-east1
+export PROJECT_ID=my-firestore-project
+export AI_STUDIO_API_KEY=${AI_STUDIO_API_KEY}
 ./mvnw -pl receipt-parser -am spring-boot:run
 ```
 
+If you are calling Vertex AI instead, replace the API key with `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION`, and any other environment variables your service account requires.
+
 Send a Cloud Storage finalize event payload to <http://localhost:8080/events/storage>. The Firestore emulator receives all writes automatically because the `FIRESTORE_EMULATOR_HOST` environment variable is already exported.
+
+#### On-demand parsing API
+
+The default profile also exposes REST endpoints for parsing individual PDF receipts without touching Firestore. They are helpful
+for spot-checking output or comparing the hybrid, legacy, and Gemini extractors:
+
+```bash
+# discover the available parser identifiers
+curl http://localhost:8080/api/parsers | jq
+
+# parse a PDF with one of the listed parsers
+curl -F "file=@test-receipt.pdf" \
+     http://localhost:8080/api/parsers/hybrid/parse | jq
+```
+
+Switch the parser id in the URL to `legacy` or `gemini` to target a specific extractor. The service returns the structured data
+map and raw Gemini response (when applicable) directly in the HTTP response so you can iterate quickly during development.
 
 ### Option B: Local receipt test profile (emulator only)
 
