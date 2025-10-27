@@ -10,6 +10,7 @@ import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.model.tool.DefaultToolCallingManager;
 import org.springframework.ai.model.tool.DefaultToolExecutionEligibilityPredicate;
 import org.springframework.ai.model.tool.ToolCallingManager;
@@ -17,6 +18,7 @@ import org.springframework.ai.model.tool.ToolExecutionEligibilityPredicate;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatModel;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -24,6 +26,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClient;
 import dev.pekelund.pklnd.receiptparser.legacy.LegacyPdfReceiptExtractor;
 
 /**
@@ -36,7 +39,7 @@ public class ReceiptProcessingConfiguration {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptProcessingConfiguration.class);
 
     @Bean(destroyMethod = "close")
-    @Primary
+    @ConditionalOnExpression("'${AI_STUDIO_API_KEY:}' == ''")
     public VertexAI vertexAI(Environment environment) {
         String projectId = environment.getProperty("spring.ai.vertex.ai.gemini.project-id");
         if (!StringUtils.hasText(projectId)) {
@@ -58,6 +61,7 @@ public class ReceiptProcessingConfiguration {
     }
 
     @Bean
+    @ConditionalOnExpression("'${AI_STUDIO_API_KEY:}' == ''")
     public VertexAiGeminiChatOptions receiptGeminiChatOptions(Environment environment) {
         String modelName = environment.getProperty(
             "spring.ai.vertex.ai.gemini.model",
@@ -72,7 +76,7 @@ public class ReceiptProcessingConfiguration {
     }
 
     @Bean
-    @Primary
+    @ConditionalOnExpression("'${AI_STUDIO_API_KEY:}' == ''")
     public VertexAiGeminiChatModel vertexAiGeminiChatModel(VertexAI vertexAI,
         VertexAiGeminiChatOptions receiptGeminiChatOptions,
         ObjectProvider<ToolCallingManager> toolCallingManager,
@@ -97,9 +101,38 @@ public class ReceiptProcessingConfiguration {
     }
 
     @Bean
-    public AIReceiptExtractor aiReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper,
-        VertexAiGeminiChatOptions receiptGeminiChatOptions) {
-        return new AIReceiptExtractor(chatModel, objectMapper, receiptGeminiChatOptions);
+    @ConditionalOnExpression("'${AI_STUDIO_API_KEY:}' != ''")
+    public GoogleAiStudioChatModel googleAiStudioChatModel(Environment environment) {
+        String apiKey = environment.getProperty("AI_STUDIO_API_KEY");
+        String modelName = environment.getProperty("GOOGLE_AI_GEMINI_MODEL",
+            environment.getProperty("spring.ai.googleai.gemini.model", "gemini-2.0-flash"));
+        LOGGER.info("Initializing Google AI Studio chat model - model: {}", modelName);
+        return new GoogleAiStudioChatModel(apiKey, modelName,
+            RestClient.builder().baseUrl("https://generativelanguage.googleapis.com").build());
+    }
+
+    @Bean
+    @Primary
+    public ChatModel receiptChatModel(ObjectProvider<GoogleAiStudioChatModel> googleAiStudioChatModel,
+        ObjectProvider<VertexAiGeminiChatModel> vertexAiGeminiChatModel) {
+        GoogleAiStudioChatModel googleModel = googleAiStudioChatModel.getIfAvailable();
+        if (googleModel != null) {
+            LOGGER.info("Using Google AI Studio Gemini chat model for receipt parsing");
+            return googleModel;
+        }
+        VertexAiGeminiChatModel vertexModel = vertexAiGeminiChatModel.getIfAvailable();
+        if (vertexModel != null) {
+            LOGGER.info("Using Vertex AI Gemini chat model for receipt parsing");
+            return vertexModel;
+        }
+        throw new IllegalStateException(
+            "No Gemini chat model configured. Set AI_STUDIO_API_KEY or Vertex AI project settings.");
+    }
+
+    @Bean
+    public AIReceiptExtractor aiReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper) {
+        ChatOptions defaultOptions = chatModel.getDefaultOptions();
+        return new AIReceiptExtractor(chatModel, objectMapper, defaultOptions);
     }
 
     @Bean

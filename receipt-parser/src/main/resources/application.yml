@@ -2,6 +2,13 @@ spring:
   application:
     name: receipt-processing-service
   ai:
+    googleai:
+      gemini:
+        api-key: ${AI_STUDIO_API_KEY:}
+        model: ${GOOGLE_AI_GEMINI_MODEL:gemini-2.0-flash}
+        chat:
+          options:
+            model: ${GOOGLE_AI_GEMINI_MODEL:gemini-2.0-flash}
     vertex:
       ai:
         gemini:
