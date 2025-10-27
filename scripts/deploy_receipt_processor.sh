@@ -211,6 +211,7 @@ gcloud services enable \
   artifactregistry.googleapis.com \
   firestore.googleapis.com \
   storage.googleapis.com \
+  logging.googleapis.com \
   aiplatform.googleapis.com \
   --quiet
 
@@ -246,6 +247,10 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:${SA_EMAIL}" \
   --role "roles/aiplatform.user" --condition=None || true
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:${SA_EMAIL}" \
+  --role "roles/logging.logWriter" --condition=None || true
 
 gcloud storage buckets add-iam-policy-binding "gs://${GCS_BUCKET}" \
   --member "serviceAccount:${SA_EMAIL}" \

@@ -127,10 +127,10 @@ This script automatically:
 - Builds and deploys the container image via Cloud Build
 - Uses `receipt-parser/Dockerfile` by default to package the correct Spring Boot application (set `RECEIPT_DOCKERFILE`, tweak `RECEIPT_BUILD_CONTEXT`, or provide a custom `RECEIPT_CLOUD_BUILD_CONFIG` if you maintain alternate layouts—keep the Dockerfile within the chosen build context so Cloud Build can locate it)
 - Can be paired with `./scripts/cleanup_artifact_repos.sh` to remove older container images so Artifact Registry only retains the most recent builds
-- Grants the runtime service account access to the receipt bucket and Firestore collection
+- Grants the runtime service account access to the receipt bucket, Firestore collection, Vertex AI, and Cloud Logging so Gemini calls and optional structured logging succeed without manual IAM tweaks
 - Accepts an optional list of additional service accounts that should be allowed to invoke the processor (for example the Cloud Run web app)
 - Removes legacy Cloud Storage notifications from the receipt bucket so only authenticated callbacks from the web application reach the processor
-- Writes logs to stdout/stderr by default so Cloud Run captures them automatically; set `ENABLE_CLOUD_LOGGING=true` if your runtime service account has `logging.logEntries.create` and you want to mirror events to Cloud Logging with a custom log id
+- Writes logs to stdout/stderr by default so Cloud Run captures them automatically; set `ENABLE_CLOUD_LOGGING=true` to mirror events to Cloud Logging with a custom log id (the deployment script now assigns the required `roles/logging.logWriter` permission)
 
 #### Teardown
 

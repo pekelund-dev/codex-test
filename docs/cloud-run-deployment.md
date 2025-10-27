@@ -37,7 +37,7 @@ Replace the placeholders below with your values when following the steps:
 Prefer the repository scripts when you want a repeatable, idempotent rollout:
 
 - `scripts/deploy_cloud_run.sh` provisions APIs, Artifact Registry, Firestore, the runtime service account, and the Cloud Run service. It skips resource creation when assets already exist and expects the repository `Dockerfile` at the project root (set `BUILD_CONTEXT` if you store it elsewhere).
-- `scripts/deploy_receipt_processor.sh` provisions the receipt processor Cloud Run service, grants it access to the receipt bucket and Firestore, and aligns IAM permissions with the shared Firestore project. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely. The script now inspects the deployed web service (defaults: `WEB_SERVICE_NAME=pklnd-web`, `WEB_SERVICE_REGION=REGION`) and automatically grants its runtime service account the `roles/run.invoker` permission. Override `WEB_SERVICE_ACCOUNT` when you want to target a specific identity or use `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` for extra callers. It also removes any legacy Cloud Storage notifications on the receipt bucket so only the web application’s authenticated callbacks reach the processor. Container builds use the repository root as the build context while compiling the image from `receipt-parser/Dockerfile` via `receipt-parser/cloudbuild.yaml`; set `RECEIPT_DOCKERFILE`, `RECEIPT_BUILD_CONTEXT`, or `RECEIPT_CLOUD_BUILD_CONFIG` before running the script if you maintain a different layout, keeping the Dockerfile within the chosen context.
+- `scripts/deploy_receipt_processor.sh` provisions the receipt processor Cloud Run service, grants it access to the receipt bucket, Firestore, Vertex AI, and Cloud Logging, and aligns IAM permissions with the shared Firestore project. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely. The script now inspects the deployed web service (defaults: `WEB_SERVICE_NAME=pklnd-web`, `WEB_SERVICE_REGION=REGION`) and automatically grants its runtime service account the `roles/run.invoker` permission. Override `WEB_SERVICE_ACCOUNT` when you want to target a specific identity or use `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` for extra callers. It also removes any legacy Cloud Storage notifications on the receipt bucket so only the web application’s authenticated callbacks reach the processor. Container builds use the repository root as the build context while compiling the image from `receipt-parser/Dockerfile` via `receipt-parser/cloudbuild.yaml`; set `RECEIPT_DOCKERFILE`, `RECEIPT_BUILD_CONTEXT`, or `RECEIPT_CLOUD_BUILD_CONFIG` before running the script if you maintain a different layout, keeping the Dockerfile within the chosen context.
 - `scripts/cleanup_artifact_repos.sh` prunes older container images from both Artifact Registry repositories, keeping only the newest build for each Cloud Run service.
 - `scripts/teardown_gcp_resources.sh` removes both Cloud Run services, IAM bindings, and optional supporting infrastructure. It tolerates partially deleted projects and only removes what is present. Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` when you also want to purge the associated identities or container registry.
 
@@ -116,6 +116,7 @@ If you already downloaded key files for other environments, set `FIRESTORE_CREDE
    - **Cloud Run Invoker** (`roles/run.invoker`) – optional if you plan to make the service public; otherwise, manage access through IAM.
    - **Datastore User** (`roles/datastore.user`) – required for Firestore access.
    - **Storage Object Admin** (`roles/storage.objectAdmin`) – required for uploading and listing receipts in Cloud Storage.
+   - **Logging > Logs Writer** (`roles/logging.logWriter`) – required if you enable the optional Cloud Logging appender.
    - **Secret Manager Secret Accessor** (`roles/secretmanager.secretAccessor`) – only if your service uses secrets.
 4. Finish creation and note the service account email (`SA_EMAIL`).
 
@@ -140,6 +141,10 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:${SA_EMAIL}" \
   --role "roles/secretmanager.secretAccessor"  # optional
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:${SA_EMAIL}" \
+  --role "roles/logging.logWriter"  # required for optional Cloud Logging output
 ```
 
 > Cloud Run adds `roles/run.serviceAgent` automatically when the service is deployed. Include additional roles your app needs (Pub/Sub, Storage, etc.).
