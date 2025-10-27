@@ -2,21 +2,19 @@ package dev.pekelund.pklnd.receiptparser;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.util.StringUtils;
+import dev.pekelund.pklnd.receiptparser.googleai.GeminiClient;
 import dev.pekelund.pklnd.receiptparser.googleai.GoogleAiGeminiChatOptions;
 
 /**
- * Invokes Gemini through Spring AI to extract structured data from receipt documents.
+ * Invokes Gemini through the {@link GeminiClient} to extract structured data from receipt documents.
  */
 public class AIReceiptExtractor implements ReceiptDataExtractor {
 
@@ -30,17 +28,50 @@ public class AIReceiptExtractor implements ReceiptDataExtractor {
     private static final int CHUNK_SIZE = 8_000;
 
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<Map<String, Object>>() { };
+    private static final String FORMAT_INSTRUCTIONS = """
+        Return a JSON object with the following structure:\n
+        {\n
+          \"general\": {\n
+            \"storeName\": string|null,\n
+            \"storeAddress\": string|null,\n
+            \"receiptDate\": string|null (ISO-8601 date),\n
+            \"totalAmount\": number|null,\n
+            \"currency\": string|null,\n
+            \"paymentMethod\": string|null,\n
+            \"vatAmount\": number|null,\n
+            \"otherFees\": string|null,\n
+            \"metadata\": {\n
+              \"receiptNumber\": string|null,\n
+              \"cashier\": string|null,\n
+              \"additionalNotes\": string|null\n
+            }\n
+          },\n
+          \"items\": [\n
+            {\n
+              \"name\": string|null,\n
+              \"category\": string|null,\n
+              \"unitPrice\": number|null,\n
+              \"quantity\": number|null,\n
+              \"quantityUnit\": string|null,\n
+              \"pricePerUnit\": number|null,\n
+              \"discount\": number|null,\n
+              \"totalPrice\": number|null\n
+            }\n
+          ],\n
+          \"rawText\": string|null\n
+        }\n
+        Use null for unknown values and ensure numbers use a dot (.) as the decimal separator.\n
+        Do not add code fences or commentary; return only the JSON document.
+        """;
 
-    private final ChatModel chatModel;
+    private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper;
     private final GoogleAiGeminiChatOptions chatOptions;
-    private final BeanOutputConverter<ReceiptStructuredOutput> receiptOutputConverter;
 
-    public AIReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper, GoogleAiGeminiChatOptions chatOptions) {
-        this.chatModel = chatModel;
+    public AIReceiptExtractor(GeminiClient geminiClient, ObjectMapper objectMapper, GoogleAiGeminiChatOptions chatOptions) {
+        this.geminiClient = geminiClient;
         this.objectMapper = objectMapper;
         this.chatOptions = chatOptions;
-        this.receiptOutputConverter = new BeanOutputConverter<>(ReceiptStructuredOutput.class, objectMapper);
         LOGGER.info("constructing AIReceiptExtractor");
     }
 
@@ -60,22 +91,11 @@ public class AIReceiptExtractor implements ReceiptDataExtractor {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("AIReceiptExtractor chat options instance id {} - {}", System.identityHashCode(chatOptions),
                 chatOptions);
-            LOGGER.debug("AIReceiptExtractor chat model implementation: {}", chatModel.getClass().getName());
+            LOGGER.debug("AIReceiptExtractor Gemini client implementation: {}", geminiClient.getClass().getName());
         }
 
-        Prompt request = new Prompt(new UserMessage(prompt), chatOptions);
-        ChatResponse chatResponse = chatModel.call(request);
-        if (chatResponse == null || chatResponse.getResult() == null) {
-            throw new ReceiptParsingException("Gemini returned an empty response");
-        }
-
-        var generation = chatResponse.getResult();
-        if (generation.getOutput() == null) {
-            throw new ReceiptParsingException("Gemini returned an empty response");
-        }
-
-        String response = generation.getOutput().getText();
-        if (response == null) {
+        String response = geminiClient.generateContent(prompt, chatOptions);
+        if (!StringUtils.hasText(response)) {
             throw new ReceiptParsingException("Gemini returned an empty response");
         }
 
@@ -120,9 +140,7 @@ public class AIReceiptExtractor implements ReceiptDataExtractor {
         prompt.append("You are an expert system that extracts data from grocery receipts.\n");
         prompt.append("The document you will receive is a PDF receipt provided as base64 data between <receipt> tags.\n");
         prompt.append("Treat it as a receipt and extract the information using the following structured output instructions.\n");
-        prompt.append(receiptOutputConverter.getFormat()).append('\n');
-        prompt.append("If data is missing, use null values. Always return only the JSON document.\n");
-        prompt.append("Do not include code fences, explanations, or any text outside the JSON object beyond what the format instructions specify.\n");
+        prompt.append(FORMAT_INSTRUCTIONS).append('\n');
         prompt.append("File name: ").append(safeFileName).append('\n');
         prompt.append("<receipt>\n");
         prompt.append(chunkText(encodedPdf));
@@ -132,9 +150,8 @@ public class AIReceiptExtractor implements ReceiptDataExtractor {
 
     private ReceiptStructuredOutput parseStructuredResponse(String response) {
         try {
-            LOGGER.info("Parsing Gemini response with Spring AI output converter {}", receiptOutputConverter.getClass().getName());
-            return receiptOutputConverter.convert(response);
-        } catch (RuntimeException ex) {
+            return objectMapper.readValue(response, ReceiptStructuredOutput.class);
+        } catch (IOException ex) {
             LOGGER.error("Failed to parse Gemini response. Payload begins with: {}", preview(response));
             throw new ReceiptParsingException(
                 "Gemini returned a response that could not be parsed into the expected structure",

@@ -1,42 +1,31 @@
 package dev.pekelund.pklnd.receiptparser.googleai;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Collectors;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
+import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.model.Generation;
-import org.springframework.ai.chat.prompt.ChatOptions;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 /**
- * Simple {@link ChatModel} implementation that invokes Google AI Studio's Gemini API using
- * an API key.
+ * Client that invokes Google AI Studio's Gemini API using an API key.
  */
-public class GoogleAiGeminiChatModel implements ChatModel {
+public class GoogleAiGeminiClient implements GeminiClient {
 
     public static final String DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GoogleAiGeminiChatModel.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(GoogleAiGeminiClient.class);
 
     private final RestClient restClient;
     private final String apiKey;
     private final GoogleAiGeminiChatOptions defaultOptions;
     private final ObservationRegistry observationRegistry;
 
-    public GoogleAiGeminiChatModel(RestClient restClient, String apiKey, GoogleAiGeminiChatOptions defaultOptions,
+    public GoogleAiGeminiClient(RestClient restClient, String apiKey, GoogleAiGeminiChatOptions defaultOptions,
         ObservationRegistry observationRegistry) {
         this.restClient = restClient;
         this.apiKey = apiKey;
@@ -45,48 +34,30 @@ public class GoogleAiGeminiChatModel implements ChatModel {
     }
 
     @Override
-    public ChatResponse call(Prompt prompt) {
-        Assert.notNull(prompt, "Prompt must not be null");
-        GoogleAiGeminiChatOptions resolvedOptions = resolveOptions(prompt.getOptions());
-        String promptText = extractPromptText(prompt.getInstructions());
+    public GoogleAiGeminiChatOptions getDefaultOptions() {
+        return defaultOptions;
+    }
+
+    @Override
+    public String generateContent(String prompt, GoogleAiGeminiChatOptions overrides) {
+        if (!StringUtils.hasText(prompt)) {
+            throw new IllegalArgumentException("Prompt must not be empty");
+        }
+        GoogleAiGeminiChatOptions resolvedOptions = defaultOptions.merge(overrides);
         Observation observation = Observation.start("google.ai.gemini.call", observationRegistry)
             .highCardinalityKeyValue("model", Optional.ofNullable(resolvedOptions.getModel()).orElse("(unset)"));
         try (Observation.Scope scope = observation.openScope()) {
             LOGGER.info("Calling Google AI Gemini model '{}' with prompt length {}", resolvedOptions.getModel(),
-                promptText.length());
-            GenerateContentRequest request = buildRequest(promptText, resolvedOptions);
+                prompt.length());
+            GenerateContentRequest request = buildRequest(prompt, resolvedOptions);
             GenerateContentResponse response = executeRequest(resolvedOptions.getModel(), request);
-            String content = extractContent(response);
-            AssistantMessage assistantMessage = new AssistantMessage(content);
-            return new ChatResponse(List.of(new Generation(assistantMessage)));
+            return extractContent(response);
         } catch (RuntimeException ex) {
             observation.error(ex);
             throw ex;
         } finally {
             observation.stop();
         }
-    }
-
-    @Override
-    public ChatOptions getDefaultOptions() {
-        return defaultOptions;
-    }
-
-    private GoogleAiGeminiChatOptions resolveOptions(ChatOptions promptOptions) {
-        if (promptOptions instanceof GoogleAiGeminiChatOptions googleOptions) {
-            return defaultOptions.merge(googleOptions);
-        }
-        return defaultOptions;
-    }
-
-    private String extractPromptText(List<Message> messages) {
-        if (CollectionUtils.isEmpty(messages)) {
-            throw new IllegalArgumentException("Prompt must contain at least one message");
-        }
-        return messages.stream()
-            .map(Message::getText)
-            .filter(Objects::nonNull)
-            .collect(Collectors.joining("\n"));
     }
 
     private GenerateContentRequest buildRequest(String promptText, GoogleAiGeminiChatOptions options) {
@@ -156,4 +127,3 @@ public class GoogleAiGeminiChatModel implements ChatModel {
         }
     }
 }
-

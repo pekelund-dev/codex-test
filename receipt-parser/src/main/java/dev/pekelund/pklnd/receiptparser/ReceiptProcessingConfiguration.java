@@ -8,7 +8,6 @@ import com.google.cloud.storage.StorageOptions;
 import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.web.client.RestClient;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
@@ -18,7 +17,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 import dev.pekelund.pklnd.receiptparser.legacy.LegacyPdfReceiptExtractor;
-import dev.pekelund.pklnd.receiptparser.googleai.GoogleAiGeminiChatModel;
+import dev.pekelund.pklnd.receiptparser.googleai.GeminiClient;
+import dev.pekelund.pklnd.receiptparser.googleai.GoogleAiGeminiClient;
 import dev.pekelund.pklnd.receiptparser.googleai.GoogleAiGeminiChatOptions;
 import dev.pekelund.pklnd.receiptparser.HybridReceiptExtractor;
 
@@ -59,7 +59,7 @@ public class ReceiptProcessingConfiguration {
 
     @Bean
     @Primary
-    public GoogleAiGeminiChatModel googleAiGeminiChatModel(Environment environment,
+    public GoogleAiGeminiClient googleAiGeminiClient(Environment environment,
         GoogleAiGeminiChatOptions receiptGeminiChatOptions,
         ObjectProvider<ObservationRegistry> observationRegistry) {
 
@@ -72,20 +72,20 @@ public class ReceiptProcessingConfiguration {
             .getIfAvailable(() -> ObservationRegistry.NOOP);
 
         String baseUrl = environment.getProperty("google.ai.gemini.base-url",
-            GoogleAiGeminiChatModel.DEFAULT_BASE_URL);
+            GoogleAiGeminiClient.DEFAULT_BASE_URL);
         RestClient restClient = RestClient.builder().baseUrl(baseUrl).build();
 
-        GoogleAiGeminiChatModel chatModel = new GoogleAiGeminiChatModel(restClient, apiKey, receiptGeminiChatOptions,
+        GoogleAiGeminiClient client = new GoogleAiGeminiClient(restClient, apiKey, receiptGeminiChatOptions,
             resolvedObservationRegistry);
-        LOGGER.info("Google AI Gemini ChatModel default options: {}", chatModel.getDefaultOptions());
-        LOGGER.info("Google AI Gemini ChatModel instance id {}", System.identityHashCode(chatModel));
-        return chatModel;
+        LOGGER.info("Google AI Gemini client default options: {}", client.getDefaultOptions());
+        LOGGER.info("Google AI Gemini client instance id {}", System.identityHashCode(client));
+        return client;
     }
 
     @Bean
-    public AIReceiptExtractor aiReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper,
+    public AIReceiptExtractor aiReceiptExtractor(GeminiClient geminiClient, ObjectMapper objectMapper,
         GoogleAiGeminiChatOptions receiptGeminiChatOptions) {
-        return new AIReceiptExtractor(chatModel, objectMapper, receiptGeminiChatOptions);
+        return new AIReceiptExtractor(geminiClient, objectMapper, receiptGeminiChatOptions);
     }
 
     @Bean
