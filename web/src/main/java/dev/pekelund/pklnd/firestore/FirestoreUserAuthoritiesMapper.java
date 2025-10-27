@@ -36,12 +36,15 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
     private final FirestoreProperties properties;
     private final Firestore firestore;
     private final boolean firestoreEnabled;
+    private final ObjectProvider<FirestoreReadTracker> readTrackerProvider;
 
     public FirestoreUserAuthoritiesMapper(FirestoreProperties properties,
-                                          ObjectProvider<Firestore> firestoreProvider) {
+                                          ObjectProvider<Firestore> firestoreProvider,
+                                          ObjectProvider<FirestoreReadTracker> readTrackerProvider) {
         this.properties = properties;
         this.firestore = firestoreProvider.getIfAvailable();
         this.firestoreEnabled = properties.isEnabled() && this.firestore != null;
+        this.readTrackerProvider = readTrackerProvider;
     }
 
     @Override
@@ -116,6 +119,7 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
             .whereEqualTo("email", normalizedEmail)
             .limit(1)
             .get();
+        recordRead("Load OAuth user " + normalizedEmail);
         QuerySnapshot querySnapshot = queryFuture.get();
         if (querySnapshot == null || querySnapshot.isEmpty()) {
             return null;
@@ -161,6 +165,13 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
             log.warn("Interrupted while updating full name for Firestore user document {}.", reference.getId(), ex);
         } catch (ExecutionException ex) {
             log.debug("Failed to update Firestore display name for document {}: {}", reference.getId(), ex.getMessage());
+        }
+    }
+
+    private void recordRead(String description) {
+        FirestoreReadTracker tracker = readTrackerProvider.getIfAvailable();
+        if (tracker != null) {
+            tracker.recordRead(description);
         }
     }
 

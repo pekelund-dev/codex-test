@@ -30,10 +30,16 @@ public class ReceiptExtractionService {
 
     private final FirestoreProperties properties;
     private final Optional<Firestore> firestore;
+    private final ObjectProvider<FirestoreReadTracker> readTrackerProvider;
 
-    public ReceiptExtractionService(FirestoreProperties properties, ObjectProvider<Firestore> firestoreProvider) {
+    public ReceiptExtractionService(
+        FirestoreProperties properties,
+        ObjectProvider<Firestore> firestoreProvider,
+        ObjectProvider<FirestoreReadTracker> readTrackerProvider
+    ) {
         this.properties = properties;
         this.firestore = Optional.ofNullable(firestoreProvider.getIfAvailable());
+        this.readTrackerProvider = readTrackerProvider;
     }
 
     public boolean isEnabled() {
@@ -61,6 +67,7 @@ public class ReceiptExtractionService {
             ApiFuture<QuerySnapshot> future = firestore.get()
                 .collection(properties.getReceiptsCollection())
                 .get();
+            recordRead("Load all receipts from " + properties.getReceiptsCollection());
             QuerySnapshot snapshot = future.get();
             List<ParsedReceipt> receipts = new ArrayList<>();
             for (DocumentSnapshot document : snapshot.getDocuments()) {
@@ -95,6 +102,7 @@ public class ReceiptExtractionService {
             DocumentReference reference = firestore.get()
                 .collection(properties.getReceiptsCollection())
                 .document(id);
+            recordRead("Load receipt " + id);
             DocumentSnapshot snapshot = reference.get().get();
             if (!snapshot.exists()) {
                 return Optional.empty();
@@ -120,6 +128,7 @@ public class ReceiptExtractionService {
                 .collection(properties.getReceiptsCollection())
                 .listDocuments();
             for (DocumentReference document : documents) {
+                recordRead("Load receipt document before deletion");
                 DocumentSnapshot snapshot = document.get().get();
                 if (!snapshot.exists()) {
                     continue;
@@ -186,6 +195,13 @@ public class ReceiptExtractionService {
             rawResponse,
             error
         );
+    }
+
+    private void recordRead(String description) {
+        FirestoreReadTracker tracker = readTrackerProvider.getIfAvailable();
+        if (tracker != null) {
+            tracker.recordRead(description);
+        }
     }
 
     private Instant extractUpdatedAt(DocumentSnapshot snapshot, Object fallbackValue) {

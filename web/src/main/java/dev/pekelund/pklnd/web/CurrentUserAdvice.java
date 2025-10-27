@@ -1,6 +1,7 @@
 package dev.pekelund.pklnd.web;
 
 import dev.pekelund.pklnd.config.HeaderAwareCookieLocaleResolver;
+import dev.pekelund.pklnd.firestore.FirestoreReadTracker;
 import dev.pekelund.pklnd.firestore.FirestoreUserDetails;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,6 +21,12 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 
 @ControllerAdvice
 public class CurrentUserAdvice {
+
+    private final ObjectProvider<FirestoreReadTracker> firestoreReadTrackerProvider;
+
+    public CurrentUserAdvice(ObjectProvider<FirestoreReadTracker> firestoreReadTrackerProvider) {
+        this.firestoreReadTrackerProvider = firestoreReadTrackerProvider;
+    }
 
     @ModelAttribute("userProfile")
     public UserProfile userProfile(Authentication authentication) {
@@ -74,6 +82,12 @@ public class CurrentUserAdvice {
         options.add(buildOption("sv", "nav.language.swedish", requestUri, parameters));
         options.add(buildOption("en", "nav.language.english", requestUri, parameters));
         return options;
+    }
+
+    @ModelAttribute("firestoreReadCount")
+    public int firestoreReadCount() {
+        FirestoreReadTracker tracker = firestoreReadTrackerProvider.getIfAvailable();
+        return tracker != null ? tracker.getReadCount() : 0;
     }
 
     private LanguageOption buildOption(
