@@ -84,10 +84,9 @@ public class CurrentUserAdvice {
         return options;
     }
 
-    @ModelAttribute("firestoreReadCount")
-    public int firestoreReadCount() {
-        FirestoreReadTracker tracker = firestoreReadTrackerProvider.getIfAvailable();
-        return tracker != null ? tracker.getReadCount() : 0;
+    @ModelAttribute("firestoreReadTracker")
+    public FirestoreReadTracker firestoreReadTracker() {
+        return firestoreReadTrackerProvider.getIfAvailable();
     }
 
     private LanguageOption buildOption(
