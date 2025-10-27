@@ -139,6 +139,7 @@ append_env_var "VERTEX_AI_GEMINI_MODEL" "$VERTEX_AI_GEMINI_MODEL"
 append_env_var "PROJECT_ID" "$PROJECT_ID"
 append_env_var "RECEIPT_FIRESTORE_COLLECTION" "$RECEIPT_FIRESTORE_COLLECTION"
 append_env_var "LOGGING_PROJECT_ID" "${LOGGING_PROJECT_ID:-${PROJECT_ID}}"
+append_env_var "AI_STUDIO_API_KEY" "${AI_STUDIO_API_KEY:-}"
 
 cleanup_bucket_notifications() {
   local notifications notification_id
