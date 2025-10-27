@@ -2,6 +2,7 @@ package dev.pekelund.pklnd.web;
 
 import dev.pekelund.pklnd.config.HeaderAwareCookieLocaleResolver;
 import dev.pekelund.pklnd.firestore.FirestoreReadTracker;
+import dev.pekelund.pklnd.firestore.FirestoreReadTotals;
 import dev.pekelund.pklnd.firestore.FirestoreUserDetails;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,9 +24,14 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 public class CurrentUserAdvice {
 
     private final ObjectProvider<FirestoreReadTracker> firestoreReadTrackerProvider;
+    private final FirestoreReadTotals firestoreReadTotals;
 
-    public CurrentUserAdvice(ObjectProvider<FirestoreReadTracker> firestoreReadTrackerProvider) {
+    public CurrentUserAdvice(
+        ObjectProvider<FirestoreReadTracker> firestoreReadTrackerProvider,
+        FirestoreReadTotals firestoreReadTotals
+    ) {
         this.firestoreReadTrackerProvider = firestoreReadTrackerProvider;
+        this.firestoreReadTotals = firestoreReadTotals;
     }
 
     @ModelAttribute("userProfile")
@@ -87,6 +93,11 @@ public class CurrentUserAdvice {
     @ModelAttribute("firestoreReadTracker")
     public FirestoreReadTracker firestoreReadTracker() {
         return firestoreReadTrackerProvider.getIfAvailable();
+    }
+
+    @ModelAttribute("firestoreReadTotals")
+    public FirestoreReadTotals firestoreReadTotals() {
+        return firestoreReadTotals;
     }
 
     private LanguageOption buildOption(

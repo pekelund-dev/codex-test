@@ -11,11 +11,17 @@ import org.springframework.web.context.annotation.RequestScope;
 @RequestScope
 public class FirestoreReadTracker {
 
+    private final FirestoreReadTotals totals;
     private final List<String> readOperations = new ArrayList<>();
+
+    public FirestoreReadTracker(FirestoreReadTotals totals) {
+        this.totals = totals;
+    }
 
     public void recordRead(String description) {
         String label = StringUtils.hasText(description) ? description.trim() : "Unknown read";
         readOperations.add(label);
+        totals.increment();
     }
 
     public int getReadCount() {
