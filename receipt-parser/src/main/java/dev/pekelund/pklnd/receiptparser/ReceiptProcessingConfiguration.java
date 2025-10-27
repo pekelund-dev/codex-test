@@ -106,7 +106,7 @@ public class ReceiptProcessingConfiguration {
         String apiKey = environment.getProperty("AI_STUDIO_API_KEY");
         String modelName = environment.getProperty("GOOGLE_AI_GEMINI_MODEL",
             environment.getProperty("spring.ai.googleai.gemini.model", "gemini-2.0-flash"));
-        LOGGER.info("Initializing Google AI Studio chat model - model: {}", modelName);
+        LOGGER.info("Initializing Google AI Studio chat model - model: {} (API key provided)", modelName);
         return new GoogleAiStudioChatModel(apiKey, modelName,
             RestClient.builder().baseUrl("https://generativelanguage.googleapis.com").build());
     }
@@ -117,12 +117,12 @@ public class ReceiptProcessingConfiguration {
         ObjectProvider<VertexAiGeminiChatModel> vertexAiGeminiChatModel) {
         GoogleAiStudioChatModel googleModel = googleAiStudioChatModel.getIfAvailable();
         if (googleModel != null) {
-            LOGGER.info("Using Google AI Studio Gemini chat model for receipt parsing");
+            LOGGER.info("Receipt parsing Gemini provider selected: Google AI Studio (AI_STUDIO_API_KEY detected)");
             return googleModel;
         }
         VertexAiGeminiChatModel vertexModel = vertexAiGeminiChatModel.getIfAvailable();
         if (vertexModel != null) {
-            LOGGER.info("Using Vertex AI Gemini chat model for receipt parsing");
+            LOGGER.info("Receipt parsing Gemini provider selected: Vertex AI (AI_STUDIO_API_KEY not set)");
             return vertexModel;
         }
         throw new IllegalStateException(
