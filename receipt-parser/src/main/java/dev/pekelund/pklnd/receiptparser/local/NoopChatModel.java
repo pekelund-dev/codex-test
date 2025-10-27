@@ -10,7 +10,7 @@ import reactor.core.publisher.Flux;
 /**
  * Minimal {@link ChatModel} implementation used for the {@code local-receipt-test}
  * profile so that Spring AI auto-configuration backs off and we avoid depending
- * on Vertex AI during local development.
+ * on Google AI Gemini during local development.
  */
 class NoopChatModel implements ChatModel {
 

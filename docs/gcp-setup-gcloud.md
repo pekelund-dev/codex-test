@@ -176,7 +176,7 @@ Before deploying, make sure the receipt processor module builds cleanly and that
 2. **Deploy the Cloud Run service**
 
     ```bash
-    gcloud run deploy pklnd-receipts \n      --image "${IMAGE_URI}" \n      --region "${REGION}" \n      --service-account "${RECEIPT_SA}" \n      --no-allow-unauthenticated \n      --set-env-vars "SPRING_PROFILES_ACTIVE=prod,PROJECT_ID=${PROJECT_ID},VERTEX_AI_PROJECT_ID=${PROJECT_ID},VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions" \n      --min-instances 0 \n      --max-instances 5
+    gcloud run deploy pklnd-receipts \n      --image "${IMAGE_URI}" \n      --region "${REGION}" \n      --service-account "${RECEIPT_SA}" \n      --no-allow-unauthenticated \n      --set-env-vars "SPRING_PROFILES_ACTIVE=prod,PROJECT_ID=${PROJECT_ID},AI_STUDIO_API_KEY=${AI_STUDIO_API_KEY},GOOGLE_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions" \n      --min-instances 0 \n      --max-instances 5
     ```
 
 3. **Prune older container images** so Artifact Registry keeps only the latest build.
@@ -263,16 +263,15 @@ gcloud run services add-iam-policy-binding pklnd-receipts   --region "${REGION}"
 #### 4. API not enabled errors
 **Symptom**: Deployment fails with `API [...] not enabled on project`.
 
-**Fix**: Re-run the core `gcloud services enable` command listed earlier so Cloud Run, Artifact Registry, and Vertex AI are active.
+**Fix**: Re-run the core `gcloud services enable` command listed earlier so Cloud Run, Artifact Registry, the Generative Language API, and other dependencies are active.
 
 #### 5. Environment variable issues
-**Symptom**: The service deploys but fails to read Firestore or Vertex AI.
+**Symptom**: The service deploys but fails to read Firestore or reach Gemini.
 
 **Fix**: Confirm the deployment includes the correct variables:
-- `PROJECT_ID` – project hosting the Firestore database and Vertex AI resources
-- `VERTEX_AI_PROJECT_ID` – typically your current project
-- `VERTEX_AI_LOCATION` – must match the chosen Vertex AI region
-- `VERTEX_AI_GEMINI_MODEL` – default `gemini-2.0-flash`
+- `PROJECT_ID` – project hosting the Firestore database
+- `AI_STUDIO_API_KEY` – Secret Manager reference to the Google AI Studio key
+- `GOOGLE_AI_GEMINI_MODEL` – optional override (default `gemini-2.0-flash`)
 - `RECEIPT_FIRESTORE_COLLECTION` – usually `receiptExtractions`
 
 Cloud Run deployments fail fast if `PROJECT_ID` resolves to the local emulator id (for example, `pklnd-local`).

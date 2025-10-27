@@ -33,7 +33,7 @@ flowchart LR
         ProcessorService["Cloud Run Service\npklnd-receipts"]
     end
 
-    subgraph VertexAI["Vertex AI\n(PROJECT_ID/REGION)"]
+    subgraph VertexAI["Google AI Studio\n(API key)"]
         Gemini["Gemini API"]
     end
 
@@ -66,7 +66,7 @@ sequenceDiagram
     participant Storage as Cloud Storage Bucket
     participant ProcessorService as Receipt Processor
     participant Firestore
-    participant Gemini as Vertex AI Gemini
+    participant Gemini as Google AI Gemini
 
     User->>CloudRun: Upload receipt (via UI)
     CloudRun->>Storage: PUT object using signed URL

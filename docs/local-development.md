@@ -99,12 +99,13 @@ Two options exist depending on how closely you need to mirror production:
 
 ### Option A: Full Cloud Run pipeline
 
-When you want to execute the same code that runs on Cloud Run—including Vertex AI requests—start the service locally with Spring Boot. Make sure the Firestore emulator is running and source the local environment helper in the same shell, then add the extra environment variables that Vertex AI requires:
+When you want to execute the same code that runs on Cloud Run—including Gemini requests—start the service locally with Spring Boot. Make sure the Firestore emulator is running and source the local environment helper in the same shell, then add the extra environment variables that Google AI Studio requires:
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/a/service-account.json
-export VERTEX_AI_PROJECT_ID=my-vertex-project
-export VERTEX_AI_LOCATION=us-east1
+export AI_STUDIO_API_KEY=your-api-key-from-ai-studio
+# Optional override if you need a different model name
+export GOOGLE_AI_GEMINI_MODEL=gemini-2.0-pro-exp
 ./mvnw -pl receipt-parser -am spring-boot:run
 ```
 
@@ -112,7 +113,7 @@ Send a Cloud Storage finalize event payload to <http://localhost:8080/events/sto
 
 ### Option B: Local receipt test profile (emulator only)
 
-If you only need to evaluate the legacy PDF extractor and Firestore writes—without incurring Vertex AI costs—start the lightweight Spring profile:
+If you only need to evaluate the legacy PDF extractor and Firestore writes—without incurring Gemini API costs—start the lightweight Spring profile:
 
 ```bash
 ./mvnw -pl receipt-parser -am spring-boot:run \

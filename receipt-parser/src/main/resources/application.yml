@@ -1,16 +1,11 @@
 spring:
   application:
     name: receipt-processing-service
+
+google:
   ai:
-    vertex:
-      ai:
-        gemini:
-          project-id: ${VERTEX_AI_PROJECT_ID:codex-test-473008}
-          location: ${VERTEX_AI_LOCATION:us-east1}
-          model: ${VERTEX_AI_GEMINI_MODEL:gemini-2.0-flash}
-          chat:
-            options:
-              model: ${VERTEX_AI_GEMINI_MODEL:gemini-2.0-flash}
+    gemini:
+      model: ${GOOGLE_AI_GEMINI_MODEL:gemini-2.0-flash}
 
 logging:
   level:
@@ -23,5 +18,5 @@ server:
 
 app:
   logging:
-    project-id: ${LOGGING_PROJECT_ID:${GOOGLE_CLOUD_PROJECT:${GCP_PROJECT:${VERTEX_AI_PROJECT_ID:codex-test-473008}}}}
+    project-id: ${LOGGING_PROJECT_ID:${GOOGLE_CLOUD_PROJECT:${GCP_PROJECT:${PROJECT_ID:codex-test-473008}}}}
     log-name: ${LOGGING_LOG_NAME:${spring.application.name}}

@@ -13,7 +13,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.converter.BeanOutputConverter;
-import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
+import dev.pekelund.pklnd.receiptparser.googleai.GoogleAiGeminiChatOptions;
 
 /**
  * Invokes Gemini through Spring AI to extract structured data from receipt documents.
@@ -33,10 +33,10 @@ public class AIReceiptExtractor implements ReceiptDataExtractor {
 
     private final ChatModel chatModel;
     private final ObjectMapper objectMapper;
-    private final VertexAiGeminiChatOptions chatOptions;
+    private final GoogleAiGeminiChatOptions chatOptions;
     private final BeanOutputConverter<ReceiptStructuredOutput> receiptOutputConverter;
 
-    public AIReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper, VertexAiGeminiChatOptions chatOptions) {
+    public AIReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper, GoogleAiGeminiChatOptions chatOptions) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
         this.chatOptions = chatOptions;

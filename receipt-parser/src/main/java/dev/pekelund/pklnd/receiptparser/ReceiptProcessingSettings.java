@@ -8,7 +8,7 @@ import org.springframework.util.StringUtils;
 
 /**
  * Configuration values resolved for the receipt parsing Cloud Run service.
- * Vertex AI settings are handled by Spring AI auto-configuration.
+ * Gemini API settings are handled by {@link dev.pekelund.pklnd.receiptparser.googleai.GoogleAiGeminiChatModel}.
  */
 public record ReceiptProcessingSettings(
     String projectId,

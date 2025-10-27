@@ -5,9 +5,8 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 ### Default environment variables
 
 - `PROJECT_ID` — shared by the web app and receipt processor.
-- `VERTEX_AI_PROJECT_ID` — defaults to the receipt processor project ID.
-- `VERTEX_AI_LOCATION` — defaults to `us-east1`.
-- `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
+- `AI_STUDIO_API_KEY` — Google AI Studio Gemini key (store in Secret Manager for Cloud Run).
+- `GOOGLE_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
 - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
 
 ## Firestore configuration in the Console
@@ -85,7 +84,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 ## Deploy the receipt-processing Cloud Run service
 
 1. **Review prerequisites**
-   - Ensure the following APIs are enabled in your project: Cloud Run, Cloud Build, Artifact Registry, Vertex AI, Cloud Storage, and Firestore.
+   - Ensure the following APIs are enabled in your project: Cloud Run, Cloud Build, Artifact Registry, Cloud Storage, Firestore, and the [Generative Language API](https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com).
    - (Optional) Build the receipt processor module locally (`./mvnw -pl receipt-parser -am -DskipTests package`) to verify dependencies before deploying.
 
 2. **Create or reuse a runtime service account**
@@ -93,7 +92,6 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    - Grant it the following roles:
      - **Storage Object Admin** on the receipts bucket.
      - **Datastore User** for Firestore access.
-     - **Vertex AI User** to invoke Gemini models.
 
 3. **Build and publish the container image**
    - Open **Cloud Build → Builds → Create** and select **Container image**.
@@ -108,9 +106,8 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    - Under **Security**, keep **Allow unauthenticated invocations** disabled.
    - Expand **Variables & Secrets → Environment variables** and define:
     - `PROJECT_ID` — ensure the service uses the shared Firestore project.
-    - `VERTEX_AI_PROJECT_ID` — defaults to the service project if omitted.
-    - `VERTEX_AI_LOCATION` — Vertex AI region that offers Gemini (for example `us-east1`).
-    - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
+    - `AI_STUDIO_API_KEY` — reference a Secret Manager key that stores the Gemini API key issued by Google AI Studio.
+    - `GOOGLE_AI_GEMINI_MODEL` — optional override for the model name (defaults to `gemini-2.0-flash`).
     - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
      - `RECEIPT_PROCESSOR_BASE_URL` — set to the Cloud Run URL noted after deployment.
    - Leave `RECEIPT_PROCESSOR_USE_ID_TOKEN` enabled so the web application authenticates with the processor automatically.
