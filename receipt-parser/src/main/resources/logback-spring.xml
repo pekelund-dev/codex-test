@@ -1,6 +1,5 @@
 <configuration>
-    <springProperty scope="context" name="projectId" source="app.logging.project-id" defaultValue=""/>
-    <springProperty scope="context" name="functionName" source="app.logging.log-name" defaultValue="receipt-processing-service"/>
+    <springProperty scope="context" name="logId" source="app.logging.log-name" defaultValue="receipt-processing-service"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -22,7 +21,7 @@
 
     <springProfile name="prod">
         <appender name="CLOUD" class="com.google.cloud.logging.logback.LoggingAppender">
-            <log>projects/${projectId:-${GOOGLE_CLOUD_PROJECT:-${GCP_PROJECT:-unknown-project}}}/logs/${functionName}</log>
+            <log>${logId}</log>
             <flushLevel>WARN</flushLevel>
         </appender>
 
