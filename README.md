@@ -130,6 +130,7 @@ This script automatically:
 - Grants the runtime service account access to the receipt bucket and Firestore collection
 - Accepts an optional list of additional service accounts that should be allowed to invoke the processor (for example the Cloud Run web app)
 - Removes legacy Cloud Storage notifications from the receipt bucket so only authenticated callbacks from the web application reach the processor
+- Writes logs to stdout/stderr by default so Cloud Run captures them automatically; set `ENABLE_CLOUD_LOGGING=true` if your runtime service account has `logging.logEntries.create` and you want to mirror events to Cloud Logging with a custom log id
 
 #### Teardown
 

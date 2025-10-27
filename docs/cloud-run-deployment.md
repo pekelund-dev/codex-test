@@ -199,7 +199,7 @@ gcloud artifacts repositories create web \
 4. Set the service name (`SERVICE_NAME`) and region (`REGION`).
 5. Under **Authentication**, choose whether to allow unauthenticated invocations.
 6. Expand **Security** → **Service account** and select the runtime service account (`SA_EMAIL`).
-7. Set environment variables (at a minimum `FIRESTORE_ENABLED=true`, `FIRESTORE_PROJECT_ID`, `SPRING_PROFILES_ACTIVE=prod,oauth`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GCS_ENABLED=true`, `GCS_PROJECT_ID`, `GCS_BUCKET`, and `RECEIPT_PROCESSOR_BASE_URL` pointing to the Cloud Run receipt processor URL). Keep `RECEIPT_PROCESSOR_USE_ID_TOKEN=true` so the web app authenticates with the processor automatically.
+7. Set environment variables (at a minimum `FIRESTORE_ENABLED=true`, `FIRESTORE_PROJECT_ID`, `SPRING_PROFILES_ACTIVE=prod,oauth`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GCS_ENABLED=true`, `GCS_PROJECT_ID`, `GCS_BUCKET`, and `RECEIPT_PROCESSOR_BASE_URL` pointing to the Cloud Run receipt processor URL). Keep `RECEIPT_PROCESSOR_USE_ID_TOKEN=true` so the web app authenticates with the processor automatically. The service logs to stdout/stderr unless you add `ENABLE_CLOUD_LOGGING=true`—only enable it when the runtime service account has `logging.logEntries.create`.
 8. Configure CPU/Memory limits and concurrency as required.
 9. Click **Create** to deploy.
 
@@ -219,6 +219,8 @@ SPRING_PROFILES="${SPRING_PROFILES},oauth"
 RECEIPT_PROCESSOR_BASE_URL="https://RECEIPT_SERVICE_HOSTNAME"  # Replace with the Cloud Run receipt processor URL
 RECEIPT_PROCESSOR_AUDIENCE="${RECEIPT_PROCESSOR_BASE_URL}"
 ENV_VARS="SPRING_PROFILES_ACTIVE=${SPRING_PROFILES},FIRESTORE_ENABLED=true,FIRESTORE_PROJECT_ID=${PROJECT_ID},GCS_ENABLED=true,GCS_PROJECT_ID=${PROJECT_ID},GCS_BUCKET=${GCS_BUCKET},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET},RECEIPT_PROCESSOR_BASE_URL=${RECEIPT_PROCESSOR_BASE_URL},RECEIPT_PROCESSOR_AUDIENCE=${RECEIPT_PROCESSOR_AUDIENCE}"
+# Append ENABLE_CLOUD_LOGGING=true when the service account can write directly to Cloud Logging
+# ENV_VARS="${ENV_VARS},ENABLE_CLOUD_LOGGING=true"
 
  gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_URI" \
