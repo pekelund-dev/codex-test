@@ -36,15 +36,17 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
     private final FirestoreProperties properties;
     private final Firestore firestore;
     private final boolean firestoreEnabled;
-    private final ObjectProvider<FirestoreReadTracker> readTrackerProvider;
+    private final FirestoreReadRecorder readRecorder;
 
-    public FirestoreUserAuthoritiesMapper(FirestoreProperties properties,
-                                          ObjectProvider<Firestore> firestoreProvider,
-                                          ObjectProvider<FirestoreReadTracker> readTrackerProvider) {
+    public FirestoreUserAuthoritiesMapper(
+        FirestoreProperties properties,
+        ObjectProvider<Firestore> firestoreProvider,
+        FirestoreReadRecorder readRecorder
+    ) {
         this.properties = properties;
         this.firestore = firestoreProvider.getIfAvailable();
         this.firestoreEnabled = properties.isEnabled() && this.firestore != null;
-        this.readTrackerProvider = readTrackerProvider;
+        this.readRecorder = readRecorder;
     }
 
     @Override
@@ -176,10 +178,7 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
     }
 
     private void recordRead(String description, long readUnits) {
-        FirestoreReadTracker tracker = readTrackerProvider.getIfAvailable();
-        if (tracker != null) {
-            tracker.recordRead(description, readUnits);
-        }
+        readRecorder.record(description, readUnits);
     }
 
     private List<String> readRoleNames(DocumentSnapshot documentSnapshot) {

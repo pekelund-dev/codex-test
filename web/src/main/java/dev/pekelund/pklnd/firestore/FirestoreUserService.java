@@ -37,18 +37,20 @@ public class FirestoreUserService implements UserDetailsService {
 
     private final FirestoreProperties properties;
     private final Firestore firestore;
-    private final ObjectProvider<FirestoreReadTracker> readTrackerProvider;
+    private final FirestoreReadRecorder readRecorder;
     private final PasswordEncoder passwordEncoder;
     private final boolean enabled;
     private final UserDetailsService fallbackUserDetailsService;
 
-    public FirestoreUserService(FirestoreProperties properties,
-                                ObjectProvider<Firestore> firestoreProvider,
-                                PasswordEncoder passwordEncoder,
-                                ObjectProvider<FirestoreReadTracker> readTrackerProvider) {
+    public FirestoreUserService(
+        FirestoreProperties properties,
+        ObjectProvider<Firestore> firestoreProvider,
+        PasswordEncoder passwordEncoder,
+        FirestoreReadRecorder readRecorder
+    ) {
         this.properties = properties;
         this.firestore = firestoreProvider.getIfAvailable();
-        this.readTrackerProvider = readTrackerProvider;
+        this.readRecorder = readRecorder;
         this.passwordEncoder = passwordEncoder;
         this.enabled = properties.isEnabled() && this.firestore != null;
 
@@ -474,10 +476,7 @@ public class FirestoreUserService implements UserDetailsService {
     }
 
     private void recordRead(String description, long readUnits) {
-        FirestoreReadTracker tracker = readTrackerProvider.getIfAvailable();
-        if (tracker != null) {
-            tracker.recordRead(description, readUnits);
-        }
+        readRecorder.record(description, readUnits);
     }
 
     private static String normalizeEmail(String email) {

@@ -30,16 +30,16 @@ public class ReceiptExtractionService {
 
     private final FirestoreProperties properties;
     private final Optional<Firestore> firestore;
-    private final ObjectProvider<FirestoreReadTracker> readTrackerProvider;
+    private final FirestoreReadRecorder readRecorder;
 
     public ReceiptExtractionService(
         FirestoreProperties properties,
         ObjectProvider<Firestore> firestoreProvider,
-        ObjectProvider<FirestoreReadTracker> readTrackerProvider
+        FirestoreReadRecorder readRecorder
     ) {
         this.properties = properties;
         this.firestore = Optional.ofNullable(firestoreProvider.getIfAvailable());
-        this.readTrackerProvider = readTrackerProvider;
+        this.readRecorder = readRecorder;
     }
 
     public boolean isEnabled() {
@@ -205,10 +205,7 @@ public class ReceiptExtractionService {
     }
 
     private void recordRead(String description, long readUnits) {
-        FirestoreReadTracker tracker = readTrackerProvider.getIfAvailable();
-        if (tracker != null) {
-            tracker.recordRead(description, readUnits);
-        }
+        readRecorder.record(description, readUnits);
     }
 
     private Instant extractUpdatedAt(DocumentSnapshot snapshot, Object fallbackValue) {
