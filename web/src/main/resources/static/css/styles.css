@@ -11,6 +11,12 @@ body {
     font-weight: 600;
 }
 
+.firestore-read-counter {
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding-inline: 0.75rem;
+}
+
 .user-avatar,
 .user-badge {
     width: 40px;

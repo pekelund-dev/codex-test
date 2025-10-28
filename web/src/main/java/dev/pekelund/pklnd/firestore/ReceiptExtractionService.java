@@ -30,10 +30,16 @@ public class ReceiptExtractionService {
 
     private final FirestoreProperties properties;
     private final Optional<Firestore> firestore;
+    private final FirestoreReadRecorder readRecorder;
 
-    public ReceiptExtractionService(FirestoreProperties properties, ObjectProvider<Firestore> firestoreProvider) {
+    public ReceiptExtractionService(
+        FirestoreProperties properties,
+        ObjectProvider<Firestore> firestoreProvider,
+        FirestoreReadRecorder readRecorder
+    ) {
         this.properties = properties;
         this.firestore = Optional.ofNullable(firestoreProvider.getIfAvailable());
+        this.readRecorder = readRecorder;
     }
 
     public boolean isEnabled() {
@@ -62,6 +68,10 @@ public class ReceiptExtractionService {
                 .collection(properties.getReceiptsCollection())
                 .get();
             QuerySnapshot snapshot = future.get();
+            recordRead(
+                "Load all receipts from " + properties.getReceiptsCollection(),
+                snapshot != null ? snapshot.size() : 0
+            );
             List<ParsedReceipt> receipts = new ArrayList<>();
             for (DocumentSnapshot document : snapshot.getDocuments()) {
                 ParsedReceipt parsed = toParsedReceipt(document);
@@ -96,6 +106,7 @@ public class ReceiptExtractionService {
                 .collection(properties.getReceiptsCollection())
                 .document(id);
             DocumentSnapshot snapshot = reference.get().get();
+            recordRead("Load receipt " + id, 1L);
             if (!snapshot.exists()) {
                 return Optional.empty();
             }
@@ -121,6 +132,7 @@ public class ReceiptExtractionService {
                 .listDocuments();
             for (DocumentReference document : documents) {
                 DocumentSnapshot snapshot = document.get().get();
+                recordRead("Load receipt document before deletion", 1L);
                 if (!snapshot.exists()) {
                     continue;
                 }
@@ -186,6 +198,14 @@ public class ReceiptExtractionService {
             rawResponse,
             error
         );
+    }
+
+    private void recordRead(String description) {
+        recordRead(description, 1L);
+    }
+
+    private void recordRead(String description, long readUnits) {
+        readRecorder.record(description, readUnits);
     }
 
     private Instant extractUpdatedAt(DocumentSnapshot snapshot, Object fallbackValue) {

@@ -36,12 +36,17 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
     private final FirestoreProperties properties;
     private final Firestore firestore;
     private final boolean firestoreEnabled;
+    private final FirestoreReadRecorder readRecorder;
 
-    public FirestoreUserAuthoritiesMapper(FirestoreProperties properties,
-                                          ObjectProvider<Firestore> firestoreProvider) {
+    public FirestoreUserAuthoritiesMapper(
+        FirestoreProperties properties,
+        ObjectProvider<Firestore> firestoreProvider,
+        FirestoreReadRecorder readRecorder
+    ) {
         this.properties = properties;
         this.firestore = firestoreProvider.getIfAvailable();
         this.firestoreEnabled = properties.isEnabled() && this.firestore != null;
+        this.readRecorder = readRecorder;
     }
 
     @Override
@@ -117,6 +122,10 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
             .limit(1)
             .get();
         QuerySnapshot querySnapshot = queryFuture.get();
+        recordRead(
+            "Load OAuth user " + normalizedEmail,
+            querySnapshot != null ? querySnapshot.size() : 0L
+        );
         if (querySnapshot == null || querySnapshot.isEmpty()) {
             return null;
         }
@@ -162,6 +171,14 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
         } catch (ExecutionException ex) {
             log.debug("Failed to update Firestore display name for document {}: {}", reference.getId(), ex.getMessage());
         }
+    }
+
+    private void recordRead(String description) {
+        recordRead(description, 1L);
+    }
+
+    private void recordRead(String description, long readUnits) {
+        readRecorder.record(description, readUnits);
     }
 
     private List<String> readRoleNames(DocumentSnapshot documentSnapshot) {

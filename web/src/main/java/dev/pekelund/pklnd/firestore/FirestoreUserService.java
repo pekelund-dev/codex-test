@@ -37,15 +37,20 @@ public class FirestoreUserService implements UserDetailsService {
 
     private final FirestoreProperties properties;
     private final Firestore firestore;
+    private final FirestoreReadRecorder readRecorder;
     private final PasswordEncoder passwordEncoder;
     private final boolean enabled;
     private final UserDetailsService fallbackUserDetailsService;
 
-    public FirestoreUserService(FirestoreProperties properties,
-                                ObjectProvider<Firestore> firestoreProvider,
-                                PasswordEncoder passwordEncoder) {
+    public FirestoreUserService(
+        FirestoreProperties properties,
+        ObjectProvider<Firestore> firestoreProvider,
+        PasswordEncoder passwordEncoder,
+        FirestoreReadRecorder readRecorder
+    ) {
         this.properties = properties;
         this.firestore = firestoreProvider.getIfAvailable();
+        this.readRecorder = readRecorder;
         this.passwordEncoder = passwordEncoder;
         this.enabled = properties.isEnabled() && this.firestore != null;
 
@@ -74,7 +79,9 @@ public class FirestoreUserService implements UserDetailsService {
             CollectionReference collection = firestore.collection(properties.getUsersCollection());
             ApiFuture<QuerySnapshot> query = collection.get();
             QuerySnapshot snapshot = query.get();
-            return snapshot != null ? snapshot.size() : 0L;
+            long readUnits = snapshot != null ? snapshot.size() : 0L;
+            recordRead("Count users in " + properties.getUsersCollection(), readUnits);
+            return readUnits;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             log.warn("Interrupted while counting Firestore user documents.", ex);
@@ -191,6 +198,10 @@ public class FirestoreUserService implements UserDetailsService {
             CollectionReference collection = firestore.collection(properties.getUsersCollection());
             ApiFuture<QuerySnapshot> queryFuture = collection.whereArrayContains("roles", adminRole).get();
             QuerySnapshot querySnapshot = queryFuture.get();
+            recordRead(
+                "List administrator accounts",
+                querySnapshot != null ? querySnapshot.size() : 0L
+            );
 
             if (querySnapshot == null || querySnapshot.isEmpty()) {
                 return List.of();
@@ -342,6 +353,10 @@ public class FirestoreUserService implements UserDetailsService {
             .limit(1)
             .get();
         QuerySnapshot querySnapshot = queryFuture.get();
+        recordRead(
+            "Check if user exists: " + normalizedEmail,
+            querySnapshot != null ? querySnapshot.size() : 0L
+        );
         return querySnapshot != null && !querySnapshot.isEmpty();
     }
 
@@ -353,6 +368,10 @@ public class FirestoreUserService implements UserDetailsService {
             .limit(1)
             .get();
         QuerySnapshot querySnapshot = queryFuture.get();
+        recordRead(
+            "Find user by email: " + normalizedEmail,
+            querySnapshot != null ? querySnapshot.size() : 0L
+        );
         if (querySnapshot == null || querySnapshot.isEmpty()) {
             return null;
         }
@@ -450,6 +469,14 @@ public class FirestoreUserService implements UserDetailsService {
         if (!enabled) {
             throw new IllegalStateException("Firestore integration is not configured. Unable to register users.");
         }
+    }
+
+    private void recordRead(String description) {
+        recordRead(description, 1L);
+    }
+
+    private void recordRead(String description, long readUnits) {
+        readRecorder.record(description, readUnits);
     }
 
     private static String normalizeEmail(String email) {
