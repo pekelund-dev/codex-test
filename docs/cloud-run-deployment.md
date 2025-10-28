@@ -342,5 +342,9 @@ Ensure you understand the impact on production data before running cleanup comma
 - **Domain mapping pending**: Check Porkbun DNS records; ensure CNAME/A records match Cloud Run instructions and no conflicting records exist.
 - **Cold starts or latency issues**: Increase min instances or adjust concurrency.
 - **Build failures**: Inspect Cloud Build logs; confirm Dockerfile path and environment variables.
+- **Frequent 404s from `APIs-Google` with `__GCP_CloudEventsMode=GCS_NOTIFICATION`**: Cloud Storage periodically verifies that
+  the push endpoint attached to your bucket is reachable. Google sends a handshake request to the service URL root (`/`) with
+  that query parameter and expects any `2xx` response. The receipt processor now accepts the handshake, but you will still see
+  the calls in access logs. They are normal and do not indicate user traffic or configuration errors.
 
 For advanced setups (CI/CD, multiple services, staging environments), extend these instructions with additional automation, Terraform, or Cloud Deploy pipelines.
