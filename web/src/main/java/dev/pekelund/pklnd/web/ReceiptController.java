@@ -30,6 +30,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Locale;
@@ -1054,16 +1055,14 @@ public class ReceiptController {
             effectiveScope = ReceiptViewScope.ALL;
         }
 
-        List<ParsedReceipt> receipts = viewingAll
-            ? receiptExtractionService.get().listAllReceipts()
-            : receiptExtractionService.get().listReceiptsForOwner(currentOwner);
-
-        if (!viewingAll && receipts.stream().noneMatch(parsed -> documentId.equals(parsed.id()))) {
-            receipts = new ArrayList<>(receipts);
-            receipts.add(receipt);
-        }
-
-        Map<String, Long> itemOccurrences = computeItemOccurrencesByEan(receipts);
+        ReceiptOwner statsOwner = viewingAll ? null : receipt.owner();
+        Set<String> normalizedEans = receipt.displayItems().stream()
+            .map(this::extractItemEan)
+            .filter(StringUtils::hasText)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<String, Long> itemOccurrences = normalizedEans.isEmpty()
+            ? Map.of()
+            : receiptExtractionService.get().loadItemOccurrences(normalizedEans, statsOwner, viewingAll);
         List<Map<String, Object>> receiptItems = prepareReceiptItems(receipt.displayItems(), itemOccurrences);
 
         String displayName = receipt.displayName();
@@ -1116,18 +1115,26 @@ public class ReceiptController {
             }
         }
 
-        List<ParsedReceipt> receipts = viewingAll
-            ? receiptExtractionService.get().listAllReceipts()
-            : receiptExtractionService.get().listReceiptsForOwner(currentOwner);
+        List<ReceiptExtractionService.ReceiptItemReference> itemReferences = receiptExtractionService.get()
+            .findReceiptItemReferences(trimmedEanCode, viewingAll ? null : currentOwner, viewingAll);
 
-        if (sourceReceipt != null) {
-            String sourceReceiptIdentifier = sourceReceipt.id();
-            boolean alreadyIncluded = sourceReceiptIdentifier != null
-                && receipts.stream().anyMatch(parsed -> sourceReceiptIdentifier.equals(parsed.id()));
-            if (!alreadyIncluded) {
-                receipts = new ArrayList<>(receipts);
-                receipts.add(sourceReceipt);
-            }
+        LinkedHashSet<String> receiptIdentifiers = itemReferences.stream()
+            .map(ReceiptExtractionService.ReceiptItemReference::receiptId)
+            .filter(StringUtils::hasText)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (sourceReceipt != null && StringUtils.hasText(sourceReceipt.id())) {
+            receiptIdentifiers.add(sourceReceipt.id());
+        }
+
+        List<ParsedReceipt> receipts = receiptIdentifiers.isEmpty()
+            ? List.of()
+            : new ArrayList<>(receiptExtractionService.get().findByIds(receiptIdentifiers));
+
+        String resolvedSourceReceiptId = sourceReceipt != null ? sourceReceipt.id() : null;
+        if (sourceReceipt != null && StringUtils.hasText(resolvedSourceReceiptId)
+            && receipts.stream().noneMatch(parsed -> resolvedSourceReceiptId.equals(parsed.id()))) {
+            receipts.add(sourceReceipt);
         }
 
         List<ItemPurchaseView> purchases = buildItemPurchases(trimmedEanCode, receipts);
@@ -1161,30 +1168,6 @@ public class ReceiptController {
         model.addAttribute("sourceReceiptName", sourceReceipt != null ? resolveReceiptDisplayName(sourceReceipt) : null);
 
         return "receipt-item";
-    }
-
-    private Map<String, Long> computeItemOccurrencesByEan(List<ParsedReceipt> receipts) {
-        if (receipts == null || receipts.isEmpty()) {
-            return Map.of();
-        }
-
-        Map<String, Long> occurrences = new HashMap<>();
-        for (ParsedReceipt receipt : receipts) {
-            if (receipt == null) {
-                continue;
-            }
-            for (Map<String, Object> item : receipt.displayItems()) {
-                if (item == null || item.isEmpty()) {
-                    continue;
-                }
-                String ean = extractItemEan(item);
-                if (ean == null) {
-                    continue;
-                }
-                occurrences.merge(ean, 1L, Long::sum);
-            }
-        }
-        return Collections.unmodifiableMap(occurrences);
     }
 
     private List<ItemPurchaseView> buildItemPurchases(String targetEan, List<ParsedReceipt> receipts) {

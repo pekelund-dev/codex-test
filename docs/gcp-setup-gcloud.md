@@ -79,6 +79,8 @@ export FIRESTORE_USERS_COLLECTION=users             # Optional override
 export FIRESTORE_DEFAULT_ROLE=ROLE_USER             # Optional override
 # Cloud Run services reuse these values so every component talks to the same database
 export RECEIPT_FIRESTORE_COLLECTION=${RECEIPT_FIRESTORE_COLLECTION:-receiptExtractions}
+export RECEIPT_FIRESTORE_ITEM_COLLECTION=${RECEIPT_FIRESTORE_ITEM_COLLECTION:-receiptItems}
+export RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION=${RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION:-receiptItemStats}
     ```
 
 ## Configure Cloud Storage via gcloud
@@ -176,7 +178,7 @@ Before deploying, make sure the receipt processor module builds cleanly and that
 2. **Deploy the Cloud Run service**
 
     ```bash
-    gcloud run deploy pklnd-receipts \n      --image "${IMAGE_URI}" \n      --region "${REGION}" \n      --service-account "${RECEIPT_SA}" \n      --no-allow-unauthenticated \n      --set-env-vars "SPRING_PROFILES_ACTIVE=prod,PROJECT_ID=${PROJECT_ID},VERTEX_AI_PROJECT_ID=${PROJECT_ID},VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions" \n      --min-instances 0 \n      --max-instances 5
+    gcloud run deploy pklnd-receipts \n      --image "${IMAGE_URI}" \n      --region "${REGION}" \n      --service-account "${RECEIPT_SA}" \n      --no-allow-unauthenticated \n      --set-env-vars "SPRING_PROFILES_ACTIVE=prod,PROJECT_ID=${PROJECT_ID},VERTEX_AI_PROJECT_ID=${PROJECT_ID},VERTEX_AI_LOCATION=${REGION},VERTEX_AI_GEMINI_MODEL=gemini-2.0-flash,RECEIPT_FIRESTORE_COLLECTION=receiptExtractions,RECEIPT_FIRESTORE_ITEM_COLLECTION=receiptItems,RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION=receiptItemStats" \n      --min-instances 0 \n      --max-instances 5
     ```
 
 3. **Prune older container images** so Artifact Registry keeps only the latest build.
@@ -274,6 +276,8 @@ gcloud run services add-iam-policy-binding pklnd-receipts   --region "${REGION}"
 - `VERTEX_AI_LOCATION` – must match the chosen Vertex AI region
 - `VERTEX_AI_GEMINI_MODEL` – default `gemini-2.0-flash`
 - `RECEIPT_FIRESTORE_COLLECTION` – usually `receiptExtractions`
+- `RECEIPT_FIRESTORE_ITEM_COLLECTION` – usually `receiptItems`
+- `RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION` – usually `receiptItemStats`
 
 Cloud Run deployments fail fast if `PROJECT_ID` resolves to the local emulator id (for example, `pklnd-local`).
 Remove any lingering `LOCAL_PROJECT_ID` exports or update `PROJECT_ID` before redeploying.

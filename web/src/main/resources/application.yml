@@ -15,6 +15,8 @@ firestore:
   emulator-host: ${FIRESTORE_EMULATOR_HOST:}
   users-collection: ${FIRESTORE_USERS_COLLECTION:users}
   receipts-collection: ${RECEIPT_FIRESTORE_COLLECTION:receiptExtractions}
+  receipt-items-collection: ${RECEIPT_FIRESTORE_ITEM_COLLECTION:receiptItems}
+  item-stats-collection: ${RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION:receiptItemStats}
   default-role: ${FIRESTORE_DEFAULT_ROLE:ROLE_USER}
 
 gcs:

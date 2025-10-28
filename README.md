@@ -155,7 +155,7 @@ Both documents describe prerequisites, metadata expectations, status updates, ve
 
 You can exercise the Cloud Run service locally without waiting for a new deployment by running it with Spring Boot:
 
-1. Export credentials that allow the service to reach your Cloud Storage bucket, Firestore database, and Gemini provider. If you have a Google AI Studio key, set `AI_STUDIO_API_KEY` (and optionally `GOOGLE_AI_GEMINI_MODEL`). To call Vertex AI directly, continue supplying `GOOGLE_APPLICATION_CREDENTIALS`, `PROJECT_ID`, `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION`, and `RECEIPT_FIRESTORE_COLLECTION`.
+1. Export credentials that allow the service to reach your Cloud Storage bucket, Firestore database, and Gemini provider. If you have a Google AI Studio key, set `AI_STUDIO_API_KEY` (and optionally `GOOGLE_AI_GEMINI_MODEL`). To call Vertex AI directly, continue supplying `GOOGLE_APPLICATION_CREDENTIALS`, `PROJECT_ID`, `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION`, `RECEIPT_FIRESTORE_COLLECTION`, `RECEIPT_FIRESTORE_ITEM_COLLECTION`, and `RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION`.
 2. Start the service on a local port:
 
    ```bash

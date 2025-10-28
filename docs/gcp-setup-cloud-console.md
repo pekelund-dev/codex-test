@@ -9,6 +9,8 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 - `VERTEX_AI_LOCATION` — defaults to `us-east1`.
 - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
 - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
+- `RECEIPT_FIRESTORE_ITEM_COLLECTION` — defaults to `receiptItems`.
+- `RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION` — defaults to `receiptItemStats`.
 
 ## Firestore configuration in the Console
 
@@ -44,6 +46,8 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
      export FIRESTORE_USERS_COLLECTION=users                  # Optional override
      export FIRESTORE_DEFAULT_ROLE=ROLE_USER                  # Optional override
      export RECEIPT_FIRESTORE_COLLECTION=${RECEIPT_FIRESTORE_COLLECTION:-receiptExtractions}
+     export RECEIPT_FIRESTORE_ITEM_COLLECTION=${RECEIPT_FIRESTORE_ITEM_COLLECTION:-receiptItems}
+     export RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION=${RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION:-receiptItemStats}
      ```
 
    - Restart the application to pick up the Firestore integration. Visit `/register` to create your first account and sign in on `/login`.
@@ -112,6 +116,8 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
     - `VERTEX_AI_LOCATION` — Vertex AI region that offers Gemini (for example `us-east1`).
     - `VERTEX_AI_GEMINI_MODEL` — defaults to `gemini-2.0-flash`.
     - `RECEIPT_FIRESTORE_COLLECTION` — defaults to `receiptExtractions`.
+    - `RECEIPT_FIRESTORE_ITEM_COLLECTION` — defaults to `receiptItems`.
+    - `RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION` — defaults to `receiptItemStats`.
      - `RECEIPT_PROCESSOR_BASE_URL` — set to the Cloud Run URL noted after deployment.
    - Leave `RECEIPT_PROCESSOR_USE_ID_TOKEN` enabled so the web application authenticates with the processor automatically.
    - Deploy the service and note the HTTPS URL; you will reference it when configuring the web application.

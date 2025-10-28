@@ -1,22 +1,33 @@
 package dev.pekelund.pklnd.firestore;
 
-import com.google.api.core.ApiFuture;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.FieldPath;
+import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.Query;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.cloud.firestore.QuerySnapshot;
+import com.google.cloud.firestore.SetOptions;
+import com.google.cloud.firestore.WriteBatch;
+import dev.pekelund.pklnd.receipts.ReceiptItemConstants;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -31,6 +42,8 @@ public class ReceiptExtractionService {
     private final FirestoreProperties properties;
     private final Optional<Firestore> firestore;
     private final FirestoreReadRecorder readRecorder;
+    private final String receiptItemsCollection;
+    private final String itemStatsCollection;
 
     public ReceiptExtractionService(
         FirestoreProperties properties,
@@ -40,6 +53,8 @@ public class ReceiptExtractionService {
         this.properties = properties;
         this.firestore = Optional.ofNullable(firestoreProvider.getIfAvailable());
         this.readRecorder = readRecorder;
+        this.receiptItemsCollection = properties.getReceiptItemsCollection();
+        this.itemStatsCollection = properties.getItemStatsCollection();
     }
 
     public boolean isEnabled() {
@@ -64,21 +79,26 @@ public class ReceiptExtractionService {
         }
 
         try {
-            ApiFuture<QuerySnapshot> future = firestore.get()
-                .collection(properties.getReceiptsCollection())
-                .get();
-            QuerySnapshot snapshot = future.get();
-            recordRead(
-                "Load all receipts from " + properties.getReceiptsCollection(),
-                snapshot != null ? snapshot.size() : 0
-            );
+            Firestore db = firestore.get();
+            Query query = db.collection(properties.getReceiptsCollection());
+            String description;
+
+            if (includeAllOwners) {
+                description = "Load all receipts";
+            } else {
+                if (owner == null || !StringUtils.hasText(owner.id())) {
+                    return List.of();
+                }
+                query = query.whereEqualTo("owner.id", owner.id());
+                description = "Load receipts for owner " + owner.id();
+            }
+
+            QuerySnapshot snapshot = query.get().get();
+            recordRead(description, snapshot != null ? snapshot.size() : 0);
             List<ParsedReceipt> receipts = new ArrayList<>();
             for (DocumentSnapshot document : snapshot.getDocuments()) {
                 ParsedReceipt parsed = toParsedReceipt(document);
                 if (parsed == null) {
-                    continue;
-                }
-                if (!includeAllOwners && !ReceiptOwnerMatcher.belongsToCurrentOwner(parsed.owner(), owner)) {
                     continue;
                 }
                 receipts.add(parsed);
@@ -121,6 +141,178 @@ public class ReceiptExtractionService {
         }
     }
 
+    public Map<String, Long> loadItemOccurrences(Collection<String> normalizedEans, ReceiptOwner owner,
+        boolean includeAllOwners) {
+
+        if (firestore.isEmpty() || normalizedEans == null || normalizedEans.isEmpty()) {
+            return Map.of();
+        }
+
+        Set<String> distinctEans = normalizedEans.stream()
+            .filter(StringUtils::hasText)
+            .map(String::trim)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (distinctEans.isEmpty()) {
+            return Map.of();
+        }
+
+        String ownerId = includeAllOwners ? ReceiptItemConstants.GLOBAL_OWNER_ID : owner != null ? owner.id() : null;
+        if (!includeAllOwners && !StringUtils.hasText(ownerId)) {
+            Map<String, Long> empty = new HashMap<>();
+            for (String ean : distinctEans) {
+                empty.put(ean, 0L);
+            }
+            return Map.copyOf(empty);
+        }
+
+        try {
+            Firestore db = firestore.get();
+            List<String> docIds = new ArrayList<>();
+            Map<String, String> docIdToEan = new HashMap<>();
+            for (String ean : distinctEans) {
+                String docId = buildStatsDocumentId(ownerId, ean);
+                docIds.add(docId);
+                docIdToEan.put(docId, ean);
+            }
+
+            Map<String, Long> counts = new HashMap<>();
+            for (int start = 0; start < docIds.size(); start += 10) {
+                int end = Math.min(start + 10, docIds.size());
+                List<String> chunk = docIds.subList(start, end);
+                if (chunk.isEmpty()) {
+                    continue;
+                }
+                QuerySnapshot snapshot = db.collection(itemStatsCollection)
+                    .whereIn(FieldPath.documentId(), chunk)
+                    .get()
+                    .get();
+                recordRead("Load item stats for " + chunk.size() + " entries", snapshot != null ? snapshot.size() : 0);
+                if (snapshot == null) {
+                    continue;
+                }
+                for (DocumentSnapshot document : snapshot.getDocuments()) {
+                    String docId = document.getId();
+                    String ean = docIdToEan.get(docId);
+                    if (!StringUtils.hasText(ean)) {
+                        continue;
+                    }
+                    Long count = document.getLong("count");
+                    counts.put(ean, count != null ? count : 0L);
+                }
+            }
+
+            for (String ean : distinctEans) {
+                counts.putIfAbsent(ean, 0L);
+            }
+            return Map.copyOf(counts);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while loading item statistics from Firestore", ex);
+            throw new ReceiptExtractionAccessException("Interrupted while loading item statistics from Firestore.", ex);
+        } catch (ExecutionException ex) {
+            log.error("Failed to load item statistics from Firestore", ex);
+            throw new ReceiptExtractionAccessException("Failed to load item statistics from Firestore.", ex);
+        }
+    }
+
+    public List<ReceiptItemReference> findReceiptItemReferences(String normalizedEan, ReceiptOwner owner,
+        boolean includeAllOwners) {
+
+        if (firestore.isEmpty() || !StringUtils.hasText(normalizedEan)) {
+            return List.of();
+        }
+
+        String trimmed = normalizedEan.trim();
+        try {
+            Firestore db = firestore.get();
+            Query query = db.collection(receiptItemsCollection)
+                .whereEqualTo("normalizedEan", trimmed);
+            if (!includeAllOwners) {
+                if (owner == null || !StringUtils.hasText(owner.id())) {
+                    return List.of();
+                }
+                query = query.whereEqualTo("ownerId", owner.id());
+            }
+
+            QuerySnapshot snapshot = query.get().get();
+            recordRead("Load receipt item references for " + trimmed,
+                snapshot != null ? snapshot.size() : 0);
+            if (snapshot == null) {
+                return List.of();
+            }
+
+            List<ReceiptItemReference> references = new ArrayList<>();
+            for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
+                String receiptId = document.getString("receiptId");
+                if (!StringUtils.hasText(receiptId)) {
+                    continue;
+                }
+                String ownerId = document.getString("ownerId");
+                Timestamp updatedAt = document.getTimestamp("receiptUpdatedAt");
+                references.add(new ReceiptItemReference(receiptId, ownerId, toInstant(updatedAt)));
+            }
+            return List.copyOf(references);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while loading receipt item references from Firestore", ex);
+            throw new ReceiptExtractionAccessException("Interrupted while loading receipt item references from Firestore.", ex);
+        } catch (ExecutionException ex) {
+            log.error("Failed to load receipt item references from Firestore", ex);
+            throw new ReceiptExtractionAccessException("Failed to load receipt item references from Firestore.", ex);
+        }
+    }
+
+    public List<ParsedReceipt> findByIds(Collection<String> ids) {
+        if (firestore.isEmpty() || ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> unique = ids.stream()
+            .filter(StringUtils::hasText)
+            .map(String::trim)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (unique.isEmpty()) {
+            return List.of();
+        }
+
+        try {
+            Firestore db = firestore.get();
+            List<String> identifiers = new ArrayList<>(unique);
+            List<ParsedReceipt> receipts = new ArrayList<>();
+            for (int start = 0; start < identifiers.size(); start += 10) {
+                int end = Math.min(start + 10, identifiers.size());
+                List<String> chunk = identifiers.subList(start, end);
+                if (chunk.isEmpty()) {
+                    continue;
+                }
+                QuerySnapshot snapshot = db.collection(properties.getReceiptsCollection())
+                    .whereIn(FieldPath.documentId(), chunk)
+                    .get()
+                    .get();
+                recordRead("Load receipts by id chunk", snapshot != null ? snapshot.size() : 0);
+                if (snapshot == null) {
+                    continue;
+                }
+                for (DocumentSnapshot document : snapshot.getDocuments()) {
+                    ParsedReceipt parsed = toParsedReceipt(document);
+                    if (parsed != null) {
+                        receipts.add(parsed);
+                    }
+                }
+            }
+            receipts.sort(Comparator.comparing(ParsedReceipt::updatedAt,
+                Comparator.nullsLast(Comparator.reverseOrder())));
+            return List.copyOf(receipts);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while loading receipts by id from Firestore", ex);
+            throw new ReceiptExtractionAccessException("Interrupted while loading receipts by id from Firestore.", ex);
+        } catch (ExecutionException ex) {
+            log.error("Failed to load receipts by id from Firestore", ex);
+            throw new ReceiptExtractionAccessException("Failed to load receipts by id from Firestore.", ex);
+        }
+    }
+
     public void deleteReceiptsForOwner(ReceiptOwner owner) {
         if (owner == null || firestore.isEmpty()) {
             return;
@@ -143,6 +335,7 @@ public class ReceiptExtractionService {
                 if (!ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), owner)) {
                     continue;
                 }
+                removeReceiptIndexes(document.getId(), receipt.owner());
                 document.delete().get();
             }
         } catch (InterruptedException ex) {
@@ -153,6 +346,50 @@ public class ReceiptExtractionService {
             log.error("Failed to delete parsed receipts from Firestore", ex);
             throw new ReceiptExtractionAccessException("Failed to delete parsed receipts from Firestore.", ex);
         }
+    }
+
+    private void removeReceiptIndexes(String receiptId, ReceiptOwner owner)
+        throws InterruptedException, ExecutionException {
+
+        Firestore db = firestore.get();
+        QuerySnapshot snapshot = db.collection(receiptItemsCollection)
+            .whereEqualTo("receiptId", receiptId)
+            .get()
+            .get();
+        recordRead("Load receipt items before deletion", snapshot != null ? snapshot.size() : 0);
+        if (snapshot == null || snapshot.isEmpty()) {
+            return;
+        }
+
+        WriteBatch batch = db.batch();
+        Map<String, Long> deltas = new HashMap<>();
+        for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
+            batch.delete(document.getReference());
+            String ownerId = document.getString("ownerId");
+            String normalizedEan = document.getString("normalizedEan");
+            if (!StringUtils.hasText(normalizedEan)) {
+                continue;
+            }
+            if (StringUtils.hasText(ownerId)) {
+                deltas.merge(buildStatsDocumentId(ownerId, normalizedEan), 1L, Long::sum);
+            } else if (owner != null && StringUtils.hasText(owner.id())) {
+                deltas.merge(buildStatsDocumentId(owner.id(), normalizedEan), 1L, Long::sum);
+            }
+            deltas.merge(buildStatsDocumentId(ReceiptItemConstants.GLOBAL_OWNER_ID, normalizedEan), 1L, Long::sum);
+        }
+
+        Timestamp updateTimestamp = Timestamp.now();
+        for (Map.Entry<String, Long> entry : deltas.entrySet()) {
+            String docId = entry.getKey();
+            long decrement = entry.getValue();
+            DocumentReference statsRef = db.collection(itemStatsCollection).document(docId);
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("count", FieldValue.increment(-decrement));
+            updates.put("updatedAt", updateTimestamp);
+            batch.set(statsRef, updates, SetOptions.merge());
+        }
+
+        batch.commit().get();
     }
 
     private ParsedReceipt toParsedReceipt(DocumentSnapshot snapshot) {
@@ -198,6 +435,17 @@ public class ReceiptExtractionService {
             rawResponse,
             error
         );
+    }
+
+    private Instant toInstant(Timestamp timestamp) {
+        if (timestamp == null) {
+            return null;
+        }
+        return timestamp.toDate().toInstant();
+    }
+
+    private String buildStatsDocumentId(String ownerId, String normalizedEan) {
+        return ownerId + "#" + normalizedEan;
     }
 
     private void recordRead(String description) {
@@ -269,5 +517,8 @@ public class ReceiptExtractionService {
             return StringUtils.hasText(string) ? string : null;
         }
         return value.toString();
+    }
+
+    public record ReceiptItemReference(String receiptId, String ownerId, Instant receiptUpdatedAt) {
     }
 }
