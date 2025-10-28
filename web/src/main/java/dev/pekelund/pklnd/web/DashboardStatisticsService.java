@@ -49,13 +49,14 @@ public class DashboardStatisticsService {
             .filter(ReceiptExtractionService::isEnabled)
             .isPresent();
 
-        List<ParsedReceipt> allReceipts = receiptsEnabled ? loadAllReceipts() : List.of();
-        long totalReceipts = receiptsEnabled ? allReceipts.size() : 0L;
-        long totalStores = receiptsEnabled ? countDistinctStores(allReceipts) : 0L;
-        long totalItems = receiptsEnabled ? countItems(allReceipts) : 0L;
+        // Use lightweight summaries instead of full receipts
+        List<ReceiptExtractionService.ReceiptSummary> allSummaries = receiptsEnabled ? loadAllReceiptSummaries() : List.of();
+        long totalReceipts = receiptsEnabled ? allSummaries.size() : 0L;
+        long totalStores = receiptsEnabled ? countDistinctStoresFromSummaries(allSummaries) : 0L;
+        long totalItems = receiptsEnabled ? countItemsFromSummaries(allSummaries) : 0L;
 
         PersonalTotals personalTotals = receiptsEnabled
-            ? computePersonalTotals(authentication)
+            ? computePersonalTotalsFromSummaries(authentication)
             : PersonalTotals.unavailable();
 
         return new DashboardStatistics(
@@ -71,23 +72,23 @@ public class DashboardStatisticsService {
         );
     }
 
-    private List<ParsedReceipt> loadAllReceipts() {
+    private List<ReceiptExtractionService.ReceiptSummary> loadAllReceiptSummaries() {
         try {
-            return receiptExtractionService.get().listAllReceipts();
+            return receiptExtractionService.get().listReceiptSummaries(null, true);
         } catch (ReceiptExtractionAccessException ex) {
-            log.warn("Unable to load parsed receipts for dashboard statistics.", ex);
+            log.warn("Unable to load receipt summaries for dashboard statistics.", ex);
             return List.of();
         }
     }
 
-    private long countDistinctStores(List<ParsedReceipt> receipts) {
-        if (receipts.isEmpty()) {
+    private long countDistinctStoresFromSummaries(List<ReceiptExtractionService.ReceiptSummary> summaries) {
+        if (summaries.isEmpty()) {
             return 0L;
         }
 
         Set<String> stores = new HashSet<>();
-        for (ParsedReceipt receipt : receipts) {
-            String storeName = receipt != null ? receipt.storeName() : null;
+        for (ReceiptExtractionService.ReceiptSummary summary : summaries) {
+            String storeName = summary.storeName();
             if (storeName == null) {
                 continue;
             }
@@ -100,22 +101,22 @@ public class DashboardStatisticsService {
         return stores.size();
     }
 
-    private long countItems(List<ParsedReceipt> receipts) {
-        return receipts.stream()
-            .filter(receipt -> receipt != null && receipt.items() != null)
-            .mapToLong(receipt -> receipt.items().size())
+    private long countItemsFromSummaries(List<ReceiptExtractionService.ReceiptSummary> summaries) {
+        return summaries.stream()
+            .mapToLong(ReceiptExtractionService.ReceiptSummary::itemCount)
             .sum();
     }
 
-    private PersonalTotals computePersonalTotals(Authentication authentication) {
+    private PersonalTotals computePersonalTotalsFromSummaries(Authentication authentication) {
         ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
         if (owner == null || receiptExtractionService.isEmpty()) {
             return PersonalTotals.unavailable();
         }
 
         try {
-            List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
-            if (receipts.isEmpty()) {
+            List<ReceiptExtractionService.ReceiptSummary> summaries = 
+                receiptExtractionService.get().listReceiptSummaries(owner, false);
+            if (summaries.isEmpty()) {
                 return new PersonalTotals(true, BigDecimal.ZERO, BigDecimal.ZERO);
             }
 
@@ -125,18 +126,18 @@ public class DashboardStatisticsService {
             BigDecimal currentTotal = BigDecimal.ZERO;
             BigDecimal lastMonthTotal = BigDecimal.ZERO;
 
-            for (ParsedReceipt receipt : receipts) {
-                if (receipt == null) {
+            for (ReceiptExtractionService.ReceiptSummary summary : summaries) {
+                if (summary == null) {
                     continue;
                 }
 
-                BigDecimal amount = receipt.totalAmountValue();
+                BigDecimal amount = parseTotalAmount(summary.totalAmount());
                 if (amount == null) {
                     continue;
                 }
 
-                LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
-                    .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                LocalDate receiptDate = parseReceiptDate(summary.receiptDate())
+                    .orElseGet(() -> deriveDateFromInstant(summary.updatedAt()));
                 if (receiptDate == null) {
                     continue;
                 }
@@ -154,6 +155,29 @@ public class DashboardStatisticsService {
             log.warn("Unable to load personal receipt totals for dashboard statistics.", ex);
             return PersonalTotals.unavailable();
         }
+    }
+
+    private BigDecimal parseTotalAmount(Object value) {
+        if (value instanceof BigDecimal bigDecimal) {
+            return bigDecimal;
+        }
+        if (value instanceof Number number) {
+            return new BigDecimal(number.toString());
+        }
+        if (value instanceof String string) {
+            String normalized = string.replace('\u00A0', ' ').trim();
+            if (normalized.isEmpty()) {
+                return null;
+            }
+            normalized = normalized.replace(" ", "");
+            normalized = normalized.replace(',', '.');
+            try {
+                return new BigDecimal(normalized);
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private Optional<LocalDate> parseReceiptDate(String rawDate) {

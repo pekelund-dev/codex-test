@@ -61,6 +61,107 @@ public class ReceiptExtractionService {
         return firestore.isPresent();
     }
 
+    /**
+     * Lightweight receipt summary for dashboard statistics.
+     * Only extracts top-level fields without parsing nested data structures.
+     */
+    public record ReceiptSummary(
+        String id,
+        ReceiptOwner owner,
+        Instant updatedAt,
+        String storeName,
+        String receiptDate,
+        Object totalAmount,
+        int itemCount
+    ) {
+    }
+
+    public List<ReceiptSummary> listReceiptSummaries(ReceiptOwner owner, boolean includeAllOwners) {
+        if (firestore.isEmpty()) {
+            return List.of();
+        }
+
+        if (!includeAllOwners && owner == null) {
+            return List.of();
+        }
+
+        try {
+            Firestore db = firestore.get();
+            Query query = db.collection(properties.getReceiptsCollection());
+            String description;
+
+            if (includeAllOwners) {
+                description = "Load all receipt summaries";
+            } else {
+                if (owner == null || !StringUtils.hasText(owner.id())) {
+                    return List.of();
+                }
+                query = query.whereEqualTo("owner.id", owner.id());
+                description = "Load receipt summaries for owner " + owner.id();
+            }
+
+            QuerySnapshot snapshot = query.get().get();
+            recordRead(description, snapshot != null ? snapshot.size() : 0);
+            List<ReceiptSummary> summaries = new ArrayList<>();
+            for (DocumentSnapshot document : snapshot.getDocuments()) {
+                ReceiptSummary summary = toReceiptSummary(document);
+                if (summary != null) {
+                    summaries.add(summary);
+                }
+            }
+            summaries.sort(Comparator.comparing(ReceiptSummary::updatedAt,
+                Comparator.nullsLast(Comparator.reverseOrder())));
+            return Collections.unmodifiableList(summaries);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while loading receipt summaries from Firestore", ex);
+            throw new ReceiptExtractionAccessException("Interrupted while loading receipt summaries from Firestore.", ex);
+        } catch (ExecutionException ex) {
+            log.error("Failed to load receipt summaries from Firestore", ex);
+            throw new ReceiptExtractionAccessException("Failed to load receipt summaries from Firestore.", ex);
+        }
+    }
+
+    private ReceiptSummary toReceiptSummary(DocumentSnapshot snapshot) {
+        Map<String, Object> data = snapshot.getData();
+        if (data == null || data.isEmpty()) {
+            return null;
+        }
+
+        // Extract only top-level fields - no parsing of nested data structures
+        Instant updatedAt = extractUpdatedAt(snapshot, data.get("updatedAt"));
+        ReceiptOwner owner = toReceiptOwner(data.get("owner"));
+        
+        // Get summary fields that were added to top level
+        String storeName = asString(data.get("storeName"));
+        String receiptDate = asString(data.get("receiptDate"));
+        Object totalAmount = data.get("totalAmount");
+        
+        // Get itemCount from top level (added in receipt-parser)
+        Integer itemCountRaw = null;
+        if (data.get("itemCount") instanceof Number number) {
+            itemCountRaw = number.intValue();
+        }
+        
+        // Fallback: count items in data.items if itemCount not present (for older receipts)
+        int itemCount = itemCountRaw != null ? itemCountRaw : 0;
+        if (itemCount == 0 && data.containsKey("data")) {
+            Map<String, Object> structuredData = toStringObjectMap(data.get("data"));
+            List<Map<String, Object>> items = toMapList(structuredData.get("items"));
+            itemCount = items.size();
+        }
+
+        return new ReceiptSummary(
+            snapshot.getId(),
+            owner,
+            updatedAt,
+            storeName,
+            receiptDate,
+            totalAmount,
+            itemCount
+        );
+    }
+
     public List<ParsedReceipt> listReceiptsForOwner(ReceiptOwner owner) {
         return listReceipts(owner, false);
     }

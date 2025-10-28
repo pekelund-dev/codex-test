@@ -105,6 +105,18 @@ public class ReceiptExtractionRepository {
             if (extractionResult != null) {
                 payload.put("data", structuredData);
                 payload.put("rawResponse", extractionResult.rawResponse());
+                
+                // Add summary fields for efficient dashboard queries
+                payload.put("itemCount", items != null ? items.size() : 0);
+                if (general != null && general.containsKey("storeName")) {
+                    payload.put("storeName", general.get("storeName"));
+                }
+                if (general != null && general.containsKey("receiptDate")) {
+                    payload.put("receiptDate", general.get("receiptDate"));
+                }
+                if (general != null && general.containsKey("totalAmount")) {
+                    payload.put("totalAmount", general.get("totalAmount"));
+                }
             }
 
             if (errorMessage != null) {
