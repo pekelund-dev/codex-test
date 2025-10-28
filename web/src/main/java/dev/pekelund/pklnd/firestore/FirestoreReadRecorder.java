@@ -1,5 +1,6 @@
 package dev.pekelund.pklnd.firestore;
 
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
@@ -30,7 +31,7 @@ public class FirestoreReadRecorder {
 
     public void record(String description, long readUnits) {
         long units = Math.max(0L, readUnits);
-        FirestoreReadTracker tracker = trackerProvider.getIfAvailable();
+        FirestoreReadTracker tracker = resolveTracker();
         if (tracker != null) {
             tracker.recordRead(description, units);
             return;
@@ -38,6 +39,19 @@ public class FirestoreReadRecorder {
 
         if (units > 0) {
             totals.increment(units);
+        }
+    }
+
+    private FirestoreReadTracker resolveTracker() {
+        FirestoreReadTracker tracker = trackerProvider.getIfAvailable();
+        if (tracker != null) {
+            return tracker;
+        }
+
+        try {
+            return trackerProvider.getObject();
+        } catch (BeansException ex) {
+            return null;
         }
     }
 }
