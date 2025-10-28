@@ -319,19 +319,39 @@ public class ReceiptExtractionRepository {
             return List.of();
         }
         Object items = structuredData.get("items");
-        if (!(items instanceof Collection<?> collection)) {
+        return normalizeItems(items);
+    }
+
+    static List<Map<String, Object>> normalizeItems(Object items) {
+        if (items == null) {
             return List.of();
         }
+
         List<Map<String, Object>> result = new ArrayList<>();
-        for (Object element : collection) {
-            if (element instanceof Map<?, ?> map) {
-                result.add(toStringObjectMap(map));
+
+        if (items instanceof Collection<?> collection) {
+            for (Object element : collection) {
+                Map<String, Object> mapped = toStringObjectMap(element);
+                if (!mapped.isEmpty()) {
+                    result.add(mapped);
+                }
             }
+        } else if (items instanceof Map<?, ?> map) {
+            for (Object value : map.values()) {
+                Map<String, Object> mapped = toStringObjectMap(value);
+                if (!mapped.isEmpty()) {
+                    result.add(mapped);
+                }
+            }
+        }
+
+        if (result.isEmpty()) {
+            return List.of();
         }
         return List.copyOf(result);
     }
 
-    private Map<String, Object> toStringObjectMap(Object value) {
+    private static Map<String, Object> toStringObjectMap(Object value) {
         if (!(value instanceof Map<?, ?> map)) {
             return Map.of();
         }
@@ -346,11 +366,11 @@ public class ReceiptExtractionRepository {
         return Collections.unmodifiableMap(result);
     }
 
-    private String extractNormalizedEan(Map<String, Object> item) {
+    static String extractNormalizedEan(Map<String, Object> item) {
         if (item == null || item.isEmpty()) {
             return null;
         }
-        String[] keys = {"ean", "gtin", "barcode", "code", "productCode", "itemCode"};
+        String[] keys = {"ean", "gtin", "barcode", "code", "productCode", "itemCode", "eanCode", "ean_code"};
         for (String key : keys) {
             String normalized = normalizeEanValue(item.get(key));
             if (normalized != null) {
@@ -360,7 +380,7 @@ public class ReceiptExtractionRepository {
         return normalizeEanValue(item.get("name"));
     }
 
-    private String normalizeEanValue(Object raw) {
+    private static String normalizeEanValue(Object raw) {
         if (raw == null) {
             return null;
         }
@@ -382,7 +402,7 @@ public class ReceiptExtractionRepository {
         return null;
     }
 
-    private boolean isValidEan(String digits) {
+    private static boolean isValidEan(String digits) {
         return StringUtils.hasText(digits) && digits.length() >= 8 && digits.length() <= 14;
     }
 
