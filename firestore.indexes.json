@@ -27,16 +27,6 @@
           "order": "ASCENDING"
         }
       ]
-    },
-    {
-      "collectionGroup": "receiptItems",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "receiptId",
-          "order": "ASCENDING"
-        }
-      ]
     }
   ],
   "fieldOverrides": []
