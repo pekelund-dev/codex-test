@@ -117,7 +117,8 @@ public class ReceiptExtractionRepository {
                 LOGGER.debug("Firestore payload for {}/{}: {}", collectionName, documentId, payload);
             }
 
-            ItemSyncPlan syncPlan = determineSyncPlan(documentId, owner, status, general, items, updateTimestamp);
+            ItemSyncPlan syncPlan = determineSyncPlan(documentId, objectName, owner, status, general, items,
+                updateTimestamp);
 
             WriteBatch batch = firestore.batch();
             batch.set(documentReference, payload, SetOptions.merge());
@@ -135,12 +136,13 @@ public class ReceiptExtractionRepository {
         }
     }
 
-    private ItemSyncPlan determineSyncPlan(String documentId, ReceiptOwner owner, ReceiptProcessingStatus status,
-        Map<String, Object> general, List<Map<String, Object>> items, Timestamp updatedAt)
+    private ItemSyncPlan determineSyncPlan(String documentId, String objectName, ReceiptOwner owner,
+        ReceiptProcessingStatus status, Map<String, Object> general, List<Map<String, Object>> items,
+        Timestamp updatedAt)
         throws InterruptedException, ExecutionException {
 
         if (status == ReceiptProcessingStatus.COMPLETED) {
-            return buildUpsertPlan(documentId, owner, general, items, updatedAt);
+            return buildUpsertPlan(documentId, objectName, owner, general, items, updatedAt);
         }
         if (status == ReceiptProcessingStatus.FAILED || status == ReceiptProcessingStatus.SKIPPED) {
             return buildRemovalPlan(documentId);
@@ -172,8 +174,9 @@ public class ReceiptExtractionRepository {
         return new ItemSyncPlan(deletions, List.of(), deltas, Map.of());
     }
 
-    private ItemSyncPlan buildUpsertPlan(String documentId, ReceiptOwner owner, Map<String, Object> general,
-        List<Map<String, Object>> items, Timestamp updatedAt) throws InterruptedException, ExecutionException {
+    private ItemSyncPlan buildUpsertPlan(String documentId, String objectName, ReceiptOwner owner,
+        Map<String, Object> general, List<Map<String, Object>> items, Timestamp updatedAt)
+        throws InterruptedException, ExecutionException {
 
         QuerySnapshot snapshot = firestore.collection(itemsCollectionName)
             .whereEqualTo("receiptId", documentId)
@@ -195,6 +198,8 @@ public class ReceiptExtractionRepository {
         String ownerId = owner != null ? owner.id() : null;
         String receiptDate = asString(general.get("receiptDate"));
         String storeName = asString(general.get("storeName"));
+        String fileName = asString(general.get("fileName"));
+        String displayName = resolveReceiptDisplayName(storeName, fileName, objectName);
 
         for (int index = 0; index < items.size(); index++) {
             Map<String, Object> item = items.get(index);
@@ -214,6 +219,12 @@ public class ReceiptExtractionRepository {
             }
             if (StringUtils.hasText(storeName)) {
                 document.put("receiptStoreName", storeName);
+            }
+            if (StringUtils.hasText(displayName)) {
+                document.put("receiptDisplayName", displayName);
+            }
+            if (StringUtils.hasText(objectName)) {
+                document.put("receiptObjectName", objectName);
             }
             if (StringUtils.hasText(ownerId)) {
                 document.put("ownerId", ownerId);
@@ -492,6 +503,19 @@ public class ReceiptExtractionRepository {
             current = map.get(key);
         }
         return current;
+    }
+
+    private String resolveReceiptDisplayName(String storeName, String fileName, String objectName) {
+        if (StringUtils.hasText(storeName)) {
+            return storeName;
+        }
+        if (StringUtils.hasText(fileName)) {
+            return fileName;
+        }
+        if (StringUtils.hasText(objectName)) {
+            return objectName;
+        }
+        return null;
     }
 
     private String asString(Object value) {

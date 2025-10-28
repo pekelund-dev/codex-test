@@ -249,7 +249,21 @@ public class ReceiptExtractionService {
                 }
                 String ownerId = document.getString("ownerId");
                 Timestamp updatedAt = document.getTimestamp("receiptUpdatedAt");
-                references.add(new ReceiptItemReference(receiptId, ownerId, toInstant(updatedAt)));
+                String receiptDate = asString(document.get("receiptDate"));
+                String storeName = asString(document.get("receiptStoreName"));
+                String displayName = asString(document.get("receiptDisplayName"));
+                String objectName = asString(document.get("receiptObjectName"));
+                Map<String, Object> itemData = toStringObjectMap(document.get("itemData"));
+                references.add(new ReceiptItemReference(
+                    receiptId,
+                    ownerId,
+                    toInstant(updatedAt),
+                    receiptDate,
+                    storeName,
+                    displayName,
+                    objectName,
+                    itemData
+                ));
             }
             return List.copyOf(references);
         } catch (InterruptedException ex) {
@@ -519,6 +533,18 @@ public class ReceiptExtractionService {
         return value.toString();
     }
 
-    public record ReceiptItemReference(String receiptId, String ownerId, Instant receiptUpdatedAt) {
+    public record ReceiptItemReference(
+        String receiptId,
+        String ownerId,
+        Instant receiptUpdatedAt,
+        String receiptDate,
+        String receiptStoreName,
+        String receiptDisplayName,
+        String receiptObjectName,
+        Map<String, Object> itemData
+    ) {
+        public ReceiptItemReference {
+            itemData = itemData == null ? Map.of() : Map.copyOf(itemData);
+        }
     }
 }
