@@ -119,8 +119,11 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
             .whereEqualTo("email", normalizedEmail)
             .limit(1)
             .get();
-        recordRead("Load OAuth user " + normalizedEmail);
         QuerySnapshot querySnapshot = queryFuture.get();
+        recordRead(
+            "Load OAuth user " + normalizedEmail,
+            querySnapshot != null ? querySnapshot.size() : 0L
+        );
         if (querySnapshot == null || querySnapshot.isEmpty()) {
             return null;
         }
@@ -169,9 +172,13 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
     }
 
     private void recordRead(String description) {
+        recordRead(description, 1L);
+    }
+
+    private void recordRead(String description, long readUnits) {
         FirestoreReadTracker tracker = readTrackerProvider.getIfAvailable();
         if (tracker != null) {
-            tracker.recordRead(description);
+            tracker.recordRead(description, readUnits);
         }
     }
 

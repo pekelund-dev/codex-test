@@ -2,6 +2,7 @@ package dev.pekelund.pklnd.firestore;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -31,7 +32,7 @@ public class FirestoreReadLoggingInterceptor implements HandlerInterceptor {
             return;
         }
 
-        int count = tracker.getReadCount();
+        long count = tracker.getReadCount();
         if (count == 0) {
             return;
         }
@@ -41,7 +42,13 @@ public class FirestoreReadLoggingInterceptor implements HandlerInterceptor {
             request.getMethod(),
             request.getRequestURI(),
             count,
-            String.join("; ", tracker.getReadOperations())
+            tracker.getReadOperations()
+                .stream()
+                .map(operation ->
+                    operation.readUnits() <= 1
+                        ? operation.description()
+                        : operation.description() + " (" + operation.readUnits() + ")")
+                .collect(Collectors.joining("; "))
         );
     }
 }

@@ -9,7 +9,14 @@ public class FirestoreReadTotals {
     private final AtomicLong totalReads = new AtomicLong();
 
     public void increment() {
-        totalReads.incrementAndGet();
+        increment(1L);
+    }
+
+    public void increment(long amount) {
+        if (amount <= 0) {
+            return;
+        }
+        totalReads.addAndGet(amount);
     }
 
     public long getTotalReads() {

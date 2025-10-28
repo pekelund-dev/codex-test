@@ -76,9 +76,10 @@ public class FirestoreUserService implements UserDetailsService {
         try {
             CollectionReference collection = firestore.collection(properties.getUsersCollection());
             ApiFuture<QuerySnapshot> query = collection.get();
-            recordRead("Count users in " + properties.getUsersCollection());
             QuerySnapshot snapshot = query.get();
-            return snapshot != null ? snapshot.size() : 0L;
+            long readUnits = snapshot != null ? snapshot.size() : 0L;
+            recordRead("Count users in " + properties.getUsersCollection(), readUnits);
+            return readUnits;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             log.warn("Interrupted while counting Firestore user documents.", ex);
@@ -194,8 +195,11 @@ public class FirestoreUserService implements UserDetailsService {
         try {
             CollectionReference collection = firestore.collection(properties.getUsersCollection());
             ApiFuture<QuerySnapshot> queryFuture = collection.whereArrayContains("roles", adminRole).get();
-            recordRead("List administrator accounts");
             QuerySnapshot querySnapshot = queryFuture.get();
+            recordRead(
+                "List administrator accounts",
+                querySnapshot != null ? querySnapshot.size() : 0L
+            );
 
             if (querySnapshot == null || querySnapshot.isEmpty()) {
                 return List.of();
@@ -346,8 +350,11 @@ public class FirestoreUserService implements UserDetailsService {
             .whereEqualTo("email", normalizedEmail)
             .limit(1)
             .get();
-        recordRead("Check if user exists: " + normalizedEmail);
         QuerySnapshot querySnapshot = queryFuture.get();
+        recordRead(
+            "Check if user exists: " + normalizedEmail,
+            querySnapshot != null ? querySnapshot.size() : 0L
+        );
         return querySnapshot != null && !querySnapshot.isEmpty();
     }
 
@@ -358,8 +365,11 @@ public class FirestoreUserService implements UserDetailsService {
             .whereEqualTo("email", normalizedEmail)
             .limit(1)
             .get();
-        recordRead("Find user by email: " + normalizedEmail);
         QuerySnapshot querySnapshot = queryFuture.get();
+        recordRead(
+            "Find user by email: " + normalizedEmail,
+            querySnapshot != null ? querySnapshot.size() : 0L
+        );
         if (querySnapshot == null || querySnapshot.isEmpty()) {
             return null;
         }
@@ -460,9 +470,13 @@ public class FirestoreUserService implements UserDetailsService {
     }
 
     private void recordRead(String description) {
+        recordRead(description, 1L);
+    }
+
+    private void recordRead(String description, long readUnits) {
         FirestoreReadTracker tracker = readTrackerProvider.getIfAvailable();
         if (tracker != null) {
-            tracker.recordRead(description);
+            tracker.recordRead(description, readUnits);
         }
     }
 

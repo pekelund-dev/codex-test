@@ -67,8 +67,11 @@ public class ReceiptExtractionService {
             ApiFuture<QuerySnapshot> future = firestore.get()
                 .collection(properties.getReceiptsCollection())
                 .get();
-            recordRead("Load all receipts from " + properties.getReceiptsCollection());
             QuerySnapshot snapshot = future.get();
+            recordRead(
+                "Load all receipts from " + properties.getReceiptsCollection(),
+                snapshot != null ? snapshot.size() : 0
+            );
             List<ParsedReceipt> receipts = new ArrayList<>();
             for (DocumentSnapshot document : snapshot.getDocuments()) {
                 ParsedReceipt parsed = toParsedReceipt(document);
@@ -102,8 +105,8 @@ public class ReceiptExtractionService {
             DocumentReference reference = firestore.get()
                 .collection(properties.getReceiptsCollection())
                 .document(id);
-            recordRead("Load receipt " + id);
             DocumentSnapshot snapshot = reference.get().get();
+            recordRead("Load receipt " + id, 1L);
             if (!snapshot.exists()) {
                 return Optional.empty();
             }
@@ -128,8 +131,8 @@ public class ReceiptExtractionService {
                 .collection(properties.getReceiptsCollection())
                 .listDocuments();
             for (DocumentReference document : documents) {
-                recordRead("Load receipt document before deletion");
                 DocumentSnapshot snapshot = document.get().get();
+                recordRead("Load receipt document before deletion", 1L);
                 if (!snapshot.exists()) {
                     continue;
                 }
@@ -198,9 +201,13 @@ public class ReceiptExtractionService {
     }
 
     private void recordRead(String description) {
+        recordRead(description, 1L);
+    }
+
+    private void recordRead(String description, long readUnits) {
         FirestoreReadTracker tracker = readTrackerProvider.getIfAvailable();
         if (tracker != null) {
-            tracker.recordRead(description);
+            tracker.recordRead(description, readUnits);
         }
     }
 
