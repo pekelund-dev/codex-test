@@ -194,6 +194,7 @@ class ReceiptOverviewControllerTests {
             Instant.parse(receiptDate + "T10:00:00Z"),
             general,
             items,
+            ParsedReceipt.ReceiptItemHistory.empty(),
             List.of(),
             List.of(),
             List.of(),

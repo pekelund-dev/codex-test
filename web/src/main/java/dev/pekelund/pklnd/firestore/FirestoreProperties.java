@@ -1,5 +1,6 @@
 package dev.pekelund.pklnd.firestore;
 
+import dev.pekelund.pklnd.receipts.ReceiptItemConstants;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -35,7 +36,17 @@ public class FirestoreProperties {
     /**
      * Firestore collection used to persist extracted receipt data.
      */
-    private String receiptsCollection = "receiptExtractions";
+    private String receiptsCollection = ReceiptItemConstants.DEFAULT_RECEIPTS_COLLECTION;
+
+    /**
+     * Firestore collection used to store denormalised receipt items.
+     */
+    private String receiptItemsCollection = ReceiptItemConstants.DEFAULT_RECEIPT_ITEMS_COLLECTION;
+
+    /**
+     * Firestore collection used to store aggregated receipt item statistics.
+     */
+    private String itemStatsCollection = ReceiptItemConstants.DEFAULT_ITEM_STATS_COLLECTION;
 
     /**
      * Default role granted to newly registered users.
@@ -93,6 +104,22 @@ public class FirestoreProperties {
 
     public void setReceiptsCollection(String receiptsCollection) {
         this.receiptsCollection = receiptsCollection;
+    }
+
+    public String getReceiptItemsCollection() {
+        return receiptItemsCollection;
+    }
+
+    public void setReceiptItemsCollection(String receiptItemsCollection) {
+        this.receiptItemsCollection = receiptItemsCollection;
+    }
+
+    public String getItemStatsCollection() {
+        return itemStatsCollection;
+    }
+
+    public void setItemStatsCollection(String itemStatsCollection) {
+        this.itemStatsCollection = itemStatsCollection;
     }
 
     public String getDefaultRole() {

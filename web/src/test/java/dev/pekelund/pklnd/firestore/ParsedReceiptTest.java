@@ -81,6 +81,7 @@ class ParsedReceiptTest {
             null,
             Map.of(),
             items,
+            ParsedReceipt.ReceiptItemHistory.empty(),
             List.of(),
             List.of(),
             List.of(),

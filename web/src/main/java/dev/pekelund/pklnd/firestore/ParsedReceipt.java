@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,6 +24,7 @@ public record ParsedReceipt(
     Instant updatedAt,
     Map<String, Object> general,
     List<Map<String, Object>> items,
+    ReceiptItemHistory itemHistory,
     List<Map<String, Object>> vats,
     List<Map<String, Object>> generalDiscounts,
     List<Map<String, Object>> errors,
@@ -37,6 +39,7 @@ public record ParsedReceipt(
     public ParsedReceipt {
         general = copyOfMap(general);
         items = copyOfMapList(items);
+        itemHistory = itemHistory != null ? itemHistory : ReceiptItemHistory.empty();
         vats = copyOfMapList(vats);
         generalDiscounts = copyOfMapList(generalDiscounts);
         errors = copyOfMapList(errors);
@@ -159,6 +162,10 @@ public record ParsedReceipt(
             normalized.add(Collections.unmodifiableMap(copy));
         }
         return Collections.unmodifiableList(normalized);
+    }
+
+    public ReceiptItemHistory itemHistory() {
+        return itemHistory != null ? itemHistory : ReceiptItemHistory.empty();
     }
 
     private QuantityParts parseQuantity(Object raw) {
@@ -299,5 +306,41 @@ public record ParsedReceipt(
             }
         }
         return Collections.unmodifiableList(copy);
+    }
+
+    public record ReceiptItemHistory(Map<String, Long> ownerCounts, Map<String, Long> globalCounts) {
+
+        public ReceiptItemHistory {
+            ownerCounts = ownerCounts != null ? Map.copyOf(ownerCounts) : Map.of();
+            globalCounts = globalCounts != null ? Map.copyOf(globalCounts) : Map.of();
+        }
+
+        public static ReceiptItemHistory empty() {
+            return new ReceiptItemHistory(Map.of(), Map.of());
+        }
+
+        public Map<String, Long> ownerCounts() {
+            return ownerCounts != null ? ownerCounts : Map.of();
+        }
+
+        public Map<String, Long> globalCounts() {
+            return globalCounts != null ? globalCounts : Map.of();
+        }
+
+        public boolean containsAll(Set<String> normalizedEans, boolean globalScope) {
+            if (normalizedEans == null || normalizedEans.isEmpty()) {
+                return true;
+            }
+            Map<String, Long> target = globalScope ? globalCounts() : ownerCounts();
+            return target.keySet().containsAll(normalizedEans);
+        }
+
+        public long countFor(String normalizedEan, boolean globalScope) {
+            if (normalizedEan == null) {
+                return 0L;
+            }
+            Map<String, Long> target = globalScope ? globalCounts() : ownerCounts();
+            return target.getOrDefault(normalizedEan, 0L);
+        }
     }
 }

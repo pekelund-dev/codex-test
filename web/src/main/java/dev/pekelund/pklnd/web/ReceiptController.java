@@ -30,6 +30,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Locale;
@@ -1054,16 +1055,12 @@ public class ReceiptController {
             effectiveScope = ReceiptViewScope.ALL;
         }
 
-        List<ParsedReceipt> receipts = viewingAll
-            ? receiptExtractionService.get().listAllReceipts()
-            : receiptExtractionService.get().listReceiptsForOwner(currentOwner);
-
-        if (!viewingAll && receipts.stream().noneMatch(parsed -> documentId.equals(parsed.id()))) {
-            receipts = new ArrayList<>(receipts);
-            receipts.add(receipt);
-        }
-
-        Map<String, Long> itemOccurrences = computeItemOccurrencesByEan(receipts);
+        ReceiptOwner statsOwner = viewingAll ? null : receipt.owner();
+        Set<String> normalizedEans = receipt.displayItems().stream()
+            .map(this::extractItemEan)
+            .filter(StringUtils::hasText)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<String, Long> itemOccurrences = resolveItemOccurrences(receipt, normalizedEans, statsOwner, viewingAll);
         List<Map<String, Object>> receiptItems = prepareReceiptItems(receipt.displayItems(), itemOccurrences);
 
         String displayName = receipt.displayName();
@@ -1076,6 +1073,27 @@ public class ReceiptController {
         model.addAttribute("viewingAll", viewingAll);
         model.addAttribute("ownsReceipt", ownsReceipt);
         return "receipt-detail";
+    }
+
+    private Map<String, Long> resolveItemOccurrences(ParsedReceipt receipt, Set<String> normalizedEans,
+        ReceiptOwner statsOwner, boolean viewingAll) {
+
+        if (normalizedEans == null || normalizedEans.isEmpty()) {
+            return Map.of();
+        }
+
+        ParsedReceipt.ReceiptItemHistory history = receipt.itemHistory();
+        boolean useGlobal = viewingAll;
+        if (history != null && history.containsAll(normalizedEans, useGlobal)) {
+            Map<String, Long> occurrences = new LinkedHashMap<>();
+            for (String ean : normalizedEans) {
+                long count = history.countFor(ean, useGlobal);
+                occurrences.put(ean, count);
+            }
+            return Map.copyOf(occurrences);
+        }
+
+        return receiptExtractionService.get().loadItemOccurrences(normalizedEans, statsOwner, viewingAll);
     }
 
     @GetMapping("/receipts/items/{eanCode}")
@@ -1101,36 +1119,65 @@ public class ReceiptController {
         }
 
         String trimmedEanCode = eanCode.trim();
-        ParsedReceipt sourceReceipt = null;
+        List<ReceiptExtractionService.ReceiptItemReference> itemReferences = receiptExtractionService.get()
+            .findReceiptItemReferences(trimmedEanCode, viewingAll ? null : currentOwner, viewingAll);
+
+        ReceiptExtractionService.ReceiptItemReference sourceReference = null;
         if (StringUtils.hasText(sourceReceiptId)) {
-            sourceReceipt = receiptExtractionService
-                .get()
-                .findById(sourceReceiptId)
-                .orElse(null);
-            boolean ownsSourceReceipt = sourceReceipt != null
-                && currentOwner != null
-                && ReceiptOwnerMatcher.belongsToCurrentOwner(sourceReceipt.owner(), currentOwner);
-            if (!viewingAll && sourceReceipt != null && !ownsSourceReceipt && canViewAll) {
-                viewingAll = true;
-                effectiveScope = ReceiptViewScope.ALL;
+            sourceReference = findReferenceByReceiptId(itemReferences, sourceReceiptId);
+            if (!viewingAll && canViewAll && sourceReference == null) {
+                List<ReceiptExtractionService.ReceiptItemReference> expandedReferences = receiptExtractionService
+                    .get()
+                    .findReceiptItemReferences(trimmedEanCode, null, true);
+                ReceiptExtractionService.ReceiptItemReference expandedSourceReference = findReferenceByReceiptId(
+                    expandedReferences,
+                    sourceReceiptId
+                );
+                if (expandedSourceReference != null
+                    && !belongsToCurrentOwner(expandedSourceReference.ownerId(), currentOwner)) {
+                    viewingAll = true;
+                    effectiveScope = ReceiptViewScope.ALL;
+                    itemReferences = expandedReferences;
+                    sourceReference = expandedSourceReference;
+                }
             }
         }
 
-        List<ParsedReceipt> receipts = viewingAll
-            ? receiptExtractionService.get().listAllReceipts()
-            : receiptExtractionService.get().listReceiptsForOwner(currentOwner);
+        ParsedReceipt sourceReceipt = null;
+        String sourceReceiptIdentifier = StringUtils.hasText(sourceReceiptId) ? sourceReceiptId.trim() : null;
+        String sourceReceiptName = sourceReference != null
+            ? resolveReceiptDisplayName(
+                sourceReference.receiptDisplayName(),
+                sourceReference.receiptStoreName(),
+                sourceReference.receiptObjectName()
+            )
+            : null;
 
-        if (sourceReceipt != null) {
-            String sourceReceiptIdentifier = sourceReceipt.id();
-            boolean alreadyIncluded = sourceReceiptIdentifier != null
-                && receipts.stream().anyMatch(parsed -> sourceReceiptIdentifier.equals(parsed.id()));
-            if (!alreadyIncluded) {
-                receipts = new ArrayList<>(receipts);
-                receipts.add(sourceReceipt);
+        List<ItemPurchaseView> purchases = buildItemPurchasesFromReferences(trimmedEanCode, itemReferences);
+
+        if (StringUtils.hasText(sourceReceiptIdentifier)) {
+            boolean includedInReferences = purchases.stream()
+                .anyMatch(purchase -> sourceReceiptIdentifier.equals(purchase.receiptId()));
+            if (!includedInReferences) {
+                sourceReceipt = receiptExtractionService
+                    .get()
+                    .findById(sourceReceiptIdentifier)
+                    .orElse(null);
+                if (sourceReceipt != null) {
+                    List<ItemPurchaseView> fallback = buildItemPurchasesFromReceipts(trimmedEanCode,
+                        List.of(sourceReceipt));
+                    if (!fallback.isEmpty()) {
+                        List<ItemPurchaseView> combined = new ArrayList<>(purchases.size() + fallback.size());
+                        combined.addAll(purchases);
+                        combined.addAll(fallback);
+                        purchases = sortPurchases(combined);
+                    }
+                    if (!StringUtils.hasText(sourceReceiptName)) {
+                        sourceReceiptName = resolveReceiptDisplayName(sourceReceipt);
+                    }
+                }
             }
         }
-
-        List<ItemPurchaseView> purchases = buildItemPurchases(trimmedEanCode, receipts);
 
         if (purchases.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found.");
@@ -1157,37 +1204,13 @@ public class ReceiptController {
         model.addAttribute("scopeParam", toScopeParameter(effectiveScope));
         model.addAttribute("viewingAll", viewingAll);
 
-        model.addAttribute("sourceReceiptId", sourceReceipt != null ? sourceReceipt.id() : null);
-        model.addAttribute("sourceReceiptName", sourceReceipt != null ? resolveReceiptDisplayName(sourceReceipt) : null);
+        model.addAttribute("sourceReceiptId", sourceReceiptIdentifier);
+        model.addAttribute("sourceReceiptName", sourceReceiptName);
 
         return "receipt-item";
     }
 
-    private Map<String, Long> computeItemOccurrencesByEan(List<ParsedReceipt> receipts) {
-        if (receipts == null || receipts.isEmpty()) {
-            return Map.of();
-        }
-
-        Map<String, Long> occurrences = new HashMap<>();
-        for (ParsedReceipt receipt : receipts) {
-            if (receipt == null) {
-                continue;
-            }
-            for (Map<String, Object> item : receipt.displayItems()) {
-                if (item == null || item.isEmpty()) {
-                    continue;
-                }
-                String ean = extractItemEan(item);
-                if (ean == null) {
-                    continue;
-                }
-                occurrences.merge(ean, 1L, Long::sum);
-            }
-        }
-        return Collections.unmodifiableMap(occurrences);
-    }
-
-    private List<ItemPurchaseView> buildItemPurchases(String targetEan, List<ParsedReceipt> receipts) {
+    private List<ItemPurchaseView> buildItemPurchasesFromReceipts(String targetEan, List<ParsedReceipt> receipts) {
         if (!StringUtils.hasText(targetEan) || receipts == null || receipts.isEmpty()) {
             return List.of();
         }
@@ -1243,8 +1266,101 @@ public class ReceiptController {
             }
         }
 
-        purchases.sort(Comparator.comparing(ItemPurchaseView::sortInstant, Comparator.nullsLast(Comparator.reverseOrder())));
-        return List.copyOf(purchases);
+        return sortPurchases(purchases);
+    }
+
+    private List<ItemPurchaseView> buildItemPurchasesFromReferences(String targetEan,
+        List<ReceiptExtractionService.ReceiptItemReference> references) {
+        if (!StringUtils.hasText(targetEan) || references == null || references.isEmpty()) {
+            return List.of();
+        }
+
+        String normalizedTarget = targetEan.trim();
+        List<ItemPurchaseView> purchases = new ArrayList<>();
+
+        for (ReceiptExtractionService.ReceiptItemReference reference : references) {
+            if (reference == null) {
+                continue;
+            }
+
+            Map<String, Object> item = reference.itemData();
+            if (item == null || item.isEmpty()) {
+                continue;
+            }
+
+            String itemEan = extractItemEan(item);
+            if (itemEan == null || !itemEan.equals(normalizedTarget)) {
+                continue;
+            }
+
+            String itemName = extractDisplayName(item.get("name"));
+            BigDecimal totalPrice = resolveTotalPrice(item);
+            BigDecimal unitPrice = resolveUnitPrice(item, totalPrice);
+            String priceLabel = determinePriceLabel(item, unitPrice, totalPrice);
+            BigDecimal resolvedPrice = unitPrice != null ? unitPrice : totalPrice;
+            BigDecimal priceValue = resolvedPrice != null ? resolvedPrice.setScale(2, RoundingMode.HALF_UP) : null;
+
+            LocalDate parsedReceiptDate = parseReceiptDate(reference.receiptDate());
+            Instant sortInstant = determineSortInstant(parsedReceiptDate, reference.receiptUpdatedAt());
+            String dateLabel = determineDateLabel(reference.receiptDate(), reference.receiptUpdatedAt());
+            String chartDate = parsedReceiptDate != null
+                ? parsedReceiptDate.toString()
+                : sortInstant != null
+                    ? sortInstant.atZone(ZoneId.systemDefault()).toLocalDate().toString()
+                    : null;
+
+            String receiptDisplayName = resolveReceiptDisplayName(
+                reference.receiptDisplayName(),
+                reference.receiptStoreName(),
+                reference.receiptObjectName()
+            );
+
+            purchases.add(new ItemPurchaseView(
+                itemName,
+                itemEan,
+                reference.receiptId(),
+                receiptDisplayName,
+                reference.receiptStoreName(),
+                dateLabel,
+                priceLabel,
+                sortInstant,
+                chartDate,
+                priceValue
+            ));
+        }
+
+        return sortPurchases(purchases);
+    }
+
+    private ReceiptExtractionService.ReceiptItemReference findReferenceByReceiptId(
+        List<ReceiptExtractionService.ReceiptItemReference> references,
+        String receiptId
+    ) {
+        if (references == null || references.isEmpty() || !StringUtils.hasText(receiptId)) {
+            return null;
+        }
+        String trimmedId = receiptId.trim();
+        return references.stream()
+            .filter(reference -> trimmedId.equals(reference.receiptId()))
+            .findFirst()
+            .orElse(null);
+    }
+
+    private boolean belongsToCurrentOwner(String ownerId, ReceiptOwner owner) {
+        if (!StringUtils.hasText(ownerId) || owner == null || !StringUtils.hasText(owner.id())) {
+            return false;
+        }
+        return ownerId.equals(owner.id());
+    }
+
+    private List<ItemPurchaseView> sortPurchases(List<ItemPurchaseView> purchases) {
+        if (purchases == null || purchases.isEmpty()) {
+            return List.of();
+        }
+        List<ItemPurchaseView> sorted = new ArrayList<>(purchases);
+        sorted.sort(Comparator.comparing(ItemPurchaseView::sortInstant,
+            Comparator.nullsLast(Comparator.reverseOrder())));
+        return List.copyOf(sorted);
     }
 
     private List<Map<String, Object>> buildPriceHistory(List<ItemPurchaseView> purchases) {
@@ -1408,17 +1524,27 @@ public class ReceiptController {
         if (receipt == null) {
             return null;
         }
-        String displayName = receipt.displayName();
-        if (StringUtils.hasText(displayName)) {
-            return displayName;
+        String resolved = resolveReceiptDisplayName(receipt.displayName(), receipt.storeName(), receipt.objectName());
+        if (StringUtils.hasText(resolved)) {
+            return resolved;
         }
         if (StringUtils.hasText(receipt.objectPath())) {
             return receipt.objectPath();
         }
-        if (StringUtils.hasText(receipt.objectName())) {
-            return receipt.objectName();
-        }
         return receipt.id();
+    }
+
+    private String resolveReceiptDisplayName(String displayName, String storeName, String objectName) {
+        if (StringUtils.hasText(displayName)) {
+            return displayName;
+        }
+        if (StringUtils.hasText(storeName)) {
+            return storeName;
+        }
+        if (StringUtils.hasText(objectName)) {
+            return objectName;
+        }
+        return null;
     }
 
     private LocalDate parseReceiptDate(String rawDate) {

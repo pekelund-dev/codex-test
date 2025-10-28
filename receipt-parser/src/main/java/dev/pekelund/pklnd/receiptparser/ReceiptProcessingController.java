@@ -5,21 +5,19 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * HTTP controller that receives Cloud Storage style events forwarded by the web application.
  */
 @RestController
-@RequestMapping(path = "/events/storage")
 public class ReceiptProcessingController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptProcessingController.class);
@@ -34,14 +32,20 @@ public class ReceiptProcessingController {
             objectMapper.getClass().getName(), System.identityHashCode(handler));
     }
 
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(path = {"/events/storage", "/"})
     public ResponseEntity<Void> handleStorageEvent(@RequestBody(required = false) String payload,
         @RequestHeader(value = "ce-type", required = false) String cloudEventType,
         @RequestHeader(value = "ce-subject", required = false) String cloudEventSubject,
-        @RequestHeader(value = "ce-id", required = false) String cloudEventId) {
+        @RequestHeader(value = "ce-id", required = false) String cloudEventId,
+        @RequestParam(value = "__GCP_CloudEventsMode", required = false) String cloudEventsMode) {
 
         LOGGER.info("ReceiptProcessingController invoked with CloudEvent type={} subject={} id={} payloadLength={}",
             cloudEventType, cloudEventSubject, cloudEventId, payload != null ? payload.length() : null);
+
+        if ("GCS_NOTIFICATION".equalsIgnoreCase(cloudEventsMode)) {
+            LOGGER.info("Acknowledging Cloud Storage push subscription validation request");
+            return ResponseEntity.noContent().build();
+        }
 
         if (!StringUtils.hasText(payload)) {
             LOGGER.warn("Received empty Cloud Storage event payload");

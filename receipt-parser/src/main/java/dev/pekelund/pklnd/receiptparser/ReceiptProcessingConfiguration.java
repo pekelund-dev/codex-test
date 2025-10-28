@@ -154,8 +154,12 @@ public class ReceiptProcessingConfiguration {
             optionsBuilder.setProjectId(receiptProcessingSettings.projectId());
         }
         Firestore firestore = optionsBuilder.build().getService();
-        LOGGER.info("Initialized Firestore client for project '{}' (target collection '{}')",
-            firestore.getOptions().getProjectId(), receiptProcessingSettings.receiptsCollection());
+        LOGGER.info(
+            "Initialized Firestore client for project '{}' (collections: receipts='{}', items='{}', stats='{}')",
+            firestore.getOptions().getProjectId(),
+            receiptProcessingSettings.receiptsCollection(),
+            receiptProcessingSettings.receiptItemsCollection(),
+            receiptProcessingSettings.itemStatsCollection());
         return firestore;
     }
 
@@ -172,7 +176,11 @@ public class ReceiptProcessingConfiguration {
     @Bean
     public ReceiptExtractionRepository receiptExtractionRepository(Firestore firestore,
         ReceiptProcessingSettings receiptProcessingSettings) {
-        return new ReceiptExtractionRepository(firestore, receiptProcessingSettings.receiptsCollection());
+        return new ReceiptExtractionRepository(
+            firestore,
+            receiptProcessingSettings.receiptsCollection(),
+            receiptProcessingSettings.receiptItemsCollection(),
+            receiptProcessingSettings.itemStatsCollection());
     }
 
     @Bean
