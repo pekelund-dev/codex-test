@@ -1060,9 +1060,7 @@ public class ReceiptController {
             .map(this::extractItemEan)
             .filter(StringUtils::hasText)
             .collect(Collectors.toCollection(LinkedHashSet::new));
-        Map<String, Long> itemOccurrences = normalizedEans.isEmpty()
-            ? Map.of()
-            : receiptExtractionService.get().loadItemOccurrences(normalizedEans, statsOwner, viewingAll);
+        Map<String, Long> itemOccurrences = resolveItemOccurrences(receipt, normalizedEans, statsOwner, viewingAll);
         List<Map<String, Object>> receiptItems = prepareReceiptItems(receipt.displayItems(), itemOccurrences);
 
         String displayName = receipt.displayName();
@@ -1075,6 +1073,27 @@ public class ReceiptController {
         model.addAttribute("viewingAll", viewingAll);
         model.addAttribute("ownsReceipt", ownsReceipt);
         return "receipt-detail";
+    }
+
+    private Map<String, Long> resolveItemOccurrences(ParsedReceipt receipt, Set<String> normalizedEans,
+        ReceiptOwner statsOwner, boolean viewingAll) {
+
+        if (normalizedEans == null || normalizedEans.isEmpty()) {
+            return Map.of();
+        }
+
+        ParsedReceipt.ReceiptItemHistory history = receipt.itemHistory();
+        boolean useGlobal = viewingAll;
+        if (history != null && history.containsAll(normalizedEans, useGlobal)) {
+            Map<String, Long> occurrences = new LinkedHashMap<>();
+            for (String ean : normalizedEans) {
+                long count = history.countFor(ean, useGlobal);
+                occurrences.put(ean, count);
+            }
+            return Map.copyOf(occurrences);
+        }
+
+        return receiptExtractionService.get().loadItemOccurrences(normalizedEans, statsOwner, viewingAll);
     }
 
     @GetMapping("/receipts/items/{eanCode}")

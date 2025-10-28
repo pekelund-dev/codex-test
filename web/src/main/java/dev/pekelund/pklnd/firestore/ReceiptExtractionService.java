@@ -426,6 +426,10 @@ public class ReceiptExtractionService {
         Map<String, Object> structuredData = toStringObjectMap(data.get("data"));
         Map<String, Object> general = toStringObjectMap(structuredData.get("general"));
         List<Map<String, Object>> items = toMapList(structuredData.get("items"));
+        Map<String, Object> itemHistoryRaw = toStringObjectMap(data.get("itemHistory"));
+        Map<String, Long> ownerHistory = toLongMap(itemHistoryRaw.get("owner"));
+        Map<String, Long> globalHistory = toLongMap(itemHistoryRaw.get("global"));
+        ParsedReceipt.ReceiptItemHistory itemHistory = new ParsedReceipt.ReceiptItemHistory(ownerHistory, globalHistory);
         List<Map<String, Object>> vats = toMapList(structuredData.get("vats"));
         List<Map<String, Object>> generalDiscounts = toMapList(structuredData.get("generalDiscounts"));
         List<Map<String, Object>> errors = toMapList(structuredData.get("errors"));
@@ -442,6 +446,7 @@ public class ReceiptExtractionService {
             updatedAt,
             general,
             items,
+            itemHistory,
             vats,
             generalDiscounts,
             errors,
@@ -449,6 +454,44 @@ public class ReceiptExtractionService {
             rawResponse,
             error
         );
+    }
+
+    private Map<String, Long> toLongMap(Object value) {
+        if (!(value instanceof Map<?, ?> map)) {
+            return Map.of();
+        }
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            Object key = entry.getKey();
+            if (key == null) {
+                continue;
+            }
+            Long numeric = toLong(entry.getValue());
+            if (numeric != null) {
+                result.put(key.toString(), numeric);
+            }
+        }
+        return Map.copyOf(result);
+    }
+
+    private Long toLong(Object value) {
+        if (value instanceof Long longValue) {
+            return longValue;
+        }
+        if (value instanceof Integer intValue) {
+            return intValue.longValue();
+        }
+        if (value instanceof Double doubleValue) {
+            return doubleValue.longValue();
+        }
+        if (value instanceof String text) {
+            try {
+                return Long.parseLong(text.trim());
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private Instant toInstant(Timestamp timestamp) {

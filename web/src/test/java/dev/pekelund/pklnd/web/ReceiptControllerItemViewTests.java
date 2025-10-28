@@ -110,6 +110,7 @@ class ReceiptControllerItemViewTests {
             Instant.parse("2024-10-02T11:00:00Z"),
             general,
             List.of(item),
+            ParsedReceipt.ReceiptItemHistory.empty(),
             List.of(),
             List.of(),
             List.of(),

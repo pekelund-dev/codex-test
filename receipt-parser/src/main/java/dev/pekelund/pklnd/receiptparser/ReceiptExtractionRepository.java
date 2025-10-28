@@ -17,10 +17,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
@@ -109,16 +111,22 @@ public class ReceiptExtractionRepository {
                 payload.put("error", errorMessage);
             }
 
+            ItemSyncPlan syncPlan = determineSyncPlan(documentId, objectName, owner, status, general, items,
+                updateTimestamp);
+
+            Object historyPayload = syncPlan.historyValue() != null ? syncPlan.historyValue().toPayload() : null;
+            if (historyPayload != null) {
+                payload.put("itemHistory", historyPayload);
+            }
+
             DocumentReference documentReference = firestore.collection(collectionName)
                 .document(documentId);
+
             LOGGER.info("Writing payload with {} entries to Firestore document {}/{}", payload.size(), collectionName,
                 documentId);
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Firestore payload for {}/{}: {}", collectionName, documentId, payload);
             }
-
-            ItemSyncPlan syncPlan = determineSyncPlan(documentId, objectName, owner, status, general, items,
-                updateTimestamp);
 
             WriteBatch batch = firestore.batch();
             batch.set(documentReference, payload, SetOptions.merge());
@@ -171,7 +179,7 @@ public class ReceiptExtractionRepository {
         for (Map.Entry<StatsKey, Long> entry : previousCounts.entrySet()) {
             deltas.put(entry.getKey(), -entry.getValue());
         }
-        return new ItemSyncPlan(deletions, List.of(), deltas, Map.of());
+        return new ItemSyncPlan(deletions, List.of(), deltas, Map.of(), ItemHistoryValue.deleteValue());
     }
 
     private ItemSyncPlan buildUpsertPlan(String documentId, String objectName, ReceiptOwner owner,
@@ -258,7 +266,9 @@ public class ReceiptExtractionRepository {
             }
         }
 
-        return new ItemSyncPlan(deletions, writes, deltas, metadata);
+        ItemHistoryValue historyValue = buildItemHistoryValue(ownerId, items, previousCounts, newCounts);
+
+        return new ItemSyncPlan(deletions, writes, deltas, metadata, historyValue);
     }
 
     private void applyItemSyncPlan(WriteBatch batch, ItemSyncPlan plan, Timestamp updatedAt) {
@@ -282,6 +292,103 @@ public class ReceiptExtractionRepository {
                 .document(buildStatsDocumentId(key.ownerId(), key.normalizedEan()));
             batch.set(statsRef, updates, SetOptions.merge());
         }
+    }
+
+    private ItemHistoryValue buildItemHistoryValue(String ownerId, List<Map<String, Object>> items,
+        Map<StatsKey, Long> previousCounts, Map<StatsKey, Long> newCounts)
+        throws InterruptedException, ExecutionException {
+
+        if (items == null || items.isEmpty()) {
+            return ItemHistoryValue.empty();
+        }
+
+        Set<String> normalizedEans = new LinkedHashSet<>();
+        for (Map<String, Object> item : items) {
+            String normalized = extractNormalizedEan(item);
+            if (StringUtils.hasText(normalized)) {
+                normalizedEans.add(normalized);
+            }
+        }
+
+        if (normalizedEans.isEmpty()) {
+            return ItemHistoryValue.empty();
+        }
+
+        Set<StatsKey> keysToLoad = new LinkedHashSet<>();
+        if (StringUtils.hasText(ownerId)) {
+            for (String ean : normalizedEans) {
+                keysToLoad.add(new StatsKey(ownerId, ean));
+            }
+        }
+        for (String ean : normalizedEans) {
+            keysToLoad.add(new StatsKey(ReceiptItemConstants.GLOBAL_OWNER_ID, ean));
+        }
+
+        Map<StatsKey, Long> existingTotals = loadExistingCounts(keysToLoad);
+
+        Map<String, Long> ownerCounts = new LinkedHashMap<>();
+        if (StringUtils.hasText(ownerId)) {
+            for (String ean : normalizedEans) {
+                StatsKey key = new StatsKey(ownerId, ean);
+                long finalCount = calculateFinalCount(existingTotals.getOrDefault(key, 0L),
+                    previousCounts.getOrDefault(key, 0L), newCounts.getOrDefault(key, 0L));
+                ownerCounts.put(ean, finalCount);
+            }
+        }
+
+        Map<String, Long> globalCounts = new LinkedHashMap<>();
+        for (String ean : normalizedEans) {
+            StatsKey key = new StatsKey(ReceiptItemConstants.GLOBAL_OWNER_ID, ean);
+            long finalCount = calculateFinalCount(existingTotals.getOrDefault(key, 0L),
+                previousCounts.getOrDefault(key, 0L), newCounts.getOrDefault(key, 0L));
+            globalCounts.put(ean, finalCount);
+        }
+
+        return new ItemHistoryValue(ownerCounts, globalCounts, false);
+    }
+
+    private long calculateFinalCount(long existingTotal, long previousCount, long newCount) {
+        long finalValue = existingTotal - previousCount + newCount;
+        return Math.max(finalValue, 0L);
+    }
+
+    private Map<StatsKey, Long> loadExistingCounts(Collection<StatsKey> keys)
+        throws InterruptedException, ExecutionException {
+
+        if (keys == null || keys.isEmpty()) {
+            return Map.of();
+        }
+
+        List<DocumentReference> references = new ArrayList<>();
+        for (StatsKey key : keys) {
+            if (!StringUtils.hasText(key.ownerId()) || !StringUtils.hasText(key.normalizedEan())) {
+                continue;
+            }
+            references.add(firestore.collection(itemStatsCollectionName)
+                .document(buildStatsDocumentId(key.ownerId(), key.normalizedEan())));
+        }
+
+        if (references.isEmpty()) {
+            return Map.of();
+        }
+
+        List<DocumentSnapshot> snapshots = firestore.getAll(references.toArray(new DocumentReference[0])).get();
+        Map<StatsKey, Long> counts = new LinkedHashMap<>();
+        for (DocumentSnapshot snapshot : snapshots) {
+            if (snapshot == null || !snapshot.exists()) {
+                continue;
+            }
+            String docId = snapshot.getId();
+            String[] parts = docId.split("#", 2);
+            if (parts.length != 2) {
+                continue;
+            }
+            String ownerId = parts[0];
+            String ean = parts[1];
+            Long count = snapshot.getLong("count");
+            counts.put(new StatsKey(ownerId, ean), count != null ? count : 0L);
+        }
+        return counts;
     }
 
     private Map<String, Object> buildStatsUpdate(StatsKey key, long delta, Timestamp updatedAt, StatsMetadata metadata) {
@@ -576,20 +683,22 @@ public class ReceiptExtractionRepository {
 
     private static final class ItemSyncPlan {
 
-        private static final ItemSyncPlan EMPTY = new ItemSyncPlan(List.of(), List.of(), Map.of(), Map.of());
+        private static final ItemSyncPlan EMPTY = new ItemSyncPlan(List.of(), List.of(), Map.of(), Map.of(), null);
 
         private final List<DocumentReference> deletions;
         private final List<ItemWrite> writes;
         private final Map<StatsKey, Long> deltas;
         private final Map<StatsKey, StatsMetadata> metadata;
+        private final ItemHistoryValue historyValue;
 
         private ItemSyncPlan(List<DocumentReference> deletions, List<ItemWrite> writes,
-            Map<StatsKey, Long> deltas, Map<StatsKey, StatsMetadata> metadata) {
+            Map<StatsKey, Long> deltas, Map<StatsKey, StatsMetadata> metadata, ItemHistoryValue historyValue) {
 
             this.deletions = deletions != null ? List.copyOf(deletions) : List.of();
             this.writes = writes != null ? List.copyOf(writes) : List.of();
             this.deltas = deltas != null ? Map.copyOf(deltas) : Map.of();
             this.metadata = metadata != null ? Map.copyOf(metadata) : Map.of();
+            this.historyValue = historyValue;
         }
 
         static ItemSyncPlan empty() {
@@ -614,6 +723,35 @@ public class ReceiptExtractionRepository {
 
         Map<StatsKey, StatsMetadata> metadata() {
             return metadata;
+        }
+
+        ItemHistoryValue historyValue() {
+            return historyValue;
+        }
+    }
+
+    private record ItemHistoryValue(Map<String, Long> ownerCounts, Map<String, Long> globalCounts, boolean delete) {
+
+        static ItemHistoryValue empty() {
+            return new ItemHistoryValue(Map.of(), Map.of(), false);
+        }
+
+        static ItemHistoryValue deleteValue() {
+            return new ItemHistoryValue(Map.of(), Map.of(), true);
+        }
+
+        Object toPayload() {
+            if (delete) {
+                return FieldValue.delete();
+            }
+            Map<String, Object> payload = new LinkedHashMap<>();
+            if (ownerCounts != null) {
+                payload.put("owner", ownerCounts);
+            }
+            if (globalCounts != null) {
+                payload.put("global", globalCounts);
+            }
+            return payload;
         }
     }
 }
