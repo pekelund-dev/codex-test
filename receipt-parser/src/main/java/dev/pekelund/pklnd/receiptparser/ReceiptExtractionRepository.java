@@ -307,19 +307,93 @@ public class ReceiptExtractionRepository {
     }
 
     private Map<String, Object> extractGeneral(Map<String, Object> structuredData) {
-        if (structuredData == null) {
+        return resolveGeneral(structuredData);
+    }
+
+    static Map<String, Object> resolveGeneral(Map<String, Object> structuredData) {
+        Map<String, Object> primary = structuredData != null
+            ? toStringObjectMap(structuredData.get("general"))
+            : Map.of();
+        Map<String, Object> fallback = findFallbackGeneral(structuredData);
+        if (fallback.isEmpty()) {
+            return primary;
+        }
+        if (primary.isEmpty()) {
+            return fallback;
+        }
+        Map<String, Object> merged = new LinkedHashMap<>(fallback);
+        merged.putAll(primary);
+        return Collections.unmodifiableMap(merged);
+    }
+
+    private static Map<String, Object> findFallbackGeneral(Map<String, Object> structuredData) {
+        if (structuredData == null || structuredData.isEmpty()) {
             return Map.of();
         }
-        Object general = structuredData.get("general");
-        return toStringObjectMap(general);
+        Map<String, Object> legacyGeneral = toStringObjectMap(nestedValue(structuredData, "legacy", "general"));
+        if (!legacyGeneral.isEmpty()) {
+            return legacyGeneral;
+        }
+        for (Object value : structuredData.values()) {
+            if (!(value instanceof Map<?, ?> nested)) {
+                continue;
+            }
+            Map<String, Object> candidate = toStringObjectMap(nested.get("general"));
+            if (!candidate.isEmpty()) {
+                return candidate;
+            }
+        }
+        return Map.of();
     }
 
     private List<Map<String, Object>> extractItems(Map<String, Object> structuredData) {
-        if (structuredData == null) {
+        return resolveItems(structuredData);
+    }
+
+    static List<Map<String, Object>> resolveItems(Map<String, Object> structuredData) {
+        List<Map<String, Object>> primary = structuredData != null
+            ? normalizeItems(structuredData.get("items"))
+            : List.of();
+        if (containsRecognisedEan(primary)) {
+            return primary;
+        }
+        List<Map<String, Object>> fallback = findFallbackItems(structuredData);
+        if (!fallback.isEmpty()) {
+            return fallback;
+        }
+        return primary;
+    }
+
+    private static List<Map<String, Object>> findFallbackItems(Map<String, Object> structuredData) {
+        if (structuredData == null || structuredData.isEmpty()) {
             return List.of();
         }
-        Object items = structuredData.get("items");
-        return normalizeItems(items);
+        List<Map<String, Object>> legacyItems = normalizeItems(nestedValue(structuredData, "legacy", "items"));
+        if (!legacyItems.isEmpty() && containsRecognisedEan(legacyItems)) {
+            return legacyItems;
+        }
+        for (Object value : structuredData.values()) {
+            if (!(value instanceof Map<?, ?> nested)) {
+                continue;
+            }
+            List<Map<String, Object>> candidate = normalizeItems(nested.get("items"));
+            if (!candidate.isEmpty() && containsRecognisedEan(candidate)) {
+                return candidate;
+            }
+        }
+        return List.of();
+    }
+
+    private static boolean containsRecognisedEan(List<Map<String, Object>> items) {
+        if (items == null || items.isEmpty()) {
+            return false;
+        }
+        for (Map<String, Object> item : items) {
+            if (extractNormalizedEan(item) != null) {
+                return true;
+            }
+        }
+        return false;
     }
 
     static List<Map<String, Object>> normalizeItems(Object items) {
@@ -404,6 +478,20 @@ public class ReceiptExtractionRepository {
 
     private static boolean isValidEan(String digits) {
         return StringUtils.hasText(digits) && digits.length() >= 8 && digits.length() <= 14;
+    }
+
+    private static Object nestedValue(Map<String, Object> source, String... path) {
+        if (source == null || path == null || path.length == 0) {
+            return null;
+        }
+        Object current = source;
+        for (String key : path) {
+            if (!(current instanceof Map<?, ?> map)) {
+                return null;
+            }
+            current = map.get(key);
+        }
+        return current;
     }
 
     private String asString(Object value) {

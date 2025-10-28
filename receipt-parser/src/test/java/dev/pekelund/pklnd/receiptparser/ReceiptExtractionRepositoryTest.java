@@ -35,4 +35,37 @@ class ReceiptExtractionRepositoryTest {
 
         assertThat(normalized).isEqualTo("7310865004703");
     }
+
+    @Test
+    void resolveItemsFallsBackToLegacySectionWhenPrimaryLacksEans() {
+        Map<String, Object> legacyItem = new LinkedHashMap<>();
+        legacyItem.put("name", "Mjölk");
+        legacyItem.put("eanCode", "7310865004703");
+
+        Map<String, Object> legacySection = Map.of("items", List.of(legacyItem));
+
+        Map<String, Object> structured = new LinkedHashMap<>();
+        structured.put("items", List.of(Map.of("name", "Mjölk")));
+        structured.put("legacy", legacySection);
+
+        List<Map<String, Object>> resolved = ReceiptExtractionRepository.resolveItems(structured);
+
+        assertThat(resolved).hasSize(1);
+        assertThat(resolved.get(0))
+            .containsEntry("name", "Mjölk")
+            .containsEntry("eanCode", "7310865004703");
+    }
+
+    @Test
+    void resolveGeneralBackfillsMissingFieldsFromLegacySection() {
+        Map<String, Object> structured = new LinkedHashMap<>();
+        structured.put("general", Map.of("receiptDate", "2024-10-01"));
+        structured.put("legacy", Map.of("general", Map.of("storeName", "ICA Test", "receiptDate", "2024-09-30")));
+
+        Map<String, Object> resolved = ReceiptExtractionRepository.resolveGeneral(structured);
+
+        assertThat(resolved)
+            .containsEntry("storeName", "ICA Test")
+            .containsEntry("receiptDate", "2024-10-01");
+    }
 }
