@@ -332,25 +332,31 @@ public class ReceiptExtractionService {
             return;
         }
 
+        if (!StringUtils.hasText(owner.id())) {
+            return;
+        }
+
         try {
-            Iterable<DocumentReference> documents = firestore.get()
+            // Use a filtered query instead of loading all documents
+            QuerySnapshot snapshot = firestore.get()
                 .collection(properties.getReceiptsCollection())
-                .listDocuments();
-            for (DocumentReference document : documents) {
-                DocumentSnapshot snapshot = document.get().get();
-                recordRead("Load receipt document before deletion", 1L);
-                if (!snapshot.exists()) {
-                    continue;
-                }
-                ParsedReceipt receipt = toParsedReceipt(snapshot);
+                .whereEqualTo("owner.id", owner.id())
+                .get()
+                .get();
+
+            recordRead("Load receipts for owner deletion", snapshot != null ? snapshot.size() : 0);
+
+            if (snapshot == null || snapshot.isEmpty()) {
+                return;
+            }
+
+            for (DocumentSnapshot document : snapshot.getDocuments()) {
+                ParsedReceipt receipt = toParsedReceipt(document);
                 if (receipt == null) {
                     continue;
                 }
-                if (!ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), owner)) {
-                    continue;
-                }
                 removeReceiptIndexes(document.getId(), receipt.owner());
-                document.delete().get();
+                document.getReference().delete().get();
             }
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
