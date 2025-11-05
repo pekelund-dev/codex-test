@@ -11,6 +11,7 @@ ResponsiveAuthApp is a Spring Boot starter application showcasing a responsive w
 - Sample Thymeleaf pages for unauthenticated and authenticated visitors.
 - Ready-to-style components and custom CSS for cohesive branding.
 - Optional receipts workspace with drag-and-drop uploads that sync to Google Cloud Storage.
+- Spring Modulith-based module boundaries with automated verification for the web and receipt processing services.
 
 ## Getting started
 
@@ -110,6 +111,35 @@ After completing either path, restart the application and visit <http://localhos
 ### Receipt parsing Cloud Run service (Vertex AI Gemini)
 
 The `receipt-parser` module now packages the receipt processor as a standalone Spring Boot web application that runs on Cloud Run. The web frontend calls this service after each successful upload, allowing the processor to download the receipt, extract structured data with Gemini, and persist the results to Firestore. The `web` module still hosts the interactive UI, while shared storage components live in the `core` module.
+
+### Spring Modulith module map
+
+Both Spring Boot applications (`web` and `receipt-parser`) enable [Spring Modulith](https://docs.spring.io/spring-modulith/reference/) to keep architectural boundaries explicit. Each major package is declared as an `@ApplicationModule`, and lightweight tests validate that the module graph has no forbidden dependencies.
+
+| Module | Location | Purpose |
+| --- | --- | --- |
+| `dev.pekelund.pklnd.web` | `web` | MVC controllers and view adapters for the responsive UI. |
+| `dev.pekelund.pklnd.firestore` | `web` | Firestore access for users and parsed receipts (declared as an open module so shared form DTOs can be reused without strict dependency checks). |
+| `dev.pekelund.pklnd.receipts` | `web` | Receipt dashboard orchestration and Cloud Storage integration. |
+| `dev.pekelund.pklnd.config` | `web` | Cross-cutting configuration shared by the web modules. |
+| `dev.pekelund.pklnd.receiptparser` | `receipt-parser` | Receipt ingestion, extraction orchestration, and HTTP API surface. |
+| `dev.pekelund.pklnd.receiptparser.legacy` | `receipt-parser` | Legacy parsing pipeline retained for comparison and fallbacks (marked as an open module because the modern extractor bridges to these classes). |
+| `dev.pekelund.pklnd.receiptparser.local` | `receipt-parser` | Local developer tooling, including mock controllers and chat models. |
+| `dev.pekelund.pklnd.storage` | `core` | Cloud Storage integration and abstractions shared across services. |
+| `dev.pekelund.pklnd.receipts` | `core` | Domain constants consumed by both applications. |
+
+Run the targeted Modulith verification tests to ensure boundaries stay intact:
+
+```bash
+# Core module scaffolding shared by both services
+./mvnw -pl core test -Dtest=ModularityVerificationTests
+
+# Web application modules
+./mvnw -Pinclude-web -pl web -am test -Dtest=ModularityVerificationTests
+
+# Receipt processor modules
+./mvnw -pl receipt-parser -am test -Dtest=ModularityVerificationTests
+```
 
 #### Quick Deployment
 
