@@ -79,11 +79,11 @@ Both guides walk through project creation, database provisioning, service accoun
 
 > 💡 When deploying to Cloud Run or any other Google-managed runtime, leave `FIRESTORE_CREDENTIALS` unset—the service account attached to the workload authenticates automatically via Application Default Credentials. Only download JSON keys for local development or third-party hosting.
 
-If you already generated service-account keys or OAuth credentials, keep the JSON files outside of the repository (for example `~/.config/responsive-auth/`). Point `FIRESTORE_CREDENTIALS_FILE` and/or `GOOGLE_OAUTH_CREDENTIALS_FILE` at those files and source the helper to populate the runtime environment without copying secrets into shell history:
+If you already generated service-account keys or OAuth credentials, keep the JSON files outside of the repository (for example `~/.config/pknld/`). Point `FIRESTORE_CREDENTIALS_FILE` and/or `GOOGLE_OAUTH_CREDENTIALS_FILE` at those files and source the helper to populate the runtime environment without copying secrets into shell history:
 
 ```bash
-export FIRESTORE_CREDENTIALS_FILE="$HOME/.config/responsive-auth/firestore.json"
-export GOOGLE_OAUTH_CREDENTIALS_FILE="$HOME/.config/responsive-auth/oauth-client.json"
+export FIRESTORE_CREDENTIALS_FILE="$HOME/.config/pknld/firestore.json"
+export GOOGLE_OAUTH_CREDENTIALS_FILE="$HOME/.config/pknld/oauth-client.json"
 source ./scripts/load_local_secrets.sh
 ```
 

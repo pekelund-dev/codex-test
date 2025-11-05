@@ -1,6 +1,6 @@
 spring:
   application:
-    name: responsive-auth-web
+    name: pknld-web
   messages:
     basename: messages
     fallback-to-system-locale: false

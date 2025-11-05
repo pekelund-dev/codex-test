@@ -27,8 +27,8 @@ clear && source ./scripts/source_local_env.sh && \
     ./mvnw -Pinclude-web -pl web -am spring-boot:run
 
 # Load locally stored service-account and OAuth credentials before running other helpers
-clear && export FIRESTORE_CREDENTIALS_FILE=$HOME/.config/responsive-auth/firestore.json && \
-    export GOOGLE_OAUTH_CREDENTIALS_FILE=$HOME/.config/responsive-auth/oauth-client.json && \
+clear && export FIRESTORE_CREDENTIALS_FILE=$HOME/.config/pknld/firestore.json && \
+    export GOOGLE_OAUTH_CREDENTIALS_FILE=$HOME/.config/pknld/oauth-client.json && \
     source ./scripts/load_local_secrets.sh
 ```
 

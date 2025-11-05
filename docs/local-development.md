@@ -69,8 +69,8 @@ source ./scripts/source_local_env.sh
 When you need to target your actual Firestore project or reuse Google OAuth credentials locally, keep the downloaded JSON files outside the repository and set `FIRESTORE_CREDENTIALS_FILE` / `GOOGLE_OAUTH_CREDENTIALS_FILE` before sourcing the helper:
 
 ```bash
-export FIRESTORE_CREDENTIALS_FILE=$HOME/.config/responsive-auth/firestore.json
-export GOOGLE_OAUTH_CREDENTIALS_FILE=$HOME/.config/responsive-auth/oauth-client.json
+export FIRESTORE_CREDENTIALS_FILE=$HOME/.config/pknld/firestore.json
+export GOOGLE_OAUTH_CREDENTIALS_FILE=$HOME/.config/pknld/oauth-client.json
 source ./scripts/load_local_secrets.sh
 ```
 
