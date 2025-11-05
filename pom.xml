@@ -38,6 +38,7 @@
         <google-cloud-storage.version>2.40.1</google-cloud-storage.version>
         <google-cloud-vertexai.version>1.35.0</google-cloud-vertexai.version>
         <spring-ai.version>1.0.3</spring-ai.version>
+        <spring-modulith.version>1.4.1</spring-modulith.version>
     </properties>
 
     <dependencyManagement>
@@ -46,6 +47,13 @@
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
                 <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.modulith</groupId>
+                <artifactId>spring-modulith-bom</artifactId>
+                <version>${spring-modulith.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
