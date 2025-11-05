@@ -1,6 +1,6 @@
 # Google Cloud setup with the gcloud CLI
 
-This guide collects the command-line steps required to run ResponsiveAuthApp end to end on Google Cloud. It complements the [Cloud Console walkthrough](gcp-setup-cloud-console.md) referenced from the main [README](../README.md).
+This guide collects the command-line steps required to run pknld end to end on Google Cloud. It complements the [Cloud Console walkthrough](gcp-setup-cloud-console.md) referenced from the main [README](../README.md).
 
 ## Prerequisites
 

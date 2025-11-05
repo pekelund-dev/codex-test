@@ -1,6 +1,6 @@
 # Google Cloud setup with the Cloud Console
 
-Use this guide if you prefer configuring ResponsiveAuthApp resources through the Google Cloud Console UI. A command-line alternative is documented in the [gcloud CLI guide](gcp-setup-gcloud.md) and both are referenced from the main [README](../README.md).
+Use this guide if you prefer configuring pknld resources through the Google Cloud Console UI. A command-line alternative is documented in the [gcloud CLI guide](gcp-setup-gcloud.md) and both are referenced from the main [README](../README.md).
 
 ### Default environment variables
 

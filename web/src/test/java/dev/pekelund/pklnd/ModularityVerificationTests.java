@@ -7,6 +7,6 @@ class ModularityVerificationTests {
 
     @Test
     void webModulesShouldRespectDeclaredBoundaries() {
-        ApplicationModules.of(ResponsiveAuthAppApplication.class).verify();
+        ApplicationModules.of(PknldApplication.class).verify();
     }
 }

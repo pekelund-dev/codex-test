@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import dev.pekelund.pklnd.PknldApplication;
 import dev.pekelund.pklnd.firestore.FirestoreReadTotals;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
@@ -16,10 +17,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ReceiptController.class)
+@ContextConfiguration(classes = PknldApplication.class)
 @Import(FirestoreReadTotals.class)
 class ReceiptOverviewPageTests {
 
