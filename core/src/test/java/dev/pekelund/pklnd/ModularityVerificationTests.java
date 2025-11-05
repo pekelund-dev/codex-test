@@ -7,6 +7,6 @@ class ModularityVerificationTests {
 
     @Test
     void coreModulesShouldVerifySuccessfully() {
-        ApplicationModules.of("dev.pekelund.pklnd").verify();
+        ApplicationModules.of(CoreModulithConfiguration.class).verify();
     }
 }
