@@ -3,7 +3,8 @@
 Running the entire stack locally avoids container builds in Artifact Registry and keeps
 experimentation free. This guide explains how to launch the Firestore emulator, configure
 matching environment variables, and run the Spring Boot web app plus the receipt parsing
-function on your workstation.
+function on your workstation so you can keep iterating on the personal receipt vault for ICA
+and other Swedish retailers without leaving your laptop.
 
 > ℹ️ The JSON key files you use locally are **not** required when the container runs on Cloud Run. Google injects the attached service account automatically in managed environments, so keep the downloaded keys on your workstation only.
 

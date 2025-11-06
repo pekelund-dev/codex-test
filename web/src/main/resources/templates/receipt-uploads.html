@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
 <head>
-    <title th:text="${pageTitle}">Receipt uploads</title>
+    <title th:text="${pageTitle}">Kvitto-uppladdningar</title>
 </head>
 <body>
 <section class="py-3 py-lg-4" th:attr="data-dashboard-url=@{/receipts/dashboard(scope=${scopeParam})}">
@@ -9,39 +9,38 @@
         <div class="col-lg-8">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body p-4">
-                    <h1 class="h3 fw-semibold text-primary mb-3">Upload receipts</h1>
+                    <h1 class="h3 fw-semibold text-primary mb-3">Ladda upp kvitton</h1>
                     <p class="text-muted mb-4">
-                        Drop PDF or image receipts into the area below, or click to choose files from your computer.
-                        Up to <span th:text="${maxUploadFiles}">50</span> files can be uploaded at a time.
+                        Släpp PDF- eller bildkvitton i ytan nedan, eller klicka för att välja filer från din dator.
+                        Du kan ladda upp upp till <span th:text="${maxUploadFiles}">50</span> filer åt gången.
                     </p>
 
                     <div th:if="${canViewAll}" class="mb-3">
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Receipt scope">
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Visningsläge för kvitton">
                             <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
-                               th:href="@{/receipts/uploads(scope='my')}">My receipts</a>
+                               th:href="@{/receipts/uploads(scope='my')}">Mina kvitton</a>
                             <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
-                               th:href="@{/receipts/uploads(scope='all')}">All receipts</a>
+                               th:href="@{/receipts/uploads(scope='all')}">Alla kvitton</a>
                         </div>
                         <p class="text-muted small mb-0 mt-2"
-                           th:text="${viewingAll} ? 'Managing all uploaded receipt files.' : 'Managing only the receipt files you have uploaded.'">Managing only the receipt files you have uploaded.</p>
+                           th:text="${viewingAll} ? 'Hanterar alla uppladdade kvittofiler.' : 'Hanterar bara kvittofiler du själv har laddat upp.'">Hanterar bara kvittofiler du själv har laddat upp.</p>
                     </div>
 
                     <div class="d-flex align-items-center gap-2 mb-4" aria-live="polite">
-                        <span class="text-muted small">Storage status:</span>
-                        <span th:if="${storageEnabled}" class="badge bg-success">Enabled</span>
-                        <span th:if="${!storageEnabled}" class="badge bg-danger">Disabled</span>
+                        <span class="text-muted small">Lagring:</span>
+                        <span th:if="${storageEnabled}" class="badge bg-success">Aktiv</span>
+                        <span th:if="${!storageEnabled}" class="badge bg-danger">Inaktiv</span>
                     </div>
 
                     <div th:if="${successMessage}" class="alert alert-success" role="alert">
-                        <span th:text="${successMessage}">Files uploaded successfully.</span>
+                        <span th:text="${successMessage}">Kvittofilen laddades upp.</span>
                     </div>
                     <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
-                        <span th:text="${errorMessage}">Upload failed.</span>
+                        <span th:text="${errorMessage}">Uppladdningen misslyckades.</span>
                     </div>
 
                     <div th:if="${!storageEnabled}" class="alert alert-warning" role="alert">
-                        Receipt uploads are currently disabled. Follow the Google Cloud Storage setup instructions in the
-                        README to enable this feature.
+                        Kvitto-uppladdningar är för närvarande avstängda. Följ instruktionerna för Google Cloud Storage i README för att aktivera funktionen.
                     </div>
 
                     <form th:if="${storageEnabled}" th:action="@{/receipts/upload}" method="post"
@@ -53,13 +52,12 @@
                             <div class="dropzone-icon text-primary mb-2">
                                 <i class="bi bi-cloud-arrow-up-fill" aria-hidden="true"></i>
                             </div>
-                            <p class="fw-semibold mb-1">Drag &amp; drop receipts here</p>
-                            <p class="text-muted small mb-3">or</p>
-                            <button type="button" class="btn btn-outline-primary" id="trigger-file-select">Click to
-                                select files
+                            <p class="fw-semibold mb-1">Dra och släpp kvitton här</p>
+                            <p class="text-muted small mb-3">eller</p>
+                            <button type="button" class="btn btn-outline-primary" id="trigger-file-select">Välj filer
                             </button>
                             <p class="text-muted small mt-3 mb-0" id="file-limit-hint">
-                                You can add up to <span th:text="${maxUploadFiles}">50</span> files per upload.
+                                Du kan lägga till upp till <span th:text="${maxUploadFiles}">50</span> filer per uppladdning.
                             </p>
                         </div>
 
@@ -76,10 +74,10 @@
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <a class="btn btn-link px-0" th:href="@{/receipts(scope=${scopeParam})}">
                                 <i class="bi bi-collection me-2" aria-hidden="true"></i>
-                                View stored receipts
+                                Visa kvittoarkivet
                             </a>
                             <button type="submit" class="btn btn-primary" id="upload-button" disabled>
-                                Upload receipt files
+                                Ladda upp kvittofiler
                             </button>
                         </div>
                     </form>
@@ -89,11 +87,11 @@
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body p-4 d-flex flex-column gap-3">
-                    <h2 class="h5 fw-semibold mb-0">Tips for faster uploads</h2>
+                    <h2 class="h5 fw-semibold mb-0">Tips för snabbare uppladdningar</h2>
                     <ul class="text-muted small mb-0 ps-3">
-                        <li>Group related receipts together so they are processed in the same batch.</li>
-                        <li>Use descriptive file names before uploading to make them easier to find later.</li>
-                        <li>Stay on this page after starting an upload to monitor the progress indicator.</li>
+                        <li>Gruppera kvitton som hör ihop så behandlas de i samma batch.</li>
+                        <li>Döp filerna innan du laddar upp dem så blir de enklare att hitta senare.</li>
+                        <li>Stanna kvar på sidan när uppladdningen startar för att följa förloppsindikatorn.</li>
                     </ul>
                 </div>
             </div>
@@ -107,26 +105,26 @@
                     <span class="d-flex align-items-center gap-2">
                         <img th:src="@{/img/collapsible-indicator.svg}" src="/img/collapsible-indicator.svg" alt=""
                              class="details-toggle-icon" aria-hidden="true">
-                        <span class="h5 fw-semibold mb-0">Stored receipt files</span>
+                        <span class="h5 fw-semibold mb-0">Sparade kvittofiler</span>
                     </span>
                     <span class="badge bg-primary-subtle text-primary" data-files-count
                           th:classappend="${files == null or #lists.isEmpty(files)} ? ' d-none'"
-                          th:text="${files != null ? files.size() + ' files' : '0 files'}">0 files</span>
+                          th:text="${files != null ? files.size() + ' filer' : '0 filer'}">0 filer</span>
                 </summary>
 
                 <div class="alert alert-warning" role="alert" th:if="${!storageEnabled}">
-                    Receipt uploads are currently disabled. Enable Google Cloud Storage to manage stored files.
+                    Kvitto-uppladdningar är för närvarande avstängda. Aktivera Google Cloud Storage för att hantera sparade filer.
                 </div>
 
                 <div class="alert alert-danger" role="alert" data-files-error
                      th:classappend="${listingError == null} ? ' d-none'"
                      th:text="${listingError != null ? listingError : ''}">
-                    Unable to list files.
+                    Det gick inte att lista filer.
                 </div>
 
                 <div class="text-center text-muted py-5" data-files-empty
                      th:classappend="${files != null and !#lists.isEmpty(files)} ? ' d-none'">
-                    <p class="mb-0">No receipt files have been uploaded yet.</p>
+                    <p class="mb-0">Inga kvittofiler har laddats upp ännu.</p>
                 </div>
 
                 <div class="table-responsive" data-files-table
@@ -134,12 +132,12 @@
                     <table class="table align-middle mb-0">
                         <thead class="table-light">
                         <tr>
-                            <th scope="col">File name</th>
-                            <th scope="col" class="text-end">Size</th>
-                            <th scope="col">Uploaded by</th>
-                            <th scope="col">Last updated</th>
+                            <th scope="col">Filnamn</th>
+                            <th scope="col" class="text-end">Storlek</th>
+                            <th scope="col">Uppladdad av</th>
+                            <th scope="col">Senast uppdaterad</th>
                             <th scope="col">Status</th>
-                            <th scope="col">Content type</th>
+                            <th scope="col">Innehållstyp</th>
                         </tr>
                         </thead>
                         <tbody data-files-body>
@@ -157,7 +155,7 @@
                                           th:text="${status != null && status.status() != null ? status.status() : 'PENDING'}">PENDING</span>
                                     <span class="text-muted small file-status-message"
                                           th:classappend="${status == null || status.statusMessage() == null} ? ' d-none'"
-                                          th:text="${status != null ? status.statusMessage() : ''}">Status message</span>
+                                          th:text="${status != null ? status.statusMessage() : ''}">Statusmeddelande</span>
                                 </div>
                             </td>
                             <td th:text="${file.contentType() != null ? file.contentType() : '—'}">application/pdf</td>

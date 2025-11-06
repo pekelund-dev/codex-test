@@ -1,26 +1,26 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
 <head>
-    <title th:text="${pageTitle}">Receipt details</title>
+    <title th:text="${pageTitle}">Kvittodetaljer</title>
 </head>
 <body>
 <section class="py-3 py-lg-4">
     <div class="d-flex align-items-center gap-2 mb-3">
         <a class="btn btn-link p-0 text-decoration-none" th:href="@{/receipts(scope=${scopeParam})}">
             <i class="bi bi-arrow-left"></i>
-            Back to receipts
+            Tillbaka till kvitton
         </a>
     </div>
 
     <div th:if="${canViewAll}" class="mb-3">
-        <div class="btn-group btn-group-sm" role="group" aria-label="Receipt scope">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Visningsläge för kvitton">
             <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
-               th:href="${ownsReceipt} ? @{/receipts/{id}(id=${receipt.id()}, scope='my')} : @{/receipts(scope='my')}">My receipts</a>
+               th:href="${ownsReceipt} ? @{/receipts/{id}(id=${receipt.id()}, scope='my')} : @{/receipts(scope='my')}">Mina kvitton</a>
             <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
-               th:href="@{/receipts/{id}(id=${receipt.id()}, scope='all')}">All receipts</a>
+               th:href="@{/receipts/{id}(id=${receipt.id()}, scope='all')}">Alla kvitton</a>
         </div>
         <p class="text-muted small mb-0 mt-2"
-           th:text="${viewingAll} ? 'Viewing all parsed receipts.' : 'Viewing only your parsed receipts.'">Viewing only your parsed receipts.</p>
+           th:text="${viewingAll} ? 'Visar alla tolkade kvitton.' : 'Visar bara dina egna tolkade kvitton.'">Visar bara dina egna tolkade kvitton.</p>
     </div>
 
     <div class="card shadow-sm border-0">
@@ -28,7 +28,7 @@
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
                 <div>
                     <h1 class="h3 fw-semibold text-primary mb-1"
-                        th:text="${receipt.displayName() != null ? receipt.displayName() : 'Receipt details'}">Receipt details</h1>
+                        th:text="${receipt.displayName() != null ? receipt.displayName() : 'Kvittodetaljer'}">Kvittodetaljer</h1>
                     <p class="text-muted mb-0" th:if="${receipt.objectPath()}" th:text="${receipt.objectPath()}">gs://bucket/object</p>
                 </div>
                 <div class="d-flex flex-column align-items-md-end gap-2">
@@ -36,7 +36,7 @@
                           th:classappend="${receipt.statusBadgeClass()}"
                           th:text="${receipt.status() != null ? receipt.status() : 'UNKNOWN'}">COMPLETED</span>
                     <div class="fw-semibold text-secondary" th:if="${receipt.formattedTotalAmount()}">
-                        Total:
+                        Totalsumma:
                         <span th:text="${receipt.formattedTotalAmount()}">129.99</span>
                         <span class="text-muted">SEK</span>
                     </div>
@@ -46,11 +46,11 @@
             <div class="row mt-4 gy-3">
                 <div class="col-md-6">
                     <dl class="row mb-0">
-                        <dt class="col-sm-4">Store</dt>
-                        <dd class="col-sm-8" th:text="${receipt.storeName() != null ? receipt.storeName() : '—'}">Store name</dd>
-                        <dt class="col-sm-4">Receipt date</dt>
+                        <dt class="col-sm-4">Butik</dt>
+                        <dd class="col-sm-8" th:text="${receipt.storeName() != null ? receipt.storeName() : '—'}">Butik</dd>
+                        <dt class="col-sm-4">Kvittodatum</dt>
                         <dd class="col-sm-8" th:text="${receipt.receiptDate() != null ? receipt.receiptDate() : '—'}">2024-01-01</dd>
-                        <dt class="col-sm-4">Total</dt>
+                        <dt class="col-sm-4">Totalsumma</dt>
                         <dd class="col-sm-8" th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() : (receipt.totalAmount() != null ? receipt.totalAmount() : '—')}">129.99</dd>
                         <dt class="col-sm-4">Format</dt>
                         <dd class="col-sm-8" th:text="${receipt.format() != null ? receipt.format() : '—'}">NEW_FORMAT</dd>
@@ -58,14 +58,14 @@
                 </div>
                 <div class="col-md-6">
                     <dl class="row mb-0">
-                        <dt class="col-sm-4">Updated</dt>
+                        <dt class="col-sm-4">Uppdaterad</dt>
                         <dd class="col-sm-8"
                             th:text="${receipt.updatedAt() != null ? #temporals.format(receipt.updatedAt(), 'yyyy-MM-dd HH:mm:ss') : '—'}">
                             2024-01-01 10:30:00
                         </dd>
-                        <dt class="col-sm-4">Status message</dt>
+                        <dt class="col-sm-4">Statusmeddelande</dt>
                         <dd class="col-sm-8" th:text="${receipt.statusMessage() != null ? receipt.statusMessage() : '—'}">Completed</dd>
-                        <dt class="col-sm-4">Error</dt>
+                        <dt class="col-sm-4">Felmeddelande</dt>
                         <dd class="col-sm-8" th:text="${receipt.error() != null ? receipt.error() : '—'}">—</dd>
                     </dl>
                 </div>
@@ -75,16 +75,16 @@
 
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
-            <h2 class="h5 fw-semibold mb-3">Items</h2>
-            <div th:if="${#lists.isEmpty(receiptItems)}" class="text-muted">No items were detected.</div>
+            <h2 class="h5 fw-semibold mb-3">Artikelrader</h2>
+            <div th:if="${#lists.isEmpty(receiptItems)}" class="text-muted">Inga artiklar hittades.</div>
             <div th:if="${!#lists.isEmpty(receiptItems)}" class="table-responsive">
                 <table class="table align-middle">
                     <thead class="table-light">
                     <tr>
-                        <th scope="col">Name</th>
-                        <th scope="col">Quantity</th>
-                        <th scope="col">Unit price</th>
-                        <th scope="col">Total price</th>
+                        <th scope="col">Artikel</th>
+                        <th scope="col">Antal</th>
+                        <th scope="col">Pris per enhet</th>
+                        <th scope="col">Totalsumma</th>
                         <th scope="col">Discounts</th>
                     </tr>
                     </thead>
@@ -93,13 +93,13 @@
                         <td th:with="itemName=${item['name'] != null ? #strings.trim(item['name']) : null},
                                        itemEan=${item['normalizedEan'] != null ? item['normalizedEan'] : null},
                                        historyCount=${item['historyCount'] != null ? item['historyCount'] : 0L}">
-                            <a th:if="${itemEan != null and historyCount > 1}"
+                               <a th:if="${itemEan != null and historyCount > 1}"
                                class="fw-semibold text-decoration-none"
                                th:href="@{/receipts/items/{eanCode}(eanCode=${itemEan}, sourceId=${receipt.id()}, scope=${scopeParam})}"
-                               th:text="${itemName != null ? itemName : '—'}">Item name</a>
+                               th:text="${itemName != null ? itemName : '—'}">Artikel</a>
                             <span th:if="${!(itemEan != null and historyCount > 1)}"
                                   class="fw-semibold"
-                                  th:text="${itemName != null ? itemName : '—'}">Item name</span>
+                                  th:text="${itemName != null ? itemName : '—'}">Artikel</span>
                             <div class="text-muted small" th:if="${itemEan != null}" th:text="${'EAN: ' + itemEan}">EAN</div>
                         </td>
                         <td th:text="${item['displayQuantity'] != null ? item['displayQuantity'] : (item['quantity'] != null ? item['quantity'] : '—')}">—</td>
@@ -109,7 +109,7 @@
                             <ul class="list-unstyled mb-0"
                                 th:if="${item['discounts'] != null and !#lists.isEmpty(item['discounts'])}">
                                 <li th:each="discount : ${item['discounts']}"
-                                    th:text="${(discount['description'] != null ? discount['description'] : 'Discount') + ' (' + (discount['amount'] != null ? discount['amount'] : '—') + ')'}">Discount</li>
+                                    th:text="${(discount['description'] != null ? discount['description'] : 'Rabatt') + ' (' + (discount['amount'] != null ? discount['amount'] : '—') + ')'}">Rabatt</li>
                             </ul>
                             <span th:if="${item['discounts'] == null or #lists.isEmpty(item['discounts'])}" class="text-muted">—</span>
                         </td>
@@ -122,16 +122,16 @@
 
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
-            <h2 class="h5 fw-semibold mb-3">VAT summary</h2>
-            <div th:if="${#lists.isEmpty(receipt.vats())}" class="text-muted">No VAT information available.</div>
+            <h2 class="h5 fw-semibold mb-3">Momsöversikt</h2>
+            <div th:if="${#lists.isEmpty(receipt.vats())}" class="text-muted">Ingen momsinformation tillgänglig.</div>
             <div th:if="${!#lists.isEmpty(receipt.vats())}" class="table-responsive">
                 <table class="table align-middle">
                     <thead class="table-light">
                     <tr>
-                        <th scope="col">Rate</th>
-                        <th scope="col">Net amount</th>
-                        <th scope="col">Tax amount</th>
-                        <th scope="col">Gross amount</th>
+                        <th scope="col">Sats</th>
+                        <th scope="col">Netto</th>
+                        <th scope="col">Moms</th>
+                        <th scope="col">Brutto</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -149,13 +149,13 @@
 
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
-            <h2 class="h5 fw-semibold mb-3">General discounts</h2>
-            <div th:if="${#lists.isEmpty(receipt.generalDiscounts())}" class="text-muted">No general discounts were found.</div>
+            <h2 class="h5 fw-semibold mb-3">Allmänna rabatter</h2>
+            <div th:if="${#lists.isEmpty(receipt.generalDiscounts())}" class="text-muted">Inga allmänna rabatter hittades.</div>
             <ul class="list-group list-group-flush"
                 th:if="${!#lists.isEmpty(receipt.generalDiscounts())}">
                 <li class="list-group-item" th:each="discount : ${receipt.generalDiscounts()}"
-                    th:text="${(discount['description'] != null ? discount['description'] : 'Discount') + ' (' + (discount['amount'] != null ? discount['amount'] : '—') + ')'}">
-                    Discount description (amount)
+                    th:text="${(discount['description'] != null ? discount['description'] : 'Rabatt') + ' (' + (discount['amount'] != null ? discount['amount'] : '—') + ')'}">
+                    Rabattbeskrivning (belopp)
                 </li>
             </ul>
         </div>
@@ -163,15 +163,15 @@
 
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
-            <h2 class="h5 fw-semibold mb-3">Parsing errors</h2>
-            <div th:if="${#lists.isEmpty(receipt.errors())}" class="text-muted">No parsing errors were reported.</div>
+            <h2 class="h5 fw-semibold mb-3">Tolkningsfel</h2>
+            <div th:if="${#lists.isEmpty(receipt.errors())}" class="text-muted">Inga tolkningsfel rapporterades.</div>
             <div th:if="${!#lists.isEmpty(receipt.errors())}" class="table-responsive">
                 <table class="table align-middle">
                     <thead class="table-light">
                     <tr>
-                        <th scope="col">Line</th>
-                        <th scope="col">Content</th>
-                        <th scope="col">Message</th>
+                        <th scope="col">Rad</th>
+                        <th scope="col">Innehåll</th>
+                        <th scope="col">Meddelande</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -188,13 +188,13 @@
 
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
-            <h2 class="h5 fw-semibold mb-3">Raw receipt text</h2>
-            <pre class="bg-light p-3 rounded small" th:text="${receipt.rawText() != null ? receipt.rawText() : 'No raw text available.'}">No raw text available.</pre>
+            <h2 class="h5 fw-semibold mb-3">Rå kvittotext</h2>
+            <pre class="bg-light p-3 rounded small" th:text="${receipt.rawText() != null ? receipt.rawText() : 'Ingen råtext tillgänglig.'}">Ingen råtext tillgänglig.</pre>
 
             <details class="mt-3">
-                <summary class="fw-semibold text-primary">View raw response</summary>
+                <summary class="fw-semibold text-primary">Visa råsvar</summary>
                 <pre class="bg-light p-3 rounded small mt-2"
-                     th:text="${receipt.rawResponse() != null ? receipt.rawResponse() : 'No raw response available.'}">Raw response</pre>
+                     th:text="${receipt.rawResponse() != null ? receipt.rawResponse() : 'Inget råsvar tillgängligt.'}">Råsvar</pre>
             </details>
         </div>
     </div>
