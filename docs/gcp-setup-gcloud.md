@@ -1,6 +1,6 @@
 # Google Cloud setup with the gcloud CLI
 
-This guide collects the command-line steps required to run ResponsiveAuthApp end to end on Google Cloud. It complements the [Cloud Console walkthrough](gcp-setup-cloud-console.md) referenced from the main [README](../README.md).
+This guide collects the command-line steps required to run pknld end to end on Google Cloud. It complements the [Cloud Console walkthrough](gcp-setup-cloud-console.md) referenced from the main [README](../README.md).
 
 ## Prerequisites
 
@@ -26,7 +26,7 @@ gcloud services enable \
 1. **Create (or select) your project**
 
     ```bash
-    gcloud projects create responsive-auth-app --set-as-default
+    gcloud projects create pknld-app --set-as-default
     # Or reuse an existing project
     ```
 
@@ -40,9 +40,9 @@ gcloud services enable \
 3. **Create a service account for the Spring Boot app**
 
     ```bash
-    FIRESTORE_SA=responsive-auth-firestore@$(gcloud config get-value project).iam.gserviceaccount.com
-    gcloud iam service-accounts create responsive-auth-firestore \
-      --display-name="ResponsiveAuth Firestore client"
+    FIRESTORE_SA=pknld-firestore@$(gcloud config get-value project).iam.gserviceaccount.com
+    gcloud iam service-accounts create pknld-firestore \
+      --display-name="pknld Firestore client"
 
     gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
       --member="serviceAccount:${FIRESTORE_SA}" \
@@ -64,11 +64,11 @@ gcloud services enable \
 
 5. **Export the application environment variables**
 
-    Keep any downloaded keys or OAuth credentials outside of the repository (for example under `~/.config/responsive-auth/`). Point environment variables at the files and source the helper so every shell inherits the derived values:
+    Keep any downloaded keys or OAuth credentials outside of the repository (for example under `~/.config/pknld/`). Point environment variables at the files and source the helper so every shell inherits the derived values:
 
     ```bash
-export FIRESTORE_CREDENTIALS_FILE=${FIRESTORE_CREDENTIALS_FILE:-$HOME/.config/responsive-auth/firestore.json}
-export GOOGLE_OAUTH_CREDENTIALS_FILE=${GOOGLE_OAUTH_CREDENTIALS_FILE:-$HOME/.config/responsive-auth/oauth-client.json}
+export FIRESTORE_CREDENTIALS_FILE=${FIRESTORE_CREDENTIALS_FILE:-$HOME/.config/pknld/firestore.json}
+export GOOGLE_OAUTH_CREDENTIALS_FILE=${GOOGLE_OAUTH_CREDENTIALS_FILE:-$HOME/.config/pknld/oauth-client.json}
 source ./scripts/load_local_secrets.sh
 
 export FIRESTORE_ENABLED=true
@@ -88,7 +88,7 @@ export RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION=${RECEIPT_FIRESTORE_ITEM_STATS_CO
 1. **Create the receipts bucket**
 
     ```bash
-    BUCKET=gs://responsive-auth-receipts-$(gcloud config get-value project)
+    BUCKET=gs://pknld-receipts-$(gcloud config get-value project)
     gcloud storage buckets create "${BUCKET}" --location="${REGION}"
     # Enforce uniform bucket-level access (enabled by default for new buckets)
     gcloud storage buckets update "${BUCKET}" --uniform-bucket-level-access
@@ -97,9 +97,9 @@ export RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION=${RECEIPT_FIRESTORE_ITEM_STATS_CO
 2. **Create a service account dedicated to uploads**
 
     ```bash
-    UPLOAD_SA=responsive-auth-receipts@$(gcloud config get-value project).iam.gserviceaccount.com
-    gcloud iam service-accounts create responsive-auth-receipts \
-      --display-name="ResponsiveAuth receipts uploader"
+    UPLOAD_SA=pknld-receipts@$(gcloud config get-value project).iam.gserviceaccount.com
+    gcloud iam service-accounts create pknld-receipts \
+      --display-name="pknld receipts uploader"
 
     gcloud storage buckets add-iam-policy-binding "${BUCKET}" \
       --member="serviceAccount:${UPLOAD_SA}" \
@@ -145,7 +145,7 @@ Before deploying, make sure the receipt processor module builds cleanly and that
     RECEIPT_SA=receipt-processor@${PROJECT_ID}.iam.gserviceaccount.com
     gcloud iam service-accounts create receipt-processor \n      --display-name="Receipt processor Cloud Run service" || true
 
-    BUCKET=gs://responsive-auth-receipts-${PROJECT_ID}  # Replace if you use a custom bucket
+    BUCKET=gs://pknld-receipts-${PROJECT_ID}  # Replace if you use a custom bucket
     gcloud storage buckets add-iam-policy-binding "${BUCKET}" \n      --member="serviceAccount:${RECEIPT_SA}" \n      --role="roles/storage.objectAdmin"
 
     gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
@@ -192,7 +192,7 @@ Before deploying, make sure the receipt processor module builds cleanly and that
 1. **Grant the web service account invocation rights** so uploads can trigger parsing. Replace the example identity if your Cloud Run web app uses a different service account.
 
     ```bash
-    WEB_APP_SA=responsive-auth-run-sa@${PROJECT_ID}.iam.gserviceaccount.com
+    WEB_APP_SA=pknld-run-sa@${PROJECT_ID}.iam.gserviceaccount.com
     gcloud run services add-iam-policy-binding pklnd-receipts \
       --region "${REGION}" \
       --member="serviceAccount:${WEB_APP_SA}" \
@@ -256,7 +256,7 @@ gcloud storage buckets describe gs://your-bucket-name --format="value(location)"
 
 ```bash
 PROJECT_ID=$(gcloud config get-value project)
-WEB_APP_SA=responsive-auth-run-sa@${PROJECT_ID}.iam.gserviceaccount.com
+WEB_APP_SA=pknld-run-sa@${PROJECT_ID}.iam.gserviceaccount.com
 
 # Allow the web app to call the receipt processor
 gcloud run services add-iam-policy-binding pklnd-receipts   --region "${REGION}"   --member="serviceAccount:${WEB_APP_SA}"   --role="roles/run.invoker"

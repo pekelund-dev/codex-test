@@ -6,12 +6,12 @@
 
     <parent>
         <groupId>dev.pekelund</groupId>
-        <artifactId>responsive-auth</artifactId>
+        <artifactId>pknld</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>responsive-auth-core</artifactId>
-    <name>ResponsiveAuth Core</name>
+    <artifactId>pknld-core</artifactId>
+    <name>pknld Core</name>
     <packaging>jar</packaging>
 
     <dependencies>

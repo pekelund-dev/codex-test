@@ -1,6 +1,6 @@
 # System Architecture Schematics
 
-The diagrams below illustrate how the responsive auth web application, receipt-processing Cloud Run service, and shared Google Cloud resources work together. Replace placeholder values (for example `PROJECT_ID`, `DOMAIN`, or `RECEIPTS_BUCKET`) with your real identifiers when applying the design.
+The diagrams below illustrate how the pknld web application, receipt-processing Cloud Run service, and shared Google Cloud resources work together. Replace placeholder values (for example `PROJECT_ID`, `DOMAIN`, or `RECEIPTS_BUCKET`) with your real identifiers when applying the design.
 
 Both deployable services now enable Spring Modulith. Packages called out below map one-to-one with Modulith application modules so the generated diagrams stay consistent with the verified architectural boundaries.
 

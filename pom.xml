@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>dev.pekelund</groupId>
-    <artifactId>responsive-auth</artifactId>
+    <artifactId>pknld</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>ResponsiveAuth</name>
+    <name>pknld</name>
     <description>Responsive authentication sample with web UI and receipt processing service</description>
 
     <modules>
@@ -59,7 +59,7 @@
             </dependency>
             <dependency>
                 <groupId>dev.pekelund</groupId>
-                <artifactId>responsive-auth-core</artifactId>
+                <artifactId>pknld-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

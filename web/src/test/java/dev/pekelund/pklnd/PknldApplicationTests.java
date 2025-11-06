@@ -3,11 +3,11 @@ package dev.pekelund.pklnd;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class ResponsiveAuthAppApplicationTests {
+@SpringBootTest(classes = PknldApplication.class)
+class PknldApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
+    @Test
+    void contextLoads() {
+    }
 
 }

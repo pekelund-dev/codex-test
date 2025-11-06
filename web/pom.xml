@@ -6,18 +6,18 @@
 
     <parent>
         <groupId>dev.pekelund</groupId>
-        <artifactId>responsive-auth</artifactId>
+        <artifactId>pknld</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>responsive-auth-web</artifactId>
-    <name>ResponsiveAuth Web</name>
+    <artifactId>pknld-web</artifactId>
+    <name>pknld Web</name>
     <packaging>jar</packaging>
 
     <dependencies>
         <dependency>
             <groupId>dev.pekelund</groupId>
-            <artifactId>responsive-auth-core</artifactId>
+            <artifactId>pknld-core</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

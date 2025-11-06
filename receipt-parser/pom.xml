@@ -6,19 +6,19 @@
 
     <parent>
         <groupId>dev.pekelund</groupId>
-        <artifactId>responsive-auth</artifactId>
+        <artifactId>pknld</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>responsive-auth-receipt-processor</artifactId>
-    <name>ResponsiveAuth Receipt Processor</name>
+    <artifactId>pknld-receipt-processor</artifactId>
+    <name>pknld Receipt Processor</name>
     <packaging>jar</packaging>
 
     <dependencies>
         <!-- Internal dependency on core module -->
         <dependency>
             <groupId>dev.pekelund</groupId>
-            <artifactId>responsive-auth-core</artifactId>
+            <artifactId>pknld-core</artifactId>
         </dependency>
 
         <dependency>

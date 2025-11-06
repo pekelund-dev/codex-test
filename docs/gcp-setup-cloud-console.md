@@ -1,6 +1,6 @@
 # Google Cloud setup with the Cloud Console
 
-Use this guide if you prefer configuring ResponsiveAuthApp resources through the Google Cloud Console UI. A command-line alternative is documented in the [gcloud CLI guide](gcp-setup-gcloud.md) and both are referenced from the main [README](../README.md).
+Use this guide if you prefer configuring pknld resources through the Google Cloud Console UI. A command-line alternative is documented in the [gcloud CLI guide](gcp-setup-gcloud.md) and both are referenced from the main [README](../README.md).
 
 ### Default environment variables
 
@@ -32,11 +32,11 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    - If you need to run the app outside Google Cloud, click **Add key → Create new key → JSON** and download the credentials. Store them outside your source tree (for example `~/secrets/firestore-service-account.json`).
 
 5. **Configure the Spring Boot app**
-   - Keep downloaded JSON keys outside the repository (for example `~/.config/responsive-auth/firestore.json`). Point the helper at those files so the environment variables are populated without copying secrets into your shell history:
+   - Keep downloaded JSON keys outside the repository (for example `~/.config/pknld/firestore.json`). Point the helper at those files so the environment variables are populated without copying secrets into your shell history:
 
      ```bash
-     export FIRESTORE_CREDENTIALS_FILE=${FIRESTORE_CREDENTIALS_FILE:-$HOME/.config/responsive-auth/firestore.json}
-     export GOOGLE_OAUTH_CREDENTIALS_FILE=${GOOGLE_OAUTH_CREDENTIALS_FILE:-$HOME/.config/responsive-auth/oauth-client.json}
+     export FIRESTORE_CREDENTIALS_FILE=${FIRESTORE_CREDENTIALS_FILE:-$HOME/.config/pknld/firestore.json}
+     export GOOGLE_OAUTH_CREDENTIALS_FILE=${GOOGLE_OAUTH_CREDENTIALS_FILE:-$HOME/.config/pknld/oauth-client.json}
      source ./scripts/load_local_secrets.sh
 
      export FIRESTORE_ENABLED=true
@@ -62,12 +62,12 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 
 3. **Create a bucket**
    - Navigate to **Cloud Storage → Buckets → Create**.
-   - Provide a globally unique name (for example `responsive-auth-receipts`).
+   - Provide a globally unique name (for example `pknld-receipts`).
    - Choose the region near your users and keep **Uniform bucket-level access** enabled.
 
 4. **Create a dedicated service account**
    - Open **IAM & Admin → Service Accounts → Create service account**.
-   - Name it something like `responsive-auth-receipts-uploader` and grant **Storage Object Admin**.
+   - Name it something like `pknld-receipts-uploader` and grant **Storage Object Admin**.
    - Finish the wizard without granting user access.
 
 5. **Generate a key for uploads**
@@ -78,7 +78,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
 
    ```bash
    export GCS_ENABLED=true
-   export GCS_BUCKET=responsive-auth-receipts           # Replace with your bucket name
+   export GCS_BUCKET=pknld-receipts           # Replace with your bucket name
    export GCS_CREDENTIALS=file:/home/user/secrets/gcs-receipts.json  # Optional; omit on Cloud Run
    export GCS_PROJECT_ID=your-project-id                # Optional if derived from credentials
    ```
@@ -123,7 +123,7 @@ Use this guide if you prefer configuring ResponsiveAuthApp resources through the
    - Deploy the service and note the HTTPS URL; you will reference it when configuring the web application.
 
 5. **Allow the web application to invoke the processor**
-   - In **Cloud Run → pklnd-receipts → Permissions**, add the web service account (for example `responsive-auth-run-sa@PROJECT_ID.iam.gserviceaccount.com`) with the **Cloud Run Invoker** role.
+   - In **Cloud Run → pklnd-receipts → Permissions**, add the web service account (for example `pknld-run-sa@PROJECT_ID.iam.gserviceaccount.com`) with the **Cloud Run Invoker** role.
    - From the service detail page copy the service URL and configure the web application deployment with `RECEIPT_PROCESSOR_BASE_URL`.
    - If you deploy via `scripts/deploy_cloud_run.sh`, set `RECEIPT_PROCESSOR_BASE_URL` before running the script. `scripts/deploy_receipt_processor.sh` inspects the existing web service (override with `WEB_SERVICE_NAME`/`WEB_SERVICE_REGION`) and grants that runtime service account the **Cloud Run Invoker** role automatically; set `WEB_SERVICE_ACCOUNT` (or `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS`) when you need to authorize different callers directly.
 
