@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
 <head>
-    <title th:text="${pageTitle}">Receipts</title>
+    <title th:text="${pageTitle}">Kvitton</title>
 </head>
 <body>
 <section class="py-3 py-lg-4" th:attr="data-dashboard-url=@{/receipts/dashboard(scope=${scopeParam})}">
@@ -10,39 +10,39 @@
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body p-4 d-flex flex-column gap-4">
                     <div>
-                        <h1 class="h3 fw-semibold text-primary mb-2">Receipt archive</h1>
-                        <p class="text-muted mb-0">Review parsed receipt data generated from your uploads. Use the button below to add new receipts or manage the uploaded files.</p>
+                        <h1 class="h3 fw-semibold text-primary mb-2">Kvittoarkiv</h1>
+                        <p class="text-muted mb-0">Granska tolkade kvitton från dina uppladdningar. Lägg till fler kvitton eller hantera filerna med genvägarna nedan.</p>
                     </div>
 
-                    <div th:if="${canViewAll}" class="btn-group btn-group-sm w-auto" role="group" aria-label="Receipt scope">
+                    <div th:if="${canViewAll}" class="btn-group btn-group-sm w-auto" role="group" aria-label="Visningsläge för kvitton">
                         <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
-                           th:href="@{/receipts(scope='my')}">My receipts</a>
+                           th:href="@{/receipts(scope='my')}">Mina kvitton</a>
                         <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
-                           th:href="@{/receipts(scope='all')}">All receipts</a>
+                           th:href="@{/receipts(scope='all')}">Alla kvitton</a>
                     </div>
-                    <p th:if="${canViewAll}" class="text-muted small mb-0" th:text="${viewingAll} ? 'Showing all uploaded receipts.' : 'Showing only receipts you have uploaded.'">Showing only receipts you have uploaded.</p>
+                    <p th:if="${canViewAll}" class="text-muted small mb-0" th:text="${viewingAll} ? 'Visar alla uppladdade kvitton.' : 'Visar endast kvitton du själv har laddat upp.'">Visar endast kvitton du själv har laddat upp.</p>
 
                     <div class="d-flex flex-wrap align-items-center gap-3" aria-live="polite">
                         <a class="btn btn-primary" th:href="@{/receipts/uploads(scope=${scopeParam})}">
                             <i class="bi bi-cloud-arrow-up me-2" aria-hidden="true"></i>
-                            Upload new receipts
+                            Ladda upp kvitton
                         </a>
                         <a class="btn btn-outline-primary" th:href="@{/receipts/overview(scope=${scopeParam})}">
                             <i class="bi bi-bar-chart-line me-2" aria-hidden="true"></i>
                             Visa artikelöversikt
                         </a>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="text-muted small">Parsing status:</span>
-                            <span th:if="${parsedReceiptsEnabled}" class="badge bg-success">Enabled</span>
-                            <span th:if="${!parsedReceiptsEnabled}" class="badge bg-danger">Disabled</span>
+                            <span class="text-muted small">Tolkning:</span>
+                            <span th:if="${parsedReceiptsEnabled}" class="badge bg-success">Aktiv</span>
+                            <span th:if="${!parsedReceiptsEnabled}" class="badge bg-danger">Inaktiv</span>
                         </div>
                     </div>
 
                     <div th:if="${successMessage}" class="alert alert-success mb-0" role="alert">
-                        <span th:text="${successMessage}">Files uploaded successfully.</span>
+                        <span th:text="${successMessage}">Kvittona laddades upp.</span>
                     </div>
                     <div th:if="${errorMessage}" class="alert alert-danger mb-0" role="alert">
-                        <span th:text="${errorMessage}">Action failed.</span>
+                        <span th:text="${errorMessage}">Åtgärden misslyckades.</span>
                     </div>
                 </div>
             </div>
@@ -50,17 +50,16 @@
         <div class="col-lg-5">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body p-4">
-                    <h2 class="h5 fw-semibold mb-3">Testing utilities</h2>
-                    <p class="text-muted small mb-4">Quickly clear uploaded receipts and parsed receipt data for your
-                        account while testing the application.</p>
+                    <h2 class="h5 fw-semibold mb-3">Snabbåtgärder</h2>
+                    <p class="text-muted small mb-4">Rensa snabbt bort uppladdade kvitton och tolkade data om du vill börja om från början.</p>
                     <form th:action="@{/receipts/clear}" method="post" class="d-flex flex-wrap align-items-center gap-3">
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
                         <button type="submit" class="btn btn-outline-danger"
                                 th:disabled="${!storageEnabled and !parsedReceiptsEnabled}">
-                            Clear receipt data
+                            Rensa kvittodata
                         </button>
                         <span class="text-muted small" th:if="${!storageEnabled and !parsedReceiptsEnabled}">
-                            Receipt storage and parsing are disabled.
+                            Kvittoarkivet och tolkningen är inaktiverade.
                         </span>
                     </form>
                     <div class="w-100 d-none" data-clear-feedback aria-live="polite"></div>
@@ -75,26 +74,26 @@
                 <summary class="details-toggle d-flex align-items-center justify-content-between mb-3">
                     <span class="d-flex align-items-center gap-2">
                         <img th:src="@{/img/collapsible-indicator.svg}" src="/img/collapsible-indicator.svg" alt="" class="details-toggle-icon" aria-hidden="true">
-                        <span class="h5 fw-semibold mb-0">Parsed receipts</span>
+                        <span class="h5 fw-semibold mb-0">Tolkade kvitton</span>
                     </span>
                     <span class="badge bg-primary-subtle text-primary" data-parsed-count
                           th:classappend="${parsedReceipts == null or #lists.isEmpty(parsedReceipts)} ? ' d-none'"
-                          th:text="${parsedReceipts != null ? parsedReceipts.size() + ' receipts' : '0 receipts'}">0 receipts</span>
+                          th:text="${parsedReceipts != null ? parsedReceipts.size() + ' kvitton' : '0 kvitton'}">0 kvitton</span>
                 </summary>
 
                 <div th:if="${!parsedReceiptsEnabled}" class="alert alert-warning" role="alert">
-                    Parsed receipts are currently unavailable. Configure Firestore to enable this feature.
+                    Tolkade kvitton är inte tillgängliga just nu. Konfigurera Firestore för att slå på funktionen.
                 </div>
 
                 <div class="alert alert-danger" role="alert" data-parsed-error
                      th:classappend="${parsedListingError == null} ? ' d-none'"
                      th:text="${parsedListingError != null ? parsedListingError : ''}">
-                    Unable to load parsed receipts.
+                    Det gick inte att läsa in tolkade kvitton.
                 </div>
 
                 <div class="text-center text-muted py-5" data-parsed-empty
                      th:classappend="${!parsedReceiptsEnabled or (parsedReceipts != null and !#lists.isEmpty(parsedReceipts))} ? ' d-none' : ''">
-                    <p class="mb-0">No receipts have been parsed yet.</p>
+                    <p class="mb-0">Inga kvitton har tolkats ännu.</p>
                 </div>
 
                 <div class="table-responsive" data-parsed-table
@@ -102,17 +101,17 @@
                     <table class="table align-middle">
                         <thead class="table-light">
                         <tr>
-                            <th scope="col">Receipt</th>
-                            <th scope="col">Date</th>
-                            <th scope="col">Total</th>
-                            <th scope="col" class="text-end">Updated</th>
+                            <th scope="col">Kvitto</th>
+                            <th scope="col">Datum</th>
+                            <th scope="col">Totalsumma</th>
+                            <th scope="col" class="text-end">Uppdaterad</th>
                         </tr>
                         </thead>
                         <tbody data-parsed-body>
                         <tr th:each="parsed : ${parsedReceipts}" th:attr="data-receipt-id=${parsed.id()}">
                             <td>
                                 <a th:href="@{/receipts/{id}(id=${parsed.id()}, scope=${scopeParam})}" class="fw-semibold text-decoration-none">
-                                    <span th:text="${!#strings.isEmpty(parsed.storeName()) ? parsed.storeName() : (!#strings.isEmpty(parsed.displayName()) ? parsed.displayName() : parsed.objectPath())}">Receipt</span>
+                                    <span th:text="${!#strings.isEmpty(parsed.storeName()) ? parsed.storeName() : (!#strings.isEmpty(parsed.displayName()) ? parsed.displayName() : parsed.objectPath())}">Kvitto</span>
                                 </a>
                             </td>
                             <td th:text="${parsed.receiptDate() != null ? parsed.receiptDate() : '—'}">—</td>

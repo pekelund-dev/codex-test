@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
 <head>
-    <title th:text="${pageTitle}">Item details</title>
+    <title th:text="${pageTitle}">Artikeldetaljer</title>
 </head>
 <body>
 <section class="py-3 py-lg-4">
@@ -10,57 +10,57 @@
            th:if="${sourceReceiptId != null}"
            th:href="@{/receipts/{id}(id=${sourceReceiptId}, scope=${scopeParam})}">
             <i class="bi bi-arrow-left"></i>
-            <span th:text="${sourceReceiptName != null ? 'Back to ' + sourceReceiptName : 'Back to receipt'}">Back to receipt</span>
+            <span th:text="${sourceReceiptName != null ? 'Tillbaka till ' + sourceReceiptName : 'Tillbaka till kvitto'}">Tillbaka till kvitto</span>
         </a>
         <a class="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center gap-1"
            th:href="@{/receipts(scope=${scopeParam})}">
             <i class="bi bi-receipt"></i>
-            <span>Back to receipts</span>
+            <span>Tillbaka till kvitton</span>
         </a>
     </div>
 
     <div th:if="${canViewAll}" class="mb-3">
-        <div class="btn-group btn-group-sm" role="group" aria-label="Receipt scope">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Visningsläge för kvitton">
             <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
-               th:href="${sourceReceiptId != null} ? @{/receipts/items/{eanCode}(eanCode=${itemEan}, sourceId=${sourceReceiptId}, scope='my')} : @{/receipts/items/{eanCode}(eanCode=${itemEan}, scope='my')}">My receipts</a>
+               th:href="${sourceReceiptId != null} ? @{/receipts/items/{eanCode}(eanCode=${itemEan}, sourceId=${sourceReceiptId}, scope='my')} : @{/receipts/items/{eanCode}(eanCode=${itemEan}, scope='my')}">Mina kvitton</a>
             <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
-               th:href="${sourceReceiptId != null} ? @{/receipts/items/{eanCode}(eanCode=${itemEan}, sourceId=${sourceReceiptId}, scope='all')} : @{/receipts/items/{eanCode}(eanCode=${itemEan}, scope='all')}">All receipts</a>
+               th:href="${sourceReceiptId != null} ? @{/receipts/items/{eanCode}(eanCode=${itemEan}, sourceId=${sourceReceiptId}, scope='all')} : @{/receipts/items/{eanCode}(eanCode=${itemEan}, scope='all')}">Alla kvitton</a>
         </div>
         <p class="text-muted small mb-0 mt-2"
-           th:text="${viewingAll} ? 'Showing purchases from all parsed receipts.' : 'Showing purchases from your parsed receipts only.'">Showing purchases from your parsed receipts only.</p>
+           th:text="${viewingAll} ? 'Visar köp från alla tolkade kvitton.' : 'Visar köp från endast dina tolkade kvitton.'">Visar köp från endast dina tolkade kvitton.</p>
     </div>
 
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-            <h1 class="h3 fw-semibold text-primary mb-1" th:text="${itemName}">Item name</h1>
+            <h1 class="h3 fw-semibold text-primary mb-1" th:text="${itemName != null ? itemName : 'Artikel'}">Artikel</h1>
             <p class="text-muted mb-1" th:if="${itemEan != null}" th:text="${'EAN: ' + itemEan}">EAN: 0000000000000</p>
             <p class="text-muted mb-0"
-               th:text="${purchaseCount == 1 ? '1 purchase found' : purchaseCount + ' purchases found'}">3 purchases found</p>
+               th:text="${purchaseCount == 1 ? '1 köp hittat' : purchaseCount + ' köp hittade'}">3 köp hittade</p>
         </div>
     </div>
 
     <div class="card shadow-sm border-0">
         <div class="card-body p-4">
-            <h2 class="h5 fw-semibold mb-3">Price history</h2>
+            <h2 class="h5 fw-semibold mb-3">Prisöversikt</h2>
             <div th:if="${hasPriceHistory}" class="chart-container">
                 <canvas id="priceHistoryChart"
                         th:data-price-history="${priceHistoryJson}"></canvas>
             </div>
-            <div th:if="${!hasPriceHistory}" class="text-muted">Not enough price information to render a chart.</div>
+            <div th:if="${!hasPriceHistory}" class="text-muted">För lite prisinformation för att visa diagrammet.</div>
         </div>
     </div>
 
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
-            <h2 class="h5 fw-semibold mb-3">Purchases</h2>
-            <div th:if="${#lists.isEmpty(purchases)}" class="text-muted">No purchases were found for this item.</div>
+            <h2 class="h5 fw-semibold mb-3">Köp</h2>
+            <div th:if="${#lists.isEmpty(purchases)}" class="text-muted">Inga köp hittades för den här artikeln.</div>
             <div th:if="${!#lists.isEmpty(purchases)}" class="table-responsive">
                 <table class="table align-middle">
                     <thead class="table-light">
                     <tr>
-                        <th scope="col">Date</th>
-                        <th scope="col">Store</th>
-                        <th scope="col">Price</th>
+                        <th scope="col">Datum</th>
+                        <th scope="col">Butik</th>
+                        <th scope="col">Pris</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -71,9 +71,9 @@
                             <a th:if="${purchase.receiptId() != null}"
                                class="stretched-link"
                                th:href="@{/receipts/{id}(id=${purchase.receiptId()}, scope=${scopeParam})}"
-                               th:aria-label="${'View receipt' + (purchase.receiptDisplayName() != null ? ' ' + purchase.receiptDisplayName() : '')}"></a>
+                               th:aria-label="${'Visa kvitto' + (purchase.receiptDisplayName() != null ? ' ' + purchase.receiptDisplayName() : '')}"></a>
                             <span th:if="${purchase.receiptId() == null}"
-                                  class="text-muted small d-block mt-1">Receipt unavailable</span>
+                                  class="text-muted small d-block mt-1">Kvitto saknas</span>
                         </td>
                         <td th:text="${purchase.storeName() != null ? purchase.storeName() : '—'}">Sample Store</td>
                         <td th:text="${purchase.priceLabel() != null ? purchase.priceLabel() : '—'}">19.99</td>

@@ -1,17 +1,15 @@
 # pknld
 
-pknld is a Spring Boot starter application showcasing a responsive web experience secured with email/password and Google OAuth 2.0 authentication. The UI is built with Thymeleaf and Bootstrap and demonstrates how to surface public and secured pages behind a unified navigation experience.
+pknld is a Spring Boot starter that helps individuals upload, store, and organise personal receipts from Swedish retailers. The experience focuses on ICA receipts today and keeps attachments, parsed items, and spending insights in one interface.
 
 ## Features
 
-- Spring Boot 3 with Java 21 and Maven.
-- Email/password registration handled by Spring Security with credentials hashed and user profiles stored in Cloud Firestore.
-- Spring Security configuration with form login and Google OAuth 2.0 login entry point.
-- Responsive layout powered by Bootstrap 5, including a splash screen and persistent top navigation bar with user avatar/initials.
-- Sample Thymeleaf pages for unauthenticated and authenticated visitors.
-- Ready-to-style components and custom CSS for cohesive branding.
-- Optional receipts workspace with drag-and-drop uploads that sync to Google Cloud Storage.
-- Spring Modulith-based module boundaries with automated verification for the web and receipt processing services.
+- Personal receipt vault backed by Google Cloud Storage for files and Cloud Firestore for secure metadata access.
+- Drag-and-drop uploads and receipt overviews that spotlight everyday purchases from ICA and other Swedish stores.
+- Item views and statistics panels that surface long-term spending trends for your household.
+- Email and Google sign-in via Spring Security so every receipt stays behind a private account.
+- Responsive Thymeleaf/Bootstrap design that works just as well on mobile as on desktop.
+- Spring Modulith boundaries that make it easy to extend the experience with more retailers and features.
 
 ## Getting started
 

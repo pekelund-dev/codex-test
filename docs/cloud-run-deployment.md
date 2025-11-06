@@ -1,6 +1,6 @@
 # Deploying the Web Application to Google Cloud Run
 
-This guide walks through provisioning Google Cloud resources, deploying the application to Cloud Run, configuring DNS, and verifying connectivity with Firestore and other Google Cloud services. It contains both **Google Cloud Console** and **gcloud CLI** workflows. Use whichever best fits your workflow, but keep the variables consistent across both approaches.
+This guide walks through provisioning Google Cloud resources, deploying the application to Cloud Run, configuring DNS, and verifying connectivity with Firestore and other Google Cloud services. It contains both **Google Cloud Console** and **gcloud CLI** workflows. Use whichever best fits your workflow, but keep the variables consistent across both approaches so the personal receipt archive for Swedish retailers stays available in production.
 
 > 📈 Need a visual reference before diving into the steps? Review the [System Architecture Schematics](./system-architecture-diagrams.md) for high-level diagrams that outline service relationships, data flows, and deployment pipelines.
 
