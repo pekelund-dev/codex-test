@@ -6,19 +6,19 @@
 
     <parent>
         <groupId>dev.pekelund</groupId>
-        <artifactId>pknld</artifactId>
+        <artifactId>pklnd</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>pknld-receipt-processor</artifactId>
-    <name>pknld Receipt Processor</name>
+    <artifactId>pklnd-receipt-processor</artifactId>
+    <name>pklnd Receipt Processor</name>
     <packaging>jar</packaging>
 
     <dependencies>
         <!-- Internal dependency on core module -->
         <dependency>
             <groupId>dev.pekelund</groupId>
-            <artifactId>pknld-core</artifactId>
+            <artifactId>pklnd-core</artifactId>
         </dependency>
 
         <dependency>

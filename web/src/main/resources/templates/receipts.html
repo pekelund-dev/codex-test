@@ -14,7 +14,7 @@
                         <p class="text-muted mb-0">Granska tolkade kvitton fr\u00e5n dina uppladdningar. Anv\u00e4nd knapparna f\u00f6r att ladda upp nya kvitton eller hantera arkivet.</p>
                     </div>
 
-                    <div th:if="${canViewAll}" class="btn-group btn-group-sm w-auto" role="group" aria-label="Kvittovy">
+                    <div th:if="${canViewAll}" class="btn-group btn-group-sm w-auto" role="group" aria-label="Välj kvitton">
                         <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
                            th:href="@{/receipts(scope='my')}">Mina kvitton</a>
                         <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"

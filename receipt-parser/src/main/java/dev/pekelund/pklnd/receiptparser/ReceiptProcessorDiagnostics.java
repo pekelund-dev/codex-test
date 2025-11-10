@@ -34,7 +34,7 @@ public class ReceiptProcessorDiagnostics implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        LOGGER.info("pknld receipt processor diagnostics starting");
+        LOGGER.info("pklnd receipt processor diagnostics starting");
         LOGGER.info("Active Spring profiles: {}", Arrays.toString(environment.getActiveProfiles()));
         LOGGER.info("Resolved Vertex AI configuration - project: {}, location: {}, model: {}",
             environment.getProperty("spring.ai.vertex.ai.gemini.project-id", "(unset)"),

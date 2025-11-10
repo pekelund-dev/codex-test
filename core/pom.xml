@@ -6,12 +6,12 @@
 
     <parent>
         <groupId>dev.pekelund</groupId>
-        <artifactId>pknld</artifactId>
+        <artifactId>pklnd</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>pknld-core</artifactId>
-    <name>pknld Core</name>
+    <artifactId>pklnd-core</artifactId>
+    <name>pklnd Core</name>
     <packaging>jar</packaging>
 
     <dependencies>
