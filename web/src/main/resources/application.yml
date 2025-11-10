@@ -1,6 +1,6 @@
 spring:
   application:
-    name: pknld-web
+    name: pklnd-web
   messages:
     basename: messages
     fallback-to-system-locale: false

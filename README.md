@@ -1,17 +1,15 @@
-# pknld
+# pklnd
 
-pknld is a Spring Boot starter application showcasing a responsive web experience secured with email/password and Google OAuth 2.0 authentication. The UI is built with Thymeleaf and Bootstrap and demonstrates how to surface public and secured pages behind a unified navigation experience.
+pklnd is a Spring Boot application for maintaining a personal receipt archive focused on Swedish retailers such as ICA. It helps you upload, store, and organise proof of purchase so every grocery run and household buy is searchable online. The responsive web experience is secured with email/password sign-in and Google OAuth 2.0, presenting public and protected pages through a unified navigation.
 
 ## Features
 
 - Spring Boot 3 with Java 21 and Maven.
-- Email/password registration handled by Spring Security with credentials hashed and user profiles stored in Cloud Firestore.
-- Spring Security configuration with form login and Google OAuth 2.0 login entry point.
-- Responsive layout powered by Bootstrap 5, including a splash screen and persistent top navigation bar with user avatar/initials.
-- Sample Thymeleaf pages for unauthenticated and authenticated visitors.
-- Ready-to-style components and custom CSS for cohesive branding.
-- Optional receipts workspace with drag-and-drop uploads that sync to Google Cloud Storage.
-- Spring Modulith-based module boundaries with automated verification for the web and receipt processing services.
+- Secure personal accounts via Spring Security with hashed credentials in Firestore and optional Google OAuth 2.0 login.
+- Responsive Thymeleaf interface powered by Bootstrap 5 for a smooth receipt overview on mobile and desktop.
+- Receipt workspace tailored for ICA and other Swedish stores, supporting PDF/image uploads that land in Google Cloud Storage.
+- Automatic categorisation, store detection, and chronological sorting so your personal receipts stay easy to find.
+- Modular architecture with Spring Modulith keeping the web and receipt processing services isolated and verified.
 
 ## Getting started
 
@@ -79,11 +77,11 @@ Both guides walk through project creation, database provisioning, service accoun
 
 > 💡 When deploying to Cloud Run or any other Google-managed runtime, leave `FIRESTORE_CREDENTIALS` unset—the service account attached to the workload authenticates automatically via Application Default Credentials. Only download JSON keys for local development or third-party hosting.
 
-If you already generated service-account keys or OAuth credentials, keep the JSON files outside of the repository (for example `~/.config/pknld/`). Point `FIRESTORE_CREDENTIALS_FILE` and/or `GOOGLE_OAUTH_CREDENTIALS_FILE` at those files and source the helper to populate the runtime environment without copying secrets into shell history:
+If you already generated service-account keys or OAuth credentials, keep the JSON files outside of the repository (for example `~/.config/pklnd/`). Point `FIRESTORE_CREDENTIALS_FILE` and/or `GOOGLE_OAUTH_CREDENTIALS_FILE` at those files and source the helper to populate the runtime environment without copying secrets into shell history:
 
 ```bash
-export FIRESTORE_CREDENTIALS_FILE="$HOME/.config/pknld/firestore.json"
-export GOOGLE_OAUTH_CREDENTIALS_FILE="$HOME/.config/pknld/oauth-client.json"
+export FIRESTORE_CREDENTIALS_FILE="$HOME/.config/pklnd/firestore.json"
+export GOOGLE_OAUTH_CREDENTIALS_FILE="$HOME/.config/pklnd/oauth-client.json"
 source ./scripts/load_local_secrets.sh
 ```
 

@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>dev.pekelund</groupId>
-    <artifactId>pknld</artifactId>
+    <artifactId>pklnd</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>pknld</name>
+    <name>pklnd</name>
     <description>Responsive authentication sample with web UI and receipt processing service</description>
 
     <modules>
@@ -59,7 +59,7 @@
             </dependency>
             <dependency>
                 <groupId>dev.pekelund</groupId>
-                <artifactId>pknld-core</artifactId>
+                <artifactId>pklnd-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
