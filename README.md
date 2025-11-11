@@ -48,7 +48,55 @@ The `setup-env.sh` script automatically configures:
    > automatically append `oauth` to `SPRING_PROFILES_ACTIVE`. For manual runs add `SPRING_PROFILES_ACTIVE=local,oauth` (or
    > `prod,oauth` in production).
 
-   The `scripts/deploy_cloud_run.sh` helper builds a timestamped container image ready for Cloud Run deployments. Run `./scripts/cleanup_artifact_repos.sh` after deployments to prune older revisions so Artifact Registry only keeps the most recent web application and receipt processor builds. The deploy script relies on the repository’s multi-stage `Dockerfile` (located at the project root by default); export `BUILD_CONTEXT` when you keep the Dockerfile in another directory. The receipt processor deployment helper builds from `receipt-parser/Dockerfile` via the accompanying Cloud Build configuration so the Cloud Run service always packages the parser instead of the secured web UI—override this path with `RECEIPT_DOCKERFILE` and adjust `RECEIPT_BUILD_CONTEXT` or `RECEIPT_CLOUD_BUILD_CONFIG` when using a custom image definition. Ensure the Dockerfile remains inside the selected build context so Cloud Build can resolve it.
+The `scripts/deploy_cloud_run.sh` helper builds a timestamped container image ready for Cloud Run deployments. Pass `--env staging` or call the shortcut `scripts/deploy_cloud_run_test.sh` to deploy the staging service (`pklnd-web-test` → `test.pkelund.dev`); rely on the default production settings (`pklnd-web` → `pklnd.pekelund.dev`) or the `scripts/deploy_cloud_run.sh` wrapper for production. Prefix configuration overrides with `PROD_` or `STAGING_`—for example, set `STAGING_PROJECT_ID`, `STAGING_GOOGLE_CLIENT_ID`, and `PROD_GCS_BUCKET`—so you can switch between environments without re-exporting values. Both deployments reuse the same Firestore and Cloud Storage backends unless you override `SHARED_INFRA_PROJECT_ID`, keeping the data plane consistent across smoke tests and live traffic. Run `./scripts/cleanup_artifact_repos.sh` after deployments to prune older revisions so Artifact Registry only keeps the most recent web application and receipt processor builds. The receipt processor helper (`scripts/deploy_receipt_processor.sh`) exposes the same environment-aware interface along with a staging shortcut (`scripts/deploy_receipt_processor_test.sh`). It builds from `receipt-parser/Dockerfile` via the accompanying Cloud Build configuration so the Cloud Run service always packages the parser instead of the secured web UI—override this path with `RECEIPT_DOCKERFILE` and adjust `RECEIPT_BUILD_CONTEXT` or `RECEIPT_CLOUD_BUILD_CONFIG` when using a custom image definition. Ensure the Dockerfile remains inside the selected build context so Cloud Build can resolve it. For a copy-and-paste overview of every variable used by these scripts, see [docs/environment-variables.md](docs/environment-variables.md) and review the required Google Cloud services in [docs/gcp-services.md](docs/gcp-services.md) before deploying.
+
+### First-time checklist for deployment scripts
+
+The canonical version of this checklist lives in [docs/first-time-deployment-checklist.md](docs/first-time-deployment-checklist.md) so you can reference or share it independently. Complete the following preparation once before you run any of the four deployment helpers (`deploy_cloud_run.sh`, `deploy_cloud_run_test.sh`, `deploy_receipt_processor.sh`, `deploy_receipt_processor_test.sh`):
+
+1. **Authenticate with Google Cloud.** Run `gcloud auth login` and `gcloud auth application-default login` using an account that can create resources in the staging and production projects. Confirm your account has permission to enable APIs, create service accounts, and deploy to Cloud Run.
+2. **Select target projects.** Export the `PROD_`/`STAGING_` variables from [docs/environment-variables.md](docs/environment-variables.md) so the scripts can set the correct `gcloud` project automatically. If you keep different projects for shared infrastructure, set `SHARED_INFRA_PROJECT_ID` (and its prefixed variants) as part of the same shell session.
+3. **Provision shared infrastructure.** Follow [docs/gcp-services.md](docs/gcp-services.md) to create the Firestore database, Cloud Storage bucket, Artifact Registry repositories, and IAM service accounts that both environments reuse. You only need to create these resources once; the scripts detect existing assets on subsequent runs.
+4. **Install the Google Cloud SDK and supporting tools.** Ensure `gcloud`, `gsutil`, and `bq` are available in your PATH and up to date (`gcloud components update`). The deployment helpers call these CLIs and expect Python 3 for parsing OAuth credentials when you supply a JSON file.
+5. **Clone the repository and grant execute permissions.** Fetch this repository locally and run `chmod +x scripts/*.sh` if your checkout did not preserve executable bits, so the helpers can execute without additional prompts.
+
+Once these prerequisites are in place, you can run the staging wrappers first to validate configuration and then promote the tested image to production with the corresponding production scripts.
+
+
+#### Cloud Run environment workflow
+
+Use the staging deployment to validate releases before promoting them to production:
+
+1. **Deploy staging**
+
+   ```bash
+   STAGING_PROJECT_ID="pklnd-test-project"
+   STAGING_REGION="europe-north1"
+   STAGING_GCS_BUCKET="pklnd-receipts"
+   STAGING_GOOGLE_CLIENT_ID="..."
+   STAGING_GOOGLE_CLIENT_SECRET="..."
+
+   ./scripts/deploy_cloud_run_test.sh
+   ```
+
+2. **Verify the revision** – Exercise login flows, upload sample receipts, and confirm Firestore updates inside the shared project.
+
+3. **Promote to production** – Reuse the staged container image so production receives the exact build you tested:
+
+   ```bash
+   REGION="europe-north1"
+   STAGING_IMAGE_URI=$(gcloud run services describe pklnd-web-test \
+     --region "$REGION" \
+     --format 'value(spec.template.spec.containers[0].image)')
+
+   PROD_PROJECT_ID="pklnd-prod-project"
+   PROD_REGION="europe-north1"
+   PROD_GCS_BUCKET="pklnd-receipts"
+
+   IMAGE_URI="$STAGING_IMAGE_URI" ./scripts/deploy_cloud_run.sh --env prod
+   ```
+
+This workflow keeps staging and production pointed at the same Firestore database and receipt bucket by default while giving each environment its own Cloud Run service and domain mapping.
 
 3. Configure Firestore if you want to enable user self-registration (see [Firestore configuration](#firestore-configuration)).
 4. (Optional) Configure Google Cloud Storage to enable the receipts upload page (see
@@ -146,6 +194,17 @@ Use the automated deployment script for a streamlined setup:
 ```bash
 # Deploy the Cloud Run receipt processor with all required configurations
 ./scripts/deploy_receipt_processor.sh
+```
+
+The helper honours the same `PROD_`/`STAGING_` prefixes as the web deployment. For staging runs you can skip manual flagging by
+invoking the shortcut:
+
+```bash
+STAGING_PROJECT_ID="pklnd-test-project"
+STAGING_GCS_BUCKET="pklnd-receipts"
+STAGING_VERTEX_AI_PROJECT_ID="pklnd-shared-ai"
+
+./scripts/deploy_receipt_processor_test.sh
 ```
 
 This script automatically:

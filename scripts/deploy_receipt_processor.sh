@@ -2,23 +2,148 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+usage() {
+  cat <<'EOF'
+Usage: deploy_receipt_processor.sh [--env <environment>] [--help]
+
+Deploy the receipt processor Cloud Run service. Supported environments:
+  prod     Production deployment (default)
+  staging  Staging/test deployment
+
+Override configuration with environment variables. Prefix overrides with
+`PROD_` or `STAGING_` to scope them to a specific environment without
+re-exporting values between runs.
+EOF
+}
+
+DEPLOY_ENVIRONMENT="${DEPLOY_ENVIRONMENT:-prod}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --env|-e)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for $1" >&2
+        exit 1
+      fi
+      DEPLOY_ENVIRONMENT="$2"
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$REPO_ROOT"
 
-PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null)}"
-REGION="${REGION:-europe-north1}"
-SERVICE_NAME="${RECEIPT_SERVICE_NAME:-pklnd-receipts}"
-SA_NAME="${RECEIPT_SA_NAME:-receipt-processor}"
-ARTIFACT_REPO="${RECEIPT_ARTIFACT_REPO:-receipts}"
-GCS_BUCKET="${GCS_BUCKET:-}"
-ADDITIONAL_INVOKER_SERVICE_ACCOUNTS="${ADDITIONAL_INVOKER_SERVICE_ACCOUNTS:-}"
-WEB_SERVICE_ACCOUNT="${WEB_SERVICE_ACCOUNT:-}"
-WEB_SERVICE_NAME="${WEB_SERVICE_NAME:-pklnd-web}"
-WEB_SERVICE_REGION="${WEB_SERVICE_REGION:-${REGION}}"
-DOCKERFILE_PATH="${RECEIPT_DOCKERFILE:-receipt-parser/Dockerfile}"
-BUILD_CONTEXT="${RECEIPT_BUILD_CONTEXT:-${REPO_ROOT}}"
-CLOUD_BUILD_CONFIG="${RECEIPT_CLOUD_BUILD_CONFIG:-receipt-parser/cloudbuild.yaml}"
+case "${DEPLOY_ENVIRONMENT}" in
+  prod|production)
+    DEPLOY_ENVIRONMENT="prod"
+    DEFAULT_SERVICE_NAME="pklnd-receipts"
+    DEFAULT_SA_NAME="receipt-processor"
+    DEFAULT_WEB_SERVICE_NAME="pklnd-web"
+    DEFAULT_APP_PROFILE="prod"
+    ;;
+  staging|test)
+    DEPLOY_ENVIRONMENT="staging"
+    DEFAULT_SERVICE_NAME="pklnd-receipts-test"
+    DEFAULT_SA_NAME="receipt-processor-test"
+    DEFAULT_WEB_SERVICE_NAME="pklnd-web-test"
+    DEFAULT_APP_PROFILE="staging"
+    ;;
+  *)
+    echo "Unsupported environment: ${DEPLOY_ENVIRONMENT}" >&2
+    echo "Supported environments: prod, staging" >&2
+    exit 1
+    ;;
+esac
+
+ENV_PREFIX="$(printf '%s' "${DEPLOY_ENVIRONMENT}" | tr '[:lower:]' '[:upper:]')"
+
+resolve_config_var() {
+  local var="$1"
+  local fallback="${2-}"
+  local env_specific="${ENV_PREFIX}_${var}"
+  local resolved="${!env_specific:-}"
+
+  if [[ -z "${resolved}" ]]; then
+    resolved="${!var:-}"
+  fi
+
+  if [[ -z "${resolved}" ]]; then
+    resolved="${fallback}"
+  fi
+
+  printf -v "$var" '%s' "$resolved"
+}
+
+GCLOUD_DEFAULT_PROJECT="$(gcloud config get-value project 2>/dev/null || true)"
+
+resolve_config_var PROJECT_ID "${GCLOUD_DEFAULT_PROJECT}"
+resolve_config_var REGION "europe-north1"
+
+resolve_config_var RECEIPT_SERVICE_NAME "${DEFAULT_SERVICE_NAME}"
+if [[ -z "${SERVICE_NAME:-}" ]]; then
+  SERVICE_NAME="${RECEIPT_SERVICE_NAME}"
+fi
+resolve_config_var SERVICE_NAME "${SERVICE_NAME}"
+
+resolve_config_var RECEIPT_SA_NAME "${DEFAULT_SA_NAME}"
+if [[ -z "${SA_NAME:-}" ]]; then
+  SA_NAME="${RECEIPT_SA_NAME}"
+fi
+resolve_config_var SA_NAME "${SA_NAME}"
+
+resolve_config_var RECEIPT_ARTIFACT_REPO "receipts"
+if [[ -z "${ARTIFACT_REPO:-}" ]]; then
+  ARTIFACT_REPO="${RECEIPT_ARTIFACT_REPO}"
+fi
+resolve_config_var ARTIFACT_REPO "${ARTIFACT_REPO}"
+
+resolve_config_var GCS_BUCKET ""
+resolve_config_var ADDITIONAL_INVOKER_SERVICE_ACCOUNTS ""
+resolve_config_var WEB_SERVICE_ACCOUNT ""
+
+resolve_config_var WEB_SERVICE_NAME "${DEFAULT_WEB_SERVICE_NAME}"
+resolve_config_var WEB_SERVICE_REGION "${REGION}"
+
+resolve_config_var RECEIPT_DOCKERFILE "receipt-parser/Dockerfile"
+if [[ -z "${DOCKERFILE_PATH:-}" ]]; then
+  DOCKERFILE_PATH="${RECEIPT_DOCKERFILE}"
+fi
+resolve_config_var DOCKERFILE_PATH "${DOCKERFILE_PATH}"
+
+resolve_config_var RECEIPT_BUILD_CONTEXT "${REPO_ROOT}"
+if [[ -z "${BUILD_CONTEXT:-}" ]]; then
+  BUILD_CONTEXT="${RECEIPT_BUILD_CONTEXT}"
+fi
+resolve_config_var BUILD_CONTEXT "${BUILD_CONTEXT}"
+
+resolve_config_var RECEIPT_CLOUD_BUILD_CONFIG "receipt-parser/cloudbuild.yaml"
+if [[ -z "${CLOUD_BUILD_CONFIG:-}" ]]; then
+  CLOUD_BUILD_CONFIG="${RECEIPT_CLOUD_BUILD_CONFIG}"
+fi
+resolve_config_var CLOUD_BUILD_CONFIG "${CLOUD_BUILD_CONFIG}"
+
+resolve_config_var VERTEX_AI_PROJECT_ID "${PROJECT_ID}"
+resolve_config_var VERTEX_AI_LOCATION "${REGION}"
+resolve_config_var VERTEX_AI_GEMINI_MODEL "gemini-2.0-flash"
+resolve_config_var RECEIPT_FIRESTORE_COLLECTION "receiptExtractions"
+resolve_config_var RECEIPT_FIRESTORE_ITEM_COLLECTION "receiptItems"
+resolve_config_var RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION "receiptItemStats"
+resolve_config_var SPRING_PROFILES_ACTIVE "${DEFAULT_APP_PROFILE}"
+resolve_config_var LOGGING_PROJECT_ID "${PROJECT_ID}"
+resolve_config_var AI_STUDIO_API_KEY ""
+
+echo "Preparing ${DEPLOY_ENVIRONMENT} receipt processor deployment..."
 
 if [[ -z "${PROJECT_ID}" ]]; then
   echo "PROJECT_ID must be set or configured with 'gcloud config set project'." >&2
@@ -134,6 +259,7 @@ append_env_var() {
 }
 
 ENV_VARS_LIST=()
+append_env_var "APP_ENVIRONMENT" "${DEPLOY_ENVIRONMENT}"
 append_env_var "SPRING_PROFILES_ACTIVE" "$SPRING_PROFILES_ACTIVE"
 append_env_var "VERTEX_AI_PROJECT_ID" "$VERTEX_AI_PROJECT_ID"
 append_env_var "VERTEX_AI_LOCATION" "$VERTEX_AI_LOCATION"
