@@ -48,6 +48,12 @@ public class HomeController {
         return "about";
     }
 
+    @GetMapping("/tvattstugan")
+    public String tvattstugan(Model model) {
+        model.addAttribute("pageTitleKey", "page.bookings.title");
+        return "bookings";
+    }
+
     @GetMapping("/dashboard")
     public String dashboard(Model model, Principal principal, Authentication authentication) {
         Locale locale = LocaleContextHolder.getLocale();

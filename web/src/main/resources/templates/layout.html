@@ -33,13 +33,13 @@
             <ul class="navbar-nav me-auto mb-2 mb-lg-0" th:with="currentUri=${currentRequestUri}">
                 <li class="nav-item">
                     <a class="nav-link"
-                       th:classappend="${currentUri == '/home' or currentUri == '/'} ? ' active'"
-                       th:href="@{/}" th:text="#{nav.home}">Home</a>
+                       th:classappend="${currentUri == '/tvattstugan'} ? ' active'"
+                       th:href="@{/tvattstugan}" th:text="#{nav.bookings}">Bokningar</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link"
                        th:classappend="${currentUri == '/about'} ? ' active'"
-                       th:href="@{/about}" th:text="#{nav.about}">About</a>
+                       th:href="@{/about}" th:text="#{nav.about}">Om</a>
                 </li>
                 <li class="nav-item" th:if="${userProfile.authenticated}">
                     <a class="nav-link"
