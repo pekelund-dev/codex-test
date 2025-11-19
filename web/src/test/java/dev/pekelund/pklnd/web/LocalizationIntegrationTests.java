@@ -25,7 +25,7 @@ class LocalizationIntegrationTests {
     void defaultsToSwedishContent() throws Exception {
         mockMvc.perform(get("/"))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("Digitalisera kvittoredovisningen")));
+            .andExpect(content().string(containsString("Välkommen")));
     }
 
     @Test
@@ -33,7 +33,7 @@ class LocalizationIntegrationTests {
         mockMvc.perform(get("/").param("lang", "en"))
             .andExpect(status().isOk())
             .andExpect(cookie().value("pklnd-lang", "en"))
-            .andExpect(content().string(containsString("Digitise your receipt reporting")));
+            .andExpect(content().string(containsString("Welcome")));
     }
 
     @Test
@@ -43,6 +43,6 @@ class LocalizationIntegrationTests {
 
         mockMvc.perform(get("/").cookie(englishCookie))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("Digitise your receipt reporting")));
+            .andExpect(content().string(containsString("Welcome")));
     }
 }

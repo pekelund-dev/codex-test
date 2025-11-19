@@ -37,6 +37,7 @@ public class SecurityConfig {
                     "/",
                     "/home",
                     "/about",
+                    "/tvattstugan",
                     "/login",
                     "/register",
                     "/css/**",
