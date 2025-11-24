@@ -10,7 +10,7 @@ import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import dev.pekelund.pklnd.PknldApplication;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -25,7 +25,7 @@ class LocalizationIntegrationTests {
     void defaultsToSwedishContent() throws Exception {
         mockMvc.perform(get("/"))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("Digitalisera kvittoredovisningen")));
+            .andExpect(content().string(containsString("Ditt digitala kvittoarkiv")));
     }
 
     @Test
@@ -33,7 +33,7 @@ class LocalizationIntegrationTests {
         mockMvc.perform(get("/").param("lang", "en"))
             .andExpect(status().isOk())
             .andExpect(cookie().value("pklnd-lang", "en"))
-            .andExpect(content().string(containsString("Digitise your receipt reporting")));
+            .andExpect(content().string(containsString("Your digital receipt archive")));
     }
 
     @Test
@@ -43,6 +43,6 @@ class LocalizationIntegrationTests {
 
         mockMvc.perform(get("/").cookie(englishCookie))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("Digitise your receipt reporting")));
+            .andExpect(content().string(containsString("Your digital receipt archive")));
     }
 }

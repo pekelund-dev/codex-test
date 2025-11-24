@@ -4,7 +4,7 @@ pklnd is a Spring Boot application for maintaining a personal receipt archive fo
 
 ## Features
 
-- Spring Boot 3 with Java 21 and Maven.
+- Spring Boot 4 (Spring Framework 7) with Java 21 and Maven.
 - Secure personal accounts via Spring Security with hashed credentials in Firestore and optional Google OAuth 2.0 login.
 - Responsive Thymeleaf interface powered by Bootstrap 5 for a smooth receipt overview on mobile and desktop.
 - Receipt workspace tailored for ICA and other Swedish stores, supporting PDF/image uploads that land in Google Cloud Storage.

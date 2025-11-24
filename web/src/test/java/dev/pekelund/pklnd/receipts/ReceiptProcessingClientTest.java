@@ -9,18 +9,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.test.web.client.response.MockRestResponseCreators;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 class ReceiptProcessingClientTest {
 
     private ReceiptProcessingProperties properties;
-    private RestTemplate restTemplate;
+    private RestClient restClient;
     private MockRestServiceServer server;
     private ReceiptProcessingClient client;
 
@@ -32,10 +30,10 @@ class ReceiptProcessingClientTest {
         properties.setEventPath("/events/storage");
         properties.setUseIdToken(false);
 
-        ClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        restTemplate = new RestTemplate(requestFactory);
-        server = MockRestServiceServer.createServer(restTemplate);
-        client = new ReceiptProcessingClient(restTemplate, properties);
+        RestClient.Builder restClientBuilder = RestClient.builder();
+        server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        restClient = restClientBuilder.build();
+        client = new ReceiptProcessingClient(restClient, properties);
     }
 
     @Test

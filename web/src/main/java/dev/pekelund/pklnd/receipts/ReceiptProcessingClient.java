@@ -17,25 +17,23 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 public class ReceiptProcessingClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptProcessingClient.class);
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
     private final ReceiptProcessingProperties properties;
     private final AtomicReference<IdTokenCredentials> cachedCredentials = new AtomicReference<>();
 
-    public ReceiptProcessingClient(RestTemplate restTemplate, ReceiptProcessingProperties properties) {
-        this.restTemplate = restTemplate;
+    public ReceiptProcessingClient(RestClient restClient, ReceiptProcessingProperties properties) {
+        this.restClient = restClient;
         this.properties = properties;
     }
 
@@ -92,8 +90,13 @@ public class ReceiptProcessingClient {
             }
         }
 
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
-        restTemplate.exchange(uri, HttpMethod.POST, requestEntity, Void.class);
+        restClient
+            .post()
+            .uri(uri)
+            .headers(httpHeaders -> httpHeaders.addAll(headers))
+            .body(payload)
+            .retrieve()
+            .toBodilessEntity();
     }
 
     private String fetchIdToken() {
