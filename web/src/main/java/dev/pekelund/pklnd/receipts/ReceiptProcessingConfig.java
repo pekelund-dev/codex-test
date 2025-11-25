@@ -18,8 +18,8 @@ public class ReceiptProcessingConfig {
     public ReceiptProcessingClient receiptProcessingClient(RestClient.Builder restClientBuilder,
         ReceiptProcessingProperties properties) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout((int) properties.getConnectTimeout().toMillis());
-        requestFactory.setReadTimeout((int) properties.getReadTimeout().toMillis());
+        requestFactory.setConnectTimeout(properties.getConnectTimeout());
+        requestFactory.setReadTimeout(properties.getReadTimeout());
 
         RestClient restClient = restClientBuilder
             .requestFactory(requestFactory)
