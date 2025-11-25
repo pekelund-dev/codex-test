@@ -39,7 +39,7 @@
         <google-cloud-vertexai.version>1.35.0</google-cloud-vertexai.version>
         <spring-ai.version>1.0.3</spring-ai.version>
         <spring-modulith.version>2.0.0</spring-modulith.version>
-        <spring-retry.version>3.0.0</spring-retry.version>
+        <spring-retry.version>2.0.12</spring-retry.version>
     </properties>
 
     <dependencyManagement>
