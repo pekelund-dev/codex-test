@@ -27,6 +27,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import jakarta.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
@@ -55,18 +56,22 @@ public class ReceiptExtractionRepository {
             collectionName, itemsCollectionName, itemStatsCollectionName);
     }
 
+    @Nonnull
     private Firestore firestore() {
         return Objects.requireNonNull(firestore, "firestore");
     }
 
+    @Nonnull
     private String receiptsCollection() {
         return Objects.requireNonNull(collectionName, "collectionName");
     }
 
+    @Nonnull
     private String itemsCollection() {
         return Objects.requireNonNull(itemsCollectionName, "itemsCollectionName");
     }
 
+    @Nonnull
     private String itemStatsCollection() {
         return Objects.requireNonNull(itemStatsCollectionName, "itemStatsCollectionName");
     }
@@ -389,7 +394,7 @@ public class ReceiptExtractionRepository {
         }
 
         DocumentReference[] referenceArray = references.toArray(DocumentReference[]::new);
-        List<DocumentSnapshot> snapshots = firestore.getAll(referenceArray).get();
+        List<DocumentSnapshot> snapshots = firestore.getAll(Objects.requireNonNull(referenceArray, "referenceArray")).get();
         Map<StatsKey, Long> counts = new LinkedHashMap<>();
         for (DocumentSnapshot snapshot : snapshots) {
             if (snapshot == null || !snapshot.exists()) {
@@ -408,6 +413,7 @@ public class ReceiptExtractionRepository {
         return counts;
     }
 
+    @Nonnull
     private Map<String, Object> buildStatsUpdate(StatsKey key, long delta, Timestamp updatedAt, StatsMetadata metadata) {
         Map<String, Object> updates = new HashMap<>();
         updates.put("ownerId", key.ownerId());
@@ -661,6 +667,7 @@ public class ReceiptExtractionRepository {
         return ownerMap;
     }
 
+    @Nonnull
     private String buildDocumentId(String bucket, String objectName) {
         String value = Objects.requireNonNull(bucket, "bucket") + ":" + Objects.requireNonNull(objectName, "objectName");
         UUID uuid = UUID.nameUUIDFromBytes(value.getBytes(StandardCharsets.UTF_8));
@@ -685,6 +692,7 @@ public class ReceiptExtractionRepository {
             .orElse(0);
     }
 
+    @Nonnull
     private String buildStatsDocumentId(String ownerId, String normalizedEan) {
         return Objects.requireNonNull(ownerId, "ownerId") + "#" + Objects.requireNonNull(normalizedEan, "normalizedEan");
     }
