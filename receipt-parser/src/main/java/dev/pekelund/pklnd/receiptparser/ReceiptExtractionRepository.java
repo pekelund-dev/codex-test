@@ -29,7 +29,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.lang.NonNull;
 import org.springframework.util.StringUtils;
 
 /**
@@ -40,13 +39,13 @@ public class ReceiptExtractionRepository {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptExtractionRepository.class);
     private static final Pattern EAN_PATTERN = Pattern.compile("(\\d{8,14})");
 
-    private final @NonNull Firestore firestore;
-    private final @NonNull String collectionName;
-    private final @NonNull String itemsCollectionName;
-    private final @NonNull String itemStatsCollectionName;
+    private final Firestore firestore;
+    private final String collectionName;
+    private final String itemsCollectionName;
+    private final String itemStatsCollectionName;
 
-    public ReceiptExtractionRepository(@NonNull Firestore firestore, @NonNull String collectionName,
-        @NonNull String itemsCollectionName, @NonNull String itemStatsCollectionName) {
+    public ReceiptExtractionRepository(Firestore firestore, String collectionName, String itemsCollectionName,
+        String itemStatsCollectionName) {
 
         this.firestore = Objects.requireNonNull(firestore, "firestore");
         this.collectionName = Objects.requireNonNull(collectionName, "collectionName");
@@ -56,14 +55,14 @@ public class ReceiptExtractionRepository {
             collectionName, itemsCollectionName, itemStatsCollectionName);
     }
 
-    public void markStatus(@NonNull String bucket, @NonNull String objectName, ReceiptOwner owner,
-        ReceiptProcessingStatus status, String message) {
+    public void markStatus(String bucket, String objectName, ReceiptOwner owner, ReceiptProcessingStatus status,
+        String message) {
 
         LOGGER.info("Firestore status update for gs://{}/{} -> {} ({})", bucket, objectName, status, message);
         updateDocument(bucket, objectName, owner, status, message, null, null);
     }
 
-    public void saveExtraction(@NonNull String bucket, @NonNull String objectName, ReceiptOwner owner,
+    public void saveExtraction(String bucket, String objectName, ReceiptOwner owner,
         ReceiptExtractionResult extractionResult, String message) {
 
         int itemCount = extractItemCount(extractionResult);
@@ -71,8 +70,7 @@ public class ReceiptExtractionRepository {
         updateDocument(bucket, objectName, owner, ReceiptProcessingStatus.COMPLETED, message, extractionResult, null);
     }
 
-    public void markFailure(@NonNull String bucket, @NonNull String objectName, ReceiptOwner owner, String errorMessage,
-        Throwable error) {
+    public void markFailure(String bucket, String objectName, ReceiptOwner owner, String errorMessage, Throwable error) {
         String detailedMessage = error != null ? error.getMessage() : null;
         String combined = errorMessage;
         if (detailedMessage != null && !detailedMessage.equals(errorMessage)) {
@@ -81,8 +79,8 @@ public class ReceiptExtractionRepository {
         updateDocument(bucket, objectName, owner, ReceiptProcessingStatus.FAILED, combined, null, combined);
     }
 
-    private void updateDocument(@NonNull String bucket, @NonNull String objectName, ReceiptOwner owner,
-        ReceiptProcessingStatus status, String message, ReceiptExtractionResult extractionResult, String errorMessage) {
+    private void updateDocument(String bucket, String objectName, ReceiptOwner owner, ReceiptProcessingStatus status,
+        String message, ReceiptExtractionResult extractionResult, String errorMessage) {
 
         String documentId = buildDocumentId(bucket, objectName);
         Timestamp updateTimestamp = Timestamp.now();
@@ -146,9 +144,8 @@ public class ReceiptExtractionRepository {
         }
     }
 
-    private ItemSyncPlan determineSyncPlan(@NonNull String documentId, String objectName, ReceiptOwner owner,
-        ReceiptProcessingStatus status, Map<String, Object> general, List<Map<String, Object>> items,
-        Timestamp updatedAt)
+    private ItemSyncPlan determineSyncPlan(String documentId, String objectName, ReceiptOwner owner,
+        ReceiptProcessingStatus status, Map<String, Object> general, List<Map<String, Object>> items, Timestamp updatedAt)
         throws InterruptedException, ExecutionException {
 
         if (status == ReceiptProcessingStatus.COMPLETED) {
@@ -160,7 +157,7 @@ public class ReceiptExtractionRepository {
         return ItemSyncPlan.empty();
     }
 
-    private ItemSyncPlan buildRemovalPlan(@NonNull String documentId) throws InterruptedException, ExecutionException {
+    private ItemSyncPlan buildRemovalPlan(String documentId) throws InterruptedException, ExecutionException {
         QuerySnapshot snapshot = firestore.collection(itemsCollectionName)
             .whereEqualTo("receiptId", documentId)
             .get()
@@ -184,7 +181,7 @@ public class ReceiptExtractionRepository {
         return new ItemSyncPlan(deletions, List.of(), deltas, Map.of(), ItemHistoryValue.deleteValue());
     }
 
-    private ItemSyncPlan buildUpsertPlan(@NonNull String documentId, String objectName, ReceiptOwner owner,
+    private ItemSyncPlan buildUpsertPlan(String documentId, String objectName, ReceiptOwner owner,
         Map<String, Object> general, List<Map<String, Object>> items, Timestamp updatedAt)
         throws InterruptedException, ExecutionException {
 
@@ -273,7 +270,7 @@ public class ReceiptExtractionRepository {
         return new ItemSyncPlan(deletions, writes, deltas, metadata, historyValue);
     }
 
-    private void applyItemSyncPlan(@NonNull WriteBatch batch, ItemSyncPlan plan, @NonNull Timestamp updatedAt) {
+    private void applyItemSyncPlan(WriteBatch batch, ItemSyncPlan plan, Timestamp updatedAt) {
         if (plan == null || plan.isEmpty()) {
             return;
         }
@@ -680,7 +677,7 @@ public class ReceiptExtractionRepository {
     private record ItemWrite(DocumentReference reference, Map<String, Object> data) {
     }
 
-    private record StatsKey(@NonNull String ownerId, @NonNull String normalizedEan) {
+    private record StatsKey(String ownerId, String normalizedEan) {
     }
 
     private record StatsMetadata(String receiptId, String receiptDate, String storeName, Timestamp updatedAt) {

@@ -79,7 +79,7 @@ public class ReceiptParsingApiController {
     }
 
     @ExceptionHandler(ReceiptParsingException.class)
-    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_CONTENT)
     public Map<String, Object> handleParsingException(ReceiptParsingException exception) {
         LOGGER.warn("Receipt parsing failed: {}", exception.getMessage());
         return Map.of("error", exception.getMessage());

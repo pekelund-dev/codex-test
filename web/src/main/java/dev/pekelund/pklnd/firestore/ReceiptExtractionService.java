@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -80,7 +81,7 @@ public class ReceiptExtractionService {
 
         try {
             Firestore db = firestore.get();
-            Query query = db.collection(properties.getReceiptsCollection());
+            Query query = db.collection(receiptsCollection());
             String description;
 
             if (includeAllOwners) {
@@ -94,7 +95,11 @@ public class ReceiptExtractionService {
             }
 
             QuerySnapshot snapshot = query.get().get();
-            recordRead(description, snapshot != null ? snapshot.size() : 0);
+            if (snapshot == null) {
+                recordRead(description, 0);
+                return List.of();
+            }
+            recordRead(description, snapshot.size());
             List<ParsedReceipt> receipts = new ArrayList<>();
             for (DocumentSnapshot document : snapshot.getDocuments()) {
                 ParsedReceipt parsed = toParsedReceipt(document);
@@ -123,7 +128,7 @@ public class ReceiptExtractionService {
 
         try {
             DocumentReference reference = firestore.get()
-                .collection(properties.getReceiptsCollection())
+                .collection(receiptsCollection())
                 .document(id);
             DocumentSnapshot snapshot = reference.get().get();
             recordRead("Load receipt " + id, 1L);
@@ -299,7 +304,7 @@ public class ReceiptExtractionService {
                 if (chunk.isEmpty()) {
                     continue;
                 }
-                QuerySnapshot snapshot = db.collection(properties.getReceiptsCollection())
+                QuerySnapshot snapshot = db.collection(receiptsCollection())
                     .whereIn(FieldPath.documentId(), chunk)
                     .get()
                     .get();
@@ -334,7 +339,7 @@ public class ReceiptExtractionService {
 
         try {
             Iterable<DocumentReference> documents = firestore.get()
-                .collection(properties.getReceiptsCollection())
+                .collection(receiptsCollection())
                 .listDocuments();
             for (DocumentReference document : documents) {
                 DocumentSnapshot snapshot = document.get().get();
@@ -385,11 +390,14 @@ public class ReceiptExtractionService {
                 continue;
             }
             if (StringUtils.hasText(ownerId)) {
-                deltas.merge(buildStatsDocumentId(ownerId, normalizedEan), 1L, Long::sum);
+                deltas.merge(buildStatsDocumentId(ownerId, normalizedEan), 1L,
+                    (existing, delta) -> existing == null ? delta : existing + delta);
             } else if (owner != null && StringUtils.hasText(owner.id())) {
-                deltas.merge(buildStatsDocumentId(owner.id(), normalizedEan), 1L, Long::sum);
+                deltas.merge(buildStatsDocumentId(owner.id(), normalizedEan), 1L,
+                    (existing, delta) -> existing == null ? delta : existing + delta);
             }
-            deltas.merge(buildStatsDocumentId(ReceiptItemConstants.GLOBAL_OWNER_ID, normalizedEan), 1L, Long::sum);
+            deltas.merge(buildStatsDocumentId(ReceiptItemConstants.GLOBAL_OWNER_ID, normalizedEan), 1L,
+                (existing, delta) -> existing == null ? delta : existing + delta);
         }
 
         Timestamp updateTimestamp = Timestamp.now();
@@ -505,12 +513,12 @@ public class ReceiptExtractionService {
         return ownerId + "#" + normalizedEan;
     }
 
-    private void recordRead(String description) {
-        recordRead(description, 1L);
-    }
-
     private void recordRead(String description, long readUnits) {
         readRecorder.record(description, readUnits);
+    }
+
+    private String receiptsCollection() {
+        return Objects.requireNonNull(properties.getReceiptsCollection(), "receiptsCollection");
     }
 
     private Instant extractUpdatedAt(DocumentSnapshot snapshot, Object fallbackValue) {
