@@ -55,6 +55,22 @@ public class ReceiptExtractionRepository {
             collectionName, itemsCollectionName, itemStatsCollectionName);
     }
 
+    private Firestore firestore() {
+        return Objects.requireNonNull(firestore, "firestore");
+    }
+
+    private String receiptsCollection() {
+        return Objects.requireNonNull(collectionName, "collectionName");
+    }
+
+    private String itemsCollection() {
+        return Objects.requireNonNull(itemsCollectionName, "itemsCollectionName");
+    }
+
+    private String itemStatsCollection() {
+        return Objects.requireNonNull(itemStatsCollectionName, "itemStatsCollectionName");
+    }
+
     public void markStatus(String bucket, String objectName, ReceiptOwner owner, ReceiptProcessingStatus status,
         String message) {
 
@@ -119,7 +135,7 @@ public class ReceiptExtractionRepository {
                 payload.put("itemHistory", historyPayload);
             }
 
-            DocumentReference documentReference = firestore.collection(collectionName)
+            DocumentReference documentReference = firestore().collection(receiptsCollection())
                 .document(Objects.requireNonNull(documentId, "documentId"));
 
             LOGGER.info("Writing payload with {} entries to Firestore document {}/{}", payload.size(), collectionName,
@@ -158,7 +174,7 @@ public class ReceiptExtractionRepository {
     }
 
     private ItemSyncPlan buildRemovalPlan(String documentId) throws InterruptedException, ExecutionException {
-        QuerySnapshot snapshot = firestore.collection(itemsCollectionName)
+        QuerySnapshot snapshot = firestore().collection(itemsCollection())
             .whereEqualTo("receiptId", documentId)
             .get()
             .get();
@@ -185,7 +201,7 @@ public class ReceiptExtractionRepository {
         Map<String, Object> general, List<Map<String, Object>> items, Timestamp updatedAt)
         throws InterruptedException, ExecutionException {
 
-        QuerySnapshot snapshot = firestore.collection(itemsCollectionName)
+        QuerySnapshot snapshot = firestore().collection(itemsCollection())
             .whereEqualTo("receiptId", documentId)
             .get()
             .get();
@@ -237,7 +253,7 @@ public class ReceiptExtractionRepository {
                 document.put("ownerId", ownerId);
             }
 
-            DocumentReference reference = firestore.collection(itemsCollectionName).document();
+            DocumentReference reference = firestore().collection(itemsCollection()).document();
             writes.add(new ItemWrite(reference, document));
 
             if (StringUtils.hasText(ownerId)) {
@@ -288,7 +304,7 @@ public class ReceiptExtractionRepository {
                 continue;
             }
             Map<String, Object> updates = buildStatsUpdate(key, delta, updatedAt, plan.metadata().get(key));
-            DocumentReference statsRef = firestore.collection(itemStatsCollectionName)
+            DocumentReference statsRef = firestore().collection(itemStatsCollection())
                 .document(buildStatsDocumentId(key.ownerId(), key.normalizedEan()));
             batch.set(statsRef, updates, SetOptions.merge());
         }
@@ -364,8 +380,7 @@ public class ReceiptExtractionRepository {
             if (!StringUtils.hasText(key.ownerId()) || !StringUtils.hasText(key.normalizedEan())) {
                 continue;
             }
-            String statsCollection = Objects.requireNonNull(itemStatsCollectionName, "itemStatsCollectionName");
-            references.add(firestore.collection(statsCollection)
+            references.add(firestore().collection(itemStatsCollection())
                 .document(buildStatsDocumentId(key.ownerId(), key.normalizedEan())));
         }
 
@@ -647,7 +662,7 @@ public class ReceiptExtractionRepository {
     }
 
     private String buildDocumentId(String bucket, String objectName) {
-        String value = bucket + ":" + objectName;
+        String value = Objects.requireNonNull(bucket, "bucket") + ":" + Objects.requireNonNull(objectName, "objectName");
         UUID uuid = UUID.nameUUIDFromBytes(value.getBytes(StandardCharsets.UTF_8));
         return uuid.toString().replace("-", "");
     }
@@ -671,7 +686,7 @@ public class ReceiptExtractionRepository {
     }
 
     private String buildStatsDocumentId(String ownerId, String normalizedEan) {
-        return ownerId + "#" + normalizedEan;
+        return Objects.requireNonNull(ownerId, "ownerId") + "#" + Objects.requireNonNull(normalizedEan, "normalizedEan");
     }
 
     private record ItemWrite(DocumentReference reference, Map<String, Object> data) {

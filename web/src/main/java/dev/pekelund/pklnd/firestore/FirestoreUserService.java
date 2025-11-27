@@ -66,6 +66,10 @@ public class FirestoreUserService implements UserDetailsService {
         }
     }
 
+    private Firestore firestore() {
+        return Objects.requireNonNull(firestore, "firestore");
+    }
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -76,7 +80,7 @@ public class FirestoreUserService implements UserDetailsService {
         }
 
         try {
-            CollectionReference collection = firestore.collection(usersCollection());
+            CollectionReference collection = firestore().collection(usersCollection());
             ApiFuture<QuerySnapshot> query = collection.get();
             QuerySnapshot snapshot = query.get();
             long readUnits = snapshot != null ? snapshot.size() : 0L;
@@ -120,7 +124,7 @@ public class FirestoreUserService implements UserDetailsService {
             document.put("roles", List.of(defaultRole()));
             document.put("createdAt", FieldValue.serverTimestamp());
 
-            CollectionReference usersCollection = firestore.collection(usersCollection());
+            CollectionReference usersCollection = firestore().collection(usersCollection());
             ApiFuture<DocumentReference> writeFuture = usersCollection.add(document);
             DocumentReference documentReference = writeFuture.get();
 
@@ -195,7 +199,7 @@ public class FirestoreUserService implements UserDetailsService {
         String adminRole = adminRole();
 
         try {
-            CollectionReference collection = firestore.collection(usersCollection());
+            CollectionReference collection = firestore().collection(usersCollection());
             ApiFuture<QuerySnapshot> queryFuture = collection.whereArrayContains("roles", adminRole).get();
             QuerySnapshot querySnapshot = queryFuture.get();
             recordRead(
@@ -244,7 +248,7 @@ public class FirestoreUserService implements UserDetailsService {
                 document.put("createdAt", FieldValue.serverTimestamp());
                 document.put("authProvider", "admin-dashboard");
 
-                CollectionReference collection = firestore.collection(usersCollection());
+                CollectionReference collection = firestore().collection(usersCollection());
                 collection.add(document).get();
                 return new AdminPromotionOutcome(true, true);
             }
@@ -347,7 +351,7 @@ public class FirestoreUserService implements UserDetailsService {
     }
 
     private boolean userExists(String normalizedEmail) throws ExecutionException, InterruptedException {
-        CollectionReference collection = firestore.collection(usersCollection());
+        CollectionReference collection = firestore().collection(usersCollection());
         ApiFuture<QuerySnapshot> queryFuture = collection
             .whereEqualTo("email", normalizedEmail)
             .limit(1)

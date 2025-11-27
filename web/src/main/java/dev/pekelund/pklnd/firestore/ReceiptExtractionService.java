@@ -58,6 +58,10 @@ public class ReceiptExtractionService {
         this.itemStatsCollection = properties.getItemStatsCollection();
     }
 
+    private Firestore firestore() {
+        return firestore.orElseThrow(() -> new IllegalStateException("Firestore is not configured"));
+    }
+
     public boolean isEnabled() {
         return firestore.isPresent();
     }
@@ -80,7 +84,7 @@ public class ReceiptExtractionService {
         }
 
         try {
-            Firestore db = firestore.get();
+            Firestore db = firestore();
             Query query = db.collection(receiptsCollection());
             String description;
 
@@ -127,7 +131,7 @@ public class ReceiptExtractionService {
         }
 
         try {
-            DocumentReference reference = firestore.get()
+            DocumentReference reference = firestore()
                 .collection(receiptsCollection())
                 .document(id);
             DocumentSnapshot snapshot = reference.get().get();
@@ -171,7 +175,7 @@ public class ReceiptExtractionService {
         }
 
         try {
-            Firestore db = firestore.get();
+            Firestore db = firestore();
             List<String> docIds = new ArrayList<>();
             Map<String, String> docIdToEan = new HashMap<>();
             for (String ean : distinctEans) {
@@ -187,7 +191,7 @@ public class ReceiptExtractionService {
                 if (chunk.isEmpty()) {
                     continue;
                 }
-                QuerySnapshot snapshot = db.collection(itemStatsCollection)
+                QuerySnapshot snapshot = db.collection(itemStatsCollectionName())
                     .whereIn(FieldPath.documentId(), chunk)
                     .get()
                     .get();
@@ -229,8 +233,8 @@ public class ReceiptExtractionService {
 
         String trimmed = normalizedEan.trim();
         try {
-            Firestore db = firestore.get();
-            Query query = db.collection(receiptItemsCollection)
+            Firestore db = firestore();
+            Query query = db.collection(receiptItemsCollectionName())
                 .whereEqualTo("normalizedEan", trimmed);
             if (!includeAllOwners) {
                 if (owner == null || !StringUtils.hasText(owner.id())) {
@@ -295,7 +299,7 @@ public class ReceiptExtractionService {
         }
 
         try {
-            Firestore db = firestore.get();
+            Firestore db = firestore();
             List<String> identifiers = new ArrayList<>(unique);
             List<ParsedReceipt> receipts = new ArrayList<>();
             for (int start = 0; start < identifiers.size(); start += 10) {
@@ -338,7 +342,7 @@ public class ReceiptExtractionService {
         }
 
         try {
-            Iterable<DocumentReference> documents = firestore.get()
+            Iterable<DocumentReference> documents = firestore()
                 .collection(receiptsCollection())
                 .listDocuments();
             for (DocumentReference document : documents) {
@@ -370,8 +374,8 @@ public class ReceiptExtractionService {
     private void removeReceiptIndexes(String receiptId, ReceiptOwner owner)
         throws InterruptedException, ExecutionException {
 
-        Firestore db = firestore.get();
-        QuerySnapshot snapshot = db.collection(receiptItemsCollection)
+        Firestore db = firestore();
+        QuerySnapshot snapshot = db.collection(receiptItemsCollectionName())
             .whereEqualTo("receiptId", receiptId)
             .get()
             .get();
@@ -404,7 +408,7 @@ public class ReceiptExtractionService {
         for (Map.Entry<String, Long> entry : deltas.entrySet()) {
             String docId = entry.getKey();
             long decrement = entry.getValue();
-            DocumentReference statsRef = db.collection(itemStatsCollection).document(docId);
+            DocumentReference statsRef = db.collection(itemStatsCollectionName()).document(docId);
             Map<String, Object> updates = new HashMap<>();
             updates.put("count", FieldValue.increment(-decrement));
             updates.put("updatedAt", updateTimestamp);
@@ -510,11 +514,19 @@ public class ReceiptExtractionService {
     }
 
     private String buildStatsDocumentId(String ownerId, String normalizedEan) {
-        return ownerId + "#" + normalizedEan;
+        return Objects.requireNonNull(ownerId, "ownerId") + "#" + Objects.requireNonNull(normalizedEan, "normalizedEan");
     }
 
     private void recordRead(String description, long readUnits) {
         readRecorder.record(description, readUnits);
+    }
+
+    private String receiptItemsCollectionName() {
+        return Objects.requireNonNull(receiptItemsCollection, "receiptItemsCollection");
+    }
+
+    private String itemStatsCollectionName() {
+        return Objects.requireNonNull(itemStatsCollection, "itemStatsCollection");
     }
 
     private String receiptsCollection() {

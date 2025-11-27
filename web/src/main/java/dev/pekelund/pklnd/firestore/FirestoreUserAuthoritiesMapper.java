@@ -50,6 +50,10 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
         this.readRecorder = readRecorder;
     }
 
+    private Firestore firestore() {
+        return Objects.requireNonNull(firestore, "firestore");
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> mapAuthorities(Collection<? extends GrantedAuthority> authorities) {
         Set<GrantedAuthority> mappedAuthorities = new LinkedHashSet<>();
@@ -117,7 +121,7 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
 
     private DocumentSnapshot findUserDocument(String normalizedEmail)
         throws ExecutionException, InterruptedException {
-        CollectionReference collection = firestore.collection(usersCollection());
+        CollectionReference collection = firestore().collection(usersCollection());
         ApiFuture<QuerySnapshot> queryFuture = collection
             .whereEqualTo("email", normalizedEmail)
             .limit(1)
@@ -135,7 +139,7 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
 
     private List<String> createUserDocument(String normalizedEmail, String displayName, boolean assignAdmin)
         throws ExecutionException, InterruptedException {
-        CollectionReference collection = firestore.collection(usersCollection());
+        CollectionReference collection = firestore().collection(usersCollection());
 
         Map<String, Object> document = new java.util.HashMap<>();
         document.put("email", normalizedEmail);
