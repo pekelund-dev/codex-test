@@ -20,6 +20,7 @@ import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
@@ -98,6 +99,12 @@ public class ReceiptProcessingConfiguration {
         LOGGER.info("Vertex AI Gemini ChatModel default options: {}", chatModel.getDefaultOptions());
         LOGGER.info("Vertex AI Gemini ChatModel instance id {}", System.identityHashCode(chatModel));
         return chatModel;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public RetryTemplate receiptProcessingRetryTemplate() {
+        return RetryTemplate.builder().build();
     }
 
     @Bean

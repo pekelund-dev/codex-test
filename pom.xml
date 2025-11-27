@@ -38,8 +38,8 @@
         <google-cloud-storage.version>2.40.1</google-cloud-storage.version>
         <google-cloud-vertexai.version>1.35.0</google-cloud-vertexai.version>
         <spring-ai.version>1.0.3</spring-ai.version>
-        <spring-modulith.version>2.0.0</spring-modulith.version>
         <spring-retry.version>2.0.12</spring-retry.version>
+        <spring-modulith.version>2.0.0</spring-modulith.version>
     </properties>
 
     <dependencyManagement>
