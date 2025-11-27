@@ -119,8 +119,9 @@ public class ReceiptExtractionRepository {
                 payload.put("itemHistory", historyPayload);
             }
 
-            DocumentReference documentReference = firestore.collection(collectionName)
-                .document(documentId);
+            String receiptsCollection = Objects.requireNonNull(collectionName, "collectionName");
+            DocumentReference documentReference = firestore.collection(receiptsCollection)
+                .document(Objects.requireNonNull(documentId, "documentId"));
 
             LOGGER.info("Writing payload with {} entries to Firestore document {}/{}", payload.size(), collectionName,
                 documentId);
@@ -159,7 +160,8 @@ public class ReceiptExtractionRepository {
     }
 
     private ItemSyncPlan buildRemovalPlan(String documentId) throws InterruptedException, ExecutionException {
-        QuerySnapshot snapshot = firestore.collection(itemsCollectionName)
+        String itemsCollection = Objects.requireNonNull(itemsCollectionName, "itemsCollectionName");
+        QuerySnapshot snapshot = firestore.collection(itemsCollection)
             .whereEqualTo("receiptId", documentId)
             .get()
             .get();
@@ -186,7 +188,8 @@ public class ReceiptExtractionRepository {
         Map<String, Object> general, List<Map<String, Object>> items, Timestamp updatedAt)
         throws InterruptedException, ExecutionException {
 
-        QuerySnapshot snapshot = firestore.collection(itemsCollectionName)
+        String itemsCollection = Objects.requireNonNull(itemsCollectionName, "itemsCollectionName");
+        QuerySnapshot snapshot = firestore.collection(itemsCollection)
             .whereEqualTo("receiptId", documentId)
             .get()
             .get();
@@ -238,17 +241,17 @@ public class ReceiptExtractionRepository {
                 document.put("ownerId", ownerId);
             }
 
-            DocumentReference reference = firestore.collection(itemsCollectionName).document();
+            DocumentReference reference = firestore.collection(itemsCollection).document();
             writes.add(new ItemWrite(reference, document));
 
             if (StringUtils.hasText(ownerId)) {
                 StatsKey ownerKey = new StatsKey(ownerId, normalizedEan);
-                newCounts.merge(ownerKey, 1L, Long::sum);
+                incrementCount(newCounts, ownerKey, 1L);
                 metadata.put(ownerKey, new StatsMetadata(documentId, receiptDate, storeName, updatedAt));
             }
 
             StatsKey globalKey = new StatsKey(ReceiptItemConstants.GLOBAL_OWNER_ID, normalizedEan);
-            newCounts.merge(globalKey, 1L, Long::sum);
+            incrementCount(newCounts, globalKey, 1L);
             metadata.put(globalKey, new StatsMetadata(documentId, receiptDate, storeName, updatedAt));
         }
 
@@ -276,10 +279,11 @@ public class ReceiptExtractionRepository {
             return;
         }
         for (DocumentReference reference : plan.deletions()) {
-            batch.delete(reference);
+            batch.delete(Objects.requireNonNull(reference, "reference"));
         }
         for (ItemWrite write : plan.writes()) {
-            batch.set(write.reference(), write.data(), SetOptions.merge());
+            batch.set(Objects.requireNonNull(write.reference(), "reference"),
+                Objects.requireNonNull(write.data(), "data"), SetOptions.merge());
         }
         for (Map.Entry<StatsKey, Long> entry : plan.deltas().entrySet()) {
             StatsKey key = entry.getKey();
@@ -288,7 +292,8 @@ public class ReceiptExtractionRepository {
                 continue;
             }
             Map<String, Object> updates = buildStatsUpdate(key, delta, updatedAt, plan.metadata().get(key));
-            DocumentReference statsRef = firestore.collection(itemStatsCollectionName)
+            String statsCollection = Objects.requireNonNull(itemStatsCollectionName, "itemStatsCollectionName");
+            DocumentReference statsRef = firestore.collection(statsCollection)
                 .document(buildStatsDocumentId(key.ownerId(), key.normalizedEan()));
             batch.set(statsRef, updates, SetOptions.merge());
         }
@@ -364,7 +369,8 @@ public class ReceiptExtractionRepository {
             if (!StringUtils.hasText(key.ownerId()) || !StringUtils.hasText(key.normalizedEan())) {
                 continue;
             }
-            references.add(firestore.collection(itemStatsCollectionName)
+            String statsCollection = Objects.requireNonNull(itemStatsCollectionName, "itemStatsCollectionName");
+            references.add(firestore.collection(statsCollection)
                 .document(buildStatsDocumentId(key.ownerId(), key.normalizedEan())));
         }
 
@@ -372,7 +378,8 @@ public class ReceiptExtractionRepository {
             return Map.of();
         }
 
-        List<DocumentSnapshot> snapshots = firestore.getAll(references.toArray(new DocumentReference[0])).get();
+        DocumentReference[] referenceArray = references.toArray(DocumentReference[]::new);
+        List<DocumentSnapshot> snapshots = firestore.getAll(referenceArray).get();
         Map<StatsKey, Long> counts = new LinkedHashMap<>();
         for (DocumentSnapshot snapshot : snapshots) {
             if (snapshot == null || !snapshot.exists()) {
@@ -419,9 +426,9 @@ public class ReceiptExtractionRepository {
             return;
         }
         if (StringUtils.hasText(ownerId)) {
-            counts.merge(new StatsKey(ownerId, normalizedEan), 1L, Long::sum);
+            incrementCount(counts, new StatsKey(ownerId, normalizedEan), 1L);
         }
-        counts.merge(new StatsKey(ReceiptItemConstants.GLOBAL_OWNER_ID, normalizedEan), 1L, Long::sum);
+        incrementCount(counts, new StatsKey(ReceiptItemConstants.GLOBAL_OWNER_ID, normalizedEan), 1L);
     }
 
     private Map<String, Object> extractGeneral(Map<String, Object> structuredData) {
@@ -679,6 +686,10 @@ public class ReceiptExtractionRepository {
     }
 
     private record StatsMetadata(String receiptId, String receiptDate, String storeName, Timestamp updatedAt) {
+    }
+
+    private void incrementCount(Map<StatsKey, Long> counts, StatsKey key, long delta) {
+        counts.put(key, counts.getOrDefault(key, 0L) + delta);
     }
 
     private static final class ItemSyncPlan {
