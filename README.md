@@ -179,6 +179,10 @@ Select the deployment style you prefer:
 
 Both documents describe prerequisites, metadata expectations, status updates, verification steps, and comprehensive troubleshooting guides for the Gemini-powered pipeline.
 
+#### Test environments
+
+To stand up a fully isolated test copy of pklnd in the same Google Cloud project, use the helpers in [docs/test-environment.md](docs/test-environment.md). They provision dedicated buckets, Artifact Registry repositories, and service accounts with a configurable suffix so you can deploy a parallel environment without disturbing production resources.
+
 #### Local smoke testing
 
 You can exercise the Cloud Run service locally without waiting for a new deployment by running it with Spring Boot:
