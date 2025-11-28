@@ -4,7 +4,7 @@ This guide provisions a separate test copy of the pklnd infrastructure inside th
 
 ## Step 1: Provision infrastructure
 
-Choose one path to create the bucket, Artifact Registry repositories, and runtime service accounts:
+Choose one path to create the bucket, Artifact Registry repositories, runtime service accounts, and placeholder Cloud Run services:
 
 ### gcloud script
 
@@ -28,7 +28,7 @@ terraform apply -var "project_id=$(gcloud config get-value project)" \
   -var "env_name=test"
 ```
 
-Terraform applies the same resource layout as the gcloud helper. Use the outputs for bucket names, service accounts, and repository IDs when deploying.
+Terraform applies the same resource layout as the gcloud helper and also stands up Cloud Run services using the public `gcr.io/cloudrun/hello` image so you can see the endpoints immediately. Use the outputs for bucket names, service accounts (including the upload account), repository IDs, and service URLs when deploying.
 
 ## Step 2: Deploy the services
 

@@ -20,6 +20,10 @@ WEB_REPOSITORY="web-${TEST_ENV_NAME}"
 RECEIPTS_REPOSITORY="receipts-${TEST_ENV_NAME}"
 WEB_SERVICE_ACCOUNT="cloud-run-runtime-${TEST_ENV_NAME}"
 RECEIPT_SERVICE_ACCOUNT="receipt-processor-${TEST_ENV_NAME}"
+UPLOAD_SERVICE_ACCOUNT="receipt-uploads-${TEST_ENV_NAME}"
+WEB_SERVICE_NAME="pklnd-web-${TEST_ENV_NAME}"
+RECEIPT_SERVICE_NAME="pklnd-receipts-${TEST_ENV_NAME}"
+HELLO_IMAGE="${HELLO_IMAGE:-gcr.io/cloudrun/hello}"
 
 printf "\nEnabling core APIs in project %s...\n" "${PROJECT_ID}"
 gcloud services enable \
@@ -69,9 +73,11 @@ create_sa() {
 echo "\nCreating service accounts..."
 create_sa "${WEB_SERVICE_ACCOUNT}" "pklnd web runtime (${TEST_ENV_NAME})"
 create_sa "${RECEIPT_SERVICE_ACCOUNT}" "Receipt processor runtime (${TEST_ENV_NAME})"
+create_sa "${UPLOAD_SERVICE_ACCOUNT}" "Receipt uploads (${TEST_ENV_NAME})"
 
 web_sa_email="${WEB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
 receipt_sa_email="${RECEIPT_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
+upload_sa_email="${UPLOAD_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
 
 echo "\nGranting IAM roles..."
 for role in roles/datastore.user roles/storage.objectAdmin; do
@@ -95,6 +101,11 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --role roles/logging.logWriter \
   --quiet
 
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member "serviceAccount:${upload_sa_email}" \
+  --role roles/storage.objectAdmin \
+  --quiet
+
 gcloud storage buckets add-iam-policy-binding "gs://${BUCKET_NAME}" \
   --member "serviceAccount:${web_sa_email}" \
   --role roles/storage.objectAdmin \
@@ -107,6 +118,43 @@ gcloud storage buckets add-iam-policy-binding "gs://${BUCKET_NAME}" \
   --project "${PROJECT_ID}" \
   --quiet || true
 
+gcloud storage buckets add-iam-policy-binding "gs://${BUCKET_NAME}" \
+  --member "serviceAccount:${upload_sa_email}" \
+  --role roles/storage.objectAdmin \
+  --project "${PROJECT_ID}" \
+  --quiet || true
+
+deploy_placeholder_service() {
+  local service_name="$1"
+  local service_account="$2"
+  local allow_unauth="$3"
+  local existing
+
+  existing=$(gcloud run services describe "${service_name}" --project "${PROJECT_ID}" --region "${REGION}" --format="value(status.url)" 2>/dev/null || true)
+  if [[ -n "${existing}" ]]; then
+    echo "Cloud Run service ${service_name} already exists; skipping placeholder deployment."
+    return
+  fi
+
+  local allow_flag="--no-allow-unauthenticated"
+  if [[ "${allow_unauth}" == "true" ]]; then
+    allow_flag="--allow-unauthenticated"
+  fi
+
+  gcloud run deploy "${service_name}" \
+    --image "${HELLO_IMAGE}" \
+    --service-account "${service_account}" \
+    --region "${REGION}" \
+    --platform managed \
+    ${allow_flag} \
+    --set-env-vars "SPRING_PROFILES_ACTIVE=prod" \
+    --quiet
+}
+
+echo "\nCreating placeholder Cloud Run services..."
+deploy_placeholder_service "${RECEIPT_SERVICE_NAME}" "${receipt_sa_email}" "false"
+deploy_placeholder_service "${WEB_SERVICE_NAME}" "${web_sa_email}" "true"
+
 echo "\nSummary (environment: ${TEST_ENV_NAME}):"
 echo "  Project:                 ${PROJECT_ID}"
 echo "  Region:                  ${REGION}"
@@ -115,4 +163,8 @@ echo "  Web Artifact Registry:   ${WEB_REPOSITORY}"
 echo "  Receipt Artifact Registry: ${RECEIPTS_REPOSITORY}"
 echo "  Web service account:     ${web_sa_email}"
 echo "  Receipt service account: ${receipt_sa_email}"
+echo "  Upload service account:  ${upload_sa_email}"
+echo "  Web service name:        ${WEB_SERVICE_NAME}"
+echo "  Receipt service name:    ${RECEIPT_SERVICE_NAME}"
+echo "  Placeholder image:       ${HELLO_IMAGE}"
 echo "\nProceed to deploy with scripts/deploy_test_env.sh after building the services."

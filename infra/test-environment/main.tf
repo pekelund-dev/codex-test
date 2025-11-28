@@ -20,6 +20,9 @@ locals {
   receipts_repository_id  = "receipts-${var.env_name}"
   web_service_account     = "cloud-run-runtime-${var.env_name}"
   receipt_service_account = "receipt-processor-${var.env_name}"
+  upload_service_account  = "receipt-uploads-${var.env_name}"
+  web_service_name        = "pklnd-web-${var.env_name}"
+  receipt_service_name    = "pklnd-receipts-${var.env_name}"
 }
 
 resource "google_project_service" "pklnd_services" {
@@ -96,6 +99,12 @@ resource "google_service_account" "receipt_runtime" {
   display_name = "Receipt processor runtime (${var.env_name})"
 }
 
+resource "google_service_account" "upload" {
+  account_id   = local.upload_service_account
+  project      = var.project_id
+  display_name = "Receipt uploads (${var.env_name})"
+}
+
 resource "google_project_iam_member" "web_firestore" {
   project = var.project_id
   role    = "roles/datastore.user"
@@ -138,6 +147,13 @@ resource "google_project_iam_member" "receipt_logging" {
   depends_on = [google_project_service.pklnd_services]
 }
 
+resource "google_project_iam_member" "upload_storage" {
+  project = var.project_id
+  role    = "roles/storage.objectAdmin"
+  member  = "serviceAccount:${google_service_account.upload.email}"
+  depends_on = [google_project_service.pklnd_services]
+}
+
 resource "google_storage_bucket_iam_member" "web_bucket_admin" {
   bucket = google_storage_bucket.receipts.name
   role   = "roles/storage.objectAdmin"
@@ -148,6 +164,104 @@ resource "google_storage_bucket_iam_member" "receipt_bucket_admin" {
   bucket = google_storage_bucket.receipts.name
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.receipt_runtime.email}"
+}
+
+resource "google_storage_bucket_iam_member" "upload_bucket_admin" {
+  bucket = google_storage_bucket.receipts.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.upload.email}"
+}
+
+resource "google_cloud_run_service" "receipt_processor" {
+  name     = local.receipt_service_name
+  location = var.region
+  project  = var.project_id
+
+  autogenerate_revision_name = true
+
+  template {
+    spec {
+      service_account_name = google_service_account.receipt_runtime.email
+
+      containers {
+        image = var.receipt_image
+        env {
+          name  = "SPRING_PROFILES_ACTIVE"
+          value = "prod"
+        }
+      }
+    }
+  }
+
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
+
+  lifecycle {
+    ignore_changes = [template[0].spec[0].containers[0].image]
+  }
+
+  depends_on = [google_project_service.pklnd_services]
+}
+
+resource "google_cloud_run_service" "web" {
+  name     = local.web_service_name
+  location = var.region
+  project  = var.project_id
+
+  autogenerate_revision_name = true
+
+  template {
+    spec {
+      service_account_name = google_service_account.web_runtime.email
+
+      containers {
+        image = var.web_image
+        env {
+          name  = "SPRING_PROFILES_ACTIVE"
+          value = "prod"
+        }
+      }
+    }
+  }
+
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
+
+  lifecycle {
+    ignore_changes = [template[0].spec[0].containers[0].image]
+  }
+
+  depends_on = [google_project_service.pklnd_services]
+}
+
+resource "google_cloud_run_service_iam_member" "web_public" {
+  count    = var.allow_web_unauthenticated ? 1 : 0
+  location = google_cloud_run_service.web.location
+  project  = google_cloud_run_service.web.project
+  service  = google_cloud_run_service.web.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+resource "google_cloud_run_service_iam_member" "receipt_public" {
+  count    = var.allow_receipt_unauthenticated ? 1 : 0
+  location = google_cloud_run_service.receipt_processor.location
+  project  = google_cloud_run_service.receipt_processor.project
+  service  = google_cloud_run_service.receipt_processor.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+resource "google_cloud_run_service_iam_member" "receipt_invoker_web" {
+  location = google_cloud_run_service.receipt_processor.location
+  project  = google_cloud_run_service.receipt_processor.project
+  service  = google_cloud_run_service.receipt_processor.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.web_runtime.email}"
 }
 
 output "bucket_name" {
@@ -173,4 +287,29 @@ output "web_repository" {
 output "receipt_repository" {
   description = "Artifact Registry repository for the receipt processor"
   value       = google_artifact_registry_repository.receipts.repository_id
+}
+
+output "upload_service_account_email" {
+  description = "Service account used for direct receipt uploads"
+  value       = google_service_account.upload.email
+}
+
+output "web_service_name" {
+  description = "Cloud Run service name for the web app"
+  value       = google_cloud_run_service.web.name
+}
+
+output "receipt_service_name" {
+  description = "Cloud Run service name for the receipt processor"
+  value       = google_cloud_run_service.receipt_processor.name
+}
+
+output "web_service_url" {
+  description = "Deployed URL of the web Cloud Run service"
+  value       = google_cloud_run_service.web.status[0].url
+}
+
+output "receipt_service_url" {
+  description = "Deployed URL of the receipt processor Cloud Run service"
+  value       = google_cloud_run_service.receipt_processor.status[0].url
 }
