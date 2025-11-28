@@ -151,7 +151,7 @@ resource "google_storage_bucket_iam_member" "receipt_bucket_admin" {
 }
 
 output "bucket_name" {
-  description = "Receipts bucket for the ${var.env_name} environment"
+  description = "Receipts bucket for the environment"
   value       = google_storage_bucket.receipts.name
 }
 
