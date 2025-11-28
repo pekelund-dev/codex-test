@@ -20,3 +20,16 @@ After apply, use the outputs for deployment:
 - `web_service_account_email` / `receipt_service_account_email` → runtime identities already attached to the placeholder Cloud Run services.
 - `web_service_url` / `receipt_service_url` → initial endpoints (updated automatically when you redeploy images).
 - `web_repository` / `receipt_repository` → container registries for the web and receipt processor images.
+
+## Teardown
+
+To remove the entire test stack that was created by this module, run a destroy with the same variables you applied with:
+
+```bash
+cd infra/test-environment
+terraform destroy -var "project_id=$(gcloud config get-value project)" \
+  -var "region=europe-north1" \
+  -var "env_name=test"
+```
+
+This deletes the suffixed buckets, Artifact Registry repositories, service accounts, and the placeholder Cloud Run services. Production resources are untouched.

@@ -30,6 +30,15 @@ terraform apply -var "project_id=$(gcloud config get-value project)" \
 
 Terraform applies the same resource layout as the gcloud helper and also stands up Cloud Run services using the public `gcr.io/cloudrun/hello` image so you can see the endpoints immediately. Use the outputs for bucket names, service accounts (including the upload account), repository IDs, and service URLs when deploying.
 
+To tear the Terraform-managed test environment down, run a destroy with the same variables:
+
+```bash
+cd infra/test-environment
+terraform destroy -var "project_id=$(gcloud config get-value project)" \
+  -var "region=europe-north1" \
+  -var "env_name=test"
+```
+
 ## Step 2: Deploy the services
 
 After infrastructure is in place, deploy both Cloud Run services to the test environment:
