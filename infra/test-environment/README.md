@@ -6,6 +6,7 @@ This module provisions an isolated copy of the pklnd Google Cloud footprint insi
 
 ```bash
 cd infra/test-environment
+gcloud auth application-default login
 terraform init
 terraform apply -var "project_id=$(gcloud config get-value project)" \
   -var "region=europe-north1" \

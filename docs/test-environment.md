@@ -20,6 +20,7 @@ The script enables the required APIs, creates a receipts bucket (`pklnd-receipts
 ### Terraform
 
 ```bash
+gcloud auth application-default login
 cd infra/test-environment
 terraform init
 terraform apply -var "project_id=$(gcloud config get-value project)" \
