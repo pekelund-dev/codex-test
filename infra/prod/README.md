@@ -26,6 +26,8 @@ terraform output -raw web_service_name
 terraform output -raw receipt_service_name
 ```
 
+Secret Manager entries for the OAuth client ID/secret and the optional Gemini key are also created (`oauth_client_id_secret`, `oauth_client_secret_secret`, `ai_studio_api_key_secret`). Add versions with `gcloud secrets versions add ... --data-file=...` once; the runtime service accounts already have accessor roles and the deploy scripts will automatically use these secrets instead of inline environment variables.
+
 ## Teardown
 
 Leave `protect_services` set to `true` during normal operation to avoid accidental removal of production services. Only set it to `false` if you intentionally want Terraform to delete the managed Cloud Run services, bucket, Artifact Registry repositories, and service accounts:

@@ -17,6 +17,15 @@ export REGION=europe-north1 # optional
 
 The script enables the required APIs, creates a receipts bucket (`pklnd-receipts-${TEST_ENV_NAME}-${PROJECT_ID}`), and provisions dedicated service accounts and Artifact Registry repositories suffixed with the environment name.
 
+Secrets are stored in Secret Manager so credentials are not baked into deployments. After the script runs, add secret versions (free tier covers typical usage):
+
+```bash
+gcloud secrets versions add pklnd-oauth-client-id-${TEST_ENV_NAME} --data-file=<(printf "%s" "$GOOGLE_CLIENT_ID")
+gcloud secrets versions add pklnd-oauth-client-secret-${TEST_ENV_NAME} --data-file=<(printf "%s" "$GOOGLE_CLIENT_SECRET")
+# Optional when using Gemini API keys for the receipt processor
+gcloud secrets versions add pklnd-ai-studio-api-key-${TEST_ENV_NAME} --data-file=<(printf "%s" "$AI_STUDIO_API_KEY")
+```
+
 ### Terraform
 
 ```bash
@@ -30,6 +39,8 @@ terraform apply -var "project_id=$(gcloud config get-value project)" \
 ```
 
 Terraform applies the same resource layout as the gcloud helper and also stands up Cloud Run services using the public `gcr.io/cloudrun/hello` image so you can see the endpoints immediately. Use the outputs for bucket names, service accounts (including the upload account), repository IDs, and service URLs when deploying.
+
+Secret Manager entries (`oauth_client_id_secret`, `oauth_client_secret_secret`, `ai_studio_api_key_secret`) are created empty; add versions with `gcloud secrets versions add ... --data-file=...` after `apply`. Cloud Run runtimes already have secret accessors, and the deploy scripts will prefer Secret Manager over inline environment variables.
 
 > **Safety net:** The module blocks destroying Cloud Run services, buckets, and service accounts unless you explicitly set `protect_services=false`. This prevents accidental removal of production resources if the wrong state file or environment name is used. The `env_name` must also be non-empty and not equal to `prod`/`production`.
 

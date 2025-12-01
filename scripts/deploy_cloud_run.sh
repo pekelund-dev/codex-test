@@ -14,6 +14,10 @@ SERVICE_NAME="${SERVICE_NAME:-pklnd-web}"
 SA_NAME="${SA_NAME:-cloud-run-runtime}"
 ARTIFACT_REPO="${ARTIFACT_REPO:-web}"
 BUILD_CONTEXT="${BUILD_CONTEXT:-.}"
+OAUTH_CLIENT_ID_SECRET="${WEB_OAUTH_CLIENT_ID_SECRET:-${OAUTH_CLIENT_ID_SECRET:-}}"
+OAUTH_CLIENT_SECRET_SECRET="${WEB_OAUTH_CLIENT_SECRET_SECRET:-${OAUTH_CLIENT_SECRET_SECRET:-}}"
+OAUTH_CLIENT_ID_SECRET_VERSION="${WEB_OAUTH_CLIENT_ID_SECRET_VERSION:-${OAUTH_CLIENT_ID_SECRET_VERSION:-latest}}"
+OAUTH_CLIENT_SECRET_SECRET_VERSION="${WEB_OAUTH_CLIENT_SECRET_SECRET_VERSION:-${OAUTH_CLIENT_SECRET_SECRET_VERSION:-latest}}"
 # Firestore is shared between the Cloud Run web app, the receipt processor, and the user registration flow.
 # Default the shared project to the deployment project, but allow overrides when the
 # Firestore database lives in a different project.
@@ -70,6 +74,7 @@ fi
 # Append shared configuration to the Cloud Run environment variables so every component
 # talks to the same Firestore project and OAuth client.
 ENV_VARS_LIST=()
+SECRET_VARS_LIST=()
 
 append_env_var() {
   local key="$1"
@@ -92,9 +97,27 @@ append_env_var() {
   ENV_VARS_LIST+=("${pair}")
 }
 
-if [[ -z "${GOOGLE_CLIENT_ID:-}" ]] || [[ -z "${GOOGLE_CLIENT_SECRET:-}" ]]; then
+append_secret_var() {
+  local key="$1"
+  local secret_name="$2"
+  local version="${3:-latest}"
+
+  if [[ -z "$secret_name" ]]; then
+    return
+  fi
+
+  SECRET_VARS_LIST+=("${key}=${secret_name}:${version}")
+}
+
+if [[ -z "${GOOGLE_CLIENT_ID:-}" && -z "${OAUTH_CLIENT_ID_SECRET:-}" ]]; then
   printf '%s\n' \
-    'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be provided (directly or via GOOGLE_OAUTH_CREDENTIALS_FILE) when deploying with this script.' >&2
+    'GOOGLE_CLIENT_ID must be provided directly or via WEB_OAUTH_CLIENT_ID_SECRET when deploying with this script.' >&2
+  exit 1
+fi
+
+if [[ -z "${GOOGLE_CLIENT_SECRET:-}" && -z "${OAUTH_CLIENT_SECRET_SECRET:-}" ]]; then
+  printf '%s\n' \
+    'GOOGLE_CLIENT_SECRET must be provided directly or via WEB_OAUTH_CLIENT_SECRET_SECRET when deploying with this script.' >&2
   exit 1
 fi
 
@@ -114,8 +137,14 @@ append_env_var "FIRESTORE_ENABLED" "${FIRESTORE_ENABLED:-true}"
 if [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
   append_env_var "FIRESTORE_PROJECT_ID" "${SHARED_FIRESTORE_PROJECT_ID}"
 fi
-append_env_var "GOOGLE_CLIENT_ID" "${GOOGLE_CLIENT_ID:-}"
-append_env_var "GOOGLE_CLIENT_SECRET" "${GOOGLE_CLIENT_SECRET:-}"
+append_secret_var "GOOGLE_CLIENT_ID" "${OAUTH_CLIENT_ID_SECRET}" "${OAUTH_CLIENT_ID_SECRET_VERSION}" || true
+append_secret_var "GOOGLE_CLIENT_SECRET" "${OAUTH_CLIENT_SECRET_SECRET}" "${OAUTH_CLIENT_SECRET_SECRET_VERSION}" || true
+if [[ -z "${OAUTH_CLIENT_ID_SECRET}" ]]; then
+  append_env_var "GOOGLE_CLIENT_ID" "${GOOGLE_CLIENT_ID:-}"
+fi
+if [[ -z "${OAUTH_CLIENT_SECRET_SECRET}" ]]; then
+  append_env_var "GOOGLE_CLIENT_SECRET" "${GOOGLE_CLIENT_SECRET:-}"
+fi
 append_env_var "GCS_ENABLED" "${GCS_ENABLED:-true}"
 append_env_var "GCS_PROJECT_ID" "${SHARED_GCS_PROJECT_ID:-}"
 append_env_var "GCS_BUCKET" "${GCS_BUCKET:-}"
@@ -154,6 +183,11 @@ fi
 if [[ -z "$ENV_VARS_ARG" ]]; then
   echo "Failed to assemble Cloud Run environment variables" >&2
   exit 1
+fi
+
+SECRET_VARS_ARG=""
+if (( ${#SECRET_VARS_LIST[@]} > 0 )); then
+  SECRET_VARS_ARG="--set-secrets $(IFS=,; printf '%s' "${SECRET_VARS_LIST[*]}")"
 fi
 ALLOW_UNAUTH="${ALLOW_UNAUTH:-true}"
 DOMAIN="${DOMAIN:-pklnd.pekelund.dev}"
@@ -257,6 +291,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --platform managed \
   $ALLOW_FLAG \
   --set-env-vars "${ENV_VARS_ARG}" \
+  ${SECRET_VARS_ARG:-} \
   --min-instances 0 \
   --max-instances 10
 

@@ -23,6 +23,9 @@ locals {
   upload_service_account  = "receipt-uploads-${var.env_name}"
   web_service_name        = "pklnd-web-${var.env_name}"
   receipt_service_name    = "pklnd-receipts-${var.env_name}"
+  oauth_client_id_secret  = "pklnd-oauth-client-id-${var.env_name}"
+  oauth_client_secret     = "pklnd-oauth-client-secret-${var.env_name}"
+  ai_studio_api_key       = "pklnd-ai-studio-api-key-${var.env_name}"
 }
 
 resource "google_project_service" "pklnd_services" {
@@ -113,6 +116,57 @@ resource "google_service_account" "receipt_runtime" {
   account_id   = local.receipt_service_account
   project      = var.project_id
   display_name = "Receipt processor runtime (${var.env_name})"
+
+  lifecycle {
+    prevent_destroy = var.protect_services
+  }
+}
+
+resource "google_secret_manager_secret_iam_member" "oauth_client_id_web" {
+  secret_id = google_secret_manager_secret.oauth_client_id.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.web_runtime.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "oauth_client_secret_web" {
+  secret_id = google_secret_manager_secret.oauth_client_secret.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.web_runtime.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "ai_studio_api_key_receipt" {
+  secret_id = google_secret_manager_secret.ai_studio_api_key.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.receipt_runtime.email}"
+}
+
+resource "google_secret_manager_secret" "oauth_client_id" {
+  secret_id = local.oauth_client_id_secret
+  project   = var.project_id
+
+  replication { automatic = true }
+
+  lifecycle {
+    prevent_destroy = var.protect_services
+  }
+}
+
+resource "google_secret_manager_secret" "oauth_client_secret" {
+  secret_id = local.oauth_client_secret
+  project   = var.project_id
+
+  replication { automatic = true }
+
+  lifecycle {
+    prevent_destroy = var.protect_services
+  }
+}
+
+resource "google_secret_manager_secret" "ai_studio_api_key" {
+  secret_id = local.ai_studio_api_key
+  project   = var.project_id
+
+  replication { automatic = true }
 
   lifecycle {
     prevent_destroy = var.protect_services
@@ -322,6 +376,21 @@ output "receipt_repository" {
 output "upload_service_account_email" {
   description = "Service account used for direct receipt uploads"
   value       = google_service_account.upload.email
+}
+
+output "oauth_client_id_secret" {
+  description = "Secret Manager entry for the OAuth client ID"
+  value       = google_secret_manager_secret.oauth_client_id.secret_id
+}
+
+output "oauth_client_secret_secret" {
+  description = "Secret Manager entry for the OAuth client secret"
+  value       = google_secret_manager_secret.oauth_client_secret.secret_id
+}
+
+output "ai_studio_api_key_secret" {
+  description = "Secret Manager entry for the Gemini/AI Studio API key"
+  value       = google_secret_manager_secret.ai_studio_api_key.secret_id
 }
 
 output "web_service_name" {
