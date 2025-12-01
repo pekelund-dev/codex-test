@@ -13,8 +13,7 @@ terraform init
 terraform apply \
   -var "project_id=$(gcloud config get-value project)" \
   -var "region=europe-north1" \
-  -var "bucket_name=pklnd-receipts" \
-  -var "protect_services=true"
+  -var "bucket_name=pklnd-receipts"
 ```
 
 After apply, note the outputs for bucket name, Artifact Registry repositories, service accounts, and the `config_secret` entry. Add a single secret version that stores your sensitive values as JSON so you stay within the Secret Manager free tier:
@@ -50,4 +49,4 @@ The script builds and deploys both Cloud Run services, attaching the production 
 
 ## Teardown controls
 
-The Terraform configuration uses `protect_services` to enable Cloud Run deletion protection. Leave it `true` during normal operation. Set it to `false` only if you deliberately intend to let Terraform remove the managed services; other resources will follow the normal destroy plan.
+The Terraform configuration no longer applies deletion protection to Cloud Run services. Use `terraform destroy` with care in production environments and consider removing the services from your target list if you want to keep them running while tearing down other resources.

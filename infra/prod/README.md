@@ -11,8 +11,7 @@ terraform init
 terraform apply \
   -var "project_id=$(gcloud config get-value project)" \
   -var "region=europe-north1" \
-  -var "bucket_name=pklnd-receipts" \
-  -var "protect_services=true"
+  -var "bucket_name=pklnd-receipts"
 ```
 
 > The defaults assume you want to mirror the current production naming scheme. Override any of the variables in `variables.tf` if your existing resources use different names. Import pre-existing resources into the state before applying if they already exist.
@@ -30,14 +29,4 @@ One Secret Manager entry (`config_secret`) holds all sensitive values. Add a sin
 
 ## Teardown
 
-Leave `protect_services` set to `true` during normal operation to avoid accidental removal of the Cloud Run services. Toggle it to `false` only when you intentionally want Terraform to drop the managed services (other resources now follow the normal destroy plan):
-
-```bash
-terraform destroy \
-  -var "project_id=$(gcloud config get-value project)" \
-  -var "region=europe-north1" \
-  -var "bucket_name=pklnd-receipts" \
-  -var "protect_services=false"
-```
-
-Review the plan carefully before confirming a destroy in production.
+Terraform applies standard destroy behavior to all resources. Review the plan carefully before confirming a destroy in production, and consider targeting specific resources if you need to keep Cloud Run services online while removing other infrastructure.

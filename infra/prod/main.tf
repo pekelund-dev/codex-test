@@ -111,7 +111,9 @@ resource "google_secret_manager_secret" "pklnd_config" {
   secret_id = local.config_secret_name
   project   = var.project_id
 
-  replication { automatic = true }
+  replication {
+    auto {}
+  }
 
 }
 
@@ -206,8 +208,6 @@ resource "google_cloud_run_service" "receipt_processor" {
   location = var.region
   project  = var.project_id
 
-  deletion_protection = var.protect_services
-
   autogenerate_revision_name = true
 
   template {
@@ -240,8 +240,6 @@ resource "google_cloud_run_service" "web" {
   name     = local.web_service_name
   location = var.region
   project  = var.project_id
-
-  deletion_protection = var.protect_services
 
   autogenerate_revision_name = true
 

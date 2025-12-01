@@ -20,12 +20,6 @@ variable "env_name" {
   }
 }
 
-variable "protect_services" {
-  description = "Toggle Cloud Run deletion protection; set to false only when intentionally destroying the test stack"
-  type        = bool
-  default     = true
-}
-
 variable "web_image" {
   description = "Container image to use for the web Cloud Run service (updated later by deploy scripts)"
   type        = string

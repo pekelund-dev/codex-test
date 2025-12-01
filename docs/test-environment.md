@@ -34,8 +34,7 @@ cd infra/test-environment
 terraform init
 terraform apply -var "project_id=$(gcloud config get-value project)" \
   -var "region=europe-north1" \
-  -var "env_name=test" \
-  -var "protect_services=true"
+  -var "env_name=test"
 ```
 
 Terraform applies the same resource layout as the gcloud helper and also stands up Cloud Run services using the public `gcr.io/cloudrun/hello` image so you can see the endpoints immediately. Use the outputs for bucket names, service accounts (including the upload account), repository IDs, and service URLs when deploying.
@@ -48,7 +47,7 @@ A single Secret Manager entry (`config_secret`) is created empty; add one versio
 
 Cloud Run runtimes already have secret accessors, and the deploy scripts will read these values automatically, falling back to inline environment variables only when the secret is missing.
 
-> **Safety net:** Cloud Run services use `protect_services` as deletion protection. Set it to `false` only when you intend Terraform to remove the managed services. The `env_name` must also be non-empty and not equal to `prod`/`production`.
+> **Safety note:** The test environment no longer applies deletion protection. Double-check your target resources when running `terraform destroy` so you do not remove services accidentally. The `env_name` must be non-empty and must not be `prod`/`production`.
 
 To tear the Terraform-managed test environment down, run a destroy with the same variables and an explicit override for protection:
 
@@ -56,8 +55,7 @@ To tear the Terraform-managed test environment down, run a destroy with the same
 cd infra/test-environment
 terraform destroy -var "project_id=$(gcloud config get-value project)" \
   -var "region=europe-north1" \
-  -var "env_name=test" \
-  -var "protect_services=false"
+  -var "env_name=test"
 ```
 
 ## Step 2: Deploy the services

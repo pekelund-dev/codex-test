@@ -63,12 +63,6 @@ variable "config_secret_id" {
   default     = "pklnd-config"
 }
 
-variable "protect_services" {
-  description = "Toggle Cloud Run deletion protection; set to false only when intentionally destroying the stack"
-  type        = bool
-  default     = true
-}
-
 variable "web_image" {
   description = "Container image to use for the web Cloud Run service (updated later by deploy scripts)"
   type        = string
