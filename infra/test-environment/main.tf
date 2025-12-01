@@ -57,6 +57,10 @@ resource "google_storage_bucket" "receipts" {
       with_state = "ARCHIVED"
     }
   }
+
+  lifecycle {
+    prevent_destroy = var.protect_services
+  }
 }
 
 resource "google_artifact_registry_repository" "web" {
@@ -70,6 +74,10 @@ resource "google_artifact_registry_repository" "web" {
     most_recent_versions {
       keep_count = 10
     }
+  }
+
+  lifecycle {
+    prevent_destroy = var.protect_services
   }
 }
 
@@ -85,24 +93,40 @@ resource "google_artifact_registry_repository" "receipts" {
       keep_count = 10
     }
   }
+
+  lifecycle {
+    prevent_destroy = var.protect_services
+  }
 }
 
 resource "google_service_account" "web_runtime" {
   account_id   = local.web_service_account
   project      = var.project_id
   display_name = "pklnd web runtime (${var.env_name})"
+
+  lifecycle {
+    prevent_destroy = var.protect_services
+  }
 }
 
 resource "google_service_account" "receipt_runtime" {
   account_id   = local.receipt_service_account
   project      = var.project_id
   display_name = "Receipt processor runtime (${var.env_name})"
+
+  lifecycle {
+    prevent_destroy = var.protect_services
+  }
 }
 
 resource "google_service_account" "upload" {
   account_id   = local.upload_service_account
   project      = var.project_id
   display_name = "Receipt uploads (${var.env_name})"
+
+  lifecycle {
+    prevent_destroy = var.protect_services
+  }
 }
 
 resource "google_project_iam_member" "web_firestore" {
@@ -177,6 +201,8 @@ resource "google_cloud_run_service" "receipt_processor" {
   location = var.region
   project  = var.project_id
 
+  deletion_protection = var.protect_services
+
   autogenerate_revision_name = true
 
   template {
@@ -199,7 +225,8 @@ resource "google_cloud_run_service" "receipt_processor" {
   }
 
   lifecycle {
-    ignore_changes = [template[0].spec[0].containers[0].image]
+    ignore_changes  = [template[0].spec[0].containers[0].image]
+    prevent_destroy = var.protect_services
   }
 
   depends_on = [google_project_service.pklnd_services]
@@ -209,6 +236,8 @@ resource "google_cloud_run_service" "web" {
   name     = local.web_service_name
   location = var.region
   project  = var.project_id
+
+  deletion_protection = var.protect_services
 
   autogenerate_revision_name = true
 
@@ -232,7 +261,8 @@ resource "google_cloud_run_service" "web" {
   }
 
   lifecycle {
-    ignore_changes = [template[0].spec[0].containers[0].image]
+    ignore_changes  = [template[0].spec[0].containers[0].image]
+    prevent_destroy = var.protect_services
   }
 
   depends_on = [google_project_service.pklnd_services]

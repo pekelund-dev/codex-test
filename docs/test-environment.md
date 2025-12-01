@@ -25,18 +25,22 @@ cd infra/test-environment
 terraform init
 terraform apply -var "project_id=$(gcloud config get-value project)" \
   -var "region=europe-north1" \
-  -var "env_name=test"
+  -var "env_name=test" \
+  -var "protect_services=true"
 ```
 
 Terraform applies the same resource layout as the gcloud helper and also stands up Cloud Run services using the public `gcr.io/cloudrun/hello` image so you can see the endpoints immediately. Use the outputs for bucket names, service accounts (including the upload account), repository IDs, and service URLs when deploying.
 
-To tear the Terraform-managed test environment down, run a destroy with the same variables:
+> **Safety net:** The module blocks destroying Cloud Run services, buckets, and service accounts unless you explicitly set `protect_services=false`. This prevents accidental removal of production resources if the wrong state file or environment name is used. The `env_name` must also be non-empty and not equal to `prod`/`production`.
+
+To tear the Terraform-managed test environment down, run a destroy with the same variables and an explicit override for protection:
 
 ```bash
 cd infra/test-environment
 terraform destroy -var "project_id=$(gcloud config get-value project)" \
   -var "region=europe-north1" \
-  -var "env_name=test"
+  -var "env_name=test" \
+  -var "protect_services=false"
 ```
 
 ## Step 2: Deploy the services

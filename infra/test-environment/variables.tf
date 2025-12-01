@@ -13,6 +13,17 @@ variable "env_name" {
   description = "Environment suffix used to keep resources isolated"
   type        = string
   default     = "test"
+
+  validation {
+    condition     = var.env_name != "" && lower(var.env_name) != "prod" && lower(var.env_name) != "production"
+    error_message = "env_name must be non-empty and must not be the production identifier."
+  }
+}
+
+variable "protect_services" {
+  description = "Prevent accidental deletion of Cloud Run services and other core resources; set to false only when intentionally destroying the test stack"
+  type        = bool
+  default     = true
 }
 
 variable "web_image" {
