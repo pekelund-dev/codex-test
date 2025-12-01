@@ -23,9 +23,7 @@ locals {
   upload_service_account  = var.upload_service_account
   web_service_name        = var.web_service_name
   receipt_service_name    = var.receipt_service_name
-  oauth_client_id_secret  = "pklnd-oauth-client-id"
-  oauth_client_secret     = "pklnd-oauth-client-secret"
-  ai_studio_api_key       = "pklnd-ai-studio-api-key"
+  config_secret_name      = var.config_secret_id
 }
 
 resource "google_project_service" "pklnd_services" {
@@ -124,8 +122,8 @@ resource "google_service_account" "receipt_runtime" {
   }
 }
 
-resource "google_secret_manager_secret" "oauth_client_id" {
-  secret_id = local.oauth_client_id_secret
+resource "google_secret_manager_secret" "pklnd_config" {
+  secret_id = local.config_secret_name
   project   = var.project_id
 
   replication { automatic = true }
@@ -135,42 +133,14 @@ resource "google_secret_manager_secret" "oauth_client_id" {
   }
 }
 
-resource "google_secret_manager_secret" "oauth_client_secret" {
-  secret_id = local.oauth_client_secret
-  project   = var.project_id
-
-  replication { automatic = true }
-
-  lifecycle {
-    prevent_destroy = var.protect_services
-  }
-}
-
-resource "google_secret_manager_secret" "ai_studio_api_key" {
-  secret_id = local.ai_studio_api_key
-  project   = var.project_id
-
-  replication { automatic = true }
-
-  lifecycle {
-    prevent_destroy = var.protect_services
-  }
-}
-
-resource "google_secret_manager_secret_iam_member" "oauth_client_id_web" {
-  secret_id = google_secret_manager_secret.oauth_client_id.id
+resource "google_secret_manager_secret_iam_member" "config_web" {
+  secret_id = google_secret_manager_secret.pklnd_config.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.web_runtime.email}"
 }
 
-resource "google_secret_manager_secret_iam_member" "oauth_client_secret_web" {
-  secret_id = google_secret_manager_secret.oauth_client_secret.id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.web_runtime.email}"
-}
-
-resource "google_secret_manager_secret_iam_member" "ai_studio_api_key_receipt" {
-  secret_id = google_secret_manager_secret.ai_studio_api_key.id
+resource "google_secret_manager_secret_iam_member" "config_receipt" {
+  secret_id = google_secret_manager_secret.pklnd_config.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.receipt_runtime.email}"
 }
@@ -370,19 +340,9 @@ output "upload_service_account_email" {
   value       = google_service_account.upload.email
 }
 
-output "oauth_client_id_secret" {
-  description = "Secret Manager entry for the OAuth client ID"
-  value       = google_secret_manager_secret.oauth_client_id.secret_id
-}
-
-output "oauth_client_secret_secret" {
-  description = "Secret Manager entry for the OAuth client secret"
-  value       = google_secret_manager_secret.oauth_client_secret.secret_id
-}
-
-output "ai_studio_api_key_secret" {
-  description = "Secret Manager entry for the Gemini/AI Studio API key"
-  value       = google_secret_manager_secret.ai_studio_api_key.secret_id
+output "config_secret" {
+  description = "Secret Manager entry holding all production configuration values"
+  value       = google_secret_manager_secret.pklnd_config.secret_id
 }
 
 output "web_repository" {

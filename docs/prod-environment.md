@@ -17,13 +17,16 @@ terraform apply \
   -var "protect_services=true"
 ```
 
-After apply, note the outputs for bucket name, Artifact Registry repositories, service accounts, and the Secret Manager entries (`oauth_client_id_secret`, `oauth_client_secret_secret`, `ai_studio_api_key_secret`). Add secret versions once with low-cost Secret Manager storage so Cloud Run can read them at runtime:
+After apply, note the outputs for bucket name, Artifact Registry repositories, service accounts, and the `config_secret` entry. Add a single secret version that stores your sensitive values as JSON so you stay within the Secret Manager free tier:
+
+```json
+{"google_client_id":"...","google_client_secret":"...","ai_studio_api_key":"..."}
+```
+
+Then upload it once:
 
 ```bash
-gcloud secrets versions add pklnd-oauth-client-id --data-file=<(printf "%s" "$GOOGLE_CLIENT_ID")
-gcloud secrets versions add pklnd-oauth-client-secret --data-file=<(printf "%s" "$GOOGLE_CLIENT_SECRET")
-# Optional Gemini/AI Studio key for the receipt processor
-gcloud secrets versions add pklnd-ai-studio-api-key --data-file=<(printf "%s" "$AI_STUDIO_API_KEY")
+gcloud secrets versions add pklnd-config --data-file=/path/to/config.json
 ```
 
 The Secret Manager free tier covers typical access volume, keeping costs negligible. The Terraform module already grants the runtime service accounts accessor roles.

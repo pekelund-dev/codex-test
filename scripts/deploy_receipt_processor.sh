@@ -21,6 +21,9 @@ BUILD_CONTEXT="${RECEIPT_BUILD_CONTEXT:-${REPO_ROOT}}"
 CLOUD_BUILD_CONFIG="${RECEIPT_CLOUD_BUILD_CONFIG:-receipt-parser/cloudbuild.yaml}"
 AI_STUDIO_API_KEY_SECRET="${AI_STUDIO_API_KEY_SECRET:-}"
 AI_STUDIO_API_KEY_SECRET_VERSION="${AI_STUDIO_API_KEY_SECRET_VERSION:-latest}"
+CONFIG_SECRET_NAME="${CONFIG_SECRET_NAME:-${CONFIG_SECRET:-}}"
+CONFIG_SECRET_VERSION="${CONFIG_SECRET_VERSION:-latest}"
+CONFIG_SECRET_PROJECT="${CONFIG_SECRET_PROJECT:-${PROJECT_ID}}"
 
 if [[ -z "${PROJECT_ID}" ]]; then
   echo "PROJECT_ID must be set or configured with 'gcloud config set project'." >&2
@@ -103,6 +106,10 @@ PY
 if [[ -z "${DOCKERFILE_RELATIVE}" ]]; then
   echo "Failed to derive Dockerfile path relative to build context. Ensure ${DOCKERFILE_PATH} is within ${BUILD_CONTEXT}." >&2
   exit 1
+fi
+
+if [[ -z "${AI_STUDIO_API_KEY_SECRET:-}" && -z "${AI_STUDIO_API_KEY:-}" ]]; then
+  AI_STUDIO_API_KEY="${AI_STUDIO_API_KEY:-$(config_value ai_studio_api_key)}"
 fi
 
 VERTEX_AI_PROJECT_ID="${VERTEX_AI_PROJECT_ID:-${PROJECT_ID}}"
@@ -344,3 +351,40 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
 set +x
 
 echo "✅ Receipt processor deployment complete."
+CONFIG_CACHE=""
+load_config_secret() {
+  if [[ -n "${CONFIG_CACHE}" || -z "${CONFIG_SECRET_NAME:-}" ]]; then
+    return
+  fi
+
+  CONFIG_CACHE=$(gcloud secrets versions access "${CONFIG_SECRET_VERSION:-latest}" \
+    --secret "${CONFIG_SECRET_NAME}" \
+    --project "${CONFIG_SECRET_PROJECT:-${PROJECT_ID}}" 2>/dev/null || true)
+}
+
+config_value() {
+  local key="$1"
+  load_config_secret
+  if [[ -z "${CONFIG_CACHE}" ]]; then
+    return
+  fi
+
+  CONFIG_CACHE="${CONFIG_CACHE}" python3 - <<'PY'
+import json
+import os
+import sys
+
+payload = os.environ.get("CONFIG_CACHE", "")
+if not payload.strip():
+    raise SystemExit(0)
+
+try:
+    data = json.loads(payload)
+except json.JSONDecodeError:
+    raise SystemExit(0)
+
+value = data.get(sys.argv[1])
+if value:
+    print(value)
+PY
+}

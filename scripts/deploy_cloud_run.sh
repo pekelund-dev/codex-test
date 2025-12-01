@@ -18,6 +18,9 @@ OAUTH_CLIENT_ID_SECRET="${WEB_OAUTH_CLIENT_ID_SECRET:-${OAUTH_CLIENT_ID_SECRET:-
 OAUTH_CLIENT_SECRET_SECRET="${WEB_OAUTH_CLIENT_SECRET_SECRET:-${OAUTH_CLIENT_SECRET_SECRET:-}}"
 OAUTH_CLIENT_ID_SECRET_VERSION="${WEB_OAUTH_CLIENT_ID_SECRET_VERSION:-${OAUTH_CLIENT_ID_SECRET_VERSION:-latest}}"
 OAUTH_CLIENT_SECRET_SECRET_VERSION="${WEB_OAUTH_CLIENT_SECRET_SECRET_VERSION:-${OAUTH_CLIENT_SECRET_SECRET_VERSION:-latest}}"
+CONFIG_SECRET_NAME="${CONFIG_SECRET_NAME:-${CONFIG_SECRET:-}}"
+CONFIG_SECRET_VERSION="${CONFIG_SECRET_VERSION:-latest}"
+CONFIG_SECRET_PROJECT="${CONFIG_SECRET_PROJECT:-${PROJECT_ID}}"
 # Firestore is shared between the Cloud Run web app, the receipt processor, and the user registration flow.
 # Default the shared project to the deployment project, but allow overrides when the
 # Firestore database lives in a different project.
@@ -108,6 +111,52 @@ append_secret_var() {
 
   SECRET_VARS_LIST+=("${key}=${secret_name}:${version}")
 }
+
+CONFIG_CACHE=""
+load_config_secret() {
+  if [[ -n "${CONFIG_CACHE}" || -z "${CONFIG_SECRET_NAME:-}" ]]; then
+    return
+  fi
+
+  CONFIG_CACHE=$(gcloud secrets versions access "${CONFIG_SECRET_VERSION:-latest}" \
+    --secret "${CONFIG_SECRET_NAME}" \
+    --project "${CONFIG_SECRET_PROJECT:-${PROJECT_ID}}" 2>/dev/null || true)
+}
+
+config_value() {
+  local key="$1"
+  load_config_secret
+  if [[ -z "${CONFIG_CACHE}" ]]; then
+    return
+  fi
+
+  CONFIG_CACHE="${CONFIG_CACHE}" python3 - <<'PY'
+import json
+import os
+import sys
+
+payload = os.environ.get("CONFIG_CACHE", "")
+if not payload.strip():
+    raise SystemExit(0)
+
+try:
+    data = json.loads(payload)
+except json.JSONDecodeError:
+    raise SystemExit(0)
+
+value = data.get(sys.argv[1])
+if value:
+    print(value)
+PY
+}
+
+if [[ -z "${GOOGLE_CLIENT_ID:-}" ]]; then
+  GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-$(config_value google_client_id)}"
+fi
+
+if [[ -z "${GOOGLE_CLIENT_SECRET:-}" ]]; then
+  GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-$(config_value google_client_secret)}"
+fi
 
 if [[ -z "${GOOGLE_CLIENT_ID:-}" && -z "${OAUTH_CLIENT_ID_SECRET:-}" ]]; then
   printf '%s\n' \

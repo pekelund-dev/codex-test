@@ -57,6 +57,12 @@ variable "receipt_service_name" {
   default     = "pklnd-receipts"
 }
 
+variable "config_secret_id" {
+  description = "Secret Manager ID holding production configuration payloads"
+  type        = string
+  default     = "pklnd-config"
+}
+
 variable "protect_services" {
   description = "Prevent accidental deletion of Cloud Run services and other core resources; set to false only when intentionally destroying the stack"
   type        = bool

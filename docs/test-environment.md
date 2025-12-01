@@ -40,7 +40,13 @@ terraform apply -var "project_id=$(gcloud config get-value project)" \
 
 Terraform applies the same resource layout as the gcloud helper and also stands up Cloud Run services using the public `gcr.io/cloudrun/hello` image so you can see the endpoints immediately. Use the outputs for bucket names, service accounts (including the upload account), repository IDs, and service URLs when deploying.
 
-Secret Manager entries (`oauth_client_id_secret`, `oauth_client_secret_secret`, `ai_studio_api_key_secret`) are created empty; add versions with `gcloud secrets versions add ... --data-file=...` after `apply`. Cloud Run runtimes already have secret accessors, and the deploy scripts will prefer Secret Manager over inline environment variables.
+A single Secret Manager entry (`config_secret`) is created empty; add one version that stores a JSON object with all sensitive values after `apply`, for example:
+
+```json
+{"google_client_id":"...","google_client_secret":"...","ai_studio_api_key":"..."}
+```
+
+Cloud Run runtimes already have secret accessors, and the deploy scripts will read these values automatically, falling back to inline environment variables only when the secret is missing.
 
 > **Safety net:** The module blocks destroying Cloud Run services, buckets, and service accounts unless you explicitly set `protect_services=false`. This prevents accidental removal of production resources if the wrong state file or environment name is used. The `env_name` must also be non-empty and not equal to `prod`/`production`.
 

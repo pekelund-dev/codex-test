@@ -21,7 +21,7 @@ After apply, use the outputs for deployment:
 - `web_service_account_email` / `receipt_service_account_email` → runtime identities already attached to the placeholder Cloud Run services.
 - `web_service_url` / `receipt_service_url` → initial endpoints (updated automatically when you redeploy images).
 - `web_repository` / `receipt_repository` → container registries for the web and receipt processor images.
-- `oauth_client_id_secret` / `oauth_client_secret_secret` / `ai_studio_api_key_secret` → Secret Manager names. Add a version to each with `gcloud secrets versions add ... --data-file=...` after apply; the runtime accounts already have accessor roles and the deploy scripts will prefer these secrets over inline variables.
+- `config_secret` → single Secret Manager entry for all sensitive values. Store one JSON payload (for example `{"google_client_id":"...","google_client_secret":"...","ai_studio_api_key":"..."}`) after apply; the runtime accounts already have accessor roles and the deploy scripts will read this secret automatically.
 
 ## Teardown
 

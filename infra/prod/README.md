@@ -26,7 +26,7 @@ terraform output -raw web_service_name
 terraform output -raw receipt_service_name
 ```
 
-Secret Manager entries for the OAuth client ID/secret and the optional Gemini key are also created (`oauth_client_id_secret`, `oauth_client_secret_secret`, `ai_studio_api_key_secret`). Add versions with `gcloud secrets versions add ... --data-file=...` once; the runtime service accounts already have accessor roles and the deploy scripts will automatically use these secrets instead of inline environment variables.
+One Secret Manager entry (`config_secret`) holds all sensitive values. Add a single JSON payload (for example `{"google_client_id":"...","google_client_secret":"...","ai_studio_api_key":"..."}`) with `gcloud secrets versions add ... --data-file=...` once; the runtime service accounts already have accessor roles and the deploy scripts will automatically read this secret instead of inline environment variables.
 
 ## Teardown
 
