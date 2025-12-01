@@ -25,9 +25,7 @@ After apply, use the outputs for deployment:
 
 ## Teardown
 
-> **Safety net:** Cloud Run services, buckets, Artifact Registry repositories, and service accounts use `protect_services` to pr
-event accidental deletion. Leave it `true` during day-to-day applies. Only set it to `false` when you are sure you want to tear
- down the suffixed test resources. The `env_name` variable must also be non-empty and must not equal `prod`/`production`.
+> **Safety net:** Cloud Run services honor `protect_services` as deletion protection. Leave it `true` during day-to-day applies and set it to `false` only when you are sure you want Terraform to remove the managed services. The `env_name` variable must also be non-empty and must not equal `prod`/`production`.
 
 To remove the entire test stack that was created by this module, run a destroy with the same variables you applied with and ov
 erride the protection flag:

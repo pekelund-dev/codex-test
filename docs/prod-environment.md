@@ -50,4 +50,4 @@ The script builds and deploys both Cloud Run services, attaching the production 
 
 ## Teardown controls
 
-The Terraform configuration uses `protect_services` to prevent accidental deletion of production resources. Leave it `true` during normal operation. Only set it to `false` if you deliberately intend to run `terraform destroy` and remove the managed Cloud Run services, bucket, repositories, and service accounts.
+The Terraform configuration uses `protect_services` to enable Cloud Run deletion protection. Leave it `true` during normal operation. Set it to `false` only if you deliberately intend to let Terraform remove the managed services; other resources will follow the normal destroy plan.

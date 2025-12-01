@@ -48,7 +48,7 @@ A single Secret Manager entry (`config_secret`) is created empty; add one versio
 
 Cloud Run runtimes already have secret accessors, and the deploy scripts will read these values automatically, falling back to inline environment variables only when the secret is missing.
 
-> **Safety net:** The module blocks destroying Cloud Run services, buckets, and service accounts unless you explicitly set `protect_services=false`. This prevents accidental removal of production resources if the wrong state file or environment name is used. The `env_name` must also be non-empty and not equal to `prod`/`production`.
+> **Safety net:** Cloud Run services use `protect_services` as deletion protection. Set it to `false` only when you intend Terraform to remove the managed services. The `env_name` must also be non-empty and not equal to `prod`/`production`.
 
 To tear the Terraform-managed test environment down, run a destroy with the same variables and an explicit override for protection:
 

@@ -21,7 +21,7 @@ variable "env_name" {
 }
 
 variable "protect_services" {
-  description = "Prevent accidental deletion of Cloud Run services and other core resources; set to false only when intentionally destroying the test stack"
+  description = "Toggle Cloud Run deletion protection; set to false only when intentionally destroying the test stack"
   type        = bool
   default     = true
 }

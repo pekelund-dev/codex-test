@@ -59,9 +59,6 @@ resource "google_storage_bucket" "receipts" {
     }
   }
 
-  lifecycle {
-    prevent_destroy = var.protect_services
-  }
 }
 
 resource "google_artifact_registry_repository" "web" {
@@ -77,9 +74,6 @@ resource "google_artifact_registry_repository" "web" {
     }
   }
 
-  lifecycle {
-    prevent_destroy = var.protect_services
-  }
 }
 
 resource "google_artifact_registry_repository" "receipts" {
@@ -95,9 +89,6 @@ resource "google_artifact_registry_repository" "receipts" {
     }
   }
 
-  lifecycle {
-    prevent_destroy = var.protect_services
-  }
 }
 
 resource "google_service_account" "web_runtime" {
@@ -105,9 +96,6 @@ resource "google_service_account" "web_runtime" {
   project      = var.project_id
   display_name = "pklnd web runtime (${var.env_name})"
 
-  lifecycle {
-    prevent_destroy = var.protect_services
-  }
 }
 
 resource "google_service_account" "receipt_runtime" {
@@ -115,9 +103,6 @@ resource "google_service_account" "receipt_runtime" {
   project      = var.project_id
   display_name = "Receipt processor runtime (${var.env_name})"
 
-  lifecycle {
-    prevent_destroy = var.protect_services
-  }
 }
 
 resource "google_secret_manager_secret" "pklnd_config" {
@@ -126,9 +111,6 @@ resource "google_secret_manager_secret" "pklnd_config" {
 
   replication { automatic = true }
 
-  lifecycle {
-    prevent_destroy = var.protect_services
-  }
 }
 
 resource "google_secret_manager_secret_iam_member" "config_web" {
@@ -147,10 +129,6 @@ resource "google_service_account" "upload" {
   account_id   = local.upload_service_account
   project      = var.project_id
   display_name = "Receipt uploads (${var.env_name})"
-
-  lifecycle {
-    prevent_destroy = var.protect_services
-  }
 }
 
 resource "google_project_iam_member" "web_firestore" {
@@ -249,8 +227,7 @@ resource "google_cloud_run_service" "receipt_processor" {
   }
 
   lifecycle {
-    ignore_changes  = [template[0].spec[0].containers[0].image]
-    prevent_destroy = var.protect_services
+    ignore_changes = [template[0].spec[0].containers[0].image]
   }
 
   depends_on = [google_project_service.pklnd_services]
@@ -285,8 +262,7 @@ resource "google_cloud_run_service" "web" {
   }
 
   lifecycle {
-    ignore_changes  = [template[0].spec[0].containers[0].image]
-    prevent_destroy = var.protect_services
+    ignore_changes = [template[0].spec[0].containers[0].image]
   }
 
   depends_on = [google_project_service.pklnd_services]

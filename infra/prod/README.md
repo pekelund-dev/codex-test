@@ -30,7 +30,7 @@ One Secret Manager entry (`config_secret`) holds all sensitive values. Add a sin
 
 ## Teardown
 
-Leave `protect_services` set to `true` during normal operation to avoid accidental removal of production services. Only set it to `false` if you intentionally want Terraform to delete the managed Cloud Run services, bucket, Artifact Registry repositories, and service accounts:
+Leave `protect_services` set to `true` during normal operation to avoid accidental removal of the Cloud Run services. Toggle it to `false` only when you intentionally want Terraform to drop the managed services (other resources now follow the normal destroy plan):
 
 ```bash
 terraform destroy \

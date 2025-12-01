@@ -64,7 +64,7 @@ variable "config_secret_id" {
 }
 
 variable "protect_services" {
-  description = "Prevent accidental deletion of Cloud Run services and other core resources; set to false only when intentionally destroying the stack"
+  description = "Toggle Cloud Run deletion protection; set to false only when intentionally destroying the stack"
   type        = bool
   default     = true
 }
