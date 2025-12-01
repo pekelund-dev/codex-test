@@ -183,6 +183,10 @@ Both documents describe prerequisites, metadata expectations, status updates, ve
 
 To stand up a fully isolated test copy of pklnd in the same Google Cloud project, use the helpers in [docs/test-environment.md](docs/test-environment.md). They provision dedicated buckets, Artifact Registry repositories, and service accounts with a configurable suffix so you can deploy a parallel environment without disturbing production resources.
 
+#### Production infrastructure via Terraform
+
+For production, provision the core bucket, Artifact Registry repositories, service accounts, and Cloud Run services with the Terraform configuration in [docs/prod-environment.md](docs/prod-environment.md). The accompanying deploy script reads Terraform outputs and pushes the current builds to the Cloud Run services defined in `infra/prod`.
+
 #### Local smoke testing
 
 You can exercise the Cloud Run service locally without waiting for a new deployment by running it with Spring Boot:
