@@ -16,6 +16,9 @@ terraform apply \
   -var "bucket_name=pklnd-receipts"
 ```
 
+> Passing `-var "protect_services=..."` is accepted for backward compatibility but has no effect on the current Terraform reso
+urces.
+
 After apply, note the outputs for bucket name, Artifact Registry repositories, service accounts, and the `config_secret` entry. Add a single secret version that stores your sensitive values as JSON so you stay within the Secret Manager free tier:
 
 ```json

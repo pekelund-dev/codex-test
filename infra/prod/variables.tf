@@ -86,3 +86,13 @@ variable "allow_receipt_unauthenticated" {
   type        = bool
   default     = false
 }
+
+# Backwards compatibility: accepted but unused. Terraform previously exposed a
+# protect_services flag, and some automation still passes it. Keeping the
+# variable declared prevents "value for undeclared variable" errors without
+# altering the resource graph.
+variable "protect_services" {
+  description = "Deprecated flag retained for compatibility; no effect on resources"
+  type        = bool
+  default     = false
+}

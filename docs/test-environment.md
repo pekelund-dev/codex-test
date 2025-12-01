@@ -37,6 +37,9 @@ terraform apply -var "project_id=$(gcloud config get-value project)" \
   -var "env_name=test"
 ```
 
+> Passing `-var "protect_services=..."` is accepted for backward compatibility but has no effect on the current Terraform reso
+urces.
+
 Terraform applies the same resource layout as the gcloud helper and also stands up Cloud Run services using the public `gcr.io/cloudrun/hello` image so you can see the endpoints immediately. Use the outputs for bucket names, service accounts (including the upload account), repository IDs, and service URLs when deploying.
 
 A single Secret Manager entry (`config_secret`) is created empty; add one version that stores a JSON object with all sensitive values after `apply`, for example:

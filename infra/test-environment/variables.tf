@@ -43,3 +43,12 @@ variable "allow_receipt_unauthenticated" {
   type        = bool
   default     = false
 }
+
+# Backwards compatibility: this flag is unused but retained so scripts that
+# still pass -var "protect_services=..." do not fail with undeclared variable
+# errors. It does not change any resources.
+variable "protect_services" {
+  description = "Deprecated flag accepted for compatibility; no effect"
+  type        = bool
+  default     = false
+}
