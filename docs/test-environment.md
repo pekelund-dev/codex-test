@@ -37,6 +37,20 @@ terraform apply -var "project_id=$(gcloud config get-value project)" \
   -var "env_name=test"
 ```
 
+If the test service accounts already exist in the project, reuse them to avoid 409 errors by disabling account management and providing the existing emails:
+
+```bash
+PROJECT_ID=$(gcloud config get-value project)
+
+terraform apply -var "project_id=$PROJECT_ID" \
+  -var "region=europe-north1" \
+  -var "env_name=test" \
+  -var "manage_service_accounts=false" \
+  -var "web_service_account_email=cloud-run-runtime-test@$PROJECT_ID.iam.gserviceaccount.com" \
+  -var "receipt_service_account_email=receipt-processor-test@$PROJECT_ID.iam.gserviceaccount.com" \
+  -var "upload_service_account_email=receipt-uploads-test@$PROJECT_ID.iam.gserviceaccount.com"
+```
+
 > Passing `-var "protect_services=..."` is accepted for backward compatibility but has no effect on the current Terraform reso
 urces.
 

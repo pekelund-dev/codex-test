@@ -14,7 +14,20 @@ terraform apply \
   -var "bucket_name=pklnd-receipts"
 ```
 
-> The defaults assume you want to mirror the current production naming scheme. Override any of the variables in `variables.tf` if your existing resources use different names. Import pre-existing resources into the state before applying if they already exist.
+> The defaults assume you want to mirror the current production naming scheme. Override any of the variables in `variables.tf` if your existing resources use different names.
+
+If the runtime service accounts already exist (for example, `cloud-run-runtime` and `receipt-processor`), reuse them instead of deleting them:
+
+```bash
+terraform apply \
+  -var "project_id=$(gcloud config get-value project)" \
+  -var "region=europe-north1" \
+  -var "bucket_name=pklnd-receipts" \
+  -var "manage_service_accounts=false" \
+  -var "web_service_account_email=cloud-run-runtime@$(gcloud config get-value project).iam.gserviceaccount.com" \
+  -var "receipt_service_account_email=receipt-processor@$(gcloud config get-value project).iam.gserviceaccount.com" \
+  -var "upload_service_account_email=receipt-uploads@$(gcloud config get-value project).iam.gserviceaccount.com"
+```
 
 After apply, pull the outputs to feed the deployment scripts:
 

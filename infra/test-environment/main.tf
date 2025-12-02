@@ -24,6 +24,10 @@ locals {
   web_service_name        = "pklnd-web-${var.env_name}"
   receipt_service_name    = "pklnd-receipts-${var.env_name}"
   config_secret_name      = "pklnd-config-${var.env_name}"
+
+  web_service_account_email     = var.manage_service_accounts ? google_service_account.web_runtime[0].email : var.web_service_account_email
+  receipt_service_account_email = var.manage_service_accounts ? google_service_account.receipt_runtime[0].email : var.receipt_service_account_email
+  upload_service_account_email  = var.manage_service_accounts ? google_service_account.upload[0].email : var.upload_service_account_email
 }
 
 resource "google_project_service" "pklnd_services" {
@@ -92,6 +96,8 @@ resource "google_artifact_registry_repository" "receipts" {
 }
 
 resource "google_service_account" "web_runtime" {
+  count = var.manage_service_accounts ? 1 : 0
+
   account_id   = local.web_service_account
   project      = var.project_id
   display_name = "pklnd web runtime (${var.env_name})"
@@ -99,6 +105,8 @@ resource "google_service_account" "web_runtime" {
 }
 
 resource "google_service_account" "receipt_runtime" {
+  count = var.manage_service_accounts ? 1 : 0
+
   account_id   = local.receipt_service_account
   project      = var.project_id
   display_name = "Receipt processor runtime (${var.env_name})"
@@ -118,16 +126,18 @@ resource "google_secret_manager_secret" "pklnd_config" {
 resource "google_secret_manager_secret_iam_member" "config_web" {
   secret_id = google_secret_manager_secret.pklnd_config.id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.web_runtime.email}"
+  member    = "serviceAccount:${local.web_service_account_email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "config_receipt" {
   secret_id = google_secret_manager_secret.pklnd_config.id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.receipt_runtime.email}"
+  member    = "serviceAccount:${local.receipt_service_account_email}"
 }
 
 resource "google_service_account" "upload" {
+  count = var.manage_service_accounts ? 1 : 0
+
   account_id   = local.upload_service_account
   project      = var.project_id
   display_name = "Receipt uploads (${var.env_name})"
@@ -136,68 +146,68 @@ resource "google_service_account" "upload" {
 resource "google_project_iam_member" "web_firestore" {
   project = var.project_id
   role    = "roles/datastore.user"
-  member  = "serviceAccount:${google_service_account.web_runtime.email}"
+  member  = "serviceAccount:${local.web_service_account_email}"
   depends_on = [google_project_service.pklnd_services]
 }
 
 resource "google_project_iam_member" "web_storage" {
   project = var.project_id
   role    = "roles/storage.objectAdmin"
-  member  = "serviceAccount:${google_service_account.web_runtime.email}"
+  member  = "serviceAccount:${local.web_service_account_email}"
   depends_on = [google_project_service.pklnd_services]
 }
 
 resource "google_project_iam_member" "receipt_firestore" {
   project = var.project_id
   role    = "roles/datastore.user"
-  member  = "serviceAccount:${google_service_account.receipt_runtime.email}"
+  member  = "serviceAccount:${local.receipt_service_account_email}"
   depends_on = [google_project_service.pklnd_services]
 }
 
 resource "google_project_iam_member" "receipt_storage" {
   project = var.project_id
   role    = "roles/storage.objectAdmin"
-  member  = "serviceAccount:${google_service_account.receipt_runtime.email}"
+  member  = "serviceAccount:${local.receipt_service_account_email}"
   depends_on = [google_project_service.pklnd_services]
 }
 
 resource "google_project_iam_member" "receipt_vertex" {
   project = var.project_id
   role    = "roles/aiplatform.user"
-  member  = "serviceAccount:${google_service_account.receipt_runtime.email}"
+  member  = "serviceAccount:${local.receipt_service_account_email}"
   depends_on = [google_project_service.pklnd_services]
 }
 
 resource "google_project_iam_member" "receipt_logging" {
   project = var.project_id
   role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${google_service_account.receipt_runtime.email}"
+  member  = "serviceAccount:${local.receipt_service_account_email}"
   depends_on = [google_project_service.pklnd_services]
 }
 
 resource "google_project_iam_member" "upload_storage" {
   project = var.project_id
   role    = "roles/storage.objectAdmin"
-  member  = "serviceAccount:${google_service_account.upload.email}"
+  member  = "serviceAccount:${local.upload_service_account_email}"
   depends_on = [google_project_service.pklnd_services]
 }
 
 resource "google_storage_bucket_iam_member" "web_bucket_admin" {
   bucket = google_storage_bucket.receipts.name
   role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.web_runtime.email}"
+  member = "serviceAccount:${local.web_service_account_email}"
 }
 
 resource "google_storage_bucket_iam_member" "receipt_bucket_admin" {
   bucket = google_storage_bucket.receipts.name
   role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.receipt_runtime.email}"
+  member = "serviceAccount:${local.receipt_service_account_email}"
 }
 
 resource "google_storage_bucket_iam_member" "upload_bucket_admin" {
   bucket = google_storage_bucket.receipts.name
   role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.upload.email}"
+  member = "serviceAccount:${local.upload_service_account_email}"
 }
 
 resource "google_cloud_run_service" "receipt_processor" {
@@ -209,7 +219,7 @@ resource "google_cloud_run_service" "receipt_processor" {
 
   template {
     spec {
-      service_account_name = google_service_account.receipt_runtime.email
+      service_account_name = local.receipt_service_account_email
 
       containers {
         image = var.receipt_image
@@ -242,7 +252,7 @@ resource "google_cloud_run_service" "web" {
 
   template {
     spec {
-      service_account_name = google_service_account.web_runtime.email
+      service_account_name = local.web_service_account_email
 
       containers {
         image = var.web_image
@@ -289,7 +299,7 @@ resource "google_cloud_run_service_iam_member" "receipt_invoker_web" {
   project  = google_cloud_run_service.receipt_processor.project
   service  = google_cloud_run_service.receipt_processor.name
   role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.web_runtime.email}"
+  member   = "serviceAccount:${local.web_service_account_email}"
 }
 
 output "bucket_name" {
@@ -299,12 +309,12 @@ output "bucket_name" {
 
 output "web_service_account_email" {
   description = "Runtime service account for the web app"
-  value       = google_service_account.web_runtime.email
+  value       = local.web_service_account_email
 }
 
 output "receipt_service_account_email" {
   description = "Runtime service account for the receipt processor"
-  value       = google_service_account.receipt_runtime.email
+  value       = local.receipt_service_account_email
 }
 
 output "web_repository" {
@@ -319,7 +329,7 @@ output "receipt_repository" {
 
 output "upload_service_account_email" {
   description = "Service account used for direct receipt uploads"
-  value       = google_service_account.upload.email
+  value       = local.upload_service_account_email
 }
 
 output "config_secret" {

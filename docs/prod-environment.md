@@ -16,6 +16,21 @@ terraform apply \
   -var "bucket_name=pklnd-receipts"
 ```
 
+If the runtime service accounts already exist in the project, reuse them instead of deleting them:
+
+```bash
+PROJECT_ID=$(gcloud config get-value project)
+
+terraform apply \
+  -var "project_id=$PROJECT_ID" \
+  -var "region=europe-north1" \
+  -var "bucket_name=pklnd-receipts" \
+  -var "manage_service_accounts=false" \
+  -var "web_service_account_email=cloud-run-runtime@$PROJECT_ID.iam.gserviceaccount.com" \
+  -var "receipt_service_account_email=receipt-processor@$PROJECT_ID.iam.gserviceaccount.com" \
+  -var "upload_service_account_email=receipt-uploads@$PROJECT_ID.iam.gserviceaccount.com"
+```
+
 > Passing `-var "protect_services=..."` is accepted for backward compatibility but has no effect on the current Terraform reso
 urces.
 

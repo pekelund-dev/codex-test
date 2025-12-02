@@ -13,6 +13,21 @@ terraform apply -var "project_id=$(gcloud config get-value project)" \
   -var "env_name=test"
 ```
 
+If the shared project already contains the test service accounts (for example, from a previous run), reuse them to avoid creati
+on conflicts:
+
+```bash
+PROJECT_ID=$(gcloud config get-value project)
+
+terraform apply -var "project_id=$PROJECT_ID" \
+  -var "region=europe-north1" \
+  -var "env_name=test" \
+  -var "manage_service_accounts=false" \
+  -var "web_service_account_email=cloud-run-runtime-test@$PROJECT_ID.iam.gserviceaccount.com" \
+  -var "receipt_service_account_email=receipt-processor-test@$PROJECT_ID.iam.gserviceaccount.com" \
+  -var "upload_service_account_email=receipt-uploads-test@$PROJECT_ID.iam.gserviceaccount.com"
+```
+
 After apply, use the outputs for deployment:
 
 - `bucket_name` → pass to `GCS_BUCKET` when deploying the web app and receipt processor.

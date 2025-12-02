@@ -44,6 +44,30 @@ variable "allow_receipt_unauthenticated" {
   default     = false
 }
 
+variable "manage_service_accounts" {
+  description = "Whether Terraform should create/manage service accounts. Set to false to reuse existing accounts."
+  type        = bool
+  default     = true
+}
+
+variable "web_service_account_email" {
+  description = "Email of an existing web runtime service account (required when manage_service_accounts is false)."
+  type        = string
+  default     = ""
+}
+
+variable "receipt_service_account_email" {
+  description = "Email of an existing receipt processor service account (required when manage_service_accounts is false)."
+  type        = string
+  default     = ""
+}
+
+variable "upload_service_account_email" {
+  description = "Email of an existing upload service account (required when manage_service_accounts is false)."
+  type        = string
+  default     = ""
+}
+
 # Backwards compatibility: this flag is unused but retained so scripts that
 # still pass -var "protect_services=..." do not fail with undeclared variable
 # errors. It does not change any resources.
@@ -51,4 +75,14 @@ variable "protect_services" {
   description = "Deprecated flag accepted for compatibility; no effect"
   type        = bool
   default     = false
+}
+
+validation {
+  condition = var.manage_service_accounts || (
+    length(var.web_service_account_email) > 0 &&
+    length(var.receipt_service_account_email) > 0 &&
+    length(var.upload_service_account_email) > 0
+  )
+
+  error_message = "Set manage_service_accounts to true or provide existing service account emails for web, receipt, and upload."
 }
