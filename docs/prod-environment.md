@@ -35,6 +35,28 @@ The Secret Manager free tier covers typical access volume, keeping costs negligi
 
 > The defaults match the current production naming scheme. Override values in `variables.tf` if your existing resources use different identifiers. Import any pre-existing resources before you apply so Terraform manages them safely.
 
+### Verify Cloud Run scaffolding before deploying
+
+Terraform seeds placeholder Cloud Run services using the public `gcr.io/cloudrun/hello` image so you can confirm everything exists before pushing real images. Use the outputs to describe both services:
+
+```bash
+cd infra/prod
+WEB_SERVICE=$(terraform output -raw web_service_name)
+RECEIPT_SERVICE=$(terraform output -raw receipt_service_name)
+PROJECT_ID=$(terraform output -raw project_id)
+REGION=$(terraform output -raw region)
+
+gcloud run services describe "$WEB_SERVICE" \
+  --project "$PROJECT_ID" --region "$REGION" \
+  --format="value(status.url,status.latestReadyRevisionName,template.spec.containers[0].image)"
+
+gcloud run services describe "$RECEIPT_SERVICE" \
+  --project "$PROJECT_ID" --region "$REGION" \
+  --format="value(status.url,status.latestReadyRevisionName,template.spec.containers[0].image)"
+```
+
+You should see a URL for each service and the `gcr.io/cloudrun/hello` image until you deploy the production artifacts with `deploy_prod_env.sh`.
+
 ## Step 2: Deploy the services
 
 With infrastructure in place, deploy the production builds via the helper script. It reuses Terraform outputs when available and falls back to the standard production names:

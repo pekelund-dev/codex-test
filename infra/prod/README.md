@@ -25,6 +25,25 @@ terraform output -raw web_service_name
 terraform output -raw receipt_service_name
 ```
 
+To double-check that Terraform created the placeholder Cloud Run services, describe them with `gcloud` (they initially point to the public `gcr.io/cloudrun/hello` image):
+
+```bash
+WEB_SERVICE=$(terraform output -raw web_service_name)
+RECEIPT_SERVICE=$(terraform output -raw receipt_service_name)
+PROJECT_ID=$(terraform output -raw project_id)
+REGION=$(terraform output -raw region)
+
+gcloud run services describe "$WEB_SERVICE" \
+  --project "$PROJECT_ID" --region "$REGION" \
+  --format="value(status.url,status.latestReadyRevisionName,template.spec.containers[0].image)"
+
+gcloud run services describe "$RECEIPT_SERVICE" \
+  --project "$PROJECT_ID" --region "$REGION" \
+  --format="value(status.url,status.latestReadyRevisionName,template.spec.containers[0].image)"
+```
+
+Seeing valid URLs and the `gcr.io/cloudrun/hello` image confirms the services exist and are ready for a production deployment with `scripts/deploy_prod_env.sh`.
+
 One Secret Manager entry (`config_secret`) holds all sensitive values. Add a single JSON payload (for example `{"google_client_id":"...","google_client_secret":"...","ai_studio_api_key":"..."}`) with `gcloud secrets versions add ... --data-file=...` once; the runtime service accounts already have accessor roles and the deploy scripts will automatically read this secret instead of inline environment variables.
 
 ## Teardown
