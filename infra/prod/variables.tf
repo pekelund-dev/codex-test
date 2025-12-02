@@ -49,6 +49,16 @@ variable "manage_service_accounts" {
   description = "Whether Terraform should create/manage service accounts. Set to false to reuse existing accounts."
   type        = bool
   default     = true
+
+  validation {
+    condition = var.manage_service_accounts || (
+      length(var.web_service_account_email) > 0 &&
+      length(var.receipt_service_account_email) > 0 &&
+      length(var.upload_service_account_email) > 0
+    )
+
+    error_message = "Set manage_service_accounts to true or provide existing service account emails for web, receipt, and upload."
+  }
 }
 
 variable "web_service_account_email" {
@@ -67,16 +77,6 @@ variable "upload_service_account_email" {
   description = "Email of an existing upload service account (required when manage_service_accounts is false)."
   type        = string
   default     = ""
-}
-
-validation {
-  condition = var.manage_service_accounts || (
-    length(var.web_service_account_email) > 0 &&
-    length(var.receipt_service_account_email) > 0 &&
-    length(var.upload_service_account_email) > 0
-  )
-
-  error_message = "Set manage_service_accounts to true or provide existing service account emails for web, receipt, and upload."
 }
 
 variable "web_service_name" {
