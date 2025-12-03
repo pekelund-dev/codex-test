@@ -16,18 +16,17 @@ terraform apply \
 
 > The defaults assume you want to mirror the current production naming scheme. Override any of the variables in `variables.tf` if your existing resources use different names.
 
-If the runtime service accounts already exist (for example, `cloud-run-runtime` and `receipt-processor`), reuse them instead of deleting them:
+Existing projects typically already have the runtime service accounts (`cloud-run-runtime` and `receipt-processor`). By default Terraform will reuse them automatically—no extra flags needed—because `manage_service_accounts` now defaults to `false` and derives the service account emails from the IDs and project ID. If you prefer Terraform to create the identities (for a brand-new project), flip the flag to `true`:
 
 ```bash
 terraform apply \
   -var "project_id=$(gcloud config get-value project)" \
   -var "region=europe-north1" \
   -var "bucket_name=pklnd-receipts" \
-  -var "manage_service_accounts=false" \
-  -var "web_service_account_email=cloud-run-runtime@$(gcloud config get-value project).iam.gserviceaccount.com" \
-  -var "receipt_service_account_email=receipt-processor@$(gcloud config get-value project).iam.gserviceaccount.com" \
-  -var "upload_service_account_email=receipt-uploads@$(gcloud config get-value project).iam.gserviceaccount.com"
+  -var "manage_service_accounts=true"
 ```
+
+If you need to point at existing service accounts that do not follow the default naming convention, set `manage_service_accounts=false` and pass their emails explicitly using the `*_service_account_email` variables.
 
 After apply, pull the outputs to feed the deployment scripts:
 

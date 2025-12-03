@@ -37,7 +37,7 @@ terraform apply -var "project_id=$(gcloud config get-value project)" \
   -var "env_name=test"
 ```
 
-If the test service accounts already exist in the project, reuse them to avoid 409 errors by disabling account management and providing the existing emails:
+Existing projects typically already have the runtime service accounts. Terraform now defaults to reusing them automatically because `manage_service_accounts` is `false` and the module derives the service account emails from the environment name and project ID. If you need Terraform to create fresh identities (for a brand-new test project), set `manage_service_accounts=true`:
 
 ```bash
 PROJECT_ID=$(gcloud config get-value project)
@@ -45,11 +45,10 @@ PROJECT_ID=$(gcloud config get-value project)
 terraform apply -var "project_id=$PROJECT_ID" \
   -var "region=europe-north1" \
   -var "env_name=test" \
-  -var "manage_service_accounts=false" \
-  -var "web_service_account_email=cloud-run-runtime-test@$PROJECT_ID.iam.gserviceaccount.com" \
-  -var "receipt_service_account_email=receipt-processor-test@$PROJECT_ID.iam.gserviceaccount.com" \
-  -var "upload_service_account_email=receipt-uploads-test@$PROJECT_ID.iam.gserviceaccount.com"
+  -var "manage_service_accounts=true"
 ```
+
+When your service accounts use different names, keep `manage_service_accounts=false` and pass the custom emails via the `*_service_account_email` variables.
 
 > Passing `-var "protect_services=..."` is accepted for backward compatibility but has no effect on the current Terraform reso
 urces.

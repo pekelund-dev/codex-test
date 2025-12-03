@@ -13,8 +13,7 @@ terraform apply -var "project_id=$(gcloud config get-value project)" \
   -var "env_name=test"
 ```
 
-If the shared project already contains the test service accounts (for example, from a previous run), reuse them to avoid creati
-on conflicts:
+Existing projects usually already contain the test service accounts. Terraform reuses them automatically now because `manage_service_accounts` defaults to `false` and derives the emails from the environment name and project ID. To have Terraform create new identities in a brand-new project, set `manage_service_accounts=true`:
 
 ```bash
 PROJECT_ID=$(gcloud config get-value project)
@@ -22,11 +21,10 @@ PROJECT_ID=$(gcloud config get-value project)
 terraform apply -var "project_id=$PROJECT_ID" \
   -var "region=europe-north1" \
   -var "env_name=test" \
-  -var "manage_service_accounts=false" \
-  -var "web_service_account_email=cloud-run-runtime-test@$PROJECT_ID.iam.gserviceaccount.com" \
-  -var "receipt_service_account_email=receipt-processor-test@$PROJECT_ID.iam.gserviceaccount.com" \
-  -var "upload_service_account_email=receipt-uploads-test@$PROJECT_ID.iam.gserviceaccount.com"
+  -var "manage_service_accounts=true"
 ```
+
+If your service accounts use different names, keep `manage_service_accounts=false` and pass the emails with the `*_service_account_email` variables.
 
 After apply, use the outputs for deployment:
 

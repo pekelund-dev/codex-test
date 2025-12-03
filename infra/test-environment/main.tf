@@ -25,9 +25,13 @@ locals {
   receipt_service_name    = "pklnd-receipts-${var.env_name}"
   config_secret_name      = "pklnd-config-${var.env_name}"
 
-  web_service_account_email     = var.manage_service_accounts ? google_service_account.web_runtime[0].email : var.web_service_account_email
-  receipt_service_account_email = var.manage_service_accounts ? google_service_account.receipt_runtime[0].email : var.receipt_service_account_email
-  upload_service_account_email  = var.manage_service_accounts ? google_service_account.upload[0].email : var.upload_service_account_email
+  default_web_service_account_email     = "${local.web_service_account}@${var.project_id}.iam.gserviceaccount.com"
+  default_receipt_service_account_email = "${local.receipt_service_account}@${var.project_id}.iam.gserviceaccount.com"
+  default_upload_service_account_email  = "${local.upload_service_account}@${var.project_id}.iam.gserviceaccount.com"
+
+  web_service_account_email     = var.manage_service_accounts ? google_service_account.web_runtime[0].email : coalesce(var.web_service_account_email, local.default_web_service_account_email)
+  receipt_service_account_email = var.manage_service_accounts ? google_service_account.receipt_runtime[0].email : coalesce(var.receipt_service_account_email, local.default_receipt_service_account_email)
+  upload_service_account_email  = var.manage_service_accounts ? google_service_account.upload[0].email : coalesce(var.upload_service_account_email, local.default_upload_service_account_email)
 }
 
 resource "google_project_service" "pklnd_services" {

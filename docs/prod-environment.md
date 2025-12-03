@@ -16,7 +16,7 @@ terraform apply \
   -var "bucket_name=pklnd-receipts"
 ```
 
-If the runtime service accounts already exist in the project, reuse them instead of deleting them:
+If the runtime service accounts already exist in the project, Terraform reuses them automatically because `manage_service_accounts` defaults to `false` and derives the emails from the service account IDs and project ID. To have Terraform create brand-new identities, set `manage_service_accounts=true`:
 
 ```bash
 PROJECT_ID=$(gcloud config get-value project)
@@ -25,11 +25,10 @@ terraform apply \
   -var "project_id=$PROJECT_ID" \
   -var "region=europe-north1" \
   -var "bucket_name=pklnd-receipts" \
-  -var "manage_service_accounts=false" \
-  -var "web_service_account_email=cloud-run-runtime@$PROJECT_ID.iam.gserviceaccount.com" \
-  -var "receipt_service_account_email=receipt-processor@$PROJECT_ID.iam.gserviceaccount.com" \
-  -var "upload_service_account_email=receipt-uploads@$PROJECT_ID.iam.gserviceaccount.com"
+  -var "manage_service_accounts=true"
 ```
+
+If your existing accounts use different names, keep `manage_service_accounts=false` and pass their emails explicitly via the `*_service_account_email` variables.
 
 > Passing `-var "protect_services=..."` is accepted for backward compatibility but has no effect on the current Terraform reso
 urces.

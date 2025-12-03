@@ -45,37 +45,27 @@ variable "allow_receipt_unauthenticated" {
 }
 
 variable "manage_service_accounts" {
-  description = "Whether Terraform should create/manage service accounts. Set to false to reuse existing accounts."
+  description = "Whether Terraform should create/manage service accounts. Set to true when the runtime identities do not already exist."
   type        = bool
-  default     = true
-
-  validation {
-    condition = var.manage_service_accounts || (
-      length(var.web_service_account_email) > 0 &&
-      length(var.receipt_service_account_email) > 0 &&
-      length(var.upload_service_account_email) > 0
-    )
-
-    error_message = "Set manage_service_accounts to true or provide existing service account emails for web, receipt, and upload."
-  }
+  default     = false
 }
 
 variable "web_service_account_email" {
-  description = "Email of an existing web runtime service account (required when manage_service_accounts is false)."
+  description = "Email of an existing web runtime service account (used when manage_service_accounts is false)."
   type        = string
-  default     = ""
+  default     = null
 }
 
 variable "receipt_service_account_email" {
-  description = "Email of an existing receipt processor service account (required when manage_service_accounts is false)."
+  description = "Email of an existing receipt processor service account (used when manage_service_accounts is false)."
   type        = string
-  default     = ""
+  default     = null
 }
 
 variable "upload_service_account_email" {
-  description = "Email of an existing upload service account (required when manage_service_accounts is false)."
+  description = "Email of an existing upload service account (used when manage_service_accounts is false)."
   type        = string
-  default     = ""
+  default     = null
 }
 
 # Backwards compatibility: this flag is unused but retained so scripts that
