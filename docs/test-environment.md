@@ -33,8 +33,12 @@ gcloud auth application-default login
 cd infra/test-environment
 terraform init
 terraform apply -var "project_id=$(gcloud config get-value project)" \
+  -var "bucket_name=pklnd-receipts" \
   -var "region=us-central1" \
   -var "env_name=test"
+
+# Passing bucket_name keeps this command identical to production. Omit it if you
+# prefer the default env-suffixed bucket name (pklnd-receipts-${env_name}-${project_id}).
 ```
 
 Existing projects typically already have the runtime service accounts. Terraform now defaults to reusing them automatically because `manage_service_accounts` is `false` and the module derives the service account emails from the environment name and project ID. If you need Terraform to create fresh identities (for a brand-new test project), set `manage_service_accounts=true`:

@@ -20,6 +20,12 @@ variable "env_name" {
   }
 }
 
+variable "bucket_name" {
+  description = "Receipts bucket name for the test environment (defaults to an env-suffixed name)"
+  type        = string
+  default     = null
+}
+
 variable "web_image" {
   description = "Container image to use for the web Cloud Run service (updated later by deploy scripts)"
   type        = string

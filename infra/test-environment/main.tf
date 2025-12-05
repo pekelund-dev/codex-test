@@ -15,7 +15,7 @@ provider "google" {
 }
 
 locals {
-  bucket_name             = "pklnd-receipts-${var.env_name}-${var.project_id}"
+  bucket_name             = coalesce(var.bucket_name, "pklnd-receipts-${var.env_name}-${var.project_id}")
   web_repository_id       = "web-${var.env_name}"
   receipts_repository_id  = "receipts-${var.env_name}"
   web_service_account     = "cloud-run-runtime-${var.env_name}"
