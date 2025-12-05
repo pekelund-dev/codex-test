@@ -12,12 +12,11 @@ gcloud auth application-default login
 terraform init
 terraform apply -var "project_id=$(gcloud config get-value project)" \
   -var "bucket_name=pklnd-receipts" \
-  -var "region=us-central1" \
-  -var "env_name=test"
+  -var "region=us-central1"
 
 # Passing bucket_name keeps the invocation aligned with production. Omit it if
 # you want Terraform to use the default env-suffixed bucket name
-# (pklnd-receipts-${env_name}-${project_id}).
+# (pklnd-receipts-test-${project_id}).
 ```
 
 Existing projects usually already contain the test service accounts. Terraform reuses them automatically now because `manage_service_accounts` defaults to `false` and derives the emails from the environment name and project ID. To have Terraform create new identities in a brand-new project, set `manage_service_accounts=true`:
@@ -27,7 +26,6 @@ PROJECT_ID=$(gcloud config get-value project)
 
 terraform apply -var "project_id=$PROJECT_ID" \
   -var "region=us-central1" \
-  -var "env_name=test" \
   -var "manage_service_accounts=true"
 ```
 
@@ -46,4 +44,4 @@ After apply, use the outputs for deployment:
 
 ## Teardown
 
-Terraform will destroy all resources by default. Review the plan carefully before destroying a test environment, and consider targeting specific resources if you want to leave the placeholder Cloud Run services running while removing other components. The `env_name` must remain non-empty and cannot be `prod`/`production`.
+Terraform will destroy all resources by default. Review the plan carefully before destroying a test environment, and consider targeting specific resources if you want to leave the placeholder Cloud Run services running while removing other components.

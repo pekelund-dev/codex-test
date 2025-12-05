@@ -15,15 +15,16 @@ provider "google" {
 }
 
 locals {
-  bucket_name             = coalesce(var.bucket_name, "pklnd-receipts-${var.env_name}-${var.project_id}")
-  web_repository_id       = "web-${var.env_name}"
-  receipts_repository_id  = "receipts-${var.env_name}"
-  web_service_account     = "cloud-run-runtime-${var.env_name}"
-  receipt_service_account = "receipt-processor-${var.env_name}"
-  upload_service_account  = "receipt-uploads-${var.env_name}"
-  web_service_name        = "pklnd-web-${var.env_name}"
-  receipt_service_name    = "pklnd-receipts-${var.env_name}"
-  config_secret_name      = "pklnd-config-${var.env_name}"
+  env_name                = "test"
+  bucket_name             = coalesce(var.bucket_name, "pklnd-receipts-${local.env_name}-${var.project_id}")
+  web_repository_id       = "web-${local.env_name}"
+  receipts_repository_id  = "receipts-${local.env_name}"
+  web_service_account     = "cloud-run-runtime-${local.env_name}"
+  receipt_service_account = "receipt-processor-${local.env_name}"
+  upload_service_account  = "receipt-uploads-${local.env_name}"
+  web_service_name        = "pklnd-web-${local.env_name}"
+  receipt_service_name    = "pklnd-receipts-${local.env_name}"
+  config_secret_name      = "pklnd-config-${local.env_name}"
 
   default_web_service_account_email     = "${local.web_service_account}@${var.project_id}.iam.gserviceaccount.com"
   default_receipt_service_account_email = "${local.receipt_service_account}@${var.project_id}.iam.gserviceaccount.com"
@@ -105,7 +106,7 @@ resource "google_service_account" "web_runtime" {
 
   account_id   = local.web_service_account
   project      = var.project_id
-  display_name = "pklnd web runtime (${var.env_name})"
+  display_name = "pklnd web runtime (${local.env_name})"
 
 }
 
@@ -114,7 +115,7 @@ resource "google_service_account" "receipt_runtime" {
 
   account_id   = local.receipt_service_account
   project      = var.project_id
-  display_name = "Receipt processor runtime (${var.env_name})"
+  display_name = "Receipt processor runtime (${local.env_name})"
 
 }
 
@@ -145,7 +146,7 @@ resource "google_service_account" "upload" {
 
   account_id   = local.upload_service_account
   project      = var.project_id
-  display_name = "Receipt uploads (${var.env_name})"
+  display_name = "Receipt uploads (${local.env_name})"
 }
 
 resource "google_project_iam_member" "web_firestore" {

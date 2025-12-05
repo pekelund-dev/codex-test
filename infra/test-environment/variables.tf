@@ -9,17 +9,6 @@ variable "region" {
   default     = "us-central1" # aligns with GCP Always Free usage limits
 }
 
-variable "env_name" {
-  description = "Environment suffix used to keep resources isolated"
-  type        = string
-  default     = "test"
-
-  validation {
-    condition     = var.env_name != "" && lower(var.env_name) != "prod" && lower(var.env_name) != "production"
-    error_message = "env_name must be non-empty and must not be the production identifier."
-  }
-}
-
 variable "bucket_name" {
   description = "Receipts bucket name for the test environment (defaults to an env-suffixed name)"
   type        = string
