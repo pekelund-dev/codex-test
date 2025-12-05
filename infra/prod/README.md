@@ -30,6 +30,8 @@ terraform apply \
 
 If you need to point at existing service accounts that do not follow the default naming convention, set `manage_service_accounts=false` and pass their emails explicitly using the `*_service_account_email` variables.
 
+Upload permissions are applied only when Terraform manages service accounts **or** when you provide an explicit `upload_service_account_email`. If you do not use a dedicated upload identity, leave `manage_service_accounts=false` and omit `upload_service_account_email`—the upload bindings will be skipped to avoid errors.
+
 After apply, pull the outputs to feed the deployment scripts:
 
 ```bash

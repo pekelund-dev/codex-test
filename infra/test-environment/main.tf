@@ -31,7 +31,8 @@ locals {
 
   web_service_account_email     = var.manage_service_accounts ? google_service_account.web_runtime[0].email : coalesce(var.web_service_account_email, local.default_web_service_account_email)
   receipt_service_account_email = var.manage_service_accounts ? google_service_account.receipt_runtime[0].email : coalesce(var.receipt_service_account_email, local.default_receipt_service_account_email)
-  upload_service_account_email  = var.manage_service_accounts ? google_service_account.upload[0].email : coalesce(var.upload_service_account_email, local.default_upload_service_account_email)
+  manage_upload_service_account = var.manage_service_accounts || var.upload_service_account_email != null
+  upload_service_account_email  = var.manage_service_accounts ? google_service_account.upload[0].email : var.upload_service_account_email
 }
 
 resource "google_project_service" "pklnd_services" {
@@ -190,6 +191,8 @@ resource "google_project_iam_member" "receipt_logging" {
 }
 
 resource "google_project_iam_member" "upload_storage" {
+  count = local.manage_upload_service_account ? 1 : 0
+
   project = var.project_id
   role    = "roles/storage.objectAdmin"
   member  = "serviceAccount:${local.upload_service_account_email}"
@@ -209,6 +212,8 @@ resource "google_storage_bucket_iam_member" "receipt_bucket_admin" {
 }
 
 resource "google_storage_bucket_iam_member" "upload_bucket_admin" {
+  count = local.manage_upload_service_account ? 1 : 0
+
   bucket = google_storage_bucket.receipts.name
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${local.upload_service_account_email}"

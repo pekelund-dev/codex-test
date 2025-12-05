@@ -28,6 +28,8 @@ terraform apply -var "project_id=$PROJECT_ID" \
 
 If your service accounts use different names, keep `manage_service_accounts=false` and pass the emails with the `*_service_account_email` variables.
 
+Upload bindings are applied only when Terraform manages service accounts or when you supply an explicit `upload_service_account_email`. Omit that variable (and leave `manage_service_accounts=false`) if you do not have a dedicated upload identity; Terraform will skip the upload roles to avoid missing-account errors.
+
 After apply, use the outputs for deployment:
 
 - `bucket_name` → pass to `GCS_BUCKET` when deploying the web app and receipt processor.
