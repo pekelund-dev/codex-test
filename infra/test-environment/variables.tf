@@ -6,7 +6,7 @@ variable "project_id" {
 variable "region" {
   description = "Primary region for Cloud Run, Artifact Registry, and storage"
   type        = string
-  default     = "europe-north1"
+  default     = "us-central1" # aligns with GCP Always Free usage limits
 }
 
 variable "env_name" {

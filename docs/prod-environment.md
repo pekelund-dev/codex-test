@@ -2,6 +2,8 @@
 
 Use this guide to provision and deploy the production pklnd environment with Terraform and the helper scripts. It mirrors the existing names used by the deploy scripts (`pklnd-web`, `pklnd-receipts`, `cloud-run-runtime`, `receipt-processor`, `receipt-uploads`, and the `web`/`receipts` Artifact Registry repositories).
 
+For lowest-cost usage that remains inside Google Cloud's Always Free allowances (Cloud Run, Cloud Storage, and Secret Manager), prefer a US region such as `us-central1`. The examples below use `us-central1`; adjust only if you have specific latency needs outside the free-tier regions.
+
 ## Step 1: Provision infrastructure
 
 Run Terraform from `infra/prod` to enable required APIs, create the storage bucket, repositories, service accounts, Secret Manager entries, and placeholder Cloud Run services:
@@ -12,7 +14,7 @@ gcloud auth application-default login
 terraform init
 terraform apply \
   -var "project_id=$(gcloud config get-value project)" \
-  -var "region=europe-north1" \
+  -var "region=us-central1" \
   -var "bucket_name=pklnd-receipts"
 ```
 
@@ -23,7 +25,7 @@ PROJECT_ID=$(gcloud config get-value project)
 
 terraform apply \
   -var "project_id=$PROJECT_ID" \
-  -var "region=europe-north1" \
+  -var "region=us-central1" \
   -var "bucket_name=pklnd-receipts" \
   -var "manage_service_accounts=true"
 ```
@@ -77,7 +79,7 @@ With infrastructure in place, deploy the production builds via the helper script
 
 ```bash
 export PROJECT_ID=$(gcloud config get-value project)
-export REGION=europe-north1
+export REGION=us-central1
 export GOOGLE_CLIENT_ID=your-client-id
 export GOOGLE_CLIENT_SECRET=your-client-secret
 # Optional: export GOOGLE_OAUTH_CREDENTIALS_FILE if your OAuth client lives in JSON form.

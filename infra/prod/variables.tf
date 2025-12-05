@@ -6,7 +6,7 @@ variable "project_id" {
 variable "region" {
   description = "Primary region for Cloud Run, Artifact Registry, and storage"
   type        = string
-  default     = "europe-north1"
+  default     = "us-central1" # keeps resources within GCP's Always Free allowances
 }
 
 variable "bucket_name" {

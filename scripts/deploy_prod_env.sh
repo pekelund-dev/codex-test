@@ -7,7 +7,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}" || exit 1
 
 PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null)}"
-REGION="${REGION:-europe-north1}"
+REGION="${REGION:-us-central1}"
 TERRAFORM_DIR="${TERRAFORM_DIR:-${REPO_ROOT}/infra/prod}"
 
 if [[ -z "${PROJECT_ID}" ]]; then

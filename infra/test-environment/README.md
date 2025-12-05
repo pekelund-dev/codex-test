@@ -2,6 +2,8 @@
 
 This module provisions an isolated copy of the pklnd Google Cloud footprint inside the same project by suffixing resource names with an environment label (default `test`). It creates a receipts bucket, dedicated Artifact Registry repositories, Cloud Run runtime service accounts (including an upload account), and placeholder Cloud Run services that use the public `gcr.io/cloudrun/hello` image until you deploy real builds. Production resources remain untouched.
 
+To keep usage inside Google Cloud's Always Free allowances, prefer a US region such as `us-central1`. The defaults below use `us-central1`; change only for latency or residency requirements.
+
 ## Usage
 
 ```bash
@@ -9,7 +11,7 @@ cd infra/test-environment
 gcloud auth application-default login
 terraform init
 terraform apply -var "project_id=$(gcloud config get-value project)" \
-  -var "region=europe-north1" \
+  -var "region=us-central1" \
   -var "env_name=test"
 ```
 
@@ -19,7 +21,7 @@ Existing projects usually already contain the test service accounts. Terraform r
 PROJECT_ID=$(gcloud config get-value project)
 
 terraform apply -var "project_id=$PROJECT_ID" \
-  -var "region=europe-north1" \
+  -var "region=us-central1" \
   -var "env_name=test" \
   -var "manage_service_accounts=true"
 ```

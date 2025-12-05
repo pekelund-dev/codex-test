@@ -9,7 +9,7 @@ cd "$REPO_ROOT"
 # Configure the environment variables below before running the script.
 
 PROJECT_ID="${PROJECT_ID:-}"
-REGION="${REGION:-europe-north1}"
+REGION="${REGION:-us-central1}"
 SERVICE_NAME="${SERVICE_NAME:-pklnd-web}"
 SA_NAME="${SA_NAME:-cloud-run-runtime}"
 ARTIFACT_REPO="${ARTIFACT_REPO:-web}"

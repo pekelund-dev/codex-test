@@ -4,14 +4,14 @@ This guide provisions a separate test copy of the pklnd infrastructure inside th
 
 ## Step 1: Provision infrastructure
 
-Choose one path to create the bucket, Artifact Registry repositories, runtime service accounts, and placeholder Cloud Run services:
+Choose one path to create the bucket, Artifact Registry repositories, runtime service accounts, and placeholder Cloud Run services. For the widest use of Google Cloud's Always Free allowances, use a US region such as `us-central1`; the examples below default to that region.
 
 ### gcloud script
 
 ```bash
 export PROJECT_ID=$(gcloud config get-value project)
 export TEST_ENV_NAME=test   # optional, defaults to "test"
-export REGION=europe-north1 # optional
+export REGION=us-central1 # optional and recommended for free-tier coverage
 ./scripts/setup_test_env_gcloud.sh
 ```
 
@@ -33,7 +33,7 @@ gcloud auth application-default login
 cd infra/test-environment
 terraform init
 terraform apply -var "project_id=$(gcloud config get-value project)" \
-  -var "region=europe-north1" \
+  -var "region=us-central1" \
   -var "env_name=test"
 ```
 
@@ -43,7 +43,7 @@ Existing projects typically already have the runtime service accounts. Terraform
 PROJECT_ID=$(gcloud config get-value project)
 
 terraform apply -var "project_id=$PROJECT_ID" \
-  -var "region=europe-north1" \
+  -var "region=us-central1" \
   -var "env_name=test" \
   -var "manage_service_accounts=true"
 ```
@@ -70,7 +70,7 @@ To tear the Terraform-managed test environment down, run a destroy with the same
 ```bash
 cd infra/test-environment
 terraform destroy -var "project_id=$(gcloud config get-value project)" \
-  -var "region=europe-north1" \
+  -var "region=us-central1" \
   -var "env_name=test"
 ```
 
@@ -81,7 +81,7 @@ After infrastructure is in place, deploy both Cloud Run services to the test env
 ```bash
 export PROJECT_ID=$(gcloud config get-value project)
 export TEST_ENV_NAME=test
-export REGION=europe-north1
+export REGION=us-central1
 export GOOGLE_CLIENT_ID=your-client-id
 export GOOGLE_CLIENT_SECRET=your-client-secret
 # Optional overrides when OAuth credentials live in a JSON file

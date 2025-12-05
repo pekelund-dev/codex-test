@@ -2,6 +2,8 @@
 
 This configuration provisions the production-grade pklnd footprint in Google Cloud with Terraform. It creates the receipts bucket, Artifact Registry repositories, runtime service accounts (including an upload account), and Cloud Run services for the web app and receipt processor. By default, resources match the names used by the existing deployment scripts (`pklnd-web`, `pklnd-receipts`, `cloud-run-runtime`, `receipt-processor`, `receipt-uploads`, and the `web`/`receipts` repositories).
 
+To stay within Google Cloud's Always Free allowances where possible (Cloud Run, Cloud Storage, and Secret Manager), deploy in a US region such as `us-central1`. The defaults and examples below reflect that choice; change only if you have latency or residency requirements in another region.
+
 ## Usage
 
 ```bash
@@ -10,7 +12,7 @@ gcloud auth application-default login
 terraform init
 terraform apply \
   -var "project_id=$(gcloud config get-value project)" \
-  -var "region=europe-north1" \
+  -var "region=us-central1" \
   -var "bucket_name=pklnd-receipts"
 ```
 
@@ -21,7 +23,7 @@ Existing projects typically already have the runtime service accounts (`cloud-ru
 ```bash
 terraform apply \
   -var "project_id=$(gcloud config get-value project)" \
-  -var "region=europe-north1" \
+  -var "region=us-central1" \
   -var "bucket_name=pklnd-receipts" \
   -var "manage_service_accounts=true"
 ```
