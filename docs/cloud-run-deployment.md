@@ -23,9 +23,9 @@ Replace the placeholders below with your values when following the steps:
 | Placeholder | Description |
 |-------------|-------------|
 | `PROJECT_ID` | Google Cloud project ID (e.g., `my-project`). |
-| `REGION` | Supported Cloud Run region (e.g., `europe-north1`). |
+| `REGION` | Supported Cloud Run region (e.g., `us-central1` to align with Always Free allowances). |
 | `SERVICE_NAME` | Desired Cloud Run service name (e.g., `pklnd-web`). |
-| `IMAGE_URI` | Fully qualified container image reference (e.g., `europe-north1-docker.pkg.dev/PROJECT_ID/web/app:latest`). |
+| `IMAGE_URI` | Fully qualified container image reference (e.g., `us-central1-docker.pkg.dev/PROJECT_ID/web/app:latest`). |
 | `DOMAIN` | Fully qualified domain to map (e.g., `pklnd.pekelund.dev`). |
 | `SA_NAME` | Service account name (e.g., `cloud-run-runtime`). |
 | `SHARED_FIRESTORE_PROJECT_ID` | Project that hosts the single Firestore database used by Cloud Run services and user registration. Defaults to `PROJECT_ID`. |

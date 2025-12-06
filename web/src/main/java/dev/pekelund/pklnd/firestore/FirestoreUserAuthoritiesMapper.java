@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -47,6 +48,10 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
         this.firestore = firestoreProvider.getIfAvailable();
         this.firestoreEnabled = properties.isEnabled() && this.firestore != null;
         this.readRecorder = readRecorder;
+    }
+
+    private Firestore firestore() {
+        return Objects.requireNonNull(firestore, "firestore");
     }
 
     @Override
@@ -116,7 +121,7 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
 
     private DocumentSnapshot findUserDocument(String normalizedEmail)
         throws ExecutionException, InterruptedException {
-        CollectionReference collection = firestore.collection(properties.getUsersCollection());
+        CollectionReference collection = firestore().collection(usersCollection());
         ApiFuture<QuerySnapshot> queryFuture = collection
             .whereEqualTo("email", normalizedEmail)
             .limit(1)
@@ -134,7 +139,7 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
 
     private List<String> createUserDocument(String normalizedEmail, String displayName, boolean assignAdmin)
         throws ExecutionException, InterruptedException {
-        CollectionReference collection = firestore.collection(properties.getUsersCollection());
+        CollectionReference collection = firestore().collection(usersCollection());
 
         Map<String, Object> document = new java.util.HashMap<>();
         document.put("email", normalizedEmail);
@@ -173,12 +178,12 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
         }
     }
 
-    private void recordRead(String description) {
-        recordRead(description, 1L);
-    }
-
     private void recordRead(String description, long readUnits) {
         readRecorder.record(description, readUnits);
+    }
+
+    private String usersCollection() {
+        return Objects.requireNonNull(properties.getUsersCollection(), "usersCollection");
     }
 
     private List<String> readRoleNames(DocumentSnapshot documentSnapshot) {

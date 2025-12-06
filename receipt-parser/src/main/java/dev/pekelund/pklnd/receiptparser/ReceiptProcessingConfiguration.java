@@ -17,6 +17,7 @@ import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionEligibilityPredicate;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatModel;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
+import org.springframework.ai.retry.RetryUtils;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
@@ -80,14 +81,12 @@ public class ReceiptProcessingConfiguration {
     public VertexAiGeminiChatModel vertexAiGeminiChatModel(VertexAI vertexAI,
         VertexAiGeminiChatOptions receiptGeminiChatOptions,
         ObjectProvider<ToolCallingManager> toolCallingManager,
-        ObjectProvider<RetryTemplate> retryTemplate,
         ObjectProvider<ObservationRegistry> observationRegistry,
         ObjectProvider<ToolExecutionEligibilityPredicate> toolExecutionEligibilityPredicate) {
 
         ToolCallingManager resolvedToolCallingManager = toolCallingManager
             .getIfAvailable(() -> DefaultToolCallingManager.builder().build());
-        RetryTemplate resolvedRetryTemplate = retryTemplate
-            .getIfAvailable(() -> RetryTemplate.builder().build());
+        RetryTemplate resolvedRetryTemplate = RetryUtils.DEFAULT_RETRY_TEMPLATE;
         ObservationRegistry resolvedObservationRegistry = observationRegistry
             .getIfAvailable(() -> ObservationRegistry.NOOP);
         ToolExecutionEligibilityPredicate resolvedEligibilityPredicate = toolExecutionEligibilityPredicate

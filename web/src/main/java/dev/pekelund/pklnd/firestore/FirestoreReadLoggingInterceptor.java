@@ -60,8 +60,10 @@ public class FirestoreReadLoggingInterceptor implements HandlerInterceptor {
         Map<String, Long> callCounts = new LinkedHashMap<>();
 
         for (FirestoreReadTracker.ReadOperation operation : operations) {
-            readTotals.merge(operation.description(), operation.readUnits(), Long::sum);
-            callCounts.merge(operation.description(), 1L, Long::sum);
+            readTotals.merge(operation.description(), operation.readUnits(),
+                (existing, delta) -> existing == null ? delta : existing + delta);
+            callCounts.merge(operation.description(), 1L,
+                (existing, delta) -> existing == null ? delta : existing + delta);
         }
 
         return readTotals.entrySet()

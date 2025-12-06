@@ -7,7 +7,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$REPO_ROOT"
 
 PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null)}"
-REGION="${REGION:-europe-north1}"
+REGION="${REGION:-us-central1}"
 SERVICE_NAME="${RECEIPT_SERVICE_NAME:-pklnd-receipts}"
 SA_NAME="${RECEIPT_SA_NAME:-receipt-processor}"
 ARTIFACT_REPO="${RECEIPT_ARTIFACT_REPO:-receipts}"
@@ -19,6 +19,11 @@ WEB_SERVICE_REGION="${WEB_SERVICE_REGION:-${REGION}}"
 DOCKERFILE_PATH="${RECEIPT_DOCKERFILE:-receipt-parser/Dockerfile}"
 BUILD_CONTEXT="${RECEIPT_BUILD_CONTEXT:-${REPO_ROOT}}"
 CLOUD_BUILD_CONFIG="${RECEIPT_CLOUD_BUILD_CONFIG:-receipt-parser/cloudbuild.yaml}"
+AI_STUDIO_API_KEY_SECRET="${AI_STUDIO_API_KEY_SECRET:-}"
+AI_STUDIO_API_KEY_SECRET_VERSION="${AI_STUDIO_API_KEY_SECRET_VERSION:-latest}"
+CONFIG_SECRET_NAME="${CONFIG_SECRET_NAME:-${CONFIG_SECRET:-}}"
+CONFIG_SECRET_VERSION="${CONFIG_SECRET_VERSION:-latest}"
+CONFIG_SECRET_PROJECT="${CONFIG_SECRET_PROJECT:-${PROJECT_ID}}"
 
 if [[ -z "${PROJECT_ID}" ]]; then
   echo "PROJECT_ID must be set or configured with 'gcloud config set project'." >&2
@@ -103,6 +108,10 @@ if [[ -z "${DOCKERFILE_RELATIVE}" ]]; then
   exit 1
 fi
 
+if [[ -z "${AI_STUDIO_API_KEY_SECRET:-}" && -z "${AI_STUDIO_API_KEY:-}" ]]; then
+  AI_STUDIO_API_KEY="${AI_STUDIO_API_KEY:-$(config_value ai_studio_api_key)}"
+fi
+
 VERTEX_AI_PROJECT_ID="${VERTEX_AI_PROJECT_ID:-${PROJECT_ID}}"
 VERTEX_AI_LOCATION="${VERTEX_AI_LOCATION:-${REGION}}"
 VERTEX_AI_GEMINI_MODEL="${VERTEX_AI_GEMINI_MODEL:-gemini-2.0-flash}"
@@ -133,7 +142,20 @@ append_env_var() {
   ENV_VARS_LIST+=("${pair}")
 }
 
+append_secret_var() {
+  local key="$1"
+  local secret_name="$2"
+  local version="${3:-latest}"
+
+  if [[ -z "$secret_name" ]]; then
+    return
+  fi
+
+  SECRET_VARS_LIST+=("${key}=${secret_name}:${version}")
+}
+
 ENV_VARS_LIST=()
+SECRET_VARS_LIST=()
 append_env_var "SPRING_PROFILES_ACTIVE" "$SPRING_PROFILES_ACTIVE"
 append_env_var "VERTEX_AI_PROJECT_ID" "$VERTEX_AI_PROJECT_ID"
 append_env_var "VERTEX_AI_LOCATION" "$VERTEX_AI_LOCATION"
@@ -143,7 +165,10 @@ append_env_var "RECEIPT_FIRESTORE_COLLECTION" "$RECEIPT_FIRESTORE_COLLECTION"
 append_env_var "RECEIPT_FIRESTORE_ITEM_COLLECTION" "$RECEIPT_FIRESTORE_ITEM_COLLECTION"
 append_env_var "RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION" "$RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION"
 append_env_var "LOGGING_PROJECT_ID" "${LOGGING_PROJECT_ID:-${PROJECT_ID}}"
-append_env_var "AI_STUDIO_API_KEY" "${AI_STUDIO_API_KEY:-}"
+append_secret_var "AI_STUDIO_API_KEY" "${AI_STUDIO_API_KEY_SECRET}" "${AI_STUDIO_API_KEY_SECRET_VERSION}" || true
+if [[ -z "${AI_STUDIO_API_KEY_SECRET}" ]]; then
+  append_env_var "AI_STUDIO_API_KEY" "${AI_STUDIO_API_KEY:-}"
+fi
 
 cleanup_bucket_notifications() {
   local notifications notification_id
@@ -192,6 +217,11 @@ ENV_VARS_ARG=""
 if (( ${#ENV_VARS_LIST[@]} > 0 )); then
   DELIM="$(choose_env_delimiter)"
   ENV_VARS_ARG="^${DELIM}^$(IFS="$DELIM"; printf '%s' "${ENV_VARS_LIST[*]}")"
+fi
+
+SECRET_VARS_ARG=""
+if (( ${#SECRET_VARS_LIST[@]} > 0 )); then
+  SECRET_VARS_ARG="--set-secrets $(IFS=,; printf '%s' "${SECRET_VARS_LIST[*]}")"
 fi
 
 BUCKET_REGION=$(gcloud storage buckets describe "gs://${GCS_BUCKET}" --format="value(location)" 2>/dev/null || true)
@@ -276,6 +306,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --min-instances 0 \
   --max-instances 5 \
   --set-env-vars "${ENV_VARS_ARG}" \
+  ${SECRET_VARS_ARG:-} \
   --no-allow-unauthenticated
 
 gcloud run services add-iam-policy-binding "$SERVICE_NAME" \
@@ -320,3 +351,40 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
 set +x
 
 echo "✅ Receipt processor deployment complete."
+CONFIG_CACHE=""
+load_config_secret() {
+  if [[ -n "${CONFIG_CACHE}" || -z "${CONFIG_SECRET_NAME:-}" ]]; then
+    return
+  fi
+
+  CONFIG_CACHE=$(gcloud secrets versions access "${CONFIG_SECRET_VERSION:-latest}" \
+    --secret "${CONFIG_SECRET_NAME}" \
+    --project "${CONFIG_SECRET_PROJECT:-${PROJECT_ID}}" 2>/dev/null || true)
+}
+
+config_value() {
+  local key="$1"
+  load_config_secret
+  if [[ -z "${CONFIG_CACHE}" ]]; then
+    return
+  fi
+
+  CONFIG_CACHE="${CONFIG_CACHE}" python3 - <<'PY'
+import json
+import os
+import sys
+
+payload = os.environ.get("CONFIG_CACHE", "")
+if not payload.strip():
+    raise SystemExit(0)
+
+try:
+    data = json.loads(payload)
+except json.JSONDecodeError:
+    raise SystemExit(0)
+
+value = data.get(sys.argv[1])
+if value:
+    print(value)
+PY
+}

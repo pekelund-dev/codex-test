@@ -27,11 +27,11 @@ import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Map;
 import java.util.Locale;
 import java.util.Optional;
@@ -1156,12 +1156,13 @@ public class ReceiptController {
         List<ItemPurchaseView> purchases = buildItemPurchasesFromReferences(trimmedEanCode, itemReferences);
 
         if (StringUtils.hasText(sourceReceiptIdentifier)) {
+            String receiptId = Objects.requireNonNull(sourceReceiptIdentifier);
             boolean includedInReferences = purchases.stream()
-                .anyMatch(purchase -> sourceReceiptIdentifier.equals(purchase.receiptId()));
+                .anyMatch(purchase -> receiptId.equals(purchase.receiptId()));
             if (!includedInReferences) {
                 sourceReceipt = receiptExtractionService
                     .get()
-                    .findById(sourceReceiptIdentifier)
+                    .findById(receiptId)
                     .orElse(null);
                 if (sourceReceipt != null) {
                     List<ItemPurchaseView> fallback = buildItemPurchasesFromReceipts(trimmedEanCode,

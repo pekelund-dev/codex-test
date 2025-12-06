@@ -27,6 +27,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import jakarta.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
@@ -44,8 +45,8 @@ public class ReceiptExtractionRepository {
     private final String itemsCollectionName;
     private final String itemStatsCollectionName;
 
-    public ReceiptExtractionRepository(Firestore firestore, String collectionName,
-        String itemsCollectionName, String itemStatsCollectionName) {
+    public ReceiptExtractionRepository(Firestore firestore, String collectionName, String itemsCollectionName,
+        String itemStatsCollectionName) {
 
         this.firestore = Objects.requireNonNull(firestore, "firestore");
         this.collectionName = Objects.requireNonNull(collectionName, "collectionName");
@@ -55,8 +56,28 @@ public class ReceiptExtractionRepository {
             collectionName, itemsCollectionName, itemStatsCollectionName);
     }
 
-    public void markStatus(String bucket, String objectName, ReceiptOwner owner,
-        ReceiptProcessingStatus status, String message) {
+    @Nonnull
+    private Firestore firestore() {
+        return Objects.requireNonNull(firestore, "firestore");
+    }
+
+    @Nonnull
+    private String receiptsCollection() {
+        return Objects.requireNonNull(collectionName, "collectionName");
+    }
+
+    @Nonnull
+    private String itemsCollection() {
+        return Objects.requireNonNull(itemsCollectionName, "itemsCollectionName");
+    }
+
+    @Nonnull
+    private String itemStatsCollection() {
+        return Objects.requireNonNull(itemStatsCollectionName, "itemStatsCollectionName");
+    }
+
+    public void markStatus(String bucket, String objectName, ReceiptOwner owner, ReceiptProcessingStatus status,
+        String message) {
 
         LOGGER.info("Firestore status update for gs://{}/{} -> {} ({})", bucket, objectName, status, message);
         updateDocument(bucket, objectName, owner, status, message, null, null);
@@ -79,10 +100,11 @@ public class ReceiptExtractionRepository {
         updateDocument(bucket, objectName, owner, ReceiptProcessingStatus.FAILED, combined, null, combined);
     }
 
-    private void updateDocument(String bucket, String objectName, ReceiptOwner owner,
-        ReceiptProcessingStatus status, String message, ReceiptExtractionResult extractionResult, String errorMessage) {
+    private void updateDocument(String bucket, String objectName, ReceiptOwner owner, ReceiptProcessingStatus status,
+        String message, ReceiptExtractionResult extractionResult, String errorMessage) {
 
         String documentId = buildDocumentId(bucket, objectName);
+        String nonNullDocumentId = Objects.requireNonNull(documentId, "documentId");
         Timestamp updateTimestamp = Timestamp.now();
 
         try {
@@ -111,7 +133,7 @@ public class ReceiptExtractionRepository {
                 payload.put("error", errorMessage);
             }
 
-            ItemSyncPlan syncPlan = determineSyncPlan(documentId, objectName, owner, status, general, items,
+            ItemSyncPlan syncPlan = determineSyncPlan(nonNullDocumentId, objectName, owner, status, general, items,
                 updateTimestamp);
 
             Object historyPayload = syncPlan.historyValue() != null ? syncPlan.historyValue().toPayload() : null;
@@ -119,13 +141,13 @@ public class ReceiptExtractionRepository {
                 payload.put("itemHistory", historyPayload);
             }
 
-            DocumentReference documentReference = firestore.collection(collectionName)
-                .document(documentId);
+            DocumentReference documentReference = firestore().collection(receiptsCollection())
+                .document(nonNullDocumentId);
 
             LOGGER.info("Writing payload with {} entries to Firestore document {}/{}", payload.size(), collectionName,
-                documentId);
+                nonNullDocumentId);
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Firestore payload for {}/{}: {}", collectionName, documentId, payload);
+                LOGGER.debug("Firestore payload for {}/{}: {}", collectionName, nonNullDocumentId, payload);
             }
 
             WriteBatch batch = firestore.batch();
@@ -133,7 +155,7 @@ public class ReceiptExtractionRepository {
             applyItemSyncPlan(batch, syncPlan, updateTimestamp);
 
             batch.commit().get();
-            LOGGER.info("Firestore document {}/{} successfully updated", collectionName, documentId);
+            LOGGER.info("Firestore document {}/{} successfully updated", collectionName, nonNullDocumentId);
         } catch (InterruptedException ex) {
             LOGGER.error("Interrupted while writing Firestore document {}/{}", collectionName, documentId, ex);
             Thread.currentThread().interrupt();
@@ -145,8 +167,7 @@ public class ReceiptExtractionRepository {
     }
 
     private ItemSyncPlan determineSyncPlan(String documentId, String objectName, ReceiptOwner owner,
-        ReceiptProcessingStatus status, Map<String, Object> general, List<Map<String, Object>> items,
-        Timestamp updatedAt)
+        ReceiptProcessingStatus status, Map<String, Object> general, List<Map<String, Object>> items, Timestamp updatedAt)
         throws InterruptedException, ExecutionException {
 
         if (status == ReceiptProcessingStatus.COMPLETED) {
@@ -159,8 +180,9 @@ public class ReceiptExtractionRepository {
     }
 
     private ItemSyncPlan buildRemovalPlan(String documentId) throws InterruptedException, ExecutionException {
-        QuerySnapshot snapshot = firestore.collection(itemsCollectionName)
-            .whereEqualTo("receiptId", documentId)
+        String nonNullDocumentId = Objects.requireNonNull(documentId, "documentId");
+        QuerySnapshot snapshot = firestore().collection(itemsCollection())
+            .whereEqualTo("receiptId", nonNullDocumentId)
             .get()
             .get();
 
@@ -186,8 +208,9 @@ public class ReceiptExtractionRepository {
         Map<String, Object> general, List<Map<String, Object>> items, Timestamp updatedAt)
         throws InterruptedException, ExecutionException {
 
-        QuerySnapshot snapshot = firestore.collection(itemsCollectionName)
-            .whereEqualTo("receiptId", documentId)
+        String nonNullDocumentId = Objects.requireNonNull(documentId, "documentId");
+        QuerySnapshot snapshot = firestore().collection(itemsCollection())
+            .whereEqualTo("receiptId", nonNullDocumentId)
             .get()
             .get();
 
@@ -217,7 +240,7 @@ public class ReceiptExtractionRepository {
             }
 
             Map<String, Object> document = new LinkedHashMap<>();
-            document.put("receiptId", documentId);
+            document.put("receiptId", nonNullDocumentId);
             document.put("normalizedEan", normalizedEan);
             document.put("itemIndex", index);
             document.put("itemData", item);
@@ -238,18 +261,18 @@ public class ReceiptExtractionRepository {
                 document.put("ownerId", ownerId);
             }
 
-            DocumentReference reference = firestore.collection(itemsCollectionName).document();
+            DocumentReference reference = firestore().collection(itemsCollection()).document();
             writes.add(new ItemWrite(reference, document));
 
             if (StringUtils.hasText(ownerId)) {
                 StatsKey ownerKey = new StatsKey(ownerId, normalizedEan);
-                newCounts.merge(ownerKey, 1L, Long::sum);
-                metadata.put(ownerKey, new StatsMetadata(documentId, receiptDate, storeName, updatedAt));
+                incrementCount(newCounts, ownerKey, 1L);
+                metadata.put(ownerKey, new StatsMetadata(nonNullDocumentId, receiptDate, storeName, updatedAt));
             }
 
             StatsKey globalKey = new StatsKey(ReceiptItemConstants.GLOBAL_OWNER_ID, normalizedEan);
-            newCounts.merge(globalKey, 1L, Long::sum);
-            metadata.put(globalKey, new StatsMetadata(documentId, receiptDate, storeName, updatedAt));
+            incrementCount(newCounts, globalKey, 1L);
+            metadata.put(globalKey, new StatsMetadata(nonNullDocumentId, receiptDate, storeName, updatedAt));
         }
 
         Map<StatsKey, Long> deltas = new HashMap<>();
@@ -276,10 +299,11 @@ public class ReceiptExtractionRepository {
             return;
         }
         for (DocumentReference reference : plan.deletions()) {
-            batch.delete(reference);
+            batch.delete(Objects.requireNonNull(reference, "reference"));
         }
         for (ItemWrite write : plan.writes()) {
-            batch.set(write.reference(), write.data(), SetOptions.merge());
+            batch.set(Objects.requireNonNull(write.reference(), "reference"),
+                Objects.requireNonNull(write.data(), "data"), SetOptions.merge());
         }
         for (Map.Entry<StatsKey, Long> entry : plan.deltas().entrySet()) {
             StatsKey key = entry.getKey();
@@ -288,8 +312,10 @@ public class ReceiptExtractionRepository {
                 continue;
             }
             Map<String, Object> updates = buildStatsUpdate(key, delta, updatedAt, plan.metadata().get(key));
-            DocumentReference statsRef = firestore.collection(itemStatsCollectionName)
-                .document(buildStatsDocumentId(key.ownerId(), key.normalizedEan()));
+            String ownerId = Objects.requireNonNull(key.ownerId(), "ownerId");
+            String normalizedEan = Objects.requireNonNull(key.normalizedEan(), "normalizedEan");
+            DocumentReference statsRef = firestore().collection(itemStatsCollection())
+                .document(buildStatsDocumentId(ownerId, normalizedEan));
             batch.set(statsRef, updates, SetOptions.merge());
         }
     }
@@ -364,15 +390,18 @@ public class ReceiptExtractionRepository {
             if (!StringUtils.hasText(key.ownerId()) || !StringUtils.hasText(key.normalizedEan())) {
                 continue;
             }
-            references.add(firestore.collection(itemStatsCollectionName)
-                .document(buildStatsDocumentId(key.ownerId(), key.normalizedEan())));
+            String ownerId = Objects.requireNonNull(key.ownerId(), "ownerId");
+            String normalizedEan = Objects.requireNonNull(key.normalizedEan(), "normalizedEan");
+            references.add(firestore().collection(itemStatsCollection())
+                .document(buildStatsDocumentId(ownerId, normalizedEan)));
         }
 
         if (references.isEmpty()) {
             return Map.of();
         }
 
-        List<DocumentSnapshot> snapshots = firestore.getAll(references.toArray(new DocumentReference[0])).get();
+        DocumentReference[] referenceArray = references.toArray(DocumentReference[]::new);
+        List<DocumentSnapshot> snapshots = firestore.getAll(Objects.requireNonNull(referenceArray, "referenceArray")).get();
         Map<StatsKey, Long> counts = new LinkedHashMap<>();
         for (DocumentSnapshot snapshot : snapshots) {
             if (snapshot == null || !snapshot.exists()) {
@@ -391,6 +420,7 @@ public class ReceiptExtractionRepository {
         return counts;
     }
 
+    @Nonnull
     private Map<String, Object> buildStatsUpdate(StatsKey key, long delta, Timestamp updatedAt, StatsMetadata metadata) {
         Map<String, Object> updates = new HashMap<>();
         updates.put("ownerId", key.ownerId());
@@ -419,9 +449,9 @@ public class ReceiptExtractionRepository {
             return;
         }
         if (StringUtils.hasText(ownerId)) {
-            counts.merge(new StatsKey(ownerId, normalizedEan), 1L, Long::sum);
+            incrementCount(counts, new StatsKey(ownerId, normalizedEan), 1L);
         }
-        counts.merge(new StatsKey(ReceiptItemConstants.GLOBAL_OWNER_ID, normalizedEan), 1L, Long::sum);
+        incrementCount(counts, new StatsKey(ReceiptItemConstants.GLOBAL_OWNER_ID, normalizedEan), 1L);
     }
 
     private Map<String, Object> extractGeneral(Map<String, Object> structuredData) {
@@ -644,8 +674,9 @@ public class ReceiptExtractionRepository {
         return ownerMap;
     }
 
+    @Nonnull
     private String buildDocumentId(String bucket, String objectName) {
-        String value = bucket + ":" + objectName;
+        String value = Objects.requireNonNull(bucket, "bucket") + ":" + Objects.requireNonNull(objectName, "objectName");
         UUID uuid = UUID.nameUUIDFromBytes(value.getBytes(StandardCharsets.UTF_8));
         return uuid.toString().replace("-", "");
     }
@@ -668,8 +699,9 @@ public class ReceiptExtractionRepository {
             .orElse(0);
     }
 
+    @Nonnull
     private String buildStatsDocumentId(String ownerId, String normalizedEan) {
-        return ownerId + "#" + normalizedEan;
+        return Objects.requireNonNull(ownerId, "ownerId") + "#" + Objects.requireNonNull(normalizedEan, "normalizedEan");
     }
 
     private record ItemWrite(DocumentReference reference, Map<String, Object> data) {
@@ -679,6 +711,10 @@ public class ReceiptExtractionRepository {
     }
 
     private record StatsMetadata(String receiptId, String receiptDate, String storeName, Timestamp updatedAt) {
+    }
+
+    private void incrementCount(Map<StatsKey, Long> counts, StatsKey key, long delta) {
+        counts.put(key, counts.getOrDefault(key, 0L) + delta);
     }
 
     private static final class ItemSyncPlan {

@@ -4,7 +4,7 @@ pklnd is a Spring Boot application for maintaining a personal receipt archive fo
 
 ## Features
 
-- Spring Boot 3 with Java 21 and Maven.
+- Spring Boot 4 (Spring Framework 7) with Java 21 and Maven.
 - Secure personal accounts via Spring Security with hashed credentials in Firestore and optional Google OAuth 2.0 login.
 - Responsive Thymeleaf interface powered by Bootstrap 5 for a smooth receipt overview on mobile and desktop.
 - Receipt workspace tailored for ICA and other Swedish stores, supporting PDF/image uploads that land in Google Cloud Storage.
@@ -178,6 +178,14 @@ Select the deployment style you prefer:
 - [Deploy the receipt processor with the Cloud Console](docs/gcp-setup-cloud-console.md#deploy-the-receipt-processing-service)
 
 Both documents describe prerequisites, metadata expectations, status updates, verification steps, and comprehensive troubleshooting guides for the Gemini-powered pipeline.
+
+#### Test environments
+
+To stand up a fully isolated test copy of pklnd in the same Google Cloud project, use the helpers in [docs/test-environment.md](docs/test-environment.md). They provision dedicated buckets, Artifact Registry repositories, and service accounts with a configurable suffix so you can deploy a parallel environment without disturbing production resources.
+
+#### Production infrastructure via Terraform
+
+For production, provision the core bucket, Artifact Registry repositories, service accounts, and Cloud Run services with the Terraform configuration in [docs/prod-environment.md](docs/prod-environment.md). The accompanying deploy script reads Terraform outputs and pushes the current builds to the Cloud Run services defined in `infra/prod`.
 
 #### Local smoke testing
 

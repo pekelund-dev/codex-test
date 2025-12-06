@@ -17,6 +17,7 @@ public class NewFormatParser extends ReceiptParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NewFormatParser.class);
 
+    @Deprecated
     public NewFormatParser() {
         LOGGER.warn("Using legacy NewFormatParser bean. Please migrate to ReceiptParser.");
     }
