@@ -53,13 +53,18 @@ The script automatically:
 - Pulls `google_client_id`, `google_client_secret`, and `ai_studio_api_key` from the single Secret Manager secret
 - Applies the Cloud Run services and IAM bindings
 
-Terraform does not fully support Cloud Run v2 domain mappings. After `terraform apply` completes, create the mapping manually if you need a custom domain:
+Terraform does not fully support Cloud Run v2 domain mappings. After `terraform apply` completes, create the mapping manually if you need a custom domain. The commands below pull the service name and region from Terraform outputs; set `CUSTOM_DOMAIN` to your own domain before running the command:
 
 ```bash
-gcloud run domain-mappings create \ \
-  --service $WEB_SERVICE_NAME \ \
-  --domain $CUSTOM_DOMAIN \ \
-  --region $REGION
+WEB_SERVICE_NAME=$(terraform -chdir=infra/terraform/deployment output -raw web_service_name)
+REGION=$(terraform -chdir=infra/terraform/deployment output -raw region)
+# Set to your desired domain
+CUSTOM_DOMAIN=example.com
+
+gcloud run domain-mappings create \
+  --service "$WEB_SERVICE_NAME" \
+  --domain "$CUSTOM_DOMAIN" \
+  --region "$REGION"
 ```
 
 If you need to move the domain to a different service, delete the mapping first and recreate it with the new service name:
