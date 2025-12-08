@@ -25,7 +25,7 @@ The Firestore emulator keeps user registration data and receipt parsing output d
 development. Start it in its own terminal so you can leave it running while you code:
 
 ```bash
-./scripts/start_firestore_emulator.sh
+./scripts/legacy/start_firestore_emulator.sh
 ```
 
 Key characteristics:
@@ -45,7 +45,7 @@ project. Rather than exporting them manually each session, source the helper scr
 terminal where you plan to run Maven commands:
 
 ```bash
-source ./scripts/source_local_env.sh
+source ./scripts/legacy/source_local_env.sh
 ```
 
 The script performs the following configuration:
@@ -63,7 +63,7 @@ Feel free to override the defaults before sourcing the script:
 ```bash
 export LOCAL_PROJECT_ID=my-local-project
 export FIRESTORE_EMULATOR_HOST=127.0.0.1:9000
-source ./scripts/source_local_env.sh
+source ./scripts/legacy/source_local_env.sh
 ```
 
 When you need to target your actual Firestore project or reuse Google OAuth credentials locally, keep the downloaded JSON files outside the repository and set `FIRESTORE_CREDENTIALS_FILE` / `GOOGLE_OAUTH_CREDENTIALS_FILE` before sourcing the helper:
@@ -71,7 +71,7 @@ When you need to target your actual Firestore project or reuse Google OAuth cred
 ```bash
 export FIRESTORE_CREDENTIALS_FILE=$HOME/.config/pklnd/firestore.json
 export GOOGLE_OAUTH_CREDENTIALS_FILE=$HOME/.config/pklnd/oauth-client.json
-source ./scripts/load_local_secrets.sh
+source ./scripts/legacy/load_local_secrets.sh
 ```
 
 This leaves the emulator configuration intact but also makes the credentials available if you temporarily disable the emulator host variables to run against managed Firestore.
@@ -172,7 +172,7 @@ OAuth tokens.
 
 - Stop the emulator with `Ctrl+C`.
 - Delete `.local/firestore` if you want to remove all local state.
-- Run `unset $(grep -o '^[A-Z0-9_]*' scripts/source_local_env.sh | tr '\n' ' ')` to clear the
+- Run `unset $(grep -o '^[A-Z0-9_]*' scripts/legacy/source_local_env.sh | tr '\n' ' ')` to clear the
   exported variables, or simply close the terminal where you sourced the script.
 
 With these steps you can iterate on the full stack locally, then switch back to the managed

@@ -2,6 +2,8 @@
 
 Use this guide if you prefer configuring pklnd resources through the Google Cloud Console UI. A command-line alternative is documented in the [gcloud CLI guide](gcp-setup-gcloud.md) and both are referenced from the main [README](../README.md).
 
+> The recommended path for fresh environments is the Terraform workflow outlined in [terraform-deployment.md](./terraform-deployment.md). It provisions APIs, Artifact Registry repositories, service accounts, Firestore, storage, and the unified Secret Manager secret before deploying Cloud Run. Keep this console reference handy for manual verification; the earlier bash helpers are archived in `scripts/legacy/`.
+
 ### Default environment variables
 
 - `PROJECT_ID` — shared by the web app and receipt processor.
@@ -37,7 +39,7 @@ Use this guide if you prefer configuring pklnd resources through the Google Clou
      ```bash
      export FIRESTORE_CREDENTIALS_FILE=${FIRESTORE_CREDENTIALS_FILE:-$HOME/.config/pklnd/firestore.json}
      export GOOGLE_OAUTH_CREDENTIALS_FILE=${GOOGLE_OAUTH_CREDENTIALS_FILE:-$HOME/.config/pklnd/oauth-client.json}
-     source ./scripts/load_local_secrets.sh
+     source ./scripts/legacy/load_local_secrets.sh
 
      export FIRESTORE_ENABLED=true
      # Leave FIRESTORE_CREDENTIALS unset on Cloud Run; ADC handles authentication automatically.
@@ -125,7 +127,7 @@ Use this guide if you prefer configuring pklnd resources through the Google Clou
 5. **Allow the web application to invoke the processor**
    - In **Cloud Run → pklnd-receipts → Permissions**, add the web service account (for example `pklnd-run-sa@PROJECT_ID.iam.gserviceaccount.com`) with the **Cloud Run Invoker** role.
    - From the service detail page copy the service URL and configure the web application deployment with `RECEIPT_PROCESSOR_BASE_URL`.
-   - If you deploy via `scripts/deploy_cloud_run.sh`, set `RECEIPT_PROCESSOR_BASE_URL` before running the script. `scripts/deploy_receipt_processor.sh` inspects the existing web service (override with `WEB_SERVICE_NAME`/`WEB_SERVICE_REGION`) and grants that runtime service account the **Cloud Run Invoker** role automatically; set `WEB_SERVICE_ACCOUNT` (or `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS`) when you need to authorize different callers directly.
+   - If you deploy via `scripts/legacy/deploy_cloud_run.sh`, set `RECEIPT_PROCESSOR_BASE_URL` before running the script. `scripts/legacy/deploy_receipt_processor.sh` inspects the existing web service (override with `WEB_SERVICE_NAME`/`WEB_SERVICE_REGION`) and grants that runtime service account the **Cloud Run Invoker** role automatically; set `WEB_SERVICE_ACCOUNT` (or `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS`) when you need to authorize different callers directly.
 
 6. **Observe the lifecycle**
    - Upload a PDF receipt to the bucket and include optional metadata keys:

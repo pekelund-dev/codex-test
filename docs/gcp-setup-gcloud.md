@@ -2,6 +2,8 @@
 
 This guide collects the command-line steps required to run pklnd end to end on Google Cloud. It complements the [Cloud Console walkthrough](gcp-setup-cloud-console.md) referenced from the main [README](../README.md).
 
+> Prefer the Terraform workflow in [docs/terraform-deployment.md](./terraform-deployment.md) for day-to-day provisioning and deployment. The bash-based snippets below remain for operators who need manual gcloud commands; the previous helper scripts are preserved under `scripts/legacy/`.
+
 ## Prerequisites
 
 - A Google Cloud project with billing enabled and [gcloud](https://cloud.google.com/sdk/docs/install) ≥ 430.0.0 authenticated against it (`gcloud auth login`).
@@ -69,7 +71,7 @@ gcloud services enable \
     ```bash
 export FIRESTORE_CREDENTIALS_FILE=${FIRESTORE_CREDENTIALS_FILE:-$HOME/.config/pklnd/firestore.json}
 export GOOGLE_OAUTH_CREDENTIALS_FILE=${GOOGLE_OAUTH_CREDENTIALS_FILE:-$HOME/.config/pklnd/oauth-client.json}
-source ./scripts/load_local_secrets.sh
+source ./scripts/legacy/load_local_secrets.sh
 
 export FIRESTORE_ENABLED=true
 # Leave FIRESTORE_CREDENTIALS unset on Cloud Run; ADC handles authentication automatically.
@@ -184,7 +186,7 @@ Before deploying, make sure the receipt processor module builds cleanly and that
 3. **Prune older container images** so Artifact Registry keeps only the latest build.
 
     ```bash
-    ./scripts/cleanup_artifact_repos.sh
+    ./scripts/legacy/cleanup_artifact_repos.sh
     ```
 
 ### Allow the web application to invoke the processor

@@ -48,7 +48,7 @@ The `setup-env.sh` script automatically configures:
    > automatically append `oauth` to `SPRING_PROFILES_ACTIVE`. For manual runs add `SPRING_PROFILES_ACTIVE=local,oauth` (or
    > `prod,oauth` in production).
 
-   The `scripts/deploy_cloud_run.sh` helper builds a timestamped container image ready for Cloud Run deployments. Run `./scripts/cleanup_artifact_repos.sh` after deployments to prune older revisions so Artifact Registry only keeps the most recent web application and receipt processor builds. The deploy script relies on the repository’s multi-stage `Dockerfile` (located at the project root by default); export `BUILD_CONTEXT` when you keep the Dockerfile in another directory. The receipt processor deployment helper builds from `receipt-parser/Dockerfile` via the accompanying Cloud Build configuration so the Cloud Run service always packages the parser instead of the secured web UI—override this path with `RECEIPT_DOCKERFILE` and adjust `RECEIPT_BUILD_CONTEXT` or `RECEIPT_CLOUD_BUILD_CONFIG` when using a custom image definition. Ensure the Dockerfile remains inside the selected build context so Cloud Build can resolve it.
+   Prefer the Terraform-based pipeline described in [Terraform deployment](docs/terraform-deployment.md) when targeting Google Cloud. It provisions the infrastructure and deploys both Cloud Run services with a single unified Secret Manager secret. The earlier bash helpers are still available under `scripts/legacy/` if you need to compare behaviour with the previous gcloud-driven flow.
 
 3. Configure Firestore if you want to enable user self-registration (see [Firestore configuration](#firestore-configuration)).
 4. (Optional) Configure Google Cloud Storage to enable the receipts upload page (see
@@ -82,7 +82,7 @@ If you already generated service-account keys or OAuth credentials, keep the JSO
 ```bash
 export FIRESTORE_CREDENTIALS_FILE="$HOME/.config/pklnd/firestore.json"
 export GOOGLE_OAUTH_CREDENTIALS_FILE="$HOME/.config/pklnd/oauth-client.json"
-source ./scripts/load_local_secrets.sh
+source ./scripts/legacy/load_local_secrets.sh
 ```
 
 The helper infers `FIRESTORE_CREDENTIALS=file:/...` and extracts `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` so subsequent Maven or deployment commands pick up the secure values automatically.
@@ -90,7 +90,7 @@ The helper infers `FIRESTORE_CREDENTIALS=file:/...` and extracts `GOOGLE_CLIENT_
 ### Service account handling by environment
 
 - **Cloud Run / Google-managed runtimes** – The deployment script (and the console walkthrough) attaches the `cloud-run-runtime` service account directly to the Cloud Run service. Google automatically exchanges that identity for short-lived tokens through [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc), so the container never needs a JSON key file. Leave `FIRESTORE_CREDENTIALS` unset in these environments; the Firestore client uses the attached service account transparently.
-- **Local development / other hosts** – Provide your own credentials via `FIRESTORE_CREDENTIALS_FILE` and source `./scripts/load_local_secrets.sh`, or point the application at the Firestore emulator with `scripts/source_local_env.sh`. These helpers export `FIRESTORE_CREDENTIALS=file:/…` only when you intentionally supply a downloaded key.
+- **Local development / other hosts** – Provide your own credentials via `FIRESTORE_CREDENTIALS_FILE` and source `./scripts/legacy/load_local_secrets.sh`, or point the application at the Firestore emulator with `scripts/legacy/source_local_env.sh`. These helpers export `FIRESTORE_CREDENTIALS=file:/…` only when you intentionally supply a downloaded key.
 - **Receipt processor Cloud Run service** – The deployment helper provisions a dedicated service account, attaches it to the receipt processor, and grants Firestore, Vertex AI, and Cloud Storage permissions. Like the main web service, the managed runtime exchanges that identity for short-lived tokens so no JSON key files are required on Google Cloud.
 
 ### Google Cloud Storage configuration
@@ -141,34 +141,33 @@ Run the targeted Modulith verification tests to ensure boundaries stay intact:
 
 #### Quick Deployment
 
-Use the automated deployment script for a streamlined setup:
+Use the Terraform automation for a streamlined setup:
 
 ```bash
-# Deploy the Cloud Run receipt processor with all required configurations
-./scripts/deploy_receipt_processor.sh
+# 1) Seed the unified secret locally
+cat > /tmp/pklnd-secret.json <<'JSON'
+{"google_client_id":"your-client-id","google_client_secret":"your-client-secret","ai_studio_api_key":""}
+JSON
+
+# 2) Provision infrastructure (APIs, Artifact Registry, service accounts, Firestore, storage, and the unified secret)
+PROJECT_ID=your-project APP_SECRET_FILE=/tmp/pklnd-secret.json ./scripts/terraform/apply_infrastructure.sh
+
+# 3) Build and deploy both Cloud Run services with the values pulled from the single Secret Manager secret
+PROJECT_ID=your-project ./scripts/terraform/deploy_services.sh
 ```
 
-This script automatically:
-- Enables all required Google Cloud APIs
-- Creates and configures the dedicated receipt processor service account with the correct IAM roles
-- Detects the Cloud Storage bucket region and deploys the Cloud Run service there
-- Builds and deploys the container image via Cloud Build
-- Uses `receipt-parser/Dockerfile` by default to package the correct Spring Boot application (set `RECEIPT_DOCKERFILE`, tweak `RECEIPT_BUILD_CONTEXT`, or provide a custom `RECEIPT_CLOUD_BUILD_CONFIG` if you maintain alternate layouts—keep the Dockerfile within the chosen build context so Cloud Build can locate it)
-- Can be paired with `./scripts/cleanup_artifact_repos.sh` to remove older container images so Artifact Registry only retains the most recent builds
-- Grants the runtime service account access to the receipt bucket, Firestore collection, Vertex AI, and Cloud Logging so Gemini calls and optional structured logging succeed without manual IAM tweaks
-- Accepts an optional list of additional service accounts that should be allowed to invoke the processor (for example the Cloud Run web app)
-- Removes legacy Cloud Storage notifications from the receipt bucket so only authenticated callbacks from the web application reach the processor
-- Writes logs to stdout/stderr by default so Cloud Run captures them automatically; set `ENABLE_CLOUD_LOGGING=true` to mirror events to Cloud Logging with a custom log id (the deployment script now assigns the required `roles/logging.logWriter` permission)
+The scripts keep infrastructure provisioning separate from application deployment while relying on one Secret Manager secret for OAuth and optional AI keys. Earlier gcloud-based helpers now live in `scripts/legacy/` for reference.
 
 #### Teardown
 
-When you're finished testing, run the teardown helper to remove both Cloud Run services and related IAM bindings. The script is safe to execute multiple times; it only deletes resources that still exist.
+Destroy the resources with Terraform when you want a clean slate:
 
 ```bash
-./scripts/teardown_gcp_resources.sh
+PROJECT_ID=your-project terraform -chdir=infra/terraform/deployment destroy
+PROJECT_ID=your-project terraform -chdir=infra/terraform/infrastructure destroy
 ```
 
-Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` if you also want to delete the identities or container registries created during deployment.
+If you prefer the previous bash-based cleanup workflow, the legacy teardown helper remains available under `scripts/legacy/`.
 
 #### Manual Deployment
 

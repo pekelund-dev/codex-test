@@ -2,6 +2,8 @@
 
 This guide walks through provisioning Google Cloud resources, deploying the application to Cloud Run, configuring DNS, and verifying connectivity with Firestore and other Google Cloud services. It contains both **Google Cloud Console** and **gcloud CLI** workflows. Use whichever best fits your workflow, but keep the variables consistent across both approaches.
 
+> The fastest path is now the Terraform automation described in [terraform-deployment.md](./terraform-deployment.md), which provisions infrastructure and deploys both services while consuming a single Secret Manager secret. The legacy bash helpers referenced throughout this document have been moved to `scripts/legacy/`.
+
 > 📈 Need a visual reference before diving into the steps? Review the [System Architecture Schematics](./system-architecture-diagrams.md) for high-level diagrams that outline service relationships, data flows, and deployment pipelines.
 
 ---
@@ -36,10 +38,10 @@ Replace the placeholders below with your values when following the steps:
 
 Prefer the repository scripts when you want a repeatable, idempotent rollout:
 
-- `scripts/deploy_cloud_run.sh` provisions APIs, Artifact Registry, Firestore, the runtime service account, and the Cloud Run service. It skips resource creation when assets already exist and expects the repository `Dockerfile` at the project root (set `BUILD_CONTEXT` if you store it elsewhere).
-- `scripts/deploy_receipt_processor.sh` provisions the receipt processor Cloud Run service, grants it access to the receipt bucket, Firestore, Vertex AI, and Cloud Logging, and aligns IAM permissions with the shared Firestore project. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely. The script now inspects the deployed web service (defaults: `WEB_SERVICE_NAME=pklnd-web`, `WEB_SERVICE_REGION=REGION`) and automatically grants its runtime service account the `roles/run.invoker` permission. Override `WEB_SERVICE_ACCOUNT` when you want to target a specific identity or use `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` for extra callers. It also removes any legacy Cloud Storage notifications on the receipt bucket so only the web application’s authenticated callbacks reach the processor. Container builds use the repository root as the build context while compiling the image from `receipt-parser/Dockerfile` via `receipt-parser/cloudbuild.yaml`; set `RECEIPT_DOCKERFILE`, `RECEIPT_BUILD_CONTEXT`, or `RECEIPT_CLOUD_BUILD_CONFIG` before running the script if you maintain a different layout, keeping the Dockerfile within the chosen context.
-- `scripts/cleanup_artifact_repos.sh` prunes older container images from both Artifact Registry repositories, keeping only the newest build for each Cloud Run service.
-- `scripts/teardown_gcp_resources.sh` removes both Cloud Run services, IAM bindings, and optional supporting infrastructure. It tolerates partially deleted projects and only removes what is present. Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` when you also want to purge the associated identities or container registry.
+- `scripts/legacy/deploy_cloud_run.sh` provisions APIs, Artifact Registry, Firestore, the runtime service account, and the Cloud Run service. It skips resource creation when assets already exist and expects the repository `Dockerfile` at the project root (set `BUILD_CONTEXT` if you store it elsewhere).
+- `scripts/legacy/deploy_receipt_processor.sh` provisions the receipt processor Cloud Run service, grants it access to the receipt bucket, Firestore, Vertex AI, and Cloud Logging, and aligns IAM permissions with the shared Firestore project. Existing buckets, databases, and bindings are detected so the script can be executed multiple times safely. The script now inspects the deployed web service (defaults: `WEB_SERVICE_NAME=pklnd-web`, `WEB_SERVICE_REGION=REGION`) and automatically grants its runtime service account the `roles/run.invoker` permission. Override `WEB_SERVICE_ACCOUNT` when you want to target a specific identity or use `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` for extra callers. It also removes any legacy Cloud Storage notifications on the receipt bucket so only the web application’s authenticated callbacks reach the processor. Container builds use the repository root as the build context while compiling the image from `receipt-parser/Dockerfile` via `receipt-parser/cloudbuild.yaml`; set `RECEIPT_DOCKERFILE`, `RECEIPT_BUILD_CONTEXT`, or `RECEIPT_CLOUD_BUILD_CONFIG` before running the script if you maintain a different layout, keeping the Dockerfile within the chosen context.
+- `scripts/legacy/cleanup_artifact_repos.sh` prunes older container images from both Artifact Registry repositories, keeping only the newest build for each Cloud Run service.
+- `scripts/legacy/teardown_gcp_resources.sh` removes both Cloud Run services, IAM bindings, and optional supporting infrastructure. It tolerates partially deleted projects and only removes what is present. Set `DELETE_SERVICE_ACCOUNTS=true` and/or `DELETE_ARTIFACT_REPO=true` when you also want to purge the associated identities or container registry.
 
 The rest of this document mirrors what the scripts perform under the hood if you prefer to click through the console or run individual `gcloud` commands.
 
@@ -101,7 +103,7 @@ The same Firestore database stores both the **user registration** data managed b
 
 > 💡 **No service-account keys needed on Cloud Run:** the deployed service automatically authenticates with Firestore through its runtime service account. Leave `FIRESTORE_CREDENTIALS` unset when running on Cloud Run or other Google Cloud hosts that support [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc). Only create JSON keys for local development or third-party platforms that cannot use Workload Identity.
 
-If you already downloaded key files for other environments, set `FIRESTORE_CREDENTIALS_FILE` and/or `GOOGLE_OAUTH_CREDENTIALS_FILE` to the secure file locations (outside the repository) and `source ./scripts/load_local_secrets.sh` before running any commands. The helper turns those paths into the runtime variables (`FIRESTORE_CREDENTIALS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) so both the CLI snippets below and the automation scripts reuse your stored secrets without editing them manually.
+If you already downloaded key files for other environments, set `FIRESTORE_CREDENTIALS_FILE` and/or `GOOGLE_OAUTH_CREDENTIALS_FILE` to the secure file locations (outside the repository) and `source ./scripts/legacy/load_local_secrets.sh` before running any commands. The helper turns those paths into the runtime variables (`FIRESTORE_CREDENTIALS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) so both the CLI snippets below and the automation scripts reuse your stored secrets without editing them manually.
 
 ---
 
@@ -154,8 +156,8 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 Cloud Run automatically injects the attached service account as [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc). The platform exchanges that identity for short-lived OAuth tokens whenever the web app talks to Firestore, Secret Manager, or other Google APIs. Because of this managed flow:
 
 - **Do not** provide a JSON key file to Cloud Run. Leaving `FIRESTORE_CREDENTIALS` unset is the correct configuration—the Firestore SDK picks up the runtime service account automatically.
-- The deployment script (`scripts/deploy_cloud_run.sh`) selects the `cloud-run-runtime` account by default, but you can swap in any other service account that has `roles/datastore.user`.
-- Only create key files for local development or if you plan to run the container outside Google Cloud. In those scenarios, point `FIRESTORE_CREDENTIALS_FILE` at the downloaded JSON and source `./scripts/load_local_secrets.sh`.
+- The deployment script (`scripts/legacy/deploy_cloud_run.sh`) selects the `cloud-run-runtime` account by default, but you can swap in any other service account that has `roles/datastore.user`.
+- Only create key files for local development or if you plan to run the container outside Google Cloud. In those scenarios, point `FIRESTORE_CREDENTIALS_FILE` at the downloaded JSON and source `./scripts/legacy/load_local_secrets.sh`.
 
 ---
 
@@ -240,7 +242,7 @@ ENV_VARS="SPRING_PROFILES_ACTIVE=${SPRING_PROFILES},FIRESTORE_ENABLED=true,FIRES
 
 Adjust min/max instances, authentication, and environment variables as necessary. If access should be restricted, remove `--allow-unauthenticated` and grant IAM access explicitly. Keep `FIRESTORE_ENABLED=true` so self-registration remains available.
 
-> The deployment script automatically ensures the detected web runtime service account can invoke the receipt processor. If you use a different identity for the web service, set `WEB_SERVICE_ACCOUNT`, or point the detection logic at the correct service via `WEB_SERVICE_NAME`/`WEB_SERVICE_REGION`, before running `scripts/deploy_receipt_processor.sh`. Use `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` for multiple callers.
+> The deployment script automatically ensures the detected web runtime service account can invoke the receipt processor. If you use a different identity for the web service, set `WEB_SERVICE_ACCOUNT`, or point the detection logic at the correct service via `WEB_SERVICE_NAME`/`WEB_SERVICE_REGION`, before running `scripts/legacy/deploy_receipt_processor.sh`. Use `ADDITIONAL_INVOKER_SERVICE_ACCOUNTS` for multiple callers.
 
 ---
 
