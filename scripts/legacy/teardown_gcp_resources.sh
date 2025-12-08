@@ -7,7 +7,7 @@ IFS=$'\n\t'
 # tolerating partially created or already deleted assets.
 
 PROJECT_ID="${PROJECT_ID:-}"
-REGION="${REGION:-europe-north1}"
+REGION="${REGION:-us-east1}"
 SERVICE_NAME="${SERVICE_NAME:-pklnd-web}"
 SA_NAME="${SA_NAME:-cloud-run-runtime}"
 RECEIPT_SERVICE_NAME="${RECEIPT_SERVICE_NAME:-pklnd-receipts}"

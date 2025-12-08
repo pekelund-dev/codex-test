@@ -22,14 +22,14 @@ Run the helper from the repository root to enable core APIs, create service acco
 ```bash
 APP_SECRET_FILE=/path/to/pklnd-secret.json \
 PROJECT_ID=$PROJECT_ID \
-REGION=europe-north1 \  # Optional override
+REGION=us-east1 \  # Optional override
 ./scripts/terraform/apply_infrastructure.sh
 ```
 
 Key variables (override via environment variables):
 
 - `PROJECT_ID` – target Google Cloud project
-- `REGION` / `FIRESTORE_LOCATION` – defaults to `europe-north1`
+- `REGION` / `FIRESTORE_LOCATION` – defaults to `us-east1`
 - `BUCKET_NAME` – defaults to `pklnd-receipts-<project>`
 - `APP_SECRET_NAME` – Secret Manager id to create or update (defaults to `pklnd-app-config`)
 
@@ -41,7 +41,7 @@ After infrastructure is in place and the secret contains your OAuth credentials,
 
 ```bash
 PROJECT_ID=$PROJECT_ID \
-REGION=europe-north1 \  # Optional override
+REGION=us-east1 \  # Optional override
 APP_SECRET_NAME=pklnd-app-config \  # Optional override
 ./scripts/terraform/deploy_services.sh
 ```

@@ -35,7 +35,7 @@ gcloud services enable \
 2. **Create the Firestore database**
 
     ```bash
-    REGION=us-east1 # choose the region closest to your users (for example, us-east1 or us-central1)
+    REGION=us-east1 # default region
     gcloud firestore databases create --location="${REGION}" --type=firestore-native
     ```
 

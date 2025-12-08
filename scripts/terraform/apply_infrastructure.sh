@@ -6,7 +6,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TF_DIR="${REPO_ROOT}/infra/terraform/infrastructure"
 
 PROJECT_ID=${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || true)}
-REGION=${REGION:-europe-north1}
+REGION=${REGION:-us-east1}
 FIRESTORE_LOCATION=${FIRESTORE_LOCATION:-${REGION}}
 BUCKET_NAME=${BUCKET_NAME:-}
 APP_SECRET_FILE=${APP_SECRET_FILE:-}
