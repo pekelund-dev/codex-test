@@ -34,7 +34,7 @@ resource "google_cloud_run_v2_service" "receipts" {
 
       env {
         name  = "PROJECT_ID"
-        value = local.firestore_project_id
+        value = var.project_id
       }
 
       env {
