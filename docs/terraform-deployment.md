@@ -77,11 +77,11 @@ You can still override `WEB_SERVICE_NAME`/`RECEIPT_SERVICE_NAME` when you deploy
 
 ## Teardown
 
-Destroy the deployment stack first, then remove the shared infrastructure when you want to clean up the project:
+Destroy the deployment stack first, then remove the shared infrastructure when you want to clean up the project. The helper scripts will reuse your configured gcloud project and default to `us-east1` so they can run without extra flags:
 
 ```bash
-PROJECT_ID=$PROJECT_ID terraform -chdir=infra/terraform/deployment destroy
-PROJECT_ID=$PROJECT_ID terraform -chdir=infra/terraform/infrastructure destroy
+scripts/terraform/destroy_services.sh
+scripts/terraform/destroy_infrastructure.sh
 ```
 
 ## Legacy automation
