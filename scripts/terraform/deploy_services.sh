@@ -37,43 +37,35 @@ if [[ ! -f "${REPO_ROOT}/${CLOUD_BUILD_CONFIG}" ]]; then
   exit 1
 fi
 
-infra_outputs=$(terraform -chdir="${INFRA_DIR}" output -json 2>/dev/null || true)
-
 bucket_name=${BUCKET_NAME:-}
 web_repo=web
 receipt_repo=receipts
 web_sa="cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
 receipt_sa="receipt-processor@${PROJECT_ID}.iam.gserviceaccount.com"
 
-if [[ -n "${infra_outputs}" ]]; then
-  eval "$(python - <<'PY'
-import json, os, sys
-
-outputs = json.load(sys.stdin)
-
-
-def get_output(key, default=""):
-    return outputs.get(key, {}).get("value", default)
-
-
-values = {
-    "bucket_name_from_tf": get_output("bucket_name"),
-    "web_repo_from_tf": os.path.basename(get_output("web_artifact_registry")) or "web",
-    "receipt_repo_from_tf": os.path.basename(get_output("receipt_artifact_registry")) or "receipts",
-    "web_sa_from_tf": get_output("web_service_account_email"),
-    "receipt_sa_from_tf": get_output("receipt_service_account_email"),
+tf_output_raw() {
+  terraform -chdir="${INFRA_DIR}" output -raw "$1" 2>/dev/null || true
 }
 
-print("\n".join(f"{k}='{v}'" for k, v in values.items()))
-PY
- <<<"${infra_outputs}")"
+bucket_name_from_tf=$(tf_output_raw bucket_name)
+web_registry_from_tf=$(tf_output_raw web_artifact_registry)
+receipt_registry_from_tf=$(tf_output_raw receipt_artifact_registry)
+web_sa_from_tf=$(tf_output_raw web_service_account_email)
+receipt_sa_from_tf=$(tf_output_raw receipt_service_account_email)
 
-  bucket_name=${bucket_name:-${bucket_name_from_tf}}
-  web_repo=${web_repo_from_tf:-${web_repo}}
-  receipt_repo=${receipt_repo_from_tf:-${receipt_repo}}
-  web_sa=${web_sa_from_tf:-${web_sa}}
-  receipt_sa=${receipt_sa_from_tf:-${receipt_sa}}
+if [[ -n "${web_registry_from_tf}" ]]; then
+  web_repo_from_tf=${web_registry_from_tf##*/}
 fi
+
+if [[ -n "${receipt_registry_from_tf}" ]]; then
+  receipt_repo_from_tf=${receipt_registry_from_tf##*/}
+fi
+
+bucket_name=${bucket_name:-${bucket_name_from_tf}}
+web_repo=${web_repo_from_tf:-${web_repo}}
+receipt_repo=${receipt_repo_from_tf:-${receipt_repo}}
+web_sa=${web_sa_from_tf:-${web_sa}}
+receipt_sa=${receipt_sa_from_tf:-${receipt_sa}}
 
 bucket_name=${bucket_name:-"pklnd-receipts-${PROJECT_ID}"}
 
@@ -88,25 +80,25 @@ fi
 
 secret_json=$(gcloud secrets versions access "${APP_SECRET_VERSION}" --secret "${APP_SECRET_NAME}" --project "${PROJECT_ID}")
 
-read -r GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET AI_STUDIO_API_KEY < <(
-  SECRET_JSON="${secret_json}" python - <<'PY'
-import json
-import os
+parse_json_field() {
+  local json_payload="$1"
+  local key="$2"
 
-payload = json.loads(os.environ["SECRET_JSON"])
+  if command -v jq >/dev/null 2>&1; then
+    echo "${json_payload}" | jq -r --arg key "${key}" '.[$key] // empty'
+  else
+    echo "${json_payload}" | sed -n "s/.*\"${key}\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p"
+  fi
+}
 
-client_id = payload.get("google_client_id")
-client_secret = payload.get("google_client_secret")
-ai_key = payload.get("ai_studio_api_key", "")
+GOOGLE_CLIENT_ID=$(parse_json_field "${secret_json}" "google_client_id")
+GOOGLE_CLIENT_SECRET=$(parse_json_field "${secret_json}" "google_client_secret")
+AI_STUDIO_API_KEY=$(parse_json_field "${secret_json}" "ai_studio_api_key")
 
-if not client_id or not client_secret:
-    raise SystemExit("Unified secret must include google_client_id and google_client_secret")
-
-print(client_id)
-print(client_secret)
-print(ai_key)
-PY
-)
+if [[ -z "${GOOGLE_CLIENT_ID}" || -z "${GOOGLE_CLIENT_SECRET}" ]]; then
+  echo "Unified secret must include google_client_id and google_client_secret" >&2
+  exit 1
+fi
 
 tfvars_file=$(mktemp)
 chmod 600 "${tfvars_file}"
@@ -115,65 +107,40 @@ trap 'rm -f "${tfvars_file}"' EXIT
 ALLOW_UNAUTHENTICATED_WEB=${ALLOW_UNAUTHENTICATED_WEB:-true}
 CUSTOM_DOMAIN=${CUSTOM_DOMAIN:-}
 
-TFVARS_FILE="${tfvars_file}" \
-PROJECT_ID="${PROJECT_ID}" \
-REGION="${REGION}" \
-BUCKET_NAME_VAL="${bucket_name}" \
-WEB_SA_VAL="${web_sa}" \
-RECEIPT_SA_VAL="${receipt_sa}" \
-APP_SECRET_NAME_VAL="${APP_SECRET_NAME}" \
-GOOGLE_CLIENT_ID_VAL="${GOOGLE_CLIENT_ID}" \
-GOOGLE_CLIENT_SECRET_VAL="${GOOGLE_CLIENT_SECRET}" \
-AI_STUDIO_API_KEY_VAL="${AI_STUDIO_API_KEY}" \
-WEB_IMAGE_VAL="${web_image}" \
-RECEIPT_IMAGE_VAL="${receipt_image}" \
-WEB_SERVICE_NAME_VAL="${WEB_SERVICE_NAME}" \
-RECEIPT_SERVICE_NAME_VAL="${RECEIPT_SERVICE_NAME}" \
-FIRESTORE_PROJECT_ID_VAL="${FIRESTORE_PROJECT_ID:-${PROJECT_ID}}" \
-GCS_PROJECT_ID_VAL="${GCS_PROJECT_ID:-${PROJECT_ID}}" \
-VERTEX_AI_PROJECT_ID_VAL="${VERTEX_AI_PROJECT_ID:-${PROJECT_ID}}" \
-VERTEX_AI_LOCATION_VAL="${VERTEX_AI_LOCATION:-${REGION}}" \
-LOGGING_PROJECT_ID_VAL="${LOGGING_PROJECT_ID:-${PROJECT_ID}}" \
-ALLOW_UNAUTH_WEB="${ALLOW_UNAUTHENTICATED_WEB}" \
-CUSTOM_DOMAIN_VAL="${CUSTOM_DOMAIN}" \
-python - <<'PY'
-import json
-import os
-import pathlib
+json_escape() {
+  local raw_value="$1"
 
-tfvars_path = pathlib.Path(os.environ["TFVARS_FILE"])
-
-def fmt(value, key):
-    if key == "allow_unauthenticated_web":
-        return str(value).lower()
-    return json.dumps(value)
-
-
-tfvars = {
-    "project_id": os.environ["PROJECT_ID"],
-    "region": os.environ["REGION"],
-    "bucket_name": os.environ["BUCKET_NAME_VAL"],
-    "web_service_account_email": os.environ["WEB_SA_VAL"],
-    "receipt_service_account_email": os.environ["RECEIPT_SA_VAL"],
-    "secret_name": os.environ["APP_SECRET_NAME_VAL"],
-    "google_client_id": os.environ["GOOGLE_CLIENT_ID_VAL"],
-    "google_client_secret": os.environ["GOOGLE_CLIENT_SECRET_VAL"],
-    "ai_studio_api_key": os.environ["AI_STUDIO_API_KEY_VAL"],
-    "web_image": os.environ["WEB_IMAGE_VAL"],
-    "receipt_image": os.environ["RECEIPT_IMAGE_VAL"],
-    "web_service_name": os.environ["WEB_SERVICE_NAME_VAL"],
-    "receipt_service_name": os.environ["RECEIPT_SERVICE_NAME_VAL"],
-    "firestore_project_id": os.environ["FIRESTORE_PROJECT_ID_VAL"],
-    "gcs_project_id": os.environ["GCS_PROJECT_ID_VAL"],
-    "vertex_ai_project_id": os.environ["VERTEX_AI_PROJECT_ID_VAL"],
-    "vertex_ai_location": os.environ["VERTEX_AI_LOCATION_VAL"],
-    "logging_project_id": os.environ["LOGGING_PROJECT_ID_VAL"],
-    "allow_unauthenticated_web": os.environ["ALLOW_UNAUTH_WEB"],
-    "custom_domain": os.environ["CUSTOM_DOMAIN_VAL"],
+  if command -v jq >/dev/null 2>&1; then
+    jq -Rs '.' <<<"${raw_value}"
+  else
+    printf '"%s"' "$(printf '%s' "${raw_value}" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+  fi
 }
 
-tfvars_path.write_text("\n".join(f"{key} = {fmt(value, key)}" for key, value in tfvars.items()) + "\n")
-PY
+allow_unauth_value=$(printf '%s' "${ALLOW_UNAUTHENTICATED_WEB}" | tr '[:upper:]' '[:lower:]')
+
+cat >"${tfvars_file}" <<EOF
+project_id = $(json_escape "${PROJECT_ID}")
+region = $(json_escape "${REGION}")
+bucket_name = $(json_escape "${bucket_name}")
+web_service_account_email = $(json_escape "${web_sa}")
+receipt_service_account_email = $(json_escape "${receipt_sa}")
+secret_name = $(json_escape "${APP_SECRET_NAME}")
+google_client_id = $(json_escape "${GOOGLE_CLIENT_ID}")
+google_client_secret = $(json_escape "${GOOGLE_CLIENT_SECRET}")
+ai_studio_api_key = $(json_escape "${AI_STUDIO_API_KEY}")
+web_image = $(json_escape "${web_image}")
+receipt_image = $(json_escape "${receipt_image}")
+web_service_name = $(json_escape "${WEB_SERVICE_NAME}")
+receipt_service_name = $(json_escape "${RECEIPT_SERVICE_NAME}")
+firestore_project_id = $(json_escape "${FIRESTORE_PROJECT_ID:-${PROJECT_ID}}")
+gcs_project_id = $(json_escape "${GCS_PROJECT_ID:-${PROJECT_ID}}")
+vertex_ai_project_id = $(json_escape "${VERTEX_AI_PROJECT_ID:-${PROJECT_ID}}")
+vertex_ai_location = $(json_escape "${VERTEX_AI_LOCATION:-${REGION}}")
+logging_project_id = $(json_escape "${LOGGING_PROJECT_ID:-${PROJECT_ID}}")
+allow_unauthenticated_web = ${allow_unauth_value}
+custom_domain = $(json_escape "${CUSTOM_DOMAIN}")
+EOF
 
 echo "Building web image ${web_image}"
 gcloud builds submit "${WEB_BUILD_CONTEXT}" \
