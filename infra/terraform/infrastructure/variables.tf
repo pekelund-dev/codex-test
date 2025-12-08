@@ -15,6 +15,12 @@ variable "firestore_location" {
   default     = "us-east1"
 }
 
+variable "firestore_database_name" {
+  description = "Firestore database name for the project"
+  type        = string
+  default     = "receipts-db"
+}
+
 variable "bucket_name" {
   description = "Name of the receipts bucket; defaults to pklnd-receipts-<project>"
   type        = string

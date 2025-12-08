@@ -25,7 +25,7 @@ resource "google_project_service" "services" {
 }
 
 resource "google_firestore_database" "default" {
-  name           = "(default)"
+  name           = var.firestore_database_name
   project        = var.project_id
   location_id    = var.firestore_location
   type           = "FIRESTORE_NATIVE"

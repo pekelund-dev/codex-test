@@ -36,7 +36,7 @@ gcloud services enable \
 
     ```bash
     REGION=us-east1 # default region
-    gcloud firestore databases create --location="${REGION}" --type=firestore-native
+    gcloud firestore databases create --database="receipts-db" --location="${REGION}" --type=firestore-native
     ```
 
 3. **Create a service account for the Spring Boot app**

@@ -190,10 +190,11 @@ fi
 
 # Create Firestore database in the shared project if missing
 if [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
-  if ! gcloud firestore databases describe --database="(default)" \
+  if ! gcloud firestore databases describe --database="receipts-db" \
     --project="${SHARED_FIRESTORE_PROJECT_ID}" \
     --format="value(name)" >/dev/null 2>&1; then
     gcloud firestore databases create \
+      --database="receipts-db" \
       --location="$REGION" \
       --type=firestore-native \
       --project="${SHARED_FIRESTORE_PROJECT_ID}"

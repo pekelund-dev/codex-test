@@ -156,13 +156,13 @@ Use the Firestore REST API to inspect collections during development. For exampl
 registered users:
 
 ```bash
-curl "http://${FIRESTORE_EMULATOR_HOST}/v1/projects/${FIRESTORE_PROJECT_ID}/databases/(default)/documents/${FIRESTORE_USERS_COLLECTION}"
+curl "http://${FIRESTORE_EMULATOR_HOST}/v1/projects/${FIRESTORE_PROJECT_ID}/databases/receipts-db/documents/${FIRESTORE_USERS_COLLECTION}"
 ```
 
 Or query receipt extraction results:
 
 ```bash
-curl "http://${FIRESTORE_EMULATOR_HOST}/v1/projects/${PROJECT_ID}/databases/(default)/documents/${RECEIPT_FIRESTORE_COLLECTION}"
+curl "http://${FIRESTORE_EMULATOR_HOST}/v1/projects/${PROJECT_ID}/databases/receipts-db/documents/${RECEIPT_FIRESTORE_COLLECTION}"
 ```
 
 Because the emulator does not enforce authentication, these endpoints are reachable without

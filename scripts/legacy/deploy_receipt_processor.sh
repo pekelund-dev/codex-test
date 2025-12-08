@@ -226,8 +226,9 @@ if ! gcloud artifacts repositories describe "$ARTIFACT_REPO" --location="$REGION
     --description="Container images for receipt processor"
 fi
 
-if ! gcloud firestore databases describe --database="(default)" --project="$PROJECT_ID" --format="value(name)" >/dev/null 2>&1; then
+if ! gcloud firestore databases describe --database="receipts-db" --project="$PROJECT_ID" --format="value(name)" >/dev/null 2>&1; then
   gcloud firestore databases create \
+    --database="receipts-db" \
     --location="$REGION" \
     --type=firestore-native \
     --project="$PROJECT_ID"

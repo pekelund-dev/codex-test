@@ -87,7 +87,7 @@ gcloud services enable \
 Firestore database creation is a one-time operation. If not already created, run:
 
 ```bash
-gcloud firestore databases create --region=REGION --type=firestore-native
+gcloud firestore databases create --database=receipts-db --region=REGION --type=firestore-native
 ```
 
 > **Note:** If a Firestore database already exists in the project, this command will fail. That is expected—Firestore supports only one database per project.
@@ -331,7 +331,7 @@ To remove the Cloud Run service and supporting resources:
 ```bash
 gcloud run services delete "$SERVICE_NAME" --region "$REGION"
 gcloud artifacts repositories delete web --location "$REGION"
-gcloud firestore databases delete --database="(default)"
+gcloud firestore databases delete --database="receipts-db"
 ```
 
 Ensure you understand the impact on production data before running cleanup commands.
