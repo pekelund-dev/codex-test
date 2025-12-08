@@ -51,9 +51,24 @@ The script automatically:
 - Reads Terraform outputs to reuse the generated service accounts, bucket, and Artifact Registry repositories
 - Builds timestamped container images for both services and pushes them to Artifact Registry
 - Pulls `google_client_id`, `google_client_secret`, and `ai_studio_api_key` from the single Secret Manager secret
-- Applies the Cloud Run services, IAM bindings, and optional domain mapping via Terraform
+- Applies the Cloud Run services and IAM bindings
 
-Set `CUSTOM_DOMAIN` if you want Terraform to manage a Cloud Run domain mapping, or override `WEB_SERVICE_NAME`/`RECEIPT_SERVICE_NAME` when you deploy multiple environments.
+Terraform does not fully support Cloud Run v2 domain mappings. After `terraform apply` completes, create the mapping manually if you need a custom domain:
+
+```bash
+gcloud run domain-mappings create \ \
+  --service $WEB_SERVICE_NAME \ \
+  --domain $CUSTOM_DOMAIN \ \
+  --region $REGION
+```
+
+If you need to move the domain to a different service, delete the mapping first and recreate it with the new service name:
+
+```bash
+gcloud run domain-mappings delete --domain $CUSTOM_DOMAIN --region $REGION
+```
+
+You can still override `WEB_SERVICE_NAME`/`RECEIPT_SERVICE_NAME` when you deploy multiple environments.
 
 ## Teardown
 

@@ -54,7 +54,7 @@ flowchart LR
 **Key points**
 
 - Both Cloud Run services use identities with the `roles/datastore.user` role against the shared Firestore project so user profiles and receipt documents live in the same database.
-- Custom domain traffic (`DOMAIN`) is routed through Porkbun DNS to the Cloud Run HTTPS endpoint created by the Cloud Run domain mapping workflow.
+- Custom domain traffic (`DOMAIN`) is routed through Porkbun DNS to the Cloud Run HTTPS endpoint created by a manual Cloud Run domain mapping.
 - Secrets, OAuth credentials, and API keys should be stored in Secret Manager and referenced through environment variables rather than being hard-coded.
 
 ---
@@ -107,4 +107,4 @@ flowchart LR
 - The `scripts/legacy/deploy_cloud_run.sh` and `scripts/legacy/deploy_receipt_processor.sh` scripts reuse the same environment configuration to keep the Firestore project, service accounts, and regions consistent.
 - Prefer the Terraform workflow in [docs/terraform-deployment.md](./terraform-deployment.md) for reproducible infrastructure and deployment; lean on the legacy scripts only when comparing with the previous gcloud-driven path.
 - Cloud Build can be replaced with local Docker builds if preferred—ensure the final image is pushed to a registry accessible by Cloud Run.
-- After deployment, run the domain mapping workflow so `DOMAIN` resolves to the new Cloud Run service, and verify TLS certificates are provisioned before flipping production traffic.
+- After deployment, create or update the Cloud Run domain mapping with `gcloud run domain-mappings create ...` so `DOMAIN` resolves to the new service, and verify TLS certificates are provisioned before flipping production traffic.
