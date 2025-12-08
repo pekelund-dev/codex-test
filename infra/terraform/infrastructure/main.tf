@@ -24,7 +24,7 @@ resource "google_project_service" "services" {
   disable_on_destroy = false
 }
 
-resource "google_firestore_database" "default" {
+resource "google_firestore_database" "receipts" {
   name           = var.firestore_database_name
   project        = var.project_id
   location_id    = var.firestore_location
