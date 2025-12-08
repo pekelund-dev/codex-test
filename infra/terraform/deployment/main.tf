@@ -90,8 +90,8 @@ resource "google_cloud_run_v2_service" "receipts" {
   }
 
   traffic {
-    percent         = 100
-    latest_revision = true
+    percent = 100
+    type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
   }
 }
 
@@ -169,8 +169,8 @@ resource "google_cloud_run_v2_service" "web" {
   }
 
   traffic {
-    percent         = 100
-    latest_revision = true
+    percent = 100
+    type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
   }
 }
 
