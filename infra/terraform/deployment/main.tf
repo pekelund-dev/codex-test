@@ -218,3 +218,18 @@ output "receipt_service_url" {
   value       = google_cloud_run_v2_service.receipts.uri
   description = "URL for the receipt processor Cloud Run service"
 }
+
+output "web_service_name" {
+  value       = google_cloud_run_v2_service.web.name
+  description = "Name of the web Cloud Run service"
+}
+
+output "receipt_service_name" {
+  value       = google_cloud_run_v2_service.receipts.name
+  description = "Name of the receipt Cloud Run service"
+}
+
+output "region" {
+  value       = var.region
+  description = "Region where services are deployed"
+}

@@ -59,9 +59,9 @@ Terraform does not fully support Cloud Run v2 domain mappings. After `terraform 
 WEB_SERVICE_NAME=$(terraform -chdir=infra/terraform/deployment output -raw web_service_name)
 REGION=$(terraform -chdir=infra/terraform/deployment output -raw region)
 # Set to your desired domain
-CUSTOM_DOMAIN=example.com
+CUSTOM_DOMAIN=pklnd.pekelund.dev
 
-gcloud run domain-mappings create \
+gcloud beta run domain-mappings create \
   --service "$WEB_SERVICE_NAME" \
   --domain "$CUSTOM_DOMAIN" \
   --region "$REGION"
@@ -70,7 +70,7 @@ gcloud run domain-mappings create \
 If you need to move the domain to a different service, delete the mapping first and recreate it with the new service name:
 
 ```bash
-gcloud run domain-mappings delete --domain $CUSTOM_DOMAIN --region $REGION
+gcloud beta run domain-mappings delete --domain "$CUSTOM_DOMAIN" --region "$REGION"
 ```
 
 You can still override `WEB_SERVICE_NAME`/`RECEIPT_SERVICE_NAME` when you deploy multiple environments.
