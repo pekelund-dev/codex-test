@@ -88,6 +88,11 @@ resource "google_cloud_run_v2_service" "receipts" {
       max_instance_count = 5
     }
   }
+
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
 }
 
 resource "google_cloud_run_v2_service" "web" {
@@ -161,6 +166,11 @@ resource "google_cloud_run_v2_service" "web" {
       min_instance_count = 0
       max_instance_count = 10
     }
+  }
+
+  traffic {
+    percent         = 100
+    latest_revision = true
   }
 }
 
