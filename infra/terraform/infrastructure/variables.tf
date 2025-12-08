@@ -6,13 +6,13 @@ variable "project_id" {
 variable "region" {
   description = "Primary region for regional resources"
   type        = string
-  default     = "europe-north1"
+  default     = "us-east1"
 }
 
 variable "firestore_location" {
   description = "Location for the Firestore database"
   type        = string
-  default     = "europe-north1"
+  default     = "us-east1"
 }
 
 variable "bucket_name" {

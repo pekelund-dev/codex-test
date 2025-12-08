@@ -76,15 +76,11 @@ resource "google_service_account" "receipt" {
 locals {
   web_roles = [
     "roles/datastore.user",
-    "roles/storage.objectAdmin",
-    "roles/secretmanager.secretAccessor",
   ]
   receipt_roles = [
     "roles/datastore.user",
-    "roles/storage.objectAdmin",
     "roles/aiplatform.user",
     "roles/logging.logWriter",
-    "roles/secretmanager.secretAccessor",
   ]
 }
 
@@ -117,7 +113,12 @@ resource "google_storage_bucket_iam_member" "receipt_bucket_admin" {
 resource "google_secret_manager_secret" "app_config" {
   secret_id  = var.app_secret_name
   project    = var.project_id
-  replication { automatic = true }
+
+  replication {
+    auto {}
+  }
+
+  depends_on = [google_project_service.services]
 }
 
 resource "google_secret_manager_secret_version" "app_config" {

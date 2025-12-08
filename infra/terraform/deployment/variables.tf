@@ -6,7 +6,7 @@ variable "project_id" {
 variable "region" {
   description = "Region for Cloud Run services"
   type        = string
-  default     = "europe-north1"
+  default     = "us-east1"
 }
 
 variable "bucket_name" {

@@ -27,16 +27,55 @@ resource "google_cloud_run_v2_service" "receipts" {
     containers {
       image = var.receipt_image
 
-      env { name = "SPRING_PROFILES_ACTIVE" value = "prod" }
-      env { name = "PROJECT_ID" value = var.project_id }
-      env { name = "VERTEX_AI_PROJECT_ID" value = local.vertex_ai_project_id }
-      env { name = "VERTEX_AI_LOCATION" value = local.vertex_ai_location }
-      env { name = "VERTEX_AI_GEMINI_MODEL" value = var.vertex_ai_gemini_model }
-      env { name = "RECEIPT_FIRESTORE_COLLECTION" value = "receiptExtractions" }
-      env { name = "RECEIPT_FIRESTORE_ITEM_COLLECTION" value = "receiptItems" }
-      env { name = "RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION" value = "receiptItemStats" }
-      env { name = "LOGGING_PROJECT_ID" value = local.logging_project_id }
-      env { name = "APP_CONFIG_SECRET_NAME" value = var.secret_name }
+      env {
+        name  = "SPRING_PROFILES_ACTIVE"
+        value = "prod"
+      }
+
+      env {
+        name  = "PROJECT_ID"
+        value = local.firestore_project_id
+      }
+
+      env {
+        name  = "VERTEX_AI_PROJECT_ID"
+        value = local.vertex_ai_project_id
+      }
+
+      env {
+        name  = "VERTEX_AI_LOCATION"
+        value = local.vertex_ai_location
+      }
+
+      env {
+        name  = "VERTEX_AI_GEMINI_MODEL"
+        value = var.vertex_ai_gemini_model
+      }
+
+      env {
+        name  = "RECEIPT_FIRESTORE_COLLECTION"
+        value = "receiptExtractions"
+      }
+
+      env {
+        name  = "RECEIPT_FIRESTORE_ITEM_COLLECTION"
+        value = "receiptItems"
+      }
+
+      env {
+        name  = "RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION"
+        value = "receiptItemStats"
+      }
+
+      env {
+        name  = "LOGGING_PROJECT_ID"
+        value = local.logging_project_id
+      }
+
+      env {
+        name  = "APP_CONFIG_SECRET_NAME"
+        value = var.secret_name
+      }
 
       env {
         name  = "AI_STUDIO_API_KEY"
@@ -48,17 +87,6 @@ resource "google_cloud_run_v2_service" "receipts" {
       min_instance_count = 0
       max_instance_count = 5
     }
-  }
-
-  traffic {
-    percent         = 100
-    type            = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
-    revision        = ""
-    latest_revision = true
-  }
-
-  lifecycle {
-    ignore_changes = [template[0].containers[0].env[?name == "AI_STUDIO_API_KEY"].value]
   }
 }
 
@@ -73,30 +101,66 @@ resource "google_cloud_run_v2_service" "web" {
     containers {
       image = var.web_image
 
-      env { name = "SPRING_PROFILES_ACTIVE" value = "prod,oauth" }
-      env { name = "FIRESTORE_ENABLED" value = "true" }
-      env { name = "FIRESTORE_PROJECT_ID" value = local.firestore_project_id }
-      env { name = "GOOGLE_CLIENT_ID" value = var.google_client_id }
-      env { name = "GOOGLE_CLIENT_SECRET" value = var.google_client_secret }
-      env { name = "GCS_ENABLED" value = "true" }
-      env { name = "GCS_PROJECT_ID" value = local.gcs_project_id }
-      env { name = "GCS_BUCKET" value = var.bucket_name }
-      env { name = "RECEIPT_PROCESSOR_BASE_URL" value = google_cloud_run_v2_service.receipts.uri }
-      env { name = "RECEIPT_PROCESSOR_AUDIENCE" value = google_cloud_run_v2_service.receipts.uri }
-      env { name = "APP_CONFIG_SECRET_NAME" value = var.secret_name }
+      env {
+        name  = "SPRING_PROFILES_ACTIVE"
+        value = "prod,oauth"
+      }
+
+      env {
+        name  = "FIRESTORE_ENABLED"
+        value = "true"
+      }
+
+      env {
+        name  = "FIRESTORE_PROJECT_ID"
+        value = local.firestore_project_id
+      }
+
+      env {
+        name  = "GOOGLE_CLIENT_ID"
+        value = var.google_client_id
+      }
+
+      env {
+        name  = "GOOGLE_CLIENT_SECRET"
+        value = var.google_client_secret
+      }
+
+      env {
+        name  = "GCS_ENABLED"
+        value = "true"
+      }
+
+      env {
+        name  = "GCS_PROJECT_ID"
+        value = local.gcs_project_id
+      }
+
+      env {
+        name  = "GCS_BUCKET"
+        value = var.bucket_name
+      }
+
+      env {
+        name  = "RECEIPT_PROCESSOR_BASE_URL"
+        value = google_cloud_run_v2_service.receipts.uri
+      }
+
+      env {
+        name  = "RECEIPT_PROCESSOR_AUDIENCE"
+        value = google_cloud_run_v2_service.receipts.uri
+      }
+
+      env {
+        name  = "APP_CONFIG_SECRET_NAME"
+        value = var.secret_name
+      }
     }
 
     scaling {
       min_instance_count = 0
       max_instance_count = 10
     }
-  }
-
-  traffic {
-    percent         = 100
-    type            = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
-    revision        = ""
-    latest_revision = true
   }
 }
 
@@ -125,21 +189,9 @@ resource "google_cloud_run_v2_service_iam_member" "receipt_self_invoker" {
   member   = "serviceAccount:${var.receipt_service_account_email}"
 }
 
-resource "google_cloud_run_domain_mapping" "web_domain" {
-  provider = google-beta
-  count    = var.custom_domain == "" ? 0 : 1
-
-  name     = var.custom_domain
-  location = var.region
-
-  metadata {
-    namespace = var.project_id
-  }
-
-  spec {
-    route_name = google_cloud_run_v2_service.web.name
-  }
-}
+# NOTE: Cloud Run v2 domain mappings are not fully supported by Terraform.
+# To map a custom domain, use the Google Cloud Console or the gcloud CLI:
+#   gcloud run domain-mappings create --service <SERVICE_NAME> --domain <CUSTOM_DOMAIN> --region <REGION>
 
 output "web_service_url" {
   value       = google_cloud_run_v2_service.web.uri
