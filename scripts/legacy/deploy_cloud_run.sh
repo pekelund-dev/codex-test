@@ -9,7 +9,7 @@ cd "$REPO_ROOT"
 # Configure the environment variables below before running the script.
 
 PROJECT_ID="${PROJECT_ID:-}"
-REGION="${REGION:-europe-north1}"
+REGION="${REGION:-us-east1}"
 SERVICE_NAME="${SERVICE_NAME:-pklnd-web}"
 SA_NAME="${SA_NAME:-cloud-run-runtime}"
 ARTIFACT_REPO="${ARTIFACT_REPO:-web}"
@@ -190,10 +190,11 @@ fi
 
 # Create Firestore database in the shared project if missing
 if [[ -n "${SHARED_FIRESTORE_PROJECT_ID}" ]]; then
-  if ! gcloud firestore databases describe --database="(default)" \
+  if ! gcloud firestore databases describe --database="receipts-db" \
     --project="${SHARED_FIRESTORE_PROJECT_ID}" \
     --format="value(name)" >/dev/null 2>&1; then
     gcloud firestore databases create \
+      --database="receipts-db" \
       --location="$REGION" \
       --type=firestore-native \
       --project="${SHARED_FIRESTORE_PROJECT_ID}"

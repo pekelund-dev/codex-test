@@ -7,7 +7,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$REPO_ROOT"
 
 PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null)}"
-REGION="${REGION:-europe-north1}"
+REGION="${REGION:-us-east1}"
 SERVICE_NAME="${RECEIPT_SERVICE_NAME:-pklnd-receipts}"
 SA_NAME="${RECEIPT_SA_NAME:-receipt-processor}"
 ARTIFACT_REPO="${RECEIPT_ARTIFACT_REPO:-receipts}"
@@ -226,8 +226,9 @@ if ! gcloud artifacts repositories describe "$ARTIFACT_REPO" --location="$REGION
     --description="Container images for receipt processor"
 fi
 
-if ! gcloud firestore databases describe --database="(default)" --project="$PROJECT_ID" --format="value(name)" >/dev/null 2>&1; then
+if ! gcloud firestore databases describe --database="receipts-db" --project="$PROJECT_ID" --format="value(name)" >/dev/null 2>&1; then
   gcloud firestore databases create \
+    --database="receipts-db" \
     --location="$REGION" \
     --type=firestore-native \
     --project="$PROJECT_ID"

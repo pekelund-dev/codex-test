@@ -2,6 +2,8 @@
 
 This guide collects the command-line steps required to run pklnd end to end on Google Cloud. It complements the [Cloud Console walkthrough](gcp-setup-cloud-console.md) referenced from the main [README](../README.md).
 
+> Prefer the Terraform workflow in [docs/terraform-deployment.md](./terraform-deployment.md) for day-to-day provisioning and deployment. The bash-based snippets below remain for operators who need manual gcloud commands; the previous helper scripts are preserved under `scripts/legacy/`.
+
 ## Prerequisites
 
 - A Google Cloud project with billing enabled and [gcloud](https://cloud.google.com/sdk/docs/install) ≥ 430.0.0 authenticated against it (`gcloud auth login`).
@@ -33,8 +35,8 @@ gcloud services enable \
 2. **Create the Firestore database**
 
     ```bash
-    REGION=us-east1 # choose the region closest to your users (for example, us-east1 or us-central1)
-    gcloud firestore databases create --location="${REGION}" --type=firestore-native
+    REGION=us-east1 # default region
+    gcloud firestore databases create --database="receipts-db" --location="${REGION}" --type=firestore-native
     ```
 
 3. **Create a service account for the Spring Boot app**
@@ -69,7 +71,7 @@ gcloud services enable \
     ```bash
 export FIRESTORE_CREDENTIALS_FILE=${FIRESTORE_CREDENTIALS_FILE:-$HOME/.config/pklnd/firestore.json}
 export GOOGLE_OAUTH_CREDENTIALS_FILE=${GOOGLE_OAUTH_CREDENTIALS_FILE:-$HOME/.config/pklnd/oauth-client.json}
-source ./scripts/load_local_secrets.sh
+source ./scripts/legacy/load_local_secrets.sh
 
 export FIRESTORE_ENABLED=true
 # Leave FIRESTORE_CREDENTIALS unset on Cloud Run; ADC handles authentication automatically.
@@ -184,7 +186,7 @@ Before deploying, make sure the receipt processor module builds cleanly and that
 3. **Prune older container images** so Artifact Registry keeps only the latest build.
 
     ```bash
-    ./scripts/cleanup_artifact_repos.sh
+    ./scripts/legacy/cleanup_artifact_repos.sh
     ```
 
 ### Allow the web application to invoke the processor
