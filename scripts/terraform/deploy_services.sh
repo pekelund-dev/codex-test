@@ -12,8 +12,10 @@ WEB_SERVICE_NAME=${WEB_SERVICE_NAME:-pklnd-web}
 RECEIPT_SERVICE_NAME=${RECEIPT_SERVICE_NAME:-pklnd-receipts}
 WEB_DOCKERFILE=${WEB_DOCKERFILE:-Dockerfile}
 WEB_BUILD_CONTEXT=${WEB_BUILD_CONTEXT:-${REPO_ROOT}}
+WEB_CLOUD_BUILD_CONFIG=${WEB_CLOUD_BUILD_CONFIG:-web/cloudbuild.yaml}
 RECEIPT_DOCKERFILE=${RECEIPT_DOCKERFILE:-receipt-parser/Dockerfile}
-CLOUD_BUILD_CONFIG=${CLOUD_BUILD_CONFIG:-receipt-parser/cloudbuild.yaml}
+RECEIPT_CLOUD_BUILD_CONFIG=${RECEIPT_CLOUD_BUILD_CONFIG:-receipt-parser/cloudbuild.yaml}
+PARALLEL_BUILDS=${PARALLEL_BUILDS:-true}
 APP_SECRET_NAME=${APP_SECRET_NAME:-pklnd-app-config}
 APP_SECRET_VERSION=${APP_SECRET_VERSION:-latest}
 
@@ -32,8 +34,13 @@ if [[ ! -f "${WEB_BUILD_CONTEXT%/}/${WEB_DOCKERFILE}" ]]; then
   exit 1
 fi
 
-if [[ ! -f "${REPO_ROOT}/${CLOUD_BUILD_CONFIG}" ]]; then
-  echo "Cloud Build configuration ${CLOUD_BUILD_CONFIG} was not found under the repository root." >&2
+if [[ ! -f "${REPO_ROOT}/${WEB_CLOUD_BUILD_CONFIG}" ]]; then
+  echo "Cloud Build configuration ${WEB_CLOUD_BUILD_CONFIG} was not found under the repository root." >&2
+  exit 1
+fi
+
+if [[ ! -f "${REPO_ROOT}/${RECEIPT_CLOUD_BUILD_CONFIG}" ]]; then
+  echo "Cloud Build configuration ${RECEIPT_CLOUD_BUILD_CONFIG} was not found under the repository root." >&2
   exit 1
 fi
 
@@ -142,18 +149,70 @@ allow_unauthenticated_web = ${allow_unauth_value}
 custom_domain = $(json_escape "${CUSTOM_DOMAIN}")
 EOF
 
-echo "Building web image ${web_image}"
-gcloud builds submit "${WEB_BUILD_CONTEXT}" \
-  --tag "${web_image}" \
-  --project "${PROJECT_ID}" \
-  --timeout=1800s
+echo "Building images..."
 
-echo "Building receipt processor image ${receipt_image}"
-gcloud builds submit "${REPO_ROOT}" \
-  --config "${CLOUD_BUILD_CONFIG}" \
-  --substitutions "_IMAGE_URI=${receipt_image},_DOCKERFILE=${RECEIPT_DOCKERFILE}" \
-  --project "${PROJECT_ID}" \
-  --timeout=1800s
+if [[ "${PARALLEL_BUILDS}" == "true" ]]; then
+  echo "Starting parallel builds for web and receipt processor images"
+  
+  # Start web build in background
+  (
+    echo "Building web image ${web_image}"
+    gcloud builds submit "${WEB_BUILD_CONTEXT}" \
+      --config "${WEB_CLOUD_BUILD_CONFIG}" \
+      --substitutions "_IMAGE_URI=${web_image},_DOCKERFILE=${WEB_DOCKERFILE}" \
+      --project "${PROJECT_ID}" \
+      --timeout=1800s
+    echo "✓ Web image build complete"
+  ) &
+  web_build_pid=$!
+  
+  # Start receipt processor build in background
+  (
+    echo "Building receipt processor image ${receipt_image}"
+    gcloud builds submit "${REPO_ROOT}" \
+      --config "${RECEIPT_CLOUD_BUILD_CONFIG}" \
+      --substitutions "_IMAGE_URI=${receipt_image},_DOCKERFILE=${RECEIPT_DOCKERFILE}" \
+      --project "${PROJECT_ID}" \
+      --timeout=1800s
+    echo "✓ Receipt processor image build complete"
+  ) &
+  receipt_build_pid=$!
+  
+  # Wait for both builds to complete
+  echo "Waiting for builds to complete..."
+  web_build_status=0
+  receipt_build_status=0
+  
+  wait $web_build_pid || web_build_status=$?
+  wait $receipt_build_pid || receipt_build_status=$?
+  
+  if [[ $web_build_status -ne 0 ]]; then
+    echo "Web image build failed with status ${web_build_status}" >&2
+    exit $web_build_status
+  fi
+  
+  if [[ $receipt_build_status -ne 0 ]]; then
+    echo "Receipt processor image build failed with status ${receipt_build_status}" >&2
+    exit $receipt_build_status
+  fi
+  
+  echo "✓ All builds completed successfully"
+else
+  # Sequential builds (original behavior)
+  echo "Building web image ${web_image}"
+  gcloud builds submit "${WEB_BUILD_CONTEXT}" \
+    --config "${WEB_CLOUD_BUILD_CONFIG}" \
+    --substitutions "_IMAGE_URI=${web_image},_DOCKERFILE=${WEB_DOCKERFILE}" \
+    --project "${PROJECT_ID}" \
+    --timeout=1800s
+  
+  echo "Building receipt processor image ${receipt_image}"
+  gcloud builds submit "${REPO_ROOT}" \
+    --config "${RECEIPT_CLOUD_BUILD_CONFIG}" \
+    --substitutions "_IMAGE_URI=${receipt_image},_DOCKERFILE=${RECEIPT_DOCKERFILE}" \
+    --project "${PROJECT_ID}" \
+    --timeout=1800s
+fi
 
 terraform -chdir="${DEPLOY_DIR}" init -input=false
 terraform -chdir="${DEPLOY_DIR}" apply -input=false -auto-approve -var-file="${tfvars_file}" "$@"
