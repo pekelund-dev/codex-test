@@ -22,6 +22,7 @@ class ReceiptProcessingSettingsTest {
 
         assertThat(settings.projectId()).isEqualTo("explicit-project");
         assertThat(settings.receiptsCollection()).isEqualTo("custom-collection");
+        assertThat(settings.databaseId()).isEqualTo("receipts-db");
     }
 
     @Test
@@ -55,6 +56,7 @@ class ReceiptProcessingSettingsTest {
         ReceiptProcessingSettings settings = ReceiptProcessingSettings.fromEnvironment(env, NO_PROJECT);
 
         assertThat(settings.projectId()).isEqualTo("firestore-project");
+        assertThat(settings.databaseId()).isEqualTo("receipts-db");
     }
 
     @Test
@@ -64,6 +66,7 @@ class ReceiptProcessingSettingsTest {
         ReceiptProcessingSettings settings = ReceiptProcessingSettings.fromEnvironment(env, () -> "codex-test-473008");
 
         assertThat(settings.projectId()).isEqualTo("codex-test-473008");
+        assertThat(settings.databaseId()).isEqualTo("receipts-db");
     }
 
     @Test
@@ -73,5 +76,27 @@ class ReceiptProcessingSettingsTest {
         assertThatThrownBy(() -> ReceiptProcessingSettings.fromEnvironment(env, NO_PROJECT))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Firestore project id must be configured");
+    }
+
+    @Test
+    void fromEnvironmentUsesFirestoreDatabaseIdWhenProvided() {
+        Map<String, String> env = new HashMap<>();
+        env.put("FIRESTORE_DATABASE_ID", "custom-db");
+        env.put("PROJECT_ID", "explicit-project");
+
+        ReceiptProcessingSettings settings = ReceiptProcessingSettings.fromEnvironment(env, NO_PROJECT);
+
+        assertThat(settings.databaseId()).isEqualTo("custom-db");
+    }
+
+    @Test
+    void fromEnvironmentFallsBackToFirestoreDatabaseName() {
+        Map<String, String> env = new HashMap<>();
+        env.put("FIRESTORE_DATABASE_NAME", "legacy-db");
+        env.put("PROJECT_ID", "explicit-project");
+
+        ReceiptProcessingSettings settings = ReceiptProcessingSettings.fromEnvironment(env, NO_PROJECT);
+
+        assertThat(settings.databaseId()).isEqualTo("legacy-db");
     }
 }

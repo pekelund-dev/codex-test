@@ -13,12 +13,14 @@ import org.springframework.util.StringUtils;
  */
 public record ReceiptProcessingSettings(
     String projectId,
+    String databaseId,
     String receiptsCollection,
     String receiptItemsCollection,
     String itemStatsCollection
 ) {
 
     private static final String DEFAULT_LOCAL_PROJECT_ID = "pklnd-local";
+    private static final String DEFAULT_DATABASE_ID = "receipts-db";
 
     public static ReceiptProcessingSettings fromEnvironment() {
         return fromEnvironment(System.getenv(), ServiceOptions::getDefaultProjectId);
@@ -39,6 +41,10 @@ public record ReceiptProcessingSettings(
         String statsCollection = env.getOrDefault(
             "RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION",
             ReceiptItemConstants.DEFAULT_ITEM_STATS_COLLECTION);
+        String databaseId = firstNonEmpty(
+            env.get("FIRESTORE_DATABASE_ID"),
+            env.get("FIRESTORE_DATABASE_NAME"),
+            DEFAULT_DATABASE_ID);
         String projectId = firstNonEmpty(
             env.get("PROJECT_ID"),
             env.get("FIRESTORE_PROJECT_ID"),
@@ -59,7 +65,7 @@ public record ReceiptProcessingSettings(
                 + "or available from the Cloud environment.");
         }
 
-        return new ReceiptProcessingSettings(projectId, collection, itemCollection, statsCollection);
+        return new ReceiptProcessingSettings(projectId, databaseId, collection, itemCollection, statsCollection);
     }
 
     private static boolean isRunningOnCloudRun(Map<String, String> env) {

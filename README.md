@@ -75,7 +75,7 @@ Firestore stores user profiles and receipt parsing output. Choose the setup styl
 
 Both guides walk through project creation, database provisioning, service accounts, and environment variables required by the Spring Boot application.
 
-Use the `FIRESTORE_DATABASE_ID` (or `FIRESTORE_DATABASE_NAME`) environment variable to point the app at the Firestore database you provisioned. Terraform defaults to a named database `receipts-db`; set the variable to `(default)` if you kept the primary database id instead.
+Use the `FIRESTORE_DATABASE_ID` environment variable to point the app at the Firestore database you provisioned (falls back to `FIRESTORE_DATABASE_NAME` when unset). Terraform defaults to a named database `receipts-db`; set the variable to `(default)` if you kept the primary database id instead.
 
 > 💡 When deploying to Cloud Run or any other Google-managed runtime, leave `FIRESTORE_CREDENTIALS` unset—the service account attached to the workload authenticates automatically via Application Default Credentials. Only download JSON keys for local development or third-party hosting.
 
