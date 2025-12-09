@@ -12,26 +12,31 @@ variable "region" {
 variable "bucket_name" {
   description = "Receipt uploads bucket"
   type        = string
+  default     = ""
 }
 
 variable "web_image" {
   description = "Fully qualified container image for the web application"
   type        = string
+  default     = ""
 }
 
 variable "receipt_image" {
   description = "Fully qualified container image for the receipt processor"
   type        = string
+  default     = ""
 }
 
 variable "web_service_account_email" {
   description = "Service account email used by the web application"
   type        = string
+  default     = ""
 }
 
 variable "receipt_service_account_email" {
   description = "Service account email used by the receipt processor"
   type        = string
+  default     = ""
 }
 
 variable "secret_name" {
@@ -43,12 +48,14 @@ variable "secret_name" {
 variable "google_client_id" {
   description = "Google OAuth client id (sourced from the unified secret)"
   type        = string
+  default     = ""
 }
 
 variable "google_client_secret" {
   description = "Google OAuth client secret (sourced from the unified secret)"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 variable "ai_studio_api_key" {

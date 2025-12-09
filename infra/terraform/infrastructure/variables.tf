@@ -16,7 +16,7 @@ variable "firestore_location" {
 }
 
 variable "firestore_database_name" {
-  description = "Firestore database name for the project"
+  description = "Firestore database name for the project (defaults to the dedicated receipts-db database)"
   type        = string
   default     = "receipts-db"
 }
