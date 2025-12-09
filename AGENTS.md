@@ -10,6 +10,12 @@ These instructions apply to the entire repository. Create additional `AGENTS.md`
 - Avoid committing secrets. Reference local environment files in documentation instead of adding real credentials to the repository.
 - Ensure all user-facing copy in the application appears in Swedish. When adding or updating UI text, keep keys or identifiers readable, but render the text shown to end users in Swedish.
 
+## Deployment and build practices
+- Use `scripts/terraform/build_service.sh` to build only the service you changed for faster iteration (~3-5 minutes vs ~30 minutes for both).
+- Parallel builds are enabled by default in `deploy_services.sh` - both services build simultaneously to save time.
+- Docker layer caching is configured in Cloud Build - avoid changing `pom.xml` files unnecessarily to maximize cache hits.
+- For deployment performance details and best practices, see `docs/build-performance-improvements.md`.
+
 ## Architecture and documentation
 - Keep high-level architecture descriptions in `docs/system-architecture-diagrams.md` and cross-link important updates from `README.md`.
 - When you introduce or modify major components, update the diagrams/notes in `docs/` instead of overloading this file. Mention the change in the relevant module's README if one exists.
