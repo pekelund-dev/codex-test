@@ -24,6 +24,11 @@ public class FirestoreProperties {
     private String projectId;
 
     /**
+     * Firestore database id; defaults to the named receipts database provisioned by terraform.
+     */
+    private String databaseId = "receipts-db";
+
+    /**
      * Optional host:port of the Firestore emulator.
      */
     private String emulatorHost;
@@ -80,6 +85,14 @@ public class FirestoreProperties {
 
     public void setProjectId(String projectId) {
         this.projectId = projectId;
+    }
+
+    public String getDatabaseId() {
+        return databaseId;
+    }
+
+    public void setDatabaseId(String databaseId) {
+        this.databaseId = databaseId;
     }
 
     public String getEmulatorHost() {
