@@ -15,7 +15,7 @@ steps:
       - '--build-arg'
       - 'BUILDKIT_INLINE_CACHE=1'
       - '.'
-    
+
   - name: gcr.io/cloud-builders/docker
     args:
       - tag

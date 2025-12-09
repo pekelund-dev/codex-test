@@ -96,21 +96,25 @@ build_service() {
   local image_uri=$2
   local dockerfile=$3
   local config=$4
-  
-  local cache_args=""
-  if [[ "${SKIP_CACHE}" == "false" ]]; then
-    cache_args="--substitutions _IMAGE_URI=${image_uri},_DOCKERFILE=${dockerfile}"
-  else
-    cache_args="--substitutions _IMAGE_URI=${image_uri},_DOCKERFILE=${dockerfile},BUILDKIT_INLINE_CACHE=0"
-  fi
-  
+
   echo "Building ${service} image: ${image_uri}"
-  gcloud builds submit "${REPO_ROOT}" \
-    --config "${config}" \
-    ${cache_args} \
-    --project "${PROJECT_ID}" \
-    --timeout=1800s
-  
+
+  if [[ "${SKIP_CACHE}" == "false" ]]; then
+    gcloud builds submit "${REPO_ROOT}" \
+      --config "${config}" \
+      --substitutions "_IMAGE_URI=${image_uri},_DOCKERFILE=${dockerfile}" \
+      --project "${PROJECT_ID}" \
+      --timeout=1800s
+  else
+    # For skip-cache, use simple docker build without Cloud Build config
+    echo "Building without cache (using direct docker build)"
+    gcloud builds submit "${REPO_ROOT}" \
+      --tag "${image_uri}" \
+      --dockerfile "${dockerfile}" \
+      --project "${PROJECT_ID}" \
+      --timeout=1800s
+  fi
+
   echo "✓ ${service} build complete"
 }
 
