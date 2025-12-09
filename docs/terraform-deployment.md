@@ -79,20 +79,26 @@ PARALLEL_BUILDS=false ./scripts/terraform/deploy_services.sh
 
 ### Build a single service
 
-For faster iteration during development, use the `build_service.sh` helper to build and optionally deploy just one service:
+For faster iteration during development, use the `build_service.sh` helper to build just one service:
 
 ```bash
-# Build only the web service
+# Build only the web service (3-5 min typical)
 ./scripts/terraform/build_service.sh web
 
-# Build and deploy the receipt processor
-./scripts/terraform/build_service.sh --deploy receipt-parser
+# Build only the receipt processor
+./scripts/terraform/build_service.sh receipt-parser
+
+# Build both services in parallel
+./scripts/terraform/build_service.sh both
+
+# Build and deploy both services (equivalent to deploy_services.sh)
+./scripts/terraform/build_service.sh --deploy both
 
 # Build without cache (clean build)
 ./scripts/terraform/build_service.sh --skip-cache web
 ```
 
-This is significantly faster than rebuilding both services when you've only changed one.
+This is significantly faster than rebuilding both services when you've only changed one. Note that single-service builds only build the image - use `deploy_services.sh` when ready to deploy.
 
 ### Domain mapping
 
