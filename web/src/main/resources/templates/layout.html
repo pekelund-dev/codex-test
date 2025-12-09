@@ -24,13 +24,7 @@
 </div>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
     <div class="container">
-        <div class="d-flex flex-column">
-            <a class="navbar-brand fw-bold" th:href="@{/}" th:text="#{app.name}">pklnd</a>
-            <small class="text-white-50" th:if="${gitMetadata.available()}"
-                   th:text="${#messages.msg('nav.git.info', gitMetadata.branch(), gitMetadata.commitId())}">
-                Gren: main · commit: abc123
-            </small>
-        </div>
+        <a class="navbar-brand fw-bold" th:href="@{/}" th:text="#{app.name}">pklnd</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
                 aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -111,7 +105,16 @@
             </div>
         </div>
     </div>
+    </div>
 </nav>
+<div th:if="${gitMetadata.available()}" class="bg-danger text-white">
+    <div class="container small py-1 text-center text-md-start">
+        <span class="fw-semibold"
+              th:text="${#messages.msg('nav.git.info', gitMetadata.branchOrPlaceholder(), gitMetadata.commitOrPlaceholder())}">
+            Gren: main · commit: abc123
+        </span>
+    </div>
+</div>
 <main class="flex-fill">
     <div class="container py-4" th:replace="${content}"></div>
 </main>
