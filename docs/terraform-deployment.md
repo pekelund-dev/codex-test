@@ -2,6 +2,8 @@
 
 The Terraform workflow provisions all Google Cloud resources and deploys both Cloud Run services while consolidating secrets into a single Secret Manager secret. Infrastructure creation is separate from application deployment so you can iterate on code without reprovisioning foundational services.
 
+> 📊 **Performance Note**: The deployment process includes optimizations like parallel builds and Docker layer caching to reduce deployment time from ~60 minutes to ~5-10 minutes for typical changes. See [Build Performance Improvements](build-performance-improvements.md) for detailed information.
+
 ## Prerequisites
 
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) 1.5 or newer
