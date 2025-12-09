@@ -107,7 +107,7 @@
     </div>
     </div>
 </nav>
-<div th:if="${gitMetadata.available()}" class="bg-danger text-white">
+<div class="bg-danger text-white">
     <div class="container small py-1 text-center text-md-start">
         <span class="fw-semibold"
               th:text="${#messages.msg('nav.git.info', gitMetadata.branchOrPlaceholder(), gitMetadata.commitOrPlaceholder())}">
