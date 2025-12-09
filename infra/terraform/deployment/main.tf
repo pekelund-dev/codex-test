@@ -202,12 +202,12 @@ resource "google_cloud_run_v2_service_iam_member" "receipt_self_invoker" {
 # NOTE: Cloud Run v2 domain mappings are not fully supported by Terraform, so
 # manage them manually after applying this stack.
 # To map a custom domain, use the Google Cloud Console or the gcloud CLI:
-#   gcloud run domain-mappings create \ \
+#   gcloud beta run domain-mappings create \ \
 #     --service <SERVICE_NAME> \ \
 #     --domain <CUSTOM_DOMAIN> \ \
 #     --region <REGION>
 # You can delete an existing mapping if you need to re-point it:
-#   gcloud run domain-mappings delete --domain <CUSTOM_DOMAIN> --region <REGION>
+#   gcloud beta run domain-mappings delete --domain <CUSTOM_DOMAIN> --region <REGION>
 
 output "web_service_url" {
   value       = google_cloud_run_v2_service.web.uri
@@ -217,4 +217,19 @@ output "web_service_url" {
 output "receipt_service_url" {
   value       = google_cloud_run_v2_service.receipts.uri
   description = "URL for the receipt processor Cloud Run service"
+}
+
+output "web_service_name" {
+  value       = google_cloud_run_v2_service.web.name
+  description = "Name of the web Cloud Run service"
+}
+
+output "receipt_service_name" {
+  value       = google_cloud_run_v2_service.receipts.name
+  description = "Name of the receipt Cloud Run service"
+}
+
+output "region" {
+  value       = var.region
+  description = "Deployment region"
 }
