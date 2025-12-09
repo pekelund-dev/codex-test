@@ -2,6 +2,8 @@
 
 The Terraform workflow provisions all Google Cloud resources and deploys both Cloud Run services while consolidating secrets into a single Secret Manager secret. Infrastructure creation is separate from application deployment so you can iterate on code without reprovisioning foundational services.
 
+> 📊 **Performance Note**: The deployment process includes optimizations like parallel builds and Docker layer caching to reduce deployment time from ~60 minutes to ~5-10 minutes for typical changes. See [Build Performance Improvements](build-performance-improvements.md) for detailed information.
+
 ## Prerequisites
 
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) 1.5 or newer
@@ -52,9 +54,53 @@ APP_SECRET_NAME=pklnd-app-config \  # Optional override
 The script automatically:
 
 - Reads Terraform outputs to reuse the generated service accounts, bucket, and Artifact Registry repositories
-- Builds timestamped container images for both services and pushes them to Artifact Registry
+- Builds timestamped container images for both services in parallel and pushes them to Artifact Registry
 - Pulls `google_client_id`, `google_client_secret`, and `ai_studio_api_key` from the single Secret Manager secret
 - Applies the Cloud Run services and IAM bindings
+
+### Performance optimizations
+
+The deployment process includes several optimizations to reduce build and deploy time:
+
+1. **Parallel builds** - Both services are built simultaneously rather than sequentially, cutting build time in half
+2. **Docker layer caching** - Cloud Build reuses cached layers from previous builds, dramatically reducing rebuild times
+3. **Faster build machines** - Uses E2_HIGHCPU_8 machines for faster Maven dependency resolution and compilation
+
+Expected build times:
+- **First build**: ~30 minutes (both services in parallel)
+- **Subsequent builds** (with cache hits): ~5-10 minutes
+- **No-change rebuilds**: ~3-5 minutes
+
+To disable parallel builds (e.g., for debugging), set `PARALLEL_BUILDS=false`:
+
+```bash
+PARALLEL_BUILDS=false ./scripts/terraform/deploy_services.sh
+```
+
+### Build a single service
+
+For faster iteration during development, use the `build_service.sh` helper to build just one service:
+
+```bash
+# Build only the web service (3-5 min typical)
+./scripts/terraform/build_service.sh web
+
+# Build only the receipt processor
+./scripts/terraform/build_service.sh receipt-parser
+
+# Build both services in parallel
+./scripts/terraform/build_service.sh both
+
+# Build and deploy both services (equivalent to deploy_services.sh)
+./scripts/terraform/build_service.sh --deploy both
+
+# Build without cache (clean build)
+./scripts/terraform/build_service.sh --skip-cache web
+```
+
+This is significantly faster than rebuilding both services when you've only changed one. Note that single-service builds only build the image - use `deploy_services.sh` when ready to deploy.
+
+### Domain mapping
 
 Terraform does not fully support Cloud Run v2 domain mappings. After `terraform apply` completes, create the mapping manually if you need a custom domain. The commands below pull the service name and region from Terraform outputs; set `CUSTOM_DOMAIN` to your own domain before running the command:
 

@@ -156,6 +156,8 @@ PROJECT_ID=your-project APP_SECRET_FILE=/tmp/pklnd-secret.json ./scripts/terrafo
 PROJECT_ID=your-project ./scripts/terraform/deploy_services.sh
 ```
 
+The deployment script builds both services in parallel with Docker layer caching enabled for optimal performance. First deployment takes ~30 minutes; subsequent deployments with cache hits complete in ~5-10 minutes. See [Terraform deployment](docs/terraform-deployment.md) for detailed performance information and tips for faster iteration.
+
 The scripts keep infrastructure provisioning separate from application deployment while relying on one Secret Manager secret for OAuth and optional AI keys. Earlier gcloud-based helpers now live in `scripts/legacy/` for reference.
 
 #### Teardown
