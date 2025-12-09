@@ -118,6 +118,8 @@ json_escape() {
 }
 
 allow_unauth_value=$(printf '%s' "${ALLOW_UNAUTHENTICATED_WEB}" | tr '[:upper:]' '[:lower:]')
+build_branch=${BRANCH_NAME:-$(git -C "${REPO_ROOT}" rev-parse --abbrev-ref HEAD 2>/dev/null || true)}
+build_commit=${COMMIT_SHA:-$(git -C "${REPO_ROOT}" rev-parse HEAD 2>/dev/null || true)}
 
 cat >"${tfvars_file}" <<EOF
 project_id = $(json_escape "${PROJECT_ID}")
@@ -145,6 +147,8 @@ EOF
 echo "Building web image ${web_image}"
 gcloud builds submit "${WEB_BUILD_CONTEXT}" \
   --tag "${web_image}" \
+  --build-arg "GIT_BRANCH=${build_branch}" \
+  --build-arg "GIT_COMMIT=${build_commit}" \
   --project "${PROJECT_ID}" \
   --timeout=1800s
 
