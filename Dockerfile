@@ -18,8 +18,7 @@ COPY web web
 
 RUN if [ -n "${GIT_BRANCH}${GIT_COMMIT}" ]; then \
       mkdir -p web/src/main/resources; \
-      SHORT_COMMIT="${GIT_COMMIT}"; \
-      SHORT_COMMIT=${SHORT_COMMIT:0:7}; \
+      SHORT_COMMIT=$(echo "${GIT_COMMIT}" | cut -c1-7); \
       { \
         if [ -n "${GIT_BRANCH}" ]; then echo "branch=${GIT_BRANCH}"; fi; \
         if [ -n "${GIT_COMMIT}" ]; then echo "commit.id=${GIT_COMMIT}"; echo "commit.id.abbrev=${SHORT_COMMIT}"; fi; \

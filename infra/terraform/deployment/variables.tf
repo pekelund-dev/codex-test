@@ -71,6 +71,12 @@ variable "firestore_project_id" {
   default     = ""
 }
 
+variable "firestore_database_id" {
+  description = "Firestore database id used by both services"
+  type        = string
+  default     = "receipts-db"
+}
+
 variable "gcs_project_id" {
   description = "GCS project id for the receipts bucket"
   type        = string

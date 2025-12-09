@@ -1,0 +1,33 @@
+steps:
+  # Build the web application Docker image with git info and caching
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'GIT_BRANCH=${_GIT_BRANCH}'
+      - '--build-arg'
+      - 'GIT_COMMIT=${_GIT_COMMIT}'
+      - '--cache-from'
+      - '${_IMAGE_BASE}:latest'
+      - '-t'
+      - '${_IMAGE_BASE}:${_IMAGE_TAG}'
+      - '-t'
+      - '${_IMAGE_BASE}:latest'
+      - '-f'
+      - '${_DOCKERFILE}'
+      - '.'
+    timeout: 1800s
+
+images:
+  - '${_IMAGE_BASE}:${_IMAGE_TAG}'
+  - '${_IMAGE_BASE}:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _IMAGE_BASE: 'us-east1-docker.pkg.dev/PROJECT_ID/web/pklnd-web'
+  _IMAGE_TAG: 'latest'
+  _DOCKERFILE: 'Dockerfile'
+  _GIT_BRANCH: 'main'
+  _GIT_COMMIT: 'unknown'
