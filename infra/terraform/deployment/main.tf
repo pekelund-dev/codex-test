@@ -122,6 +122,11 @@ resource "google_cloud_run_v2_service" "web" {
       }
 
       env {
+        name  = "FIRESTORE_DATABASE_ID"
+        value = var.firestore_database_id
+      }
+
+      env {
         name  = "GOOGLE_CLIENT_ID"
         value = var.google_client_id
       }

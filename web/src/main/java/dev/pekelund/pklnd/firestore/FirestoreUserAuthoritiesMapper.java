@@ -51,6 +51,9 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
 
     @Override
     public Collection<? extends GrantedAuthority> mapAuthorities(Collection<? extends GrantedAuthority> authorities) {
+        log.info("=== Starting OAuth user authorities mapping ===");
+        log.debug("Input authorities: {}", authorities);
+
         Set<GrantedAuthority> mappedAuthorities = new LinkedHashSet<>();
         if (authorities != null) {
             mappedAuthorities.addAll(authorities);
@@ -59,41 +62,60 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
         mappedAuthorities.add(new SimpleGrantedAuthority(defaultRole()));
 
         if (!firestoreEnabled) {
+            log.warn("Firestore is DISABLED - user will not be persisted. Firestore enabled: {}, Firestore instance: {}",
+                properties.isEnabled(), firestore != null ? "available" : "null");
             return List.copyOf(mappedAuthorities);
         }
 
+        log.info("Firestore enabled - extracting user information");
         String email = extractEmail(authorities);
         if (!StringUtils.hasText(email)) {
+            log.error("Failed to extract email from OAuth authorities: {}", authorities);
             return List.copyOf(mappedAuthorities);
         }
+        log.info("Extracted email: {}", email);
 
         String normalizedEmail = normalizeEmail(email);
         String displayName = extractDisplayName(authorities);
         boolean isDefaultAdmin = DEFAULT_ADMIN_EMAILS.contains(normalizedEmail);
 
+        log.info("User info - Email: {}, Display name: {}, Is default admin: {}",
+            normalizedEmail, displayName, isDefaultAdmin);
+
         if (isDefaultAdmin) {
+            log.info("Granting ROLE_ADMIN to default admin user: {}", normalizedEmail);
             mappedAuthorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         }
 
         try {
+            log.info("Looking up user document in Firestore for: {}", normalizedEmail);
             DocumentSnapshot userDocument = findUserDocument(normalizedEmail);
             List<String> storedRoles;
 
             if (userDocument == null) {
+                log.info("User document NOT FOUND - creating new user: {}", normalizedEmail);
                 storedRoles = createUserDocument(normalizedEmail, displayName, isDefaultAdmin);
+                log.info("User document CREATED with roles: {}", storedRoles);
             } else {
+                log.info("User document FOUND - ID: {}", userDocument.getId());
                 storedRoles = readRoleNames(userDocument);
+                log.debug("Stored roles from Firestore: {}", storedRoles);
+
                 if (!StringUtils.hasText(displayName)) {
                     displayName = userDocument.getString("fullName");
+                    log.debug("Using display name from Firestore: {}", displayName);
                 } else if (!StringUtils.hasText(userDocument.getString("fullName"))) {
+                    log.info("Updating display name in Firestore to: {}", displayName);
                     updateDisplayName(userDocument.getReference(), displayName);
                 }
 
                 if (storedRoles.isEmpty()) {
+                    log.warn("User has no stored roles, assigning default role");
                     storedRoles = List.of(defaultRole());
                 }
 
                 if (isDefaultAdmin) {
+                    log.info("Ensuring admin role for default admin user");
                     storedRoles = ensureAdminRole(userDocument.getReference(), storedRoles);
                 }
             }
@@ -104,19 +126,28 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
                 .map(this::ensureRolePrefix)
                 .map(SimpleGrantedAuthority::new)
                 .forEach(mappedAuthorities::add);
+
+            log.info("Final mapped authorities for {}: {}", normalizedEmail, mappedAuthorities);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-            log.warn("Interrupted while resolving Firestore roles for {}.", normalizedEmail, ex);
+            log.error("INTERRUPTED while resolving Firestore roles for {}", normalizedEmail, ex);
         } catch (ExecutionException ex) {
-            log.error("Failed to resolve Firestore roles for {}.", normalizedEmail, ex);
+            log.error("FAILED to resolve Firestore roles for {} - Error: {}", normalizedEmail, ex.getMessage(), ex);
+            if (ex.getCause() != null) {
+                log.error("Root cause: {}", ex.getCause().getMessage(), ex.getCause());
+            }
         }
 
+        log.info("=== Completed OAuth user authorities mapping ===");
         return List.copyOf(mappedAuthorities);
     }
 
     private DocumentSnapshot findUserDocument(String normalizedEmail)
         throws ExecutionException, InterruptedException {
-        CollectionReference collection = firestore.collection(properties.getUsersCollection());
+        String collectionName = properties.getUsersCollection();
+        log.debug("Querying Firestore collection '{}' for email: {}", collectionName, normalizedEmail);
+
+        CollectionReference collection = firestore.collection(collectionName);
         ApiFuture<QuerySnapshot> queryFuture = collection
             .whereEqualTo("email", normalizedEmail)
             .limit(1)
@@ -126,15 +157,23 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
             "Load OAuth user " + normalizedEmail,
             querySnapshot != null ? querySnapshot.size() : 0L
         );
+
         if (querySnapshot == null || querySnapshot.isEmpty()) {
+            log.debug("No user document found for: {}", normalizedEmail);
             return null;
         }
-        return querySnapshot.getDocuments().get(0);
+
+        DocumentSnapshot doc = querySnapshot.getDocuments().get(0);
+        log.debug("Found user document - ID: {}, Data: {}", doc.getId(), doc.getData());
+        return doc;
     }
 
     private List<String> createUserDocument(String normalizedEmail, String displayName, boolean assignAdmin)
         throws ExecutionException, InterruptedException {
-        CollectionReference collection = firestore.collection(properties.getUsersCollection());
+        String collectionName = properties.getUsersCollection();
+        log.info("Creating new user document in Firestore collection: {}", collectionName);
+
+        CollectionReference collection = firestore.collection(collectionName);
 
         Map<String, Object> document = new java.util.HashMap<>();
         document.put("email", normalizedEmail);
@@ -153,8 +192,11 @@ public class FirestoreUserAuthoritiesMapper implements GrantedAuthoritiesMapper 
         document.put("createdAt", FieldValue.serverTimestamp());
         document.put("authProvider", "oauth");
 
+        log.debug("User document to create: {}", document);
+
         ApiFuture<DocumentReference> writeFuture = collection.add(document);
-        writeFuture.get();
+        DocumentReference docRef = writeFuture.get();
+        log.info("User document created successfully - ID: {}", docRef.getId());
         return List.copyOf(roles);
     }
 

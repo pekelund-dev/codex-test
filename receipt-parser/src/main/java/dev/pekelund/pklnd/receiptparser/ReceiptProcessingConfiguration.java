@@ -153,10 +153,14 @@ public class ReceiptProcessingConfiguration {
         if (StringUtils.hasText(receiptProcessingSettings.projectId())) {
             optionsBuilder.setProjectId(receiptProcessingSettings.projectId());
         }
+        if (StringUtils.hasText(receiptProcessingSettings.databaseId())) {
+            optionsBuilder.setDatabaseId(receiptProcessingSettings.databaseId());
+        }
         Firestore firestore = optionsBuilder.build().getService();
         LOGGER.info(
-            "Initialized Firestore client for project '{}' (collections: receipts='{}', items='{}', stats='{}')",
+            "Initialized Firestore client for project '{}' (database '{}', collections: receipts='{}', items='{}', stats='{}')",
             firestore.getOptions().getProjectId(),
+            firestore.getOptions().getDatabaseId(),
             receiptProcessingSettings.receiptsCollection(),
             receiptProcessingSettings.receiptItemsCollection(),
             receiptProcessingSettings.itemStatsCollection());

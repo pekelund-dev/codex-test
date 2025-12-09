@@ -187,9 +187,16 @@ gcloud artifacts repositories create web \
   --description="Container images for Cloud Run" 2>/dev/null || true
 
 # Build and push with Cloud Build
- gcloud builds submit \
+# Forward branch and commit metadata so the navbar banner shows real values. Cloud Build automatically sets
+# $BRANCH_NAME and $COMMIT_SHA when triggered from a repository; local builds can derive them from git.
+BRANCH_NAME=${BRANCH_NAME:-$(git rev-parse --abbrev-ref HEAD)}
+COMMIT_SHA=${COMMIT_SHA:-$(git rev-parse HEAD)}
+
+gcloud builds submit \
   --tag "$IMAGE_TAG" \
-  --project "$PROJECT_ID"
+  --project "$PROJECT_ID" \
+  --build-arg "GIT_BRANCH=${BRANCH_NAME}" \
+  --build-arg "GIT_COMMIT=${COMMIT_SHA}"
 ```
 
 > Replace the build command if you prefer using `docker build` and `docker push`.

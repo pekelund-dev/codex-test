@@ -73,13 +73,24 @@ public class SecurityConfig {
         }
 
         if (oauthEnabled) {
+            log.info("OAuth2 login enabled - configuring Google authentication");
             OAuth2AuthorizationRequestResolver authorizationRequestResolver = createAuthorizationRequestResolver(
                 clientRegistrationRepository
             );
             http.oauth2Login(oauth -> oauth
                 .loginPage("/login")
                 .authorizationEndpoint(authorization -> authorization.authorizationRequestResolver(authorizationRequestResolver))
-                .userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(oauthAuthoritiesMapper)));
+                .userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(oauthAuthoritiesMapper))
+                .successHandler((request, response, authentication) -> {
+                    log.info("OAuth2 login SUCCESS - User: {}, Principal type: {}",
+                        authentication.getName(),
+                        authentication.getPrincipal().getClass().getSimpleName());
+                    response.sendRedirect("/receipts");
+                })
+                .failureHandler((request, response, exception) -> {
+                    log.error("OAuth2 login FAILED - Error: {}", exception.getMessage(), exception);
+                    response.sendRedirect("/login?error");
+                }));
         } else {
             log.info("OAuth2 login disabled - no client registrations configured. Set the 'oauth' profile and provide Google client credentials to enable it.");
         }
@@ -98,20 +109,26 @@ public class SecurityConfig {
         return new OAuth2AuthorizationRequestResolver() {
             @Override
             public OAuth2AuthorizationRequest resolve(HttpServletRequest request) {
+                log.debug("Resolving OAuth2 authorization request from: {}", request.getRequestURI());
                 OAuth2AuthorizationRequest authorizationRequest = defaultResolver.resolve(request);
                 return customizeAuthorizationRequest(authorizationRequest);
             }
 
             @Override
             public OAuth2AuthorizationRequest resolve(HttpServletRequest request, String clientRegistrationId) {
+                log.info("Resolving OAuth2 authorization request for client: {}", clientRegistrationId);
                 OAuth2AuthorizationRequest authorizationRequest = defaultResolver.resolve(request, clientRegistrationId);
                 return customizeAuthorizationRequest(authorizationRequest);
             }
 
             private OAuth2AuthorizationRequest customizeAuthorizationRequest(OAuth2AuthorizationRequest authorizationRequest) {
                 if (authorizationRequest == null) {
+                    log.debug("Authorization request is null, skipping customization");
                     return null;
                 }
+
+                log.debug("Customizing OAuth2 authorization request - redirect URI: {}",
+                    authorizationRequest.getRedirectUri());
 
                 Map<String, Object> additionalParameters = new HashMap<>(authorizationRequest.getAdditionalParameters());
                 additionalParameters.put("prompt", "select_account");

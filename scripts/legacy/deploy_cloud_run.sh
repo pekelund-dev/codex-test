@@ -242,8 +242,13 @@ if [[ ! -f "${BUILD_CONTEXT%/}/Dockerfile" ]]; then
   exit 1
 fi
 
+build_branch=${BRANCH_NAME:-$(git -C "${BUILD_CONTEXT}" rev-parse --abbrev-ref HEAD 2>/dev/null || true)}
+build_commit=${COMMIT_SHA:-$(git -C "${BUILD_CONTEXT}" rev-parse HEAD 2>/dev/null || true)}
+
 gcloud builds submit "$BUILD_CONTEXT" \
-  --tag "$IMAGE_URI"
+  --tag "$IMAGE_URI" \
+  --build-arg "GIT_BRANCH=${build_branch}" \
+  --build-arg "GIT_COMMIT=${build_commit}"
 
 # Deploy to Cloud Run
 ALLOW_FLAG="--no-allow-unauthenticated"

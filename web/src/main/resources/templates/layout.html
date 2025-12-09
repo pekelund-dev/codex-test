@@ -105,7 +105,16 @@
             </div>
         </div>
     </div>
+    </div>
 </nav>
+<div class="bg-danger text-white">
+    <div class="container small py-1 text-center text-md-start">
+        <span class="fw-semibold"
+              th:text="${#messages.msg('nav.git.info', gitMetadata.branchOrPlaceholder(), gitMetadata.commitOrPlaceholder())}">
+            Gren: main · commit: abc123
+        </span>
+    </div>
+</div>
 <main class="flex-fill">
     <div class="container py-4" th:replace="${content}"></div>
 </main>

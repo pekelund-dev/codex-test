@@ -42,6 +42,10 @@ public class FirestoreConfig {
             builder.setProjectId(properties.getProjectId());
         }
 
+        if (StringUtils.hasText(properties.getDatabaseId())) {
+            builder.setDatabaseId(properties.getDatabaseId());
+        }
+
         if (StringUtils.hasText(properties.getEmulatorHost())) {
             Assert.isTrue(StringUtils.hasText(properties.getProjectId()),
                 "Firestore project id must be provided when using the emulator");

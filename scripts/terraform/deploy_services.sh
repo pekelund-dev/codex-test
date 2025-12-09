@@ -70,8 +70,10 @@ receipt_sa=${receipt_sa_from_tf:-${receipt_sa}}
 bucket_name=${bucket_name:-"pklnd-receipts-${PROJECT_ID}"}
 
 timestamp=$(date +%Y%m%d-%H%M%S)
-web_image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${web_repo}/${WEB_SERVICE_NAME}:${timestamp}"
-receipt_image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${receipt_repo}/${RECEIPT_SERVICE_NAME}:${timestamp}"
+web_image_base="${REGION}-docker.pkg.dev/${PROJECT_ID}/${web_repo}/${WEB_SERVICE_NAME}"
+receipt_image_base="${REGION}-docker.pkg.dev/${PROJECT_ID}/${receipt_repo}/${RECEIPT_SERVICE_NAME}"
+web_image="${web_image_base}:${timestamp}"
+receipt_image="${receipt_image_base}:${timestamp}"
 
 if ! gcloud secrets describe "${APP_SECRET_NAME}" --project "${PROJECT_ID}" >/dev/null 2>&1; then
   echo "Secret ${APP_SECRET_NAME} not found in project ${PROJECT_ID}. Ensure infrastructure is applied first." >&2
@@ -118,6 +120,8 @@ json_escape() {
 }
 
 allow_unauth_value=$(printf '%s' "${ALLOW_UNAUTHENTICATED_WEB}" | tr '[:upper:]' '[:lower:]')
+build_branch=${BRANCH_NAME:-$(git -C "${REPO_ROOT}" rev-parse --abbrev-ref HEAD 2>/dev/null || true)}
+build_commit=${COMMIT_SHA:-$(git -C "${REPO_ROOT}" rev-parse HEAD 2>/dev/null || true)}
 
 cat >"${tfvars_file}" <<EOF
 project_id = $(json_escape "${PROJECT_ID}")
@@ -144,7 +148,8 @@ EOF
 
 echo "Building web image ${web_image}"
 gcloud builds submit "${WEB_BUILD_CONTEXT}" \
-  --tag "${web_image}" \
+  --config "${REPO_ROOT}/cloudbuild.yaml" \
+  --substitutions "_IMAGE_BASE=${web_image_base},_IMAGE_TAG=${timestamp},_DOCKERFILE=${WEB_DOCKERFILE},_GIT_BRANCH=${build_branch},_GIT_COMMIT=${build_commit}" \
   --project "${PROJECT_ID}" \
   --timeout=1800s
 
@@ -157,3 +162,7 @@ gcloud builds submit "${REPO_ROOT}" \
 
 terraform -chdir="${DEPLOY_DIR}" init -input=false
 terraform -chdir="${DEPLOY_DIR}" apply -input=false -auto-approve -var-file="${tfvars_file}" "$@"
+
+# Clean up Cloud Build source cache
+echo "Cleaning up Cloud Build source cache..."
+gsutil -m rm -r "gs://${PROJECT_ID}_cloudbuild/source/**" 2>/dev/null || true

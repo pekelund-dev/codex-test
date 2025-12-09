@@ -11,27 +11,31 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.info.GitProperties;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @ControllerAdvice
 public class CurrentUserAdvice {
 
     private final ObjectProvider<FirestoreReadTracker> firestoreReadTrackerProvider;
     private final FirestoreReadTotals firestoreReadTotals;
+    private final ObjectProvider<GitProperties> gitPropertiesProvider;
 
     public CurrentUserAdvice(
         ObjectProvider<FirestoreReadTracker> firestoreReadTrackerProvider,
-        FirestoreReadTotals firestoreReadTotals
+        FirestoreReadTotals firestoreReadTotals,
+        ObjectProvider<GitProperties> gitPropertiesProvider
     ) {
         this.firestoreReadTrackerProvider = firestoreReadTrackerProvider;
         this.firestoreReadTotals = firestoreReadTotals;
+        this.gitPropertiesProvider = gitPropertiesProvider;
     }
 
     @ModelAttribute("userProfile")
@@ -98,6 +102,16 @@ public class CurrentUserAdvice {
     @ModelAttribute("firestoreReadTotals")
     public FirestoreReadTotals firestoreReadTotals() {
         return firestoreReadTotals;
+    }
+
+    @ModelAttribute("gitMetadata")
+    public GitMetadata gitMetadata() {
+        GitProperties gitProperties = gitPropertiesProvider.getIfAvailable();
+        if (gitProperties == null) {
+            return GitMetadata.empty();
+        }
+
+        return new GitMetadata(gitProperties.getBranch(), gitProperties.getShortCommitId());
     }
 
     private LanguageOption buildOption(
