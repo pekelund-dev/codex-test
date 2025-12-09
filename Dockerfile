@@ -7,6 +7,7 @@ COPY pom.xml .
 COPY core/pom.xml core/pom.xml
 COPY receipt-parser/pom.xml receipt-parser/pom.xml
 COPY web/pom.xml web/pom.xml
+COPY .git .git
 
 RUN mvn -B -Pinclude-web -pl web -am -DskipTests dependency:go-offline
 

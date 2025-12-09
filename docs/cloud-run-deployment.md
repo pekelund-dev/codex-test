@@ -187,7 +187,8 @@ gcloud artifacts repositories create web \
   --description="Container images for Cloud Run" 2>/dev/null || true
 
 # Build and push with Cloud Build
- gcloud builds submit \
+Keep the `.git` directory in the Cloud Build context so the build can generate the `git.properties` file that powers the navbar git banner.
+gcloud builds submit \
   --tag "$IMAGE_TAG" \
   --project "$PROJECT_ID"
 ```
