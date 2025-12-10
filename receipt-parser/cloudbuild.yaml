@@ -8,6 +8,8 @@ steps:
       - '--tag=${_IMAGE_BASE}:latest'
       - '--cache-from=${_IMAGE_BASE}:latest'
       - '--build-arg=BUILDKIT_INLINE_CACHE=1'
+      - '--build-arg=GIT_BRANCH=${_GIT_BRANCH}'
+      - '--build-arg=GIT_COMMIT=${_GIT_COMMIT}'
       - '.'
     env:
       - 'DOCKER_BUILDKIT=1'
@@ -25,3 +27,5 @@ substitutions:
   _IMAGE_BASE: 'us-east1-docker.pkg.dev/PROJECT_ID/receipts/pklnd-receipts'
   _IMAGE_TAG: 'latest'
   _DOCKERFILE: 'receipt-parser/Dockerfile'
+  _GIT_BRANCH: 'main'
+  _GIT_COMMIT: 'unknown'
