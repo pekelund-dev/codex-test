@@ -213,9 +213,13 @@ cleanup_old_images() {
     return 0
   fi
   
+  # Extract just the tag names from the full paths
+  # Format: projects/.../tags/TAG_NAME -> TAG_NAME
+  local tag_names=$(echo "${all_tags}" | sed 's|.*/tags/||')
+  
   # Filter to only timestamped tags (format: YYYYMMDD-HHMMSS), skip 'latest' and 'buildcache'
   # Use grep with line-based matching
-  local timestamped_tags=$(echo "${all_tags}" | grep -E '^[0-9]{8}-[0-9]{6}$' || true)
+  local timestamped_tags=$(echo "${tag_names}" | grep -E '^[0-9]{8}-[0-9]{6}$' || true)
   
   # Remove empty lines and whitespace
   timestamped_tags=$(echo "${timestamped_tags}" | sed '/^[[:space:]]*$/d')
