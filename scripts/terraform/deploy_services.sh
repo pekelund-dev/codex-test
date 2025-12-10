@@ -214,31 +214,33 @@ cleanup_old_images() {
   fi
   
   # Filter to only timestamped tags (format: YYYYMMDD-HHMMSS), skip 'latest' and 'buildcache'
+  # Use grep with line-based matching
   local timestamped_tags=$(echo "${all_tags}" | grep -E '^[0-9]{8}-[0-9]{6}$' || true)
   
-  if [[ -z "${timestamped_tags}" ]] || [[ $(echo "${timestamped_tags}" | wc -w) -eq 0 ]]; then
+  if [[ -z "${timestamped_tags}" ]]; then
     echo "No timestamped images to clean up for ${image_base}"
     return 0
   fi
   
-  # Keep the 3 most recent, delete the rest
-  local total_count=$(echo "${timestamped_tags}" | wc -w)
-  local tags_to_delete=""
+  # Count lines instead of words
+  local total_count=$(echo "${timestamped_tags}" | wc -l)
   
-  if [[ ${total_count} -gt 3 ]]; then
-    # Delete oldest images (keeping the 3 most recent)
-    local keep_count=3
-    tags_to_delete=$(echo "${timestamped_tags}" | head -n -${keep_count})
+  if [[ ${total_count} -le 3 ]]; then
+    echo "Only ${total_count} timestamped image(s) found for ${image_base}, keeping all (threshold: 3)"
+    return 0
   fi
   
+  # Keep the 3 most recent, delete the rest
+  # Calculate how many to delete
+  local delete_count=$((total_count - 3))
+  local tags_to_delete=$(echo "${timestamped_tags}" | head -n ${delete_count})
+  
   if [[ -n "${tags_to_delete}" ]]; then
-    echo "Deleting old images from ${image_base}..."
-    for tag in ${tags_to_delete}; do
+    echo "Deleting ${delete_count} old image(s) from ${image_base} (keeping last 3)..."
+    while IFS= read -r tag; do
       echo "  Deleting ${image_base}:${tag}"
       gcloud artifacts docker images delete "${image_base}:${tag}" --quiet --project="${PROJECT_ID}" 2>/dev/null || true
-    done
-  else
-    echo "No old images to delete for ${image_base} (keeping last 3)"
+    done <<< "${tags_to_delete}"
   fi
 }
 
