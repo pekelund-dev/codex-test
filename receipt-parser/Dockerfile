@@ -49,7 +49,9 @@ RUN echo "Generating git.properties for Cloud Build..."; \
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -pl receipt-parser -am -DskipTests -Dgit-commit-id-plugin.skip=true package \
     && JAR_PATH="$(find receipt-parser/target -maxdepth 1 -type f -name '*-SNAPSHOT.jar' ! -name '*original*' | head -n 1)" \
-    && cp "${JAR_PATH}" /workspace/app.jar
+    && cp "${JAR_PATH}" /workspace/app.jar \
+    && echo "Verifying git.properties in JAR:" \
+    && unzip -p /workspace/app.jar BOOT-INF/classes/git.properties || echo "WARNING: git.properties not found in JAR!"
 
 FROM eclipse-temurin:21-jre
 
