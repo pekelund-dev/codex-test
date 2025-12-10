@@ -144,7 +144,19 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
                 storage.create(blobInfo, fileContent);
                 
                 // Create hash index entry for efficient duplicate detection
-                createHashIndexEntry(contentHash, objectName, owner);
+                // If this fails, rollback the receipt upload to maintain consistency
+                try {
+                    createHashIndexEntry(contentHash, objectName, owner);
+                } catch (ReceiptStorageException indexEx) {
+                    // Rollback: delete the receipt we just uploaded
+                    try {
+                        storage.delete(BlobId.of(properties.getBucket(), objectName));
+                        LOGGER.warn("Rolled back receipt upload for {} due to index creation failure", objectName);
+                    } catch (StorageException deleteEx) {
+                        LOGGER.error("Failed to rollback receipt {} after index creation failure", objectName, deleteEx);
+                    }
+                    throw indexEx;
+                }
                 
                 uploaded.add(new StoredReceiptReference(properties.getBucket(), objectName, owner));
             } catch (StorageException ex) {
