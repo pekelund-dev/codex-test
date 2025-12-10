@@ -176,8 +176,8 @@ wait $WEB_BUILD_PID
 WEB_BUILD_EXIT=$?
 if [ $WEB_BUILD_EXIT -ne 0 ]; then
   echo "Web image build failed with exit code $WEB_BUILD_EXIT" >&2
-  # Kill the other build if still running
-  kill $RECEIPT_BUILD_PID 2>/dev/null || true
+  # Note: Killing local process won't cancel the remote Cloud Build job
+  # The remote build will continue running on GCP
   exit 1
 fi
 
@@ -226,7 +226,7 @@ cleanup_old_images() {
   local tags_to_delete=""
   
   if [[ ${total_count} -gt 3 ]]; then
-    # Delete all but the last 3 (oldest images)
+    # Delete oldest images (keeping the 3 most recent)
     local keep_count=3
     tags_to_delete=$(echo "${timestamped_tags}" | head -n -${keep_count})
   fi

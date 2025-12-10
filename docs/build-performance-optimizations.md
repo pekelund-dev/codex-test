@@ -125,7 +125,7 @@ PROJECT_ID=your-project ./scripts/terraform/deploy_services.sh
 To see the improvements:
 
 1. **Check Cloud Build console**: View build duration in the GCP Console
-2. **Compare logs**: Look for "Using cached layer" messages with Kaniko
+2. **Compare logs**: Look for BuildKit cache messages such as "CACHED", "restoring cache", or "using cache" in the build logs
 3. **Monitor upload size**: Check Cloud Build logs for context upload time
 
 ### Cache Warming
@@ -142,8 +142,8 @@ For the best performance on the first build after optimizations:
 
 If builds aren't getting faster:
 
-1. **Check Kaniko logs**: Look for "Using cached layer from remote" messages
-2. **Verify cache TTL**: Default is 168h (7 days), adjust if needed
+1. **Check BuildKit logs**: Look for "restored cache", "using cache", or "exporting cache" messages to verify cache hits
+2. **Verify inline cache**: Ensure `--build-arg=BUILDKIT_INLINE_CACHE=1` is set
 3. **Check permissions**: Service account needs read access to Artifact Registry
 
 ### Parallel Builds Failing
@@ -266,7 +266,7 @@ EOF
 
 # Apply to repository
 gcloud artifacts repositories set-cleanup-policies web \
-  --project=$PROJECT_ID \
+  --project="$PROJECT_ID" \
   --location=us-east1 \
   --policy=policy.json
 ```
