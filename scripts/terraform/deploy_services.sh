@@ -197,3 +197,47 @@ terraform -chdir="${DEPLOY_DIR}" apply -input=false -auto-approve -var-file="${t
 # Clean up Cloud Build source cache
 echo "Cleaning up Cloud Build source cache..."
 gsutil -m rm -r "gs://${PROJECT_ID}_cloudbuild/source/**" 2>/dev/null || true
+
+# Clean up old container images in Artifact Registry (keep last 3 timestamped images per service)
+echo "Cleaning up old container images in Artifact Registry..."
+cleanup_old_images() {
+  local repo_path="$1"
+  local image_base="$2"
+  
+  # List all tags for this image, sorted by creation time
+  local all_tags=$(gcloud artifacts docker tags list "${image_base}" \
+    --format="get(tag)" \
+    --sort-by="~CREATE_TIME" 2>/dev/null || echo "")
+  
+  if [[ -z "${all_tags}" ]]; then
+    echo "No images found for ${image_base}"
+    return 0
+  fi
+  
+  # Filter to only timestamped tags (format: YYYYMMDD-HHMMSS), skip 'latest' and 'buildcache'
+  local timestamped_tags=$(echo "${all_tags}" | grep -E '^[0-9]{8}-[0-9]{6}$' || true)
+  
+  if [[ -z "${timestamped_tags}" ]]; then
+    echo "No timestamped images to clean up for ${image_base}"
+    return 0
+  fi
+  
+  # Keep the 3 most recent, delete the rest
+  local tags_to_delete=$(echo "${timestamped_tags}" | tail -n +4)
+  
+  if [[ -n "${tags_to_delete}" ]]; then
+    echo "Deleting old images from ${image_base}..."
+    for tag in ${tags_to_delete}; do
+      echo "  Deleting ${image_base}:${tag}"
+      gcloud artifacts docker images delete "${image_base}:${tag}" --quiet --project="${PROJECT_ID}" 2>/dev/null || true
+    done
+  else
+    echo "No old images to delete for ${image_base} (keeping last 3)"
+  fi
+}
+
+# Clean up web and receipt-parser images
+cleanup_old_images "${REGION}-docker.pkg.dev/${PROJECT_ID}/${web_repo}" "${web_image_base}"
+cleanup_old_images "${REGION}-docker.pkg.dev/${PROJECT_ID}/${receipt_repo}" "${receipt_image_base}"
+
+echo "Artifact cleanup complete"

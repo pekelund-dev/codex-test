@@ -168,6 +168,108 @@ If uploads are slow:
 4. **Build triggers**: Set up automatic builds on commit to avoid manual deploys
 5. **Regional caching**: Use region-specific cache for multi-region deployments
 
+## Artifact Management and Cost Optimization
+
+### Build Artifacts Created
+
+Each deployment creates the following artifacts:
+
+1. **Container Images** (Artifact Registry):
+   - Timestamped image (e.g., `pklnd-web:20241210-073000`)
+   - `latest` tag (updated each deployment)
+   - `buildcache` image (for BuildKit layer caching)
+
+2. **Cloud Build Archives** (Cloud Storage):
+   - Source code archives in `gs://{PROJECT_ID}_cloudbuild/source/`
+
+### Automatic Cleanup
+
+The deployment script (`scripts/terraform/deploy_services.sh`) automatically cleans up:
+
+- **Cloud Build source archives**: Deleted after each deployment
+- **Old timestamped images**: Keeps only the last 3 timestamped images per service
+
+This automatic cleanup reduces storage costs by:
+- Removing ~2GB of source archives per deployment
+- Removing old container images (each ~200-500MB)
+- Estimated savings: $0.10-0.30 per deployment
+
+### Manual Cleanup
+
+For additional cleanup control, use the dedicated cleanup script:
+
+```bash
+# Clean up with default settings (keep last 3 images)
+PROJECT_ID=your-project ./scripts/terraform/cleanup_artifacts.sh
+
+# Keep more images for rollback capability
+PROJECT_ID=your-project KEEP_IMAGES=5 ./scripts/terraform/cleanup_artifacts.sh
+
+# Also remove BuildKit cache (reduces performance on next build)
+PROJECT_ID=your-project CLEAN_CACHE=true ./scripts/terraform/cleanup_artifacts.sh
+```
+
+### Cost Analysis
+
+**Without cleanup:**
+- 10 deployments = 10 timestamped images × 2 services = ~4-10GB storage
+- Cloud Build archives = ~20GB
+- Estimated cost: $0.10-0.25/month in Artifact Registry + $0.02-0.05/month in Cloud Storage
+
+**With automatic cleanup:**
+- Only 3 recent images + latest + buildcache per service = ~2-3GB storage
+- No Cloud Build archives accumulation
+- Estimated cost: $0.03-0.08/month total
+
+**Savings:** ~60-80% reduction in artifact storage costs
+
+### Best Practices
+
+1. **Keep `buildcache` images**: They significantly improve build performance
+2. **Retain 3-5 recent images**: Enables quick rollback if needed
+3. **Run manual cleanup periodically**: Once a month for additional cleanup
+4. **Monitor storage costs**: Use GCP cost explorer to track Artifact Registry costs
+5. **Set up lifecycle policies**: For long-term automated management (see below)
+
+### Lifecycle Policies (Advanced)
+
+For production environments, consider setting up Artifact Registry lifecycle policies:
+
+```bash
+# Create a policy file
+cat > policy.json <<'EOF'
+{
+  "rules": [
+    {
+      "name": "delete-old-timestamped-images",
+      "action": "DELETE",
+      "condition": {
+        "tagState": "TAGGED",
+        "tagPrefixesToMatch": ["20"],
+        "olderThan": "2592000s"
+      }
+    },
+    {
+      "name": "keep-recent-tagged",
+      "action": "KEEP",
+      "condition": {
+        "tagState": "TAGGED",
+        "newerThan": "604800s"
+      }
+    }
+  ]
+}
+EOF
+
+# Apply to repository
+gcloud artifacts repositories set-cleanup-policies web \
+  --project=$PROJECT_ID \
+  --location=us-east1 \
+  --policy=policy.json
+```
+
+This automatically deletes images older than 30 days while keeping images from the last 7 days.
+
 ## Comparison with Legacy Scripts
 
 The legacy scripts (`scripts/legacy/`) were faster because they:
