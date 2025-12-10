@@ -3,6 +3,8 @@ package dev.pekelund.pklnd.storage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -51,26 +53,33 @@ class GcsReceiptStorageServiceTest {
             fileContent
         );
 
-        // Mock existing blob with same content hash and owner
-        Blob existingBlob = mock(Blob.class);
-        when(existingBlob.isDirectory()).thenReturn(false);
-        when(existingBlob.getName()).thenReturn("existing-receipt.pdf");
-        when(existingBlob.getSize()).thenReturn(100L);
-        when(existingBlob.getContentType()).thenReturn("application/pdf");
-        when(existingBlob.getUpdateTimeOffsetDateTime())
-            .thenReturn(OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC));
+        // Mock existing index blob with same content hash and owner
+        Blob indexBlob = mock(Blob.class);
+        when(indexBlob.isDirectory()).thenReturn(false);
+        when(indexBlob.getName()).thenReturn(".receipt-hashes/5d41/5d41402abc4b2a76b9719d911017c592");
         
         // Set the content hash metadata and owner metadata
         ReceiptOwner owner = new ReceiptOwner("user-123", "Test User", "test@example.com");
-        Map<String, String> metadata = new HashMap<>();
-        metadata.put("content-sha256", calculateExpectedHash(fileContent));
-        metadata.putAll(owner.toMetadata());
-        when(existingBlob.getMetadata()).thenReturn(metadata);
+        String contentHash = calculateExpectedHash(fileContent);
+        Map<String, String> indexMetadata = new HashMap<>();
+        indexMetadata.put("content-sha256", contentHash);
+        indexMetadata.put("receipt-object-name", "existing-receipt.pdf");
+        indexMetadata.putAll(owner.toMetadata());
+        when(indexBlob.getMetadata()).thenReturn(indexMetadata);
+        
+        // Mock the actual receipt blob
+        Blob receiptBlob = mock(Blob.class);
+        when(receiptBlob.getName()).thenReturn("existing-receipt.pdf");
+        when(receiptBlob.getSize()).thenReturn(100L);
+        when(receiptBlob.getContentType()).thenReturn("application/pdf");
+        when(receiptBlob.getUpdateTimeOffsetDateTime())
+            .thenReturn(OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC));
 
         @SuppressWarnings("unchecked")
-        Page<Blob> page = mock(Page.class);
-        when(page.iterateAll()).thenReturn(List.of(existingBlob));
-        when(storage.list("test-bucket")).thenReturn(page);
+        Page<Blob> indexPage = mock(Page.class);
+        when(indexPage.iterateAll()).thenReturn(List.of(indexBlob));
+        when(storage.list(eq("test-bucket"), any(Storage.BlobListOption.class))).thenReturn(indexPage);
+        when(storage.get("test-bucket", "existing-receipt.pdf")).thenReturn(receiptBlob);
 
         // Attempt to upload - should throw DuplicateReceiptException
         assertThatThrownBy(() -> service.uploadFiles(List.of(file), owner))
@@ -93,17 +102,11 @@ class GcsReceiptStorageServiceTest {
             fileContent
         );
 
-        // Mock existing blob with different content hash
-        Blob existingBlob = mock(Blob.class);
-        when(existingBlob.isDirectory()).thenReturn(false);
-        Map<String, String> metadata = new HashMap<>();
-        metadata.put("content-sha256", "different-hash-value");
-        when(existingBlob.getMetadata()).thenReturn(metadata);
-
+        // Mock empty index (no duplicates)
         @SuppressWarnings("unchecked")
-        Page<Blob> page = mock(Page.class);
-        when(page.iterateAll()).thenReturn(List.of(existingBlob));
-        when(storage.list("test-bucket")).thenReturn(page);
+        Page<Blob> emptyPage = mock(Page.class);
+        when(emptyPage.iterateAll()).thenReturn(List.of());
+        when(storage.list(eq("test-bucket"), any(Storage.BlobListOption.class))).thenReturn(emptyPage);
 
         // Mock successful upload
         when(storage.create(any(BlobInfo.class), any(byte[].class))).thenReturn(mock(Blob.class));
@@ -113,7 +116,8 @@ class GcsReceiptStorageServiceTest {
         List<StoredReceiptReference> result = service.uploadFiles(List.of(file), owner);
 
         assertThat(result).hasSize(1);
-        verify(storage).create(any(BlobInfo.class), any(byte[].class));
+        // Verify create was called twice: once for receipt, once for hash index
+        verify(storage, org.mockito.Mockito.times(2)).create(any(BlobInfo.class), any(byte[].class));
     }
 
     @Test
@@ -127,9 +131,9 @@ class GcsReceiptStorageServiceTest {
         );
 
         @SuppressWarnings("unchecked")
-        Page<Blob> page = mock(Page.class);
-        when(page.iterateAll()).thenReturn(List.of());
-        when(storage.list("test-bucket")).thenReturn(page);
+        Page<Blob> emptyPage = mock(Page.class);
+        when(emptyPage.iterateAll()).thenReturn(List.of());
+        when(storage.list(eq("test-bucket"), any(Storage.BlobListOption.class))).thenReturn(emptyPage);
 
         when(storage.create(any(BlobInfo.class), any(byte[].class))).thenReturn(mock(Blob.class));
 
@@ -137,10 +141,13 @@ class GcsReceiptStorageServiceTest {
         service.uploadFiles(List.of(file), owner);
 
         ArgumentCaptor<BlobInfo> blobInfoCaptor = ArgumentCaptor.forClass(BlobInfo.class);
-        verify(storage).create(blobInfoCaptor.capture(), any(byte[].class));
+        // Verify create was called twice: once for receipt, once for hash index
+        verify(storage, org.mockito.Mockito.times(2)).create(blobInfoCaptor.capture(), any(byte[].class));
 
-        BlobInfo capturedBlobInfo = blobInfoCaptor.getValue();
-        assertThat(capturedBlobInfo.getMetadata())
+        // Get the first captured BlobInfo (the receipt, not the index)
+        List<BlobInfo> capturedBlobs = blobInfoCaptor.getAllValues();
+        BlobInfo receiptBlobInfo = capturedBlobs.get(0);
+        assertThat(receiptBlobInfo.getMetadata())
             .containsKey("content-sha256")
             .containsEntry("content-sha256", service.calculateSha256Hash(fileContent));
     }

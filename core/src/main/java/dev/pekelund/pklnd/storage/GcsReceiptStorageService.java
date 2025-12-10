@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
@@ -34,10 +36,13 @@ import org.springframework.web.util.UriUtils;
 @ConditionalOnBean(Storage.class)
 public class GcsReceiptStorageService implements ReceiptStorageService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(GcsReceiptStorageService.class);
     private static final DateTimeFormatter OBJECT_PREFIX =
         DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS", Locale.US).withZone(ZoneOffset.UTC);
     private static final int MAX_OBJECT_FILENAME_LENGTH = 60;
     private static final String CONTENT_HASH_METADATA_KEY = "content-sha256";
+    private static final String HASH_INDEX_PREFIX = ".receipt-hashes/";
+    private static final int HASH_PREFIX_LENGTH = 4;
 
     private final Storage storage;
     private final GcsProperties properties;
@@ -133,6 +138,10 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
 
             try {
                 storage.create(blobInfo, fileContent);
+                
+                // Create hash index entry for efficient duplicate detection
+                createHashIndexEntry(contentHash, objectName, owner);
+                
                 uploaded.add(new StoredReceiptReference(properties.getBucket(), objectName, owner));
             } catch (StorageException ex) {
                 String displayName = StringUtils.hasText(originalFilename) ? originalFilename : objectName;
@@ -159,10 +168,40 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
                 if (!ReceiptOwnerMatcher.belongsToCurrentOwner(fileOwner, owner)) {
                     continue;
                 }
+                
+                // Delete hash index entry if this is a receipt file
+                if (!blob.getName().startsWith(HASH_INDEX_PREFIX)) {
+                    deleteHashIndexEntry(blob);
+                }
+                
+                // Delete the blob itself
                 storage.delete(blob.getBlobId());
             }
         } catch (StorageException ex) {
             throw new ReceiptStorageException("Unable to delete receipt files", ex);
+        }
+    }
+    
+    private void deleteHashIndexEntry(Blob receiptBlob) {
+        try {
+            Map<String, String> metadata = receiptBlob.getMetadata();
+            if (metadata == null) {
+                return;
+            }
+            
+            String contentHash = metadata.get(CONTENT_HASH_METADATA_KEY);
+            if (!StringUtils.hasText(contentHash) || contentHash.length() < HASH_PREFIX_LENGTH) {
+                return;
+            }
+            
+            String hashPrefix = contentHash.substring(0, HASH_PREFIX_LENGTH);
+            String indexPath = HASH_INDEX_PREFIX + hashPrefix + "/" + contentHash;
+            
+            BlobId indexBlobId = BlobId.of(properties.getBucket(), indexPath);
+            storage.delete(indexBlobId);
+        } catch (StorageException ex) {
+            // Log but don't fail the delete operation
+            LOGGER.warn("Failed to delete hash index entry for {}: {}", receiptBlob.getName(), ex.getMessage());
         }
     }
 
@@ -255,16 +294,21 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
         }
 
         try {
-            // Note: This iterates through all blobs in the bucket, which could become slow
-            // with many receipts. For production use with large volumes, consider using
-            // a more efficient lookup mechanism like indexing hashes in a database.
-            Iterable<Blob> blobs = storage.list(properties.getBucket()).iterateAll();
-            for (Blob blob : blobs) {
-                if (blob.isDirectory()) {
+            // Use hash prefix-based lookup for efficient querying
+            // Only scan blobs under the specific hash prefix instead of entire bucket
+            String hashPrefix = HASH_INDEX_PREFIX + contentHash.substring(0, HASH_PREFIX_LENGTH) + "/";
+            
+            Iterable<Blob> indexBlobs = storage.list(
+                properties.getBucket(),
+                Storage.BlobListOption.prefix(hashPrefix)
+            ).iterateAll();
+            
+            for (Blob indexBlob : indexBlobs) {
+                if (indexBlob.isDirectory()) {
                     continue;
                 }
                 
-                Map<String, String> metadata = blob.getMetadata();
+                Map<String, String> metadata = indexBlob.getMetadata();
                 if (metadata == null) {
                     continue;
                 }
@@ -274,20 +318,54 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
                     continue;
                 }
                 
-                // Check if this blob belongs to the same owner (or any owner if owner is null)
+                // Check if this blob belongs to the same owner
                 ReceiptOwner blobOwner = ReceiptOwner.fromMetadata(metadata);
                 if (owner != null && !ReceiptOwnerMatcher.belongsToCurrentOwner(blobOwner, owner)) {
                     continue;
                 }
                 
-                // Found a duplicate
-                OffsetDateTime updateTime = blob.getUpdateTimeOffsetDateTime();
-                Instant updated = updateTime != null ? updateTime.toInstant() : null;
-                return new ReceiptFile(blob.getName(), blob.getSize(), updated, blob.getContentType(), blobOwner);
+                // Found a duplicate - fetch the actual receipt file metadata
+                String actualObjectName = metadata.get("receipt-object-name");
+                if (StringUtils.hasText(actualObjectName)) {
+                    Blob actualBlob = storage.get(properties.getBucket(), actualObjectName);
+                    if (actualBlob != null) {
+                        OffsetDateTime updateTime = actualBlob.getUpdateTimeOffsetDateTime();
+                        Instant updated = updateTime != null ? updateTime.toInstant() : null;
+                        return new ReceiptFile(actualBlob.getName(), actualBlob.getSize(), updated, 
+                            actualBlob.getContentType(), blobOwner);
+                    }
+                }
             }
             return null;
         } catch (StorageException ex) {
             throw new ReceiptStorageException("Unable to check for duplicate receipts", ex);
+        }
+    }
+    
+    private void createHashIndexEntry(String contentHash, String objectName, ReceiptOwner owner) {
+        try {
+            // Create a small index blob under hash-prefixed path for fast lookup
+            String hashPrefix = contentHash.substring(0, HASH_PREFIX_LENGTH);
+            String indexPath = HASH_INDEX_PREFIX + hashPrefix + "/" + contentHash;
+            
+            Map<String, String> indexMetadata = new HashMap<>();
+            indexMetadata.put(CONTENT_HASH_METADATA_KEY, contentHash);
+            indexMetadata.put("receipt-object-name", objectName);
+            if (owner != null && owner.hasValues()) {
+                indexMetadata.putAll(owner.toMetadata());
+            }
+            
+            BlobInfo indexBlob = BlobInfo.newBuilder(BlobId.of(properties.getBucket(), indexPath))
+                .setContentType("application/json")
+                .setMetadata(indexMetadata)
+                .build();
+            
+            // Create empty index entry (just metadata)
+            storage.create(indexBlob, new byte[0]);
+        } catch (StorageException ex) {
+            // Log but don't fail upload if index creation fails
+            // The receipt is still uploaded successfully
+            LOGGER.warn("Failed to create hash index entry for {}: {}", objectName, ex.getMessage());
         }
     }
 }
