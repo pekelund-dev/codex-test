@@ -217,6 +217,9 @@ cleanup_old_images() {
   # Use grep with line-based matching
   local timestamped_tags=$(echo "${all_tags}" | grep -E '^[0-9]{8}-[0-9]{6}$' || true)
   
+  # Remove empty lines and whitespace
+  timestamped_tags=$(echo "${timestamped_tags}" | sed '/^[[:space:]]*$/d')
+  
   if [[ -z "${timestamped_tags}" ]]; then
     echo "No timestamped images to clean up for ${image_base}"
     return 0
@@ -235,11 +238,14 @@ cleanup_old_images() {
   local delete_count=$((total_count - 3))
   local tags_to_delete=$(echo "${timestamped_tags}" | head -n ${delete_count})
   
-  if [[ -n "${tags_to_delete}" ]]; then
+  # Ensure tags_to_delete is not empty before proceeding
+  if [[ -n "${tags_to_delete}" ]] && [[ ! "${tags_to_delete}" =~ ^[[:space:]]*$ ]]; then
     echo "Deleting ${delete_count} old image(s) from ${image_base} (keeping last 3)..."
     while IFS= read -r tag; do
-      echo "  Deleting ${image_base}:${tag}"
-      gcloud artifacts docker images delete "${image_base}:${tag}" --quiet --project="${PROJECT_ID}" 2>/dev/null || true
+      if [[ -n "${tag}" ]]; then
+        echo "  Deleting ${image_base}:${tag}"
+        gcloud artifacts docker images delete "${image_base}:${tag}" --quiet --project="${PROJECT_ID}" 2>/dev/null || true
+      fi
     done <<< "${tags_to_delete}"
   fi
 }
