@@ -8,11 +8,13 @@ class GitMetadataTest {
 
     @Test
     void reportsAvailableWhenEitherValuePresent() {
-        GitMetadata onlyCommit = new GitMetadata(null, "abc123");
-        GitMetadata onlyBranch = new GitMetadata("main", " ");
+        GitMetadata onlyCommit = new GitMetadata(null, "abc123", null);
+        GitMetadata onlyBranch = new GitMetadata("main", " ", null);
+        GitMetadata onlyVersion = new GitMetadata(null, null, "0.1.0-SNAPSHOT");
 
         assertThat(onlyCommit.available()).isTrue();
         assertThat(onlyBranch.available()).isTrue();
+        assertThat(onlyVersion.available()).isTrue();
     }
 
     @Test
@@ -21,5 +23,6 @@ class GitMetadataTest {
 
         assertThat(empty.branchOrPlaceholder()).isEqualTo("okänd gren");
         assertThat(empty.commitOrPlaceholder()).isEqualTo("okänt commit-ID");
+        assertThat(empty.versionOrPlaceholder()).isEqualTo("okänd version");
     }
 }

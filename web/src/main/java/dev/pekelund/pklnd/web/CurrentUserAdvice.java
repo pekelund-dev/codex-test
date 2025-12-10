@@ -111,7 +111,8 @@ public class CurrentUserAdvice {
             return GitMetadata.empty();
         }
 
-        return new GitMetadata(gitProperties.getBranch(), gitProperties.getShortCommitId());
+        String version = gitProperties.get("build.version");
+        return new GitMetadata(gitProperties.getBranch(), gitProperties.getShortCommitId(), version);
     }
 
     private LanguageOption buildOption(
