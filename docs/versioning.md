@@ -116,22 +116,26 @@ Docker images are tagged with both a timestamp and the `latest` tag during deplo
 
 ### Build-Time Git Metadata Injection
 
-Both Dockerfiles (`Dockerfile` for web, `receipt-parser/Dockerfile` for receipt-parser) accept git metadata as build arguments:
+Both Dockerfiles (`Dockerfile` for web, `receipt-parser/Dockerfile` for receipt-parser) accept git metadata as build arguments and generate the `git.properties` file at Docker build time. This is necessary because Cloud Build operates on a source archive without the full git repository history, so the Maven git-commit-id plugin cannot access git metadata during the Cloud Build process.
+
+The Dockerfiles include logic to generate git.properties from build arguments:
 
 ```dockerfile
 ARG GIT_BRANCH=""
 ARG GIT_COMMIT=""
 
-# Generate git properties if provided
+# Generate git properties if provided (for Cloud Build where git repo isn't available)
 RUN if [ -n "${GIT_BRANCH}${GIT_COMMIT}" ]; then \
-      mkdir -p web/src/main/resources; \
+      mkdir -p receipt-parser/src/main/resources; \
       SHORT_COMMIT=$(echo "${GIT_COMMIT}" | cut -c1-7); \
       { \
         if [ -n "${GIT_BRANCH}" ]; then echo "git.branch=${GIT_BRANCH}"; fi; \
         if [ -n "${GIT_COMMIT}" ]; then echo "git.commit.id=${GIT_COMMIT}"; echo "git.commit.id.abbrev=${SHORT_COMMIT}"; fi; \
-      } > web/src/main/resources/git.properties; \
+      } > receipt-parser/src/main/resources/git.properties; \
     fi
 ```
+
+**Note**: The path in this example is `receipt-parser/src/main/resources` for the receipt-parser module; the web module uses `web/src/main/resources` instead. When building locally with Maven (outside Docker), the git-commit-id plugin generates this file automatically, so the Docker build argument approach is primarily for Cloud Build deployments.
 
 ### Cloud Build Configuration
 
