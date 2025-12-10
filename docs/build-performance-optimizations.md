@@ -16,19 +16,21 @@ The following optimizations were implemented to significantly reduce build and d
 
 **Impact**: ~50-70% reduction in Maven dependency download time on subsequent builds
 
-### 2. Docker BuildKit with Registry Caching
+### 2. Docker BuildKit with Inline Caching
 
 **Problem**: The standard Docker builder in Cloud Build didn't support advanced caching features efficiently. Kaniko was considered but is now archived/deprecated.
 
 **Solution**:
 - Uses the maintained `gcr.io/cloud-builders/docker` with BuildKit enabled via `DOCKER_BUILDKIT=1`
-- Configured registry-based caching with `--cache-from` and `--cache-to` arguments
-- BuildKit caches layers in Artifact Registry for fast subsequent builds
+- Configured inline caching with `--build-arg=BUILDKIT_INLINE_CACHE=1` and `--cache-from`
+- BuildKit cache metadata is embedded in the image layers, making subsequent builds much faster
 - BuildKit is actively maintained by Docker/Moby and is the recommended solution for modern container builds
 
 **Impact**: ~40-60% reduction in image build time for unchanged layers
 
 **Why BuildKit over Kaniko**: Kaniko was archived by Google in June 2025 and is no longer maintained. BuildKit is the actively maintained, officially recommended replacement with superior performance (up to 3x faster), better multi-architecture support, and more advanced features.
+
+**Note on Caching Strategy**: We use inline caching instead of registry-based cache export because Cloud Build's default Docker driver doesn't support `--cache-to=type=registry`. Inline caching embeds cache metadata directly in the image layers, which is pulled via `--cache-from` on subsequent builds. This approach works seamlessly with Cloud Build while still providing excellent cache performance.
 
 ### 3. Parallel Image Builds
 
@@ -176,11 +178,12 @@ Each deployment creates the following artifacts:
 
 1. **Container Images** (Artifact Registry):
    - Timestamped image (e.g., `pklnd-web:20241210-073000`)
-   - `latest` tag (updated each deployment)
-   - `buildcache` image (for BuildKit layer caching)
+   - `latest` tag (updated each deployment, contains inline cache metadata)
 
 2. **Cloud Build Archives** (Cloud Storage):
    - Source code archives in `gs://{PROJECT_ID}_cloudbuild/source/`
+
+**Note**: With inline caching, the cache metadata is embedded in the `latest` image, so no separate buildcache images are created.
 
 ### Automatic Cleanup
 
@@ -212,20 +215,20 @@ PROJECT_ID=your-project CLEAN_CACHE=true ./scripts/terraform/cleanup_artifacts.s
 ### Cost Analysis
 
 **Without cleanup:**
-- 10 deployments = 10 timestamped images × 2 services = ~4-10GB storage
+- 10 deployments = 10 timestamped images × 2 services = ~4-8GB storage
 - Cloud Build archives = ~20GB
-- Estimated cost: $0.10-0.25/month in Artifact Registry + $0.02-0.05/month in Cloud Storage
+- Estimated cost: $0.10-0.20/month in Artifact Registry + $0.02-0.05/month in Cloud Storage
 
 **With automatic cleanup:**
-- Only 3 recent images + latest + buildcache per service = ~2-3GB storage
+- Only 3 recent images + latest per service = ~2-3GB storage
 - No Cloud Build archives accumulation
-- Estimated cost: $0.03-0.08/month total
+- Estimated cost: $0.03-0.06/month total
 
-**Savings:** ~60-80% reduction in artifact storage costs
+**Savings:** ~60-75% reduction in artifact storage costs
 
 ### Best Practices
 
-1. **Keep `buildcache` images**: They significantly improve build performance
+1. **Keep inline cache in `latest` tag**: Essential for build performance
 2. **Retain 3-5 recent images**: Enables quick rollback if needed
 3. **Run manual cleanup periodically**: Once a month for additional cleanup
 4. **Monitor storage costs**: Use GCP cost explorer to track Artifact Registry costs
