@@ -164,7 +164,7 @@ WEB_BUILD_PID=$!
   echo "Building receipt processor image ${receipt_image}"
   gcloud builds submit "${REPO_ROOT}" \
     --config "${CLOUD_BUILD_CONFIG}" \
-    --substitutions "_IMAGE_URI=${receipt_image},_DOCKERFILE=${RECEIPT_DOCKERFILE}" \
+    --substitutions "_IMAGE_BASE=${receipt_image_base},_IMAGE_TAG=${timestamp},_DOCKERFILE=${RECEIPT_DOCKERFILE}" \
     --project "${PROJECT_ID}" \
     --timeout=1200s
 } &
