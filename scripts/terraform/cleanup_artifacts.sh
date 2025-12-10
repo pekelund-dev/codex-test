@@ -61,10 +61,10 @@ cleanup_old_images() {
   
   echo "Processing ${service_name}..."
   
-  # List all tags for this image
+  # List all tags for this image, sorted by creation time (oldest first)
   local all_tags=$(gcloud artifacts docker tags list "${image_base}" \
     --format="get(tag)" \
-    --sort-by="~CREATE_TIME" \
+    --sort-by="CREATE_TIME" \
     --project="${PROJECT_ID}" 2>/dev/null || echo "")
   
   if [[ -z "${all_tags}" ]]; then
@@ -74,18 +74,19 @@ cleanup_old_images() {
   
   # Filter to only timestamped tags (format: YYYYMMDD-HHMMSS)
   local timestamped_tags=$(echo "${all_tags}" | grep -E '^[0-9]{8}-[0-9]{6}$' || true)
-  local total_timestamped=$(echo "${timestamped_tags}" | wc -l | tr -d ' ')
   
-  if [[ -z "${timestamped_tags}" ]] || [[ "${total_timestamped}" -eq 0 ]]; then
+  if [[ -z "${timestamped_tags}" ]] || [[ $(echo "${timestamped_tags}" | wc -w) -eq 0 ]]; then
     echo "  ℹ No timestamped images found"
   else
+    local total_timestamped=$(echo "${timestamped_tags}" | wc -w)
     echo "  Found ${total_timestamped} timestamped image(s)"
     
-    # Calculate how many to delete
+    # Calculate how many to delete (keep the most recent KEEP_IMAGES)
     local to_delete_count=$((total_timestamped - KEEP_IMAGES))
     
     if [[ ${to_delete_count} -gt 0 ]]; then
-      local tags_to_delete=$(echo "${timestamped_tags}" | tail -n +$((KEEP_IMAGES + 1)))
+      # Delete oldest images (all but the last KEEP_IMAGES)
+      local tags_to_delete=$(echo "${timestamped_tags}" | head -n ${to_delete_count})
       local deleted_count=0
       
       for tag in ${tags_to_delete}; do

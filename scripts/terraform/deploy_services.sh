@@ -201,13 +201,12 @@ gsutil -m rm -r "gs://${PROJECT_ID}_cloudbuild/source/**" 2>/dev/null || true
 # Clean up old container images in Artifact Registry (keep last 3 timestamped images per service)
 echo "Cleaning up old container images in Artifact Registry..."
 cleanup_old_images() {
-  local repo_path="$1"
-  local image_base="$2"
+  local image_base="$1"
   
-  # List all tags for this image, sorted by creation time
+  # List all tags for this image, sorted by creation time (oldest first)
   local all_tags=$(gcloud artifacts docker tags list "${image_base}" \
     --format="get(tag)" \
-    --sort-by="~CREATE_TIME" 2>/dev/null || echo "")
+    --sort-by="CREATE_TIME" 2>/dev/null || echo "")
   
   if [[ -z "${all_tags}" ]]; then
     echo "No images found for ${image_base}"
@@ -217,13 +216,20 @@ cleanup_old_images() {
   # Filter to only timestamped tags (format: YYYYMMDD-HHMMSS), skip 'latest' and 'buildcache'
   local timestamped_tags=$(echo "${all_tags}" | grep -E '^[0-9]{8}-[0-9]{6}$' || true)
   
-  if [[ -z "${timestamped_tags}" ]]; then
+  if [[ -z "${timestamped_tags}" ]] || [[ $(echo "${timestamped_tags}" | wc -w) -eq 0 ]]; then
     echo "No timestamped images to clean up for ${image_base}"
     return 0
   fi
   
   # Keep the 3 most recent, delete the rest
-  local tags_to_delete=$(echo "${timestamped_tags}" | tail -n +4)
+  local total_count=$(echo "${timestamped_tags}" | wc -w)
+  local tags_to_delete=""
+  
+  if [[ ${total_count} -gt 3 ]]; then
+    # Delete all but the last 3 (oldest images)
+    local keep_count=3
+    tags_to_delete=$(echo "${timestamped_tags}" | head -n -${keep_count})
+  fi
   
   if [[ -n "${tags_to_delete}" ]]; then
     echo "Deleting old images from ${image_base}..."
@@ -237,7 +243,7 @@ cleanup_old_images() {
 }
 
 # Clean up web and receipt-parser images
-cleanup_old_images "${REGION}-docker.pkg.dev/${PROJECT_ID}/${web_repo}" "${web_image_base}"
-cleanup_old_images "${REGION}-docker.pkg.dev/${PROJECT_ID}/${receipt_repo}" "${receipt_image_base}"
+cleanup_old_images "${web_image_base}"
+cleanup_old_images "${receipt_image_base}"
 
 echo "Artifact cleanup complete"
