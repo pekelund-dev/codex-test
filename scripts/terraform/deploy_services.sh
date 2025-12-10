@@ -146,19 +146,49 @@ allow_unauthenticated_web = ${allow_unauth_value}
 custom_domain = $(json_escape "${CUSTOM_DOMAIN}")
 EOF
 
-echo "Building web image ${web_image}"
-gcloud builds submit "${WEB_BUILD_CONTEXT}" \
-  --config "${REPO_ROOT}/cloudbuild.yaml" \
-  --substitutions "_IMAGE_BASE=${web_image_base},_IMAGE_TAG=${timestamp},_DOCKERFILE=${WEB_DOCKERFILE},_GIT_BRANCH=${build_branch},_GIT_COMMIT=${build_commit}" \
-  --project "${PROJECT_ID}" \
-  --timeout=1800s
+echo "Building both images in parallel for faster deployment..."
 
-echo "Building receipt processor image ${receipt_image}"
-gcloud builds submit "${REPO_ROOT}" \
-  --config "${CLOUD_BUILD_CONFIG}" \
-  --substitutions "_IMAGE_URI=${receipt_image},_DOCKERFILE=${RECEIPT_DOCKERFILE}" \
-  --project "${PROJECT_ID}" \
-  --timeout=1800s
+# Start web image build in background
+{
+  echo "Building web image ${web_image}"
+  gcloud builds submit "${WEB_BUILD_CONTEXT}" \
+    --config "${REPO_ROOT}/cloudbuild.yaml" \
+    --substitutions "_IMAGE_BASE=${web_image_base},_IMAGE_TAG=${timestamp},_DOCKERFILE=${WEB_DOCKERFILE},_GIT_BRANCH=${build_branch},_GIT_COMMIT=${build_commit}" \
+    --project "${PROJECT_ID}" \
+    --timeout=1200s
+} &
+WEB_BUILD_PID=$!
+
+# Start receipt processor build in background
+{
+  echo "Building receipt processor image ${receipt_image}"
+  gcloud builds submit "${REPO_ROOT}" \
+    --config "${CLOUD_BUILD_CONFIG}" \
+    --substitutions "_IMAGE_URI=${receipt_image},_DOCKERFILE=${RECEIPT_DOCKERFILE}" \
+    --project "${PROJECT_ID}" \
+    --timeout=1200s
+} &
+RECEIPT_BUILD_PID=$!
+
+# Wait for both builds to complete
+echo "Waiting for parallel builds to complete..."
+wait $WEB_BUILD_PID
+WEB_BUILD_EXIT=$?
+wait $RECEIPT_BUILD_PID
+RECEIPT_BUILD_EXIT=$?
+
+if [ $WEB_BUILD_EXIT -ne 0 ]; then
+  echo "Web image build failed with exit code $WEB_BUILD_EXIT" >&2
+  exit 1
+fi
+
+if [ $RECEIPT_BUILD_EXIT -ne 0 ]; then
+  echo "Receipt processor image build failed with exit code $RECEIPT_BUILD_EXIT" >&2
+  exit 1
+fi
+
+echo "Both images built successfully"
+
 
 terraform -chdir="${DEPLOY_DIR}" init -input=false
 terraform -chdir="${DEPLOY_DIR}" apply -input=false -auto-approve -var-file="${tfvars_file}" "$@"

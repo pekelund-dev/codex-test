@@ -1,11 +1,21 @@
 steps:
-  - name: gcr.io/cloud-builders/docker
+  # Build the receipt-parser Docker image with Kaniko for better caching
+  - name: 'gcr.io/kaniko-project/executor:latest'
     args:
-      - build
-      - '--file'
-      - '${_DOCKERFILE}'
-      - '--tag'
-      - '${_IMAGE_URI}'
-      - '.'
+      - '--dockerfile=${_DOCKERFILE}'
+      - '--context=dir:///workspace'
+      - '--destination=${_IMAGE_URI}'
+      - '--cache=true'
+      - '--cache-ttl=168h'
+    timeout: 1200s
+
 images:
   - '${_IMAGE_URI}'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+
+substitutions:
+  _IMAGE_URI: 'us-east1-docker.pkg.dev/PROJECT_ID/receipts/pklnd-receipts:latest'
+  _DOCKERFILE: 'receipt-parser/Dockerfile'

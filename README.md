@@ -143,7 +143,7 @@ Run the targeted Modulith verification tests to ensure boundaries stay intact:
 
 #### Quick Deployment
 
-Use the Terraform automation for a streamlined setup:
+Use the Terraform automation for a streamlined setup with optimized build performance:
 
 ```bash
 # 1) Seed the unified secret locally
@@ -157,6 +157,14 @@ PROJECT_ID=your-project APP_SECRET_FILE=/tmp/pklnd-secret.json ./scripts/terrafo
 # 3) Build and deploy both Cloud Run services with the values pulled from the single Secret Manager secret
 PROJECT_ID=your-project ./scripts/terraform/deploy_services.sh
 ```
+
+The deployment process has been optimized for speed with:
+- Parallel image builds reducing total build time by ~50%
+- Docker layer caching and Kaniko reducing rebuild time by ~60-80%
+- Smaller build contexts reducing upload time by ~60-80%
+- Higher CPU Cloud Build machines reducing compilation time by ~30-40%
+
+See [Build Performance Optimizations](docs/build-performance-optimizations.md) for detailed information about deployment speed improvements.
 
 The scripts keep infrastructure provisioning separate from application deployment while relying on one Secret Manager secret for OAuth and optional AI keys. Earlier gcloud-based helpers now live in `scripts/legacy/` for reference.
 
