@@ -6,16 +6,21 @@ WORKDIR /workspace
 ARG GIT_BRANCH=""
 ARG GIT_COMMIT=""
 
+# Copy POMs first for better layer caching
 COPY pom.xml .
 COPY core/pom.xml core/pom.xml
 COPY receipt-parser/pom.xml receipt-parser/pom.xml
 COPY web/pom.xml web/pom.xml
 
-RUN mvn -B -Pinclude-web -pl web -am -DskipTests dependency:go-offline
+# Download dependencies in a separate layer for caching
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -Pinclude-web -pl web -am -DskipTests dependency:go-offline
 
+# Copy source code
 COPY core core
 COPY web web
 
+# Generate git properties if provided
 RUN if [ -n "${GIT_BRANCH}${GIT_COMMIT}" ]; then \
       mkdir -p web/src/main/resources; \
       SHORT_COMMIT=$(echo "${GIT_COMMIT}" | cut -c1-7); \
@@ -25,7 +30,9 @@ RUN if [ -n "${GIT_BRANCH}${GIT_COMMIT}" ]; then \
       } > web/src/main/resources/git.properties; \
     fi
 
-RUN mvn -B -Pinclude-web -pl web -am -DskipTests package \
+# Build the application with Maven cache mount
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -Pinclude-web -pl web -am -DskipTests package \
     && JAR_PATH="$(find web/target -maxdepth 1 -type f -name '*-SNAPSHOT.jar' ! -name '*original*' | head -n 1)" \
     && cp "${JAR_PATH}" /workspace/app.jar
 

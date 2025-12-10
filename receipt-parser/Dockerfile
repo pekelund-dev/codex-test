@@ -3,16 +3,22 @@
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
 
+# Copy POMs first for better layer caching
 COPY pom.xml .
 COPY core/pom.xml core/pom.xml
 COPY receipt-parser/pom.xml receipt-parser/pom.xml
 
-RUN mvn -B -pl receipt-parser -am -DskipTests dependency:go-offline
+# Download dependencies in a separate layer for caching
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -pl receipt-parser -am -DskipTests dependency:go-offline
 
+# Copy source code
 COPY core core
 COPY receipt-parser receipt-parser
 
-RUN mvn -B -pl receipt-parser -am -DskipTests package \
+# Build the application with Maven cache mount
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -pl receipt-parser -am -DskipTests package \
     && JAR_PATH="$(find receipt-parser/target -maxdepth 1 -type f -name '*-SNAPSHOT.jar' ! -name '*original*' | head -n 1)" \
     && cp "${JAR_PATH}" /workspace/app.jar
 

@@ -146,19 +146,50 @@ allow_unauthenticated_web = ${allow_unauth_value}
 custom_domain = $(json_escape "${CUSTOM_DOMAIN}")
 EOF
 
-echo "Building web image ${web_image}"
-gcloud builds submit "${WEB_BUILD_CONTEXT}" \
-  --config "${REPO_ROOT}/cloudbuild.yaml" \
-  --substitutions "_IMAGE_BASE=${web_image_base},_IMAGE_TAG=${timestamp},_DOCKERFILE=${WEB_DOCKERFILE},_GIT_BRANCH=${build_branch},_GIT_COMMIT=${build_commit}" \
-  --project "${PROJECT_ID}" \
-  --timeout=1800s
+echo "Building both images in parallel for faster deployment..."
 
-echo "Building receipt processor image ${receipt_image}"
-gcloud builds submit "${REPO_ROOT}" \
-  --config "${CLOUD_BUILD_CONFIG}" \
-  --substitutions "_IMAGE_URI=${receipt_image},_DOCKERFILE=${RECEIPT_DOCKERFILE}" \
-  --project "${PROJECT_ID}" \
-  --timeout=1800s
+# Start web image build in background
+{
+  echo "Building web image ${web_image}"
+  gcloud builds submit "${WEB_BUILD_CONTEXT}" \
+    --config "${REPO_ROOT}/cloudbuild.yaml" \
+    --substitutions "_IMAGE_BASE=${web_image_base},_IMAGE_TAG=${timestamp},_DOCKERFILE=${WEB_DOCKERFILE},_GIT_BRANCH=${build_branch},_GIT_COMMIT=${build_commit}" \
+    --project "${PROJECT_ID}" \
+    --timeout=1200s
+} &
+WEB_BUILD_PID=$!
+
+# Start receipt processor build in background
+{
+  echo "Building receipt processor image ${receipt_image}"
+  gcloud builds submit "${REPO_ROOT}" \
+    --config "${CLOUD_BUILD_CONFIG}" \
+    --substitutions "_IMAGE_BASE=${receipt_image_base},_IMAGE_TAG=${timestamp},_DOCKERFILE=${RECEIPT_DOCKERFILE}" \
+    --project "${PROJECT_ID}" \
+    --timeout=1200s
+} &
+RECEIPT_BUILD_PID=$!
+
+# Wait for both builds to complete
+echo "Waiting for parallel builds to complete..."
+wait $WEB_BUILD_PID
+WEB_BUILD_EXIT=$?
+if [ $WEB_BUILD_EXIT -ne 0 ]; then
+  echo "Web image build failed with exit code $WEB_BUILD_EXIT" >&2
+  # Note: Killing local process won't cancel the remote Cloud Build job
+  # The remote build will continue running on GCP
+  exit 1
+fi
+
+wait $RECEIPT_BUILD_PID
+RECEIPT_BUILD_EXIT=$?
+if [ $RECEIPT_BUILD_EXIT -ne 0 ]; then
+  echo "Receipt processor image build failed with exit code $RECEIPT_BUILD_EXIT" >&2
+  exit 1
+fi
+
+echo "Both images built successfully"
+
 
 terraform -chdir="${DEPLOY_DIR}" init -input=false
 terraform -chdir="${DEPLOY_DIR}" apply -input=false -auto-approve -var-file="${tfvars_file}" "$@"
@@ -166,3 +197,53 @@ terraform -chdir="${DEPLOY_DIR}" apply -input=false -auto-approve -var-file="${t
 # Clean up Cloud Build source cache
 echo "Cleaning up Cloud Build source cache..."
 gsutil -m rm -r "gs://${PROJECT_ID}_cloudbuild/source/**" 2>/dev/null || true
+
+# Clean up old container images in Artifact Registry (keep last 3 timestamped images per service)
+echo "Cleaning up old container images in Artifact Registry..."
+cleanup_old_images() {
+  local image_base="$1"
+  
+  # List all tags for this image, sorted by creation time (oldest first)
+  local all_tags=$(gcloud artifacts docker tags list "${image_base}" \
+    --format="get(tag)" \
+    --sort-by="CREATE_TIME" 2>/dev/null || echo "")
+  
+  if [[ -z "${all_tags}" ]]; then
+    echo "No images found for ${image_base}"
+    return 0
+  fi
+  
+  # Filter to only timestamped tags (format: YYYYMMDD-HHMMSS), skip 'latest' and 'buildcache'
+  local timestamped_tags=$(echo "${all_tags}" | grep -E '^[0-9]{8}-[0-9]{6}$' || true)
+  
+  if [[ -z "${timestamped_tags}" ]] || [[ $(echo "${timestamped_tags}" | wc -w) -eq 0 ]]; then
+    echo "No timestamped images to clean up for ${image_base}"
+    return 0
+  fi
+  
+  # Keep the 3 most recent, delete the rest
+  local total_count=$(echo "${timestamped_tags}" | wc -w)
+  local tags_to_delete=""
+  
+  if [[ ${total_count} -gt 3 ]]; then
+    # Delete oldest images (keeping the 3 most recent)
+    local keep_count=3
+    tags_to_delete=$(echo "${timestamped_tags}" | head -n -${keep_count})
+  fi
+  
+  if [[ -n "${tags_to_delete}" ]]; then
+    echo "Deleting old images from ${image_base}..."
+    for tag in ${tags_to_delete}; do
+      echo "  Deleting ${image_base}:${tag}"
+      gcloud artifacts docker images delete "${image_base}:${tag}" --quiet --project="${PROJECT_ID}" 2>/dev/null || true
+    done
+  else
+    echo "No old images to delete for ${image_base} (keeping last 3)"
+  fi
+}
+
+# Clean up web and receipt-parser images
+cleanup_old_images "${web_image_base}"
+cleanup_old_images "${receipt_image_base}"
+
+echo "Artifact cleanup complete"

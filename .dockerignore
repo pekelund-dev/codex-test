@@ -1,0 +1,39 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+AGENTS.md
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test and build artifacts (will be rebuilt in container)
+target/
+*/target/
+.mvn/wrapper/maven-wrapper.jar
+
+# CI/CD
+.github/
+
+# Infrastructure and deployment scripts (not needed in build)
+infra/
+scripts/terraform/
+scripts/legacy/
+
+# Local environment files
+*.env
+.env*
+setup-env.sh
+
+# Temporary files
+tmp/
+*.tmp
+*.log
