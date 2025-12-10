@@ -22,10 +22,11 @@ target/
 
 # CI/CD
 .github/
-scripts/
 
-# Infrastructure
+# Infrastructure and deployment scripts (not needed in build)
 infra/
+scripts/terraform/
+scripts/legacy/
 
 # Local environment files
 *.env

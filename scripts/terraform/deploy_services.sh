@@ -174,14 +174,15 @@ RECEIPT_BUILD_PID=$!
 echo "Waiting for parallel builds to complete..."
 wait $WEB_BUILD_PID
 WEB_BUILD_EXIT=$?
-wait $RECEIPT_BUILD_PID
-RECEIPT_BUILD_EXIT=$?
-
 if [ $WEB_BUILD_EXIT -ne 0 ]; then
   echo "Web image build failed with exit code $WEB_BUILD_EXIT" >&2
+  # Kill the other build if still running
+  kill $RECEIPT_BUILD_PID 2>/dev/null || true
   exit 1
 fi
 
+wait $RECEIPT_BUILD_PID
+RECEIPT_BUILD_EXIT=$?
 if [ $RECEIPT_BUILD_EXIT -ne 0 ]; then
   echo "Receipt processor image build failed with exit code $RECEIPT_BUILD_EXIT" >&2
   exit 1

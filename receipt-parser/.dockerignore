@@ -1,34 +1,30 @@
 # Git files
-../.git
 .git
 .gitignore
 
 # Documentation
-../*.md
-../docs/
 *.md
 
 # IDE files
-../.vscode/
-../.idea/
+.vscode/
+.idea/
 
 # Web module (not needed for receipt-parser)
-../web/
+web/
 
-# Infrastructure
-../infra/
-
-# Scripts
-../scripts/
+# Infrastructure and non-build scripts
+infra/
+scripts/terraform/
+scripts/legacy/
 
 # Build artifacts (will be rebuilt)
 target/
-../core/target/
-../receipt-parser/target/
+core/target/
+receipt-parser/target/
 
 # Local environment
-../*.env
-../setup-env.sh
+*.env
+setup-env.sh
 
 # Temporary files
 *.log
