@@ -1,16 +1,21 @@
 steps:
-  # Build the receipt-parser Docker image with Kaniko for better caching
-  - name: 'gcr.io/kaniko-project/executor:latest'
+  # Build the receipt-parser Docker image with Docker BuildKit for better caching
+  - name: 'gcr.io/cloud-builders/docker'
     args:
-      - '--dockerfile=${_DOCKERFILE}'
-      - '--context=dir:///workspace'
-      - '--destination=${_IMAGE_URI}'
-      - '--cache=true'
-      - '--cache-ttl=168h'
+      - 'buildx'
+      - 'build'
+      - '--platform=linux/amd64'
+      - '--file=${_DOCKERFILE}'
+      - '--tag=${_IMAGE_URI}'
+      - '--cache-from=${_IMAGE_URI}'
+      - '--cache-to=type=registry,mode=max,ref=${_IMAGE_URI}-buildcache'
+      - '--cache-from=type=registry,ref=${_IMAGE_URI}-buildcache'
+      - '--build-arg=BUILDKIT_INLINE_CACHE=1'
+      - '--push'
+      - '.'
+    env:
+      - 'DOCKER_BUILDKIT=1'
     timeout: 1200s
-
-images:
-  - '${_IMAGE_URI}'
 
 options:
   logging: CLOUD_LOGGING_ONLY

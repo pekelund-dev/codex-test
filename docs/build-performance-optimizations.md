@@ -16,16 +16,19 @@ The following optimizations were implemented to significantly reduce build and d
 
 **Impact**: ~50-70% reduction in Maven dependency download time on subsequent builds
 
-### 2. Kaniko Builder with Remote Caching
+### 2. Docker BuildKit with Registry Caching
 
-**Problem**: The standard Docker builder in Cloud Build doesn't support advanced caching features efficiently.
+**Problem**: The standard Docker builder in Cloud Build didn't support advanced caching features efficiently. Kaniko was considered but is now archived/deprecated.
 
 **Solution**:
-- Migrated from `gcr.io/cloud-builders/docker` to `gcr.io/kaniko-project/executor:latest` in both cloudbuild.yaml files
-- Enabled remote caching with `--cache=true` and `--cache-ttl=168h`
-- Kaniko automatically caches layers in the Artifact Registry, making subsequent builds much faster
+- Uses the maintained `gcr.io/cloud-builders/docker` with BuildKit enabled via `DOCKER_BUILDKIT=1`
+- Configured registry-based caching with `--cache-from` and `--cache-to` arguments
+- BuildKit caches layers in Artifact Registry for fast subsequent builds
+- BuildKit is actively maintained by Docker/Moby and is the recommended solution for modern container builds
 
 **Impact**: ~40-60% reduction in image build time for unchanged layers
+
+**Why BuildKit over Kaniko**: Kaniko was archived by Google in June 2025 and is no longer maintained. BuildKit is the actively maintained, officially recommended replacement with superior performance (up to 3x faster), better multi-architecture support, and more advanced features.
 
 ### 3. Parallel Image Builds
 

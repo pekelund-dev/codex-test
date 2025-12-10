@@ -160,7 +160,7 @@ PROJECT_ID=your-project ./scripts/terraform/deploy_services.sh
 
 The deployment process has been optimized for speed with:
 - Parallel image builds reducing total build time by ~50%
-- Docker layer caching and Kaniko reducing rebuild time by ~60-80%
+- Docker BuildKit with registry caching reducing rebuild time by ~60-80%
 - Smaller build contexts reducing upload time by ~60-80%
 - Higher CPU Cloud Build machines reducing compilation time by ~30-40%
 
