@@ -297,6 +297,10 @@ To enable Google sign-in, create OAuth credentials in the Google Cloud Console a
 - `web` – Spring MVC application with security, Firestore integration, templates, and static assets.
 - `receipt-parser` – Cloud Run receipt processor that extracts receipts with Gemini and persists the output.
 
+## Versioning
+
+The application uses semantic versioning for Maven artifacts, git-based versioning for runtime metadata, and timestamp-based tagging for container images. See [docs/versioning.md](docs/versioning.md) for details on the versioning strategy and how to manage releases.
+
 ## License
 
 This project is provided as a starter template and may be adapted to suit your needs.
