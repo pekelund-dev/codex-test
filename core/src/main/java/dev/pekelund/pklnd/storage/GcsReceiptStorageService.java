@@ -5,7 +5,6 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageException;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -224,7 +223,7 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
         return filename.substring(0, safeLength) + "…";
     }
 
-    private String calculateSha256Hash(byte[] content) {
+    String calculateSha256Hash(byte[] content) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hashBytes = digest.digest(content);
@@ -247,13 +246,7 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
     }
 
     private byte[] readAllBytes(InputStream inputStream) throws IOException {
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        byte[] chunk = new byte[8192];
-        int bytesRead;
-        while ((bytesRead = inputStream.read(chunk)) != -1) {
-            buffer.write(chunk, 0, bytesRead);
-        }
-        return buffer.toByteArray();
+        return inputStream.readAllBytes();
     }
 
     private ReceiptFile findReceiptByContentHash(String contentHash, ReceiptOwner owner) {
@@ -262,6 +255,9 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
         }
 
         try {
+            // Note: This iterates through all blobs in the bucket, which could become slow
+            // with many receipts. For production use with large volumes, consider using
+            // a more efficient lookup mechanism like indexing hashes in a database.
             Iterable<Blob> blobs = storage.list(properties.getBucket()).iterateAll();
             for (Blob blob : blobs) {
                 if (blob.isDirectory()) {

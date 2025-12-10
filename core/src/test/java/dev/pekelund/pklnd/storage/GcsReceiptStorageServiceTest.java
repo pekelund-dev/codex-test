@@ -142,24 +142,11 @@ class GcsReceiptStorageServiceTest {
         BlobInfo capturedBlobInfo = blobInfoCaptor.getValue();
         assertThat(capturedBlobInfo.getMetadata())
             .containsKey("content-sha256")
-            .containsEntry("content-sha256", calculateExpectedHash(fileContent));
+            .containsEntry("content-sha256", service.calculateSha256Hash(fileContent));
     }
 
     private String calculateExpectedHash(byte[] content) {
-        try {
-            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(content);
-            StringBuilder hexString = new StringBuilder(2 * hashBytes.length);
-            for (byte b : hashBytes) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (java.security.NoSuchAlgorithmException ex) {
-            throw new RuntimeException(ex);
-        }
+        // Use the production method via the service instance
+        return service.calculateSha256Hash(content);
     }
 }
