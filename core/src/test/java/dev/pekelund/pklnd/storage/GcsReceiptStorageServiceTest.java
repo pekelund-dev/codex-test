@@ -3,7 +3,6 @@ package dev.pekelund.pklnd.storage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -12,9 +11,9 @@ import static org.mockito.Mockito.when;
 
 import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -53,14 +52,17 @@ class GcsReceiptStorageServiceTest {
             fileContent
         );
 
+        // Calculate the correct hash for the test content
+        ReceiptOwner owner = new ReceiptOwner("user-123", "Test User", "test@example.com");
+        String contentHash = calculateExpectedHash(fileContent);
+        String hashPrefix = contentHash.substring(0, 4);
+        
         // Mock existing index blob with same content hash and owner
         Blob indexBlob = mock(Blob.class);
         when(indexBlob.isDirectory()).thenReturn(false);
-        when(indexBlob.getName()).thenReturn(".receipt-hashes/5d41/5d41402abc4b2a76b9719d911017c592");
+        when(indexBlob.getName()).thenReturn(".receipt-hashes/" + hashPrefix + "/" + contentHash);
         
         // Set the content hash metadata and owner metadata
-        ReceiptOwner owner = new ReceiptOwner("user-123", "Test User", "test@example.com");
-        String contentHash = calculateExpectedHash(fileContent);
         Map<String, String> indexMetadata = new HashMap<>();
         indexMetadata.put("content-sha256", contentHash);
         indexMetadata.put("receipt-object-name", "existing-receipt.pdf");
@@ -150,6 +152,105 @@ class GcsReceiptStorageServiceTest {
         assertThat(receiptBlobInfo.getMetadata())
             .containsKey("content-sha256")
             .containsEntry("content-sha256", service.calculateSha256Hash(fileContent));
+    }
+
+    @Test
+    void allowsDifferentOwnersToUploadSameReceipt() throws IOException {
+        // Create a file with specific content
+        byte[] fileContent = "Same receipt content".getBytes();
+        String contentHash = calculateExpectedHash(fileContent);
+        String hashPrefix = contentHash.substring(0, 4);
+        
+        // First owner uploads the receipt
+        ReceiptOwner owner1 = new ReceiptOwner("user-1", "User One", "user1@example.com");
+        
+        // Mock existing index blob for owner1
+        Blob indexBlob1 = mock(Blob.class);
+        when(indexBlob1.isDirectory()).thenReturn(false);
+        when(indexBlob1.getName()).thenReturn(".receipt-hashes/" + hashPrefix + "/" + contentHash);
+        Map<String, String> metadata1 = new HashMap<>();
+        metadata1.put("content-sha256", contentHash);
+        metadata1.put("receipt-object-name", "owner1-receipt.pdf");
+        metadata1.putAll(owner1.toMetadata());
+        when(indexBlob1.getMetadata()).thenReturn(metadata1);
+        
+        @SuppressWarnings("unchecked")
+        Page<Blob> indexPage = mock(Page.class);
+        when(indexPage.iterateAll()).thenReturn(List.of(indexBlob1));
+        when(storage.list(eq("test-bucket"), any(Storage.BlobListOption.class))).thenReturn(indexPage);
+        when(storage.create(any(BlobInfo.class), any(byte[].class))).thenReturn(mock(Blob.class));
+        
+        // Second owner tries to upload - should succeed because different owner
+        ReceiptOwner owner2 = new ReceiptOwner("user-2", "User Two", "user2@example.com");
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "receipt.pdf",
+            "application/pdf",
+            fileContent
+        );
+        
+        List<StoredReceiptReference> result = service.uploadFiles(List.of(file), owner2);
+        
+        assertThat(result).hasSize(1);
+        // Verify upload was allowed for different owner
+        verify(storage, org.mockito.Mockito.times(2)).create(any(BlobInfo.class), any(byte[].class));
+    }
+
+    @Test
+    void deletesHashIndexWhenDeletingReceipt() throws IOException {
+        ReceiptOwner owner = new ReceiptOwner("user-123", "Test User", "test@example.com");
+        String contentHash = "a".repeat(64); // Valid 64-char hex hash
+        
+        // Mock receipt blob with hash metadata
+        Blob receiptBlob = mock(Blob.class);
+        when(receiptBlob.isDirectory()).thenReturn(false);
+        when(receiptBlob.getName()).thenReturn("receipt-file.pdf");
+        Map<String, String> receiptMetadata = new HashMap<>();
+        receiptMetadata.put("content-sha256", contentHash);
+        receiptMetadata.putAll(owner.toMetadata());
+        when(receiptBlob.getMetadata()).thenReturn(receiptMetadata);
+        when(receiptBlob.getBlobId()).thenReturn(BlobId.of("test-bucket", "receipt-file.pdf"));
+        
+        @SuppressWarnings("unchecked")
+        Page<Blob> page = mock(Page.class);
+        when(page.iterateAll()).thenReturn(List.of(receiptBlob));
+        when(storage.list("test-bucket")).thenReturn(page);
+        
+        service.deleteReceiptsForOwner(owner);
+        
+        // Verify receipt was deleted
+        verify(storage).delete(receiptBlob.getBlobId());
+        // Verify hash index was also deleted
+        verify(storage).delete(BlobId.of("test-bucket", ".receipt-hashes/aaaa/" + contentHash));
+    }
+
+    @Test
+    void filtersHashIndexFromReceiptList() {
+        // Mock receipt blob
+        Blob receiptBlob = mock(Blob.class);
+        when(receiptBlob.isDirectory()).thenReturn(false);
+        when(receiptBlob.getName()).thenReturn("receipt-file.pdf");
+        when(receiptBlob.getSize()).thenReturn(1000L);
+        when(receiptBlob.getContentType()).thenReturn("application/pdf");
+        when(receiptBlob.getUpdateTimeOffsetDateTime())
+            .thenReturn(OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC));
+        when(receiptBlob.getMetadata()).thenReturn(Map.of());
+        
+        // Mock hash index blob (should be filtered out)
+        Blob hashIndexBlob = mock(Blob.class);
+        when(hashIndexBlob.isDirectory()).thenReturn(false);
+        when(hashIndexBlob.getName()).thenReturn(".receipt-hashes/abcd/abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890");
+        
+        @SuppressWarnings("unchecked")
+        Page<Blob> page = mock(Page.class);
+        when(page.iterateAll()).thenReturn(List.of(receiptBlob, hashIndexBlob));
+        when(storage.list("test-bucket")).thenReturn(page);
+        
+        List<ReceiptFile> result = service.listReceipts();
+        
+        // Should only include the receipt, not the hash index
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).name()).isEqualTo("receipt-file.pdf");
     }
 
     private String calculateExpectedHash(byte[] content) {

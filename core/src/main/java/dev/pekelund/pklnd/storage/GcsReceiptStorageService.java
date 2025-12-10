@@ -68,6 +68,10 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
                 if (blob.isDirectory()) {
                     continue;
                 }
+                // Skip hash index entries - these are internal implementation details
+                if (blob.getName().startsWith(HASH_INDEX_PREFIX)) {
+                    continue;
+                }
                 ReceiptOwner owner = ReceiptOwner.fromMetadata(blob.getMetadata());
                 OffsetDateTime updateTime = blob.getUpdateTimeOffsetDateTime();
                 Instant updated = updateTime != null ? updateTime.toInstant() : null;
@@ -107,7 +111,7 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
             // Read file content once for both hash calculation and upload
             byte[] fileContent;
             try (InputStream inputStream = file.getInputStream()) {
-                fileContent = readAllBytes(inputStream);
+                fileContent = inputStream.readAllBytes();
             } catch (IOException ex) {
                 String displayName = StringUtils.hasText(originalFilename) ? originalFilename : "file";
                 throw new ReceiptStorageException("Failed to read file '%s'".formatted(displayName), ex);
@@ -190,8 +194,8 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
             }
             
             String contentHash = metadata.get(CONTENT_HASH_METADATA_KEY);
-            // SHA-256 produces 64-character hex string; validate proper length
-            if (!StringUtils.hasText(contentHash) || contentHash.length() != 64) {
+            // SHA-256 produces 64-character hex string; validate proper length and format
+            if (!isValidSha256Hash(contentHash)) {
                 LOGGER.debug("Skipping hash index cleanup for {}: invalid or missing hash", receiptBlob.getName());
                 return;
             }
@@ -286,8 +290,18 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
         return hexString.toString();
     }
 
-    private byte[] readAllBytes(InputStream inputStream) throws IOException {
-        return inputStream.readAllBytes();
+    private boolean isValidSha256Hash(String hash) {
+        if (hash == null || hash.length() != 64) {
+            return false;
+        }
+        // Validate that hash contains only hexadecimal characters [0-9a-f]
+        for (int i = 0; i < hash.length(); i++) {
+            char c = hash.charAt(i);
+            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private ReceiptFile findReceiptByContentHash(String contentHash, ReceiptOwner owner) {
@@ -295,9 +309,9 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
             return null;
         }
 
-        // SHA-256 produces 64-character hex string; validate proper length
-        if (contentHash.length() != 64) {
-            LOGGER.warn("Invalid hash length for duplicate check: expected 64, got {}", contentHash.length());
+        // SHA-256 produces 64-character hex string; validate proper length and format
+        if (!isValidSha256Hash(contentHash)) {
+            LOGGER.warn("Invalid hash format for duplicate check: {}", contentHash);
             return null;
         }
 
@@ -351,10 +365,9 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
     }
     
     private void createHashIndexEntry(String contentHash, String objectName, ReceiptOwner owner) {
-        // SHA-256 produces 64-character hex string; validate proper length
-        if (!StringUtils.hasText(contentHash) || contentHash.length() != 64) {
-            LOGGER.warn("Cannot create hash index for {}: invalid hash length", objectName);
-            return;
+        // SHA-256 produces 64-character hex string; validate proper length and format
+        if (!isValidSha256Hash(contentHash)) {
+            throw new ReceiptStorageException("Cannot create hash index for " + objectName + ": invalid hash format");
         }
         
         try {
@@ -377,9 +390,9 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
             // Create empty index entry (just metadata)
             storage.create(indexBlob, new byte[0]);
         } catch (StorageException ex) {
-            // Log but don't fail upload if index creation fails
-            // The receipt is still uploaded successfully
-            LOGGER.warn("Failed to create hash index entry for {}: {}", objectName, ex.getMessage());
+            // Fail upload if index creation fails to prevent data inconsistency
+            // Without the index, this receipt won't be detected as a duplicate in future uploads
+            throw new ReceiptStorageException("Failed to create hash index entry for " + objectName, ex);
         }
     }
 }
