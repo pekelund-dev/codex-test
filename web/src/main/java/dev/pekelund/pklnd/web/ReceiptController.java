@@ -8,6 +8,7 @@ import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.receipts.ReceiptProcessingClient;
 import dev.pekelund.pklnd.receipts.ReceiptProcessingClient.ProcessingFailure;
 import dev.pekelund.pklnd.receipts.ReceiptProcessingClient.ProcessingResult;
+import dev.pekelund.pklnd.storage.DuplicateReceiptException;
 import dev.pekelund.pklnd.storage.ReceiptFile;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
@@ -1685,6 +1686,9 @@ public class ReceiptController {
             }
 
             return new UploadOutcome(successMessage, errorMessage);
+        } catch (DuplicateReceiptException ex) {
+            LOGGER.info("Duplicate receipt upload attempt: {}", ex.getMessage());
+            return new UploadOutcome(null, ex.getMessage());
         } catch (ReceiptStorageException ex) {
             LOGGER.error("Failed to upload receipts", ex);
             return new UploadOutcome(null, ex.getMessage());

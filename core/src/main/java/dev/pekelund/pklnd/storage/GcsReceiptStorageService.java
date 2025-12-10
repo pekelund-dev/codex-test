@@ -5,17 +5,21 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageException;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -34,6 +38,7 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
     private static final DateTimeFormatter OBJECT_PREFIX =
         DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS", Locale.US).withZone(ZoneOffset.UTC);
     private static final int MAX_OBJECT_FILENAME_LENGTH = 60;
+    private static final String CONTENT_HASH_METADATA_KEY = "content-sha256";
 
     private final Storage storage;
     private final GcsProperties properties;
@@ -94,19 +99,43 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
             }
 
             String originalFilename = file.getOriginalFilename();
-            String objectName = buildObjectName(originalFilename);
-            BlobInfo.Builder blobInfoBuilder = BlobInfo.newBuilder(BlobId.of(properties.getBucket(), objectName))
-                .setContentType(file.getContentType());
-            Map<String, String> metadata = owner != null && owner.hasValues() ? owner.toMetadata() : Map.of();
-            if (!metadata.isEmpty()) {
-                blobInfoBuilder.setMetadata(metadata);
-            }
-            BlobInfo blobInfo = blobInfoBuilder.build();
-
+            
+            // Read file content once for both hash calculation and upload
+            byte[] fileContent;
             try (InputStream inputStream = file.getInputStream()) {
-                storage.createFrom(blobInfo, inputStream);
+                fileContent = readAllBytes(inputStream);
+            } catch (IOException ex) {
+                String displayName = StringUtils.hasText(originalFilename) ? originalFilename : "file";
+                throw new ReceiptStorageException("Failed to read file '%s'".formatted(displayName), ex);
+            }
+            
+            // Calculate content hash
+            String contentHash = calculateSha256Hash(fileContent);
+            
+            // Check for duplicates
+            ReceiptFile existingReceipt = findReceiptByContentHash(contentHash, owner);
+            if (existingReceipt != null) {
+                String displayName = StringUtils.hasText(originalFilename) ? originalFilename : "file";
+                throw new DuplicateReceiptException(
+                    "Kvittot '%s' har redan laddats upp tidigare.".formatted(displayName),
+                    existingReceipt.name(),
+                    contentHash
+                );
+            }
+
+            String objectName = buildObjectName(originalFilename);
+            Map<String, String> metadata = new HashMap<>(owner != null && owner.hasValues() ? owner.toMetadata() : Map.of());
+            metadata.put(CONTENT_HASH_METADATA_KEY, contentHash);
+            
+            BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(properties.getBucket(), objectName))
+                .setContentType(file.getContentType())
+                .setMetadata(metadata)
+                .build();
+
+            try {
+                storage.create(blobInfo, fileContent);
                 uploaded.add(new StoredReceiptReference(properties.getBucket(), objectName, owner));
-            } catch (IOException | StorageException ex) {
+            } catch (StorageException ex) {
                 String displayName = StringUtils.hasText(originalFilename) ? originalFilename : objectName;
                 throw new ReceiptStorageException("Failed to upload file '%s'".formatted(displayName), ex);
             }
@@ -193,6 +222,77 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
 
         int safeLength = Math.max(1, maxLength - 1);
         return filename.substring(0, safeLength) + "…";
+    }
+
+    private String calculateSha256Hash(byte[] content) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(content);
+            return bytesToHex(hashBytes);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new ReceiptStorageException("SHA-256 algorithm not available", ex);
+        }
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder hexString = new StringBuilder(2 * bytes.length);
+        for (byte b : bytes) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
+        }
+        return hexString.toString();
+    }
+
+    private byte[] readAllBytes(InputStream inputStream) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] chunk = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = inputStream.read(chunk)) != -1) {
+            buffer.write(chunk, 0, bytesRead);
+        }
+        return buffer.toByteArray();
+    }
+
+    private ReceiptFile findReceiptByContentHash(String contentHash, ReceiptOwner owner) {
+        if (!StringUtils.hasText(contentHash)) {
+            return null;
+        }
+
+        try {
+            Iterable<Blob> blobs = storage.list(properties.getBucket()).iterateAll();
+            for (Blob blob : blobs) {
+                if (blob.isDirectory()) {
+                    continue;
+                }
+                
+                Map<String, String> metadata = blob.getMetadata();
+                if (metadata == null) {
+                    continue;
+                }
+                
+                String blobHash = metadata.get(CONTENT_HASH_METADATA_KEY);
+                if (!contentHash.equals(blobHash)) {
+                    continue;
+                }
+                
+                // Check if this blob belongs to the same owner (or any owner if owner is null)
+                ReceiptOwner blobOwner = ReceiptOwner.fromMetadata(metadata);
+                if (owner != null && !ReceiptOwnerMatcher.belongsToCurrentOwner(blobOwner, owner)) {
+                    continue;
+                }
+                
+                // Found a duplicate
+                OffsetDateTime updateTime = blob.getUpdateTimeOffsetDateTime();
+                Instant updated = updateTime != null ? updateTime.toInstant() : null;
+                return new ReceiptFile(blob.getName(), blob.getSize(), updated, blob.getContentType(), blobOwner);
+            }
+            return null;
+        } catch (StorageException ex) {
+            throw new ReceiptStorageException("Unable to check for duplicate receipts", ex);
+        }
     }
 }
 
