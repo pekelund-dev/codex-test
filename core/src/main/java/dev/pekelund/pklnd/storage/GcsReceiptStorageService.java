@@ -190,7 +190,9 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
             }
             
             String contentHash = metadata.get(CONTENT_HASH_METADATA_KEY);
-            if (!StringUtils.hasText(contentHash) || contentHash.length() < HASH_PREFIX_LENGTH) {
+            // SHA-256 produces 64-character hex string; validate proper length
+            if (!StringUtils.hasText(contentHash) || contentHash.length() != 64) {
+                LOGGER.debug("Skipping hash index cleanup for {}: invalid or missing hash", receiptBlob.getName());
                 return;
             }
             
@@ -293,6 +295,12 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
             return null;
         }
 
+        // SHA-256 produces 64-character hex string; validate proper length
+        if (contentHash.length() != 64) {
+            LOGGER.warn("Invalid hash length for duplicate check: expected 64, got {}", contentHash.length());
+            return null;
+        }
+
         try {
             // Use hash prefix-based lookup for efficient querying
             // Only scan blobs under the specific hash prefix instead of entire bucket
@@ -343,6 +351,12 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
     }
     
     private void createHashIndexEntry(String contentHash, String objectName, ReceiptOwner owner) {
+        // SHA-256 produces 64-character hex string; validate proper length
+        if (!StringUtils.hasText(contentHash) || contentHash.length() != 64) {
+            LOGGER.warn("Cannot create hash index for {}: invalid hash length", objectName);
+            return;
+        }
+        
         try {
             // Create a small index blob under hash-prefixed path for fast lookup
             String hashPrefix = contentHash.substring(0, HASH_PREFIX_LENGTH);
