@@ -143,9 +143,12 @@ RUN if [ -n "${GIT_BRANCH}${GIT_COMMIT}" ]; then \
         echo "git.build.version=${PROJECT_VERSION}"; \
       } > receipt-parser/src/main/resources/git.properties; \
     fi
+
+# Build with git-commit-id-plugin disabled to use Docker-generated git.properties
+RUN mvn -B -pl receipt-parser -am -DskipTests -Dgit-commit-id-plugin.skip=true package
 ```
 
-**Note**: The path in this example is `receipt-parser/src/main/resources` for the receipt-parser module; the web module uses `web/src/main/resources` instead. When building locally with Maven (outside Docker), the git-commit-id plugin generates this file automatically with the same properties, so the Docker build argument approach is primarily for Cloud Build deployments.
+**Note**: The path in this example is `receipt-parser/src/main/resources` for the receipt-parser module; the web module uses `web/src/main/resources` instead. When building locally with Maven (outside Docker), the git-commit-id plugin generates this file automatically with the same properties. During Docker builds, the plugin is explicitly disabled via `-Dgit-commit-id-plugin.skip=true` to ensure the Docker-generated git.properties file is used instead of having the plugin attempt to generate one.
 
 ### Cloud Build Configuration
 
@@ -189,6 +192,22 @@ This approach allows:
 - Rollback to specific deployments using timestamp tags
 - Easy updates using the `latest` tag
 - Image retention policies based on timestamp patterns
+
+### Artifact Cleanup
+
+The deployment script (`scripts/terraform/deploy_services.sh`) automatically cleans up old container images to reduce storage costs:
+
+- Keeps the last 3 timestamped images for each service (web and receipt-parser)
+- Preserves the `latest` tag and buildcache
+- Deletes older images automatically after each deployment
+- Cleans up Cloud Build source cache
+
+This automatic cleanup ensures that artifact storage costs remain manageable while retaining recent deployment history for rollback purposes. The retention count (3 images) can be adjusted by modifying the cleanup logic in the deployment script.
+
+For manual cleanup or custom retention policies, use:
+```bash
+PROJECT_ID=your-project KEEP_IMAGES=5 ./scripts/terraform/cleanup_artifacts.sh
+```
 
 ## Benefits
 

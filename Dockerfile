@@ -38,9 +38,9 @@ RUN if [ -n "${GIT_BRANCH}${GIT_COMMIT}" ]; then \
       } > web/src/main/resources/git.properties; \
     fi
 
-# Build the application with Maven cache mount
+# Build the application with Maven cache mount, skipping git-commit-id-plugin
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -B -Pinclude-web -pl web -am -DskipTests package \
+    mvn -B -Pinclude-web -pl web -am -DskipTests -Dgit-commit-id-plugin.skip=true package \
     && JAR_PATH="$(find web/target -maxdepth 1 -type f -name '*-SNAPSHOT.jar' ! -name '*original*' | head -n 1)" \
     && cp "${JAR_PATH}" /workspace/app.jar
 
