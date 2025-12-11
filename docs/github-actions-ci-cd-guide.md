@@ -203,9 +203,25 @@ jobs:
 **Cost**: Free (within 2,000 minute limit)
 **Benefit**: Catch issues before merging, no cost impact on Cloud Build
 
-### Phase 2: Add GitHub Actions for Deployments (Optional)
+### Phase 2: Add GitHub Actions for Deployments
 
-If you want to migrate deployments to GitHub Actions, create `.github/workflows/deploy.yml`:
+A manually-triggered deployment workflow has been added at `.github/workflows/deploy-cloud-run.yml`. This workflow:
+- Triggers manually via GitHub UI (Actions → Deploy to Cloud Run → Run workflow)
+- Builds and pushes Docker images to Artifact Registry
+- Deploys to Cloud Run using Terraform
+- Supports environment selection (production/staging)
+- Provides deployment summary with service URLs
+- Automatically cleans up old container images
+
+**To use the deployment workflow:**
+1. Set up Workload Identity Federation (see Phase 3 below)
+2. Configure GitHub secrets (see required secrets below)
+3. Navigate to Actions → Deploy to Cloud Run → Run workflow
+4. Select environment and region, then click "Run workflow"
+
+**Alternative: Automatic deployments on push to main**
+
+If you prefer automatic deployments instead of manual triggers, you can create `.github/workflows/deploy-auto.yml`:
 
 ```yaml
 name: Deploy to Cloud Run
@@ -293,16 +309,28 @@ jobs:
 
 ### Phase 3: Set Up Workload Identity Federation
 
-For secure authentication without service account keys:
+For secure authentication without service account keys, set up Workload Identity Federation:
+
+#### Step 1: Get your GCP project number
 
 ```bash
-# Create Workload Identity Pool
+PROJECT_ID="your-project-id"
+PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
+echo "Project Number: ${PROJECT_NUMBER}"
+```
+
+#### Step 2: Create Workload Identity Pool
+
+```bash
 gcloud iam workload-identity-pools create "github-actions" \
   --project="${PROJECT_ID}" \
   --location="global" \
   --display-name="GitHub Actions Pool"
+```
 
-# Create Workload Identity Provider
+#### Step 3: Create Workload Identity Provider
+
+```bash
 gcloud iam workload-identity-pools providers create-oidc "github-provider" \
   --project="${PROJECT_ID}" \
   --location="global" \
@@ -310,18 +338,49 @@ gcloud iam workload-identity-pools providers create-oidc "github-provider" \
   --display-name="GitHub Provider" \
   --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
   --issuer-uri="https://token.actions.githubusercontent.com"
+```
 
-# Grant permissions to GitHub Actions
+#### Step 4: Grant permissions to GitHub Actions
+
+Replace `YOUR_GITHUB_ORG/YOUR_REPO` with your actual repository:
+
+```bash
+# Grant the cloud-run-runtime service account permission to be used by GitHub Actions
 gcloud iam service-accounts add-iam-policy-binding "cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
   --project="${PROJECT_ID}" \
   --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions/attribute.repository/pekelund-dev/codex-test"
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-actions/attribute.repository/pekelund-dev/codex-test"
+
+# Also grant permissions to push to Artifact Registry
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/artifactregistry.writer"
 ```
 
-Add to GitHub Secrets:
-- `GCP_PROJECT_ID`: Your GCP project ID
-- `WIF_PROVIDER`: Full workload identity provider name
-- `WIF_SERVICE_ACCOUNT`: Service account email
+#### Step 5: Get Workload Identity Provider name
+
+```bash
+gcloud iam workload-identity-pools providers describe "github-provider" \
+  --project="${PROJECT_ID}" \
+  --location="global" \
+  --workload-identity-pool="github-actions" \
+  --format="value(name)"
+```
+
+This will output something like: `projects/123456789/locations/global/workloadIdentityPools/github-actions/providers/github-provider`
+
+#### Step 6: Configure GitHub Secrets
+
+Go to your GitHub repository → Settings → Secrets and variables → Actions → New repository secret
+
+Add these secrets:
+- `GCP_PROJECT_ID`: Your GCP project ID (e.g., `my-project-123`)
+- `WIF_PROVIDER`: Full workload identity provider name from Step 5 (e.g., `projects/123456789/locations/global/workloadIdentityPools/github-actions/providers/github-provider`)
+- `WIF_SERVICE_ACCOUNT`: Service account email (e.g., `cloud-run-runtime@my-project-123.iam.gserviceaccount.com`)
+
+#### Step 7: Test the workflow
+
+Navigate to GitHub Actions → Deploy to Cloud Run → Run workflow to test the deployment.
 
 ## Migration Strategy
 
