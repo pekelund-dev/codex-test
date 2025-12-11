@@ -56,6 +56,8 @@ The script automatically:
 - Pulls `google_client_id`, `google_client_secret`, and `ai_studio_api_key` from the single Secret Manager secret
 - Applies the Cloud Run services and IAM bindings
 
+> **Note on IAM configuration**: When deploying via GitHub Actions or other CI/CD pipelines, the service account email variables may not be provided. In this case, the Terraform deployment will use the default compute service account for Cloud Run services, and IAM member bindings for inter-service invocation will be skipped. For production deployments using the local script above, dedicated service accounts are created by the infrastructure stack and properly configured.
+
 Terraform does not fully support Cloud Run v2 domain mappings. After `terraform apply` completes, create the mapping manually if you need a custom domain. The commands below pull the service name and region from Terraform outputs; set `CUSTOM_DOMAIN` to your own domain before running the command:
 
 ```bash
