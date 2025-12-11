@@ -155,6 +155,9 @@ The setup is already highly optimized and cost-effective. However, here are opti
 ### Q: Should we switch to local builds to save money?
 **A**: No. Local builds are slower, inconsistent across developers, and lack caching benefits. The $5/month cost is worth it.
 
+### Q: What about GitHub Actions instead of Cloud Build?
+**A**: GitHub Actions has a generous free tier (2,000-3,000 minutes/month) and could reduce costs to $0 for typical usage. However, builds are 60-100% slower. Recommended: Use GitHub Actions for PR validation (free) and keep Cloud Build for deployments (fast). See [GitHub Actions CI/CD Guide](github-actions-ci-cd-guide.md) for details.
+
 ## Need More Details?
 
 See the comprehensive [Cloud Build Cost Analysis](cloud-build-cost-analysis.md) document for:
@@ -163,6 +166,11 @@ See the comprehensive [Cloud Build Cost Analysis](cloud-build-cost-analysis.md) 
 - Alternative build strategy comparisons
 - Step-by-step optimization instructions
 - Long-term cost projections
+
+For GitHub Actions migration information, see:
+- [GitHub Actions CI/CD Guide](github-actions-ci-cd-guide.md) - Complete guide for GitHub Actions setup
+- Includes cost comparison, implementation guide, and workflow examples
+- Recommended hybrid approach: GitHub Actions for PRs, Cloud Build for deployments
 
 ## Cost Monitoring Tools
 

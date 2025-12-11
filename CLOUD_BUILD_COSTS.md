@@ -78,6 +78,7 @@ For detailed analysis and recommendations, see:
 - 📊 **[Cloud Build Cost Analysis](docs/cloud-build-cost-analysis.md)** - Comprehensive breakdown
 - 📋 **[Cost Summary](docs/cloud-build-cost-summary.md)** - Quick reference guide
 - 🚀 **[Build Performance Optimizations](docs/build-performance-optimizations.md)** - Technical details
+- 🔄 **[GitHub Actions CI/CD Guide](docs/github-actions-ci-cd-guide.md)** - Alternative to Cloud Build
 
 ## Quick Reference
 
