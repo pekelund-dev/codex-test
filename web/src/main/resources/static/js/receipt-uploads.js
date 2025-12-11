@@ -131,7 +131,7 @@
         if (!feedback) {
             return;
         }
-        feedback.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-info');
+        feedback.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-info', 'alert-warning');
         feedback.classList.add(`alert-${type}`);
         feedback.textContent = message;
     }
@@ -142,7 +142,7 @@
         }
         feedback.classList.add('d-none');
         feedback.textContent = '';
-        feedback.classList.remove('alert-success', 'alert-danger', 'alert-info');
+        feedback.classList.remove('alert-success', 'alert-danger', 'alert-info', 'alert-warning');
     }
 
     function refreshSelectedFiles() {
@@ -296,10 +296,23 @@
             const isSuccess = xhr.status >= 200 && xhr.status < 300;
             const payload = xhr.response;
             if (isSuccess) {
-                const message = payload && payload.successMessage
+                const successMsg = payload && payload.successMessage
                     ? payload.successMessage
                     : 'Files uploaded successfully.';
-                showFeedback(message, 'success');
+                const errorMsg = payload && payload.errorMessage
+                    ? payload.errorMessage
+                    : null;
+                
+                // Combine success and error messages if both exist
+                let combinedMessage = successMsg;
+                if (errorMsg) {
+                    combinedMessage = `${successMsg} ${errorMsg}`;
+                }
+                
+                // Show appropriate type: warning if there are errors, success otherwise
+                const feedbackType = errorMsg ? 'warning' : 'success';
+                showFeedback(combinedMessage, feedbackType);
+                
                 selectedFiles = [];
                 syncFileInput();
                 refreshSelectedFiles();
