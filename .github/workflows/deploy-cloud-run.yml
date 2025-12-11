@@ -26,35 +26,35 @@ jobs:
     name: Build and Deploy to Cloud Run
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    
+
     permissions:
       contents: read
       id-token: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
-      
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-      
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.14.1"
-      
+
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Generate build metadata
         id: meta
         run: |
@@ -64,7 +64,7 @@ jobs:
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "web_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:${TIMESTAMP}" >> $GITHUB_OUTPUT
           echo "receipt_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:${TIMESTAMP}" >> $GITHUB_OUTPUT
-      
+
       - name: Build and push web image
         uses: docker/build-push-action@v5
         with:
@@ -82,7 +82,7 @@ jobs:
           build-args: |
             GIT_BRANCH=${{ github.ref_name }}
             GIT_COMMIT=${{ github.sha }}
-      
+
       - name: Build and push receipt-parser image
         uses: docker/build-push-action@v5
         with:
@@ -100,29 +100,29 @@ jobs:
           build-args: |
             GIT_BRANCH=${{ github.ref_name }}
             GIT_COMMIT=${{ github.sha }}
-      
+
       - name: Get infrastructure outputs and secrets
         id: infra
         run: |
           # Initialize infrastructure Terraform to read outputs
           cd infra/terraform/infrastructure
           terraform init -input=false
-          
+
           # Read service account emails from infrastructure outputs
           WEB_SA=$(terraform output -raw web_service_account_email 2>/dev/null || echo "")
           RECEIPT_SA=$(terraform output -raw receipt_service_account_email 2>/dev/null || echo "")
           BUCKET_NAME=$(terraform output -raw bucket_name 2>/dev/null || echo "")
           APP_SECRET_NAME=$(terraform output -raw app_secret_name 2>/dev/null || echo "pklnd-app-config")
-          
+
           echo "web_sa=${WEB_SA}" >> $GITHUB_OUTPUT
           echo "receipt_sa=${RECEIPT_SA}" >> $GITHUB_OUTPUT
           echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
           echo "app_secret_name=${APP_SECRET_NAME}" >> $GITHUB_OUTPUT
-          
+
           # Retrieve OAuth credentials from Secret Manager
           if gcloud secrets describe "${APP_SECRET_NAME}" --project "${{ env.PROJECT_ID }}" >/dev/null 2>&1; then
             SECRET_JSON=$(gcloud secrets versions access latest --secret "${APP_SECRET_NAME}" --project "${{ env.PROJECT_ID }}")
-            
+
             # Parse JSON fields (using jq if available, otherwise sed)
             if command -v jq >/dev/null 2>&1; then
               GOOGLE_CLIENT_ID=$(echo "${SECRET_JSON}" | jq -r '.google_client_id // empty')
@@ -133,18 +133,18 @@ jobs:
               GOOGLE_CLIENT_SECRET=$(echo "${SECRET_JSON}" | sed -n 's/.*"google_client_secret"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
               AI_STUDIO_API_KEY=$(echo "${SECRET_JSON}" | sed -n 's/.*"ai_studio_api_key"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
             fi
-            
+
             # Mask sensitive values in logs
             echo "::add-mask::${GOOGLE_CLIENT_SECRET}"
             echo "::add-mask::${AI_STUDIO_API_KEY}"
-            
+
             echo "google_client_id=${GOOGLE_CLIENT_ID}" >> $GITHUB_OUTPUT
             echo "google_client_secret=${GOOGLE_CLIENT_SECRET}" >> $GITHUB_OUTPUT
             echo "ai_studio_api_key=${AI_STUDIO_API_KEY}" >> $GITHUB_OUTPUT
           else
             echo "Secret ${APP_SECRET_NAME} not found, skipping OAuth credentials"
           fi
-      
+
       - name: Deploy to Cloud Run using Terraform
         env:
           BRANCH_NAME: ${{ github.ref_name }}
@@ -153,7 +153,7 @@ jobs:
           # Set Terraform variables for deployment
           export TF_VAR_web_image="${{ steps.meta.outputs.web_image }}"
           export TF_VAR_receipt_image="${{ steps.meta.outputs.receipt_image }}"
-          
+
           # Run Terraform deployment
           cd infra/terraform/deployment
           terraform init -input=false
@@ -169,7 +169,7 @@ jobs:
             -var="google_client_id=${{ steps.infra.outputs.google_client_id }}" \
             -var="google_client_secret=${{ steps.infra.outputs.google_client_secret }}" \
             -var="ai_studio_api_key=${{ steps.infra.outputs.ai_studio_api_key }}"
-      
+
       - name: Get Cloud Run URLs
         id: urls
         run: |
@@ -177,7 +177,7 @@ jobs:
           RECEIPT_URL=$(gcloud run services describe pklnd-receipts --region=${{ env.REGION }} --format='value(status.url)' 2>/dev/null || echo "Not deployed")
           echo "web_url=${WEB_URL}" >> $GITHUB_OUTPUT
           echo "receipt_url=${RECEIPT_URL}" >> $GITHUB_OUTPUT
-      
+
       - name: Deployment Summary
         run: |
           echo "## Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
@@ -199,7 +199,7 @@ jobs:
           echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Timestamp:** ${{ steps.meta.outputs.timestamp }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Triggered by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-      
+
       - name: Cleanup old images
         if: always()
         continue-on-error: true
