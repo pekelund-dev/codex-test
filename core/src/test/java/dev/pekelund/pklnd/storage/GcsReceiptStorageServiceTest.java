@@ -253,6 +253,76 @@ class GcsReceiptStorageServiceTest {
         assertThat(result.get(0).name()).isEqualTo("receipt-file.pdf");
     }
 
+    @Test
+    void handlesBatchUploadWithDuplicates() throws IOException {
+        // Create three files: two unique, one duplicate
+        byte[] content1 = "First receipt content".getBytes();
+        byte[] content2 = "Second receipt content".getBytes();
+        byte[] content3 = content1; // Duplicate of first
+        
+        MockMultipartFile file1 = new MockMultipartFile("file1", "receipt1.pdf", "application/pdf", content1);
+        MockMultipartFile file2 = new MockMultipartFile("file2", "receipt2.pdf", "application/pdf", content2);
+        MockMultipartFile file3 = new MockMultipartFile("file3", "receipt3.pdf", "application/pdf", content3);
+        
+        // Mock empty index initially (no existing receipts)
+        @SuppressWarnings("unchecked")
+        Page<Blob> emptyPage = mock(Page.class);
+        when(emptyPage.iterateAll()).thenReturn(List.of());
+        
+        // Mock index lookup for first file (no match)
+        String hash1 = calculateExpectedHash(content1);
+        String hash2 = calculateExpectedHash(content2);
+        
+        // First call returns empty (no duplicate), second returns empty, third returns duplicate from first
+        Blob indexBlob1 = mock(Blob.class);
+        when(indexBlob1.isDirectory()).thenReturn(false);
+        when(indexBlob1.getName()).thenReturn(".receipt-hashes/" + hash1.substring(0, 4) + "/" + hash1);
+        
+        ReceiptOwner owner = new ReceiptOwner("user-123", "Test User", "test@example.com");
+        Map<String, String> metadata1 = new HashMap<>();
+        metadata1.put("content-sha256", hash1);
+        metadata1.put("receipt-object-name", "20250101-000000-000_receipt1.pdf");
+        metadata1.putAll(owner.toMetadata());
+        when(indexBlob1.getMetadata()).thenReturn(metadata1);
+        
+        Blob receiptBlob1 = mock(Blob.class);
+        when(receiptBlob1.getName()).thenReturn("20250101-000000-000_receipt1.pdf");
+        when(receiptBlob1.getSize()).thenReturn(100L);
+        when(receiptBlob1.getContentType()).thenReturn("application/pdf");
+        when(receiptBlob1.getUpdateTimeOffsetDateTime())
+            .thenReturn(OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC));
+        
+        @SuppressWarnings("unchecked")
+        Page<Blob> pageWithDuplicate = mock(Page.class);
+        when(pageWithDuplicate.iterateAll()).thenReturn(List.of(indexBlob1));
+        
+        // Set up mock to return empty for first two lookups, then return duplicate for third
+        when(storage.list(eq("test-bucket"), any(Storage.BlobListOption.class)))
+            .thenReturn(emptyPage)  // First file lookup - no duplicate
+            .thenReturn(emptyPage)  // Second file lookup - no duplicate
+            .thenReturn(pageWithDuplicate);  // Third file lookup - duplicate found
+        
+        when(storage.get("test-bucket", "20250101-000000-000_receipt1.pdf")).thenReturn(receiptBlob1);
+        when(storage.create(any(BlobInfo.class), any(byte[].class))).thenReturn(mock(Blob.class));
+        
+        // Upload all three files
+        UploadResult result = service.uploadFilesWithResults(List.of(file1, file2, file3), owner);
+        
+        // Should have 2 successes and 1 failure
+        assertThat(result.successCount()).isEqualTo(2);
+        assertThat(result.failureCount()).isEqualTo(1);
+        assertThat(result.uploadedReceipts()).hasSize(2);
+        assertThat(result.failures()).hasSize(1);
+        
+        // Check that the failure is marked as duplicate
+        UploadFailure failure = result.failures().get(0);
+        assertThat(failure.isDuplicate()).isTrue();
+        assertThat(failure.filename()).isEqualTo("receipt3.pdf");
+        
+        // Verify 4 creates: 2 receipts + 2 index entries (3rd was duplicate, no upload)
+        verify(storage, org.mockito.Mockito.times(4)).create(any(BlobInfo.class), any(byte[].class));
+    }
+
     private String calculateExpectedHash(byte[] content) {
         // Use the production method via the service instance
         return service.calculateSha256Hash(content);

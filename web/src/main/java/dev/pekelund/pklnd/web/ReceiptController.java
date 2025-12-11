@@ -1664,13 +1664,21 @@ public class ReceiptController {
         ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
 
         try {
-            List<StoredReceiptReference> uploadedReferences = storage.uploadFiles(sanitizedFiles, owner);
+            dev.pekelund.pklnd.storage.UploadResult uploadResult = storage.uploadFilesWithResults(sanitizedFiles, owner);
+            List<StoredReceiptReference> uploadedReferences = uploadResult.uploadedReceipts();
             int uploadedCount = uploadedReferences.size();
-            String successMessage = uploadedCount == 1
-                ? "1 fil laddades upp."
-                : "%d filer laddades upp.".formatted(uploadedCount);
+            
+            String successMessage = null;
             String errorMessage = null;
 
+            // Build success message
+            if (uploadedCount > 0) {
+                successMessage = uploadedCount == 1
+                    ? "1 fil laddades upp."
+                    : "%d filer laddades upp.".formatted(uploadedCount);
+            }
+
+            // Notify parser about successful uploads
             if (uploadedCount > 0 && receiptProcessingClient.isPresent()) {
                 ProcessingResult processingResult = receiptProcessingClient.get().notifyUploads(uploadedReferences);
                 if (processingResult.succeededCount() > 0) {
@@ -1680,19 +1688,62 @@ public class ReceiptController {
                         : "%d filer laddades upp och köades för tolkning.".formatted(queued);
                 }
                 if (!processingResult.failures().isEmpty()) {
-                    errorMessage = formatProcessingFailure(processingResult.failures());
+                    String parsingErrors = formatProcessingFailure(processingResult.failures());
+                    errorMessage = errorMessage != null ? errorMessage + " " + parsingErrors : parsingErrors;
                     LOGGER.warn("Failed to queue {} receipt(s) for parsing", processingResult.failures().size());
                 }
             }
 
+            // Add upload failure messages
+            if (uploadResult.hasFailures()) {
+                String uploadErrors = formatUploadFailures(uploadResult.failures());
+                errorMessage = errorMessage != null ? errorMessage + " " + uploadErrors : uploadErrors;
+            }
+
+            // If nothing succeeded, return only error
+            if (uploadedCount == 0 && uploadResult.hasFailures()) {
+                return new UploadOutcome(null, errorMessage);
+            }
+
             return new UploadOutcome(successMessage, errorMessage);
-        } catch (DuplicateReceiptException ex) {
-            LOGGER.info("Duplicate receipt upload attempt: {}", ex.getMessage());
-            return new UploadOutcome(null, ex.getMessage());
         } catch (ReceiptStorageException ex) {
             LOGGER.error("Failed to upload receipts", ex);
             return new UploadOutcome(null, ex.getMessage());
         }
+    }
+
+    private String formatUploadFailures(List<dev.pekelund.pklnd.storage.UploadFailure> failures) {
+        if (failures == null || failures.isEmpty()) {
+            return null;
+        }
+
+        long duplicateCount = failures.stream().filter(dev.pekelund.pklnd.storage.UploadFailure::isDuplicate).count();
+        long errorCount = failures.size() - duplicateCount;
+
+        StringBuilder message = new StringBuilder();
+        
+        if (duplicateCount > 0) {
+            if (duplicateCount == 1) {
+                String filename = failures.stream()
+                    .filter(dev.pekelund.pklnd.storage.UploadFailure::isDuplicate)
+                    .findFirst()
+                    .map(dev.pekelund.pklnd.storage.UploadFailure::filename)
+                    .orElse("okänd fil");
+                message.append("Kvittot '").append(filename).append("' har redan laddats upp tidigare.");
+            } else {
+                message.append(duplicateCount).append(" kvitton har redan laddats upp tidigare.");
+            }
+        }
+        
+        if (errorCount > 0) {
+            if (message.length() > 0) {
+                message.append(" ");
+            }
+            message.append(errorCount == 1 ? "1 fil" : errorCount + " filer")
+                .append(" kunde inte laddas upp på grund av ett fel.");
+        }
+
+        return message.toString();
     }
 
     private String formatProcessingFailure(List<ProcessingFailure> failures) {

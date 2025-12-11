@@ -99,48 +99,49 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
     }
 
     @Override
-    public List<StoredReceiptReference> uploadFiles(List<MultipartFile> files, ReceiptOwner owner) {
+    public UploadResult uploadFilesWithResults(List<MultipartFile> files, ReceiptOwner owner) {
         List<StoredReceiptReference> uploaded = new ArrayList<>();
+        List<UploadFailure> failures = new ArrayList<>();
+        
         for (MultipartFile file : files) {
             if (file == null || file.isEmpty()) {
                 continue;
             }
 
             String originalFilename = file.getOriginalFilename();
+            String displayName = StringUtils.hasText(originalFilename) ? originalFilename : "file";
             
-            // Read file content once for both hash calculation and upload
-            byte[] fileContent;
-            try (InputStream inputStream = file.getInputStream()) {
-                fileContent = inputStream.readAllBytes();
-            } catch (IOException ex) {
-                String displayName = StringUtils.hasText(originalFilename) ? originalFilename : "file";
-                throw new ReceiptStorageException("Failed to read file '%s'".formatted(displayName), ex);
-            }
-            
-            // Calculate content hash
-            String contentHash = calculateSha256Hash(fileContent);
-            
-            // Check for duplicates
-            ReceiptFile existingReceipt = findReceiptByContentHash(contentHash, owner);
-            if (existingReceipt != null) {
-                String displayName = StringUtils.hasText(originalFilename) ? originalFilename : "file";
-                throw new DuplicateReceiptException(
-                    "Kvittot '%s' har redan laddats upp tidigare.".formatted(displayName),
-                    existingReceipt.name(),
-                    contentHash
-                );
-            }
-
-            String objectName = buildObjectName(originalFilename);
-            Map<String, String> metadata = new HashMap<>(owner != null && owner.hasValues() ? owner.toMetadata() : Map.of());
-            metadata.put(CONTENT_HASH_METADATA_KEY, contentHash);
-            
-            BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(properties.getBucket(), objectName))
-                .setContentType(file.getContentType())
-                .setMetadata(metadata)
-                .build();
-
             try {
+                // Read file content once for both hash calculation and upload
+                byte[] fileContent;
+                try (InputStream inputStream = file.getInputStream()) {
+                    fileContent = inputStream.readAllBytes();
+                } catch (IOException ex) {
+                    failures.add(UploadFailure.error(displayName, "Failed to read file"));
+                    LOGGER.warn("Failed to read file {}: {}", displayName, ex.getMessage());
+                    continue;
+                }
+                
+                // Calculate content hash
+                String contentHash = calculateSha256Hash(fileContent);
+                
+                // Check for duplicates
+                ReceiptFile existingReceipt = findReceiptByContentHash(contentHash, owner);
+                if (existingReceipt != null) {
+                    failures.add(UploadFailure.duplicate(displayName, existingReceipt.name()));
+                    LOGGER.info("Duplicate receipt detected: {} (matches {})", displayName, existingReceipt.name());
+                    continue;
+                }
+
+                String objectName = buildObjectName(originalFilename);
+                Map<String, String> metadata = new HashMap<>(owner != null && owner.hasValues() ? owner.toMetadata() : Map.of());
+                metadata.put(CONTENT_HASH_METADATA_KEY, contentHash);
+                
+                BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(properties.getBucket(), objectName))
+                    .setContentType(file.getContentType())
+                    .setMetadata(metadata)
+                    .build();
+
                 storage.create(blobInfo, fileContent);
                 
                 // Create hash index entry for efficient duplicate detection
@@ -160,12 +161,36 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
                 
                 uploaded.add(new StoredReceiptReference(properties.getBucket(), objectName, owner));
             } catch (StorageException ex) {
-                String displayName = StringUtils.hasText(originalFilename) ? originalFilename : objectName;
-                throw new ReceiptStorageException("Failed to upload file '%s'".formatted(displayName), ex);
+                failures.add(UploadFailure.error(displayName, "Upload failed: " + ex.getMessage()));
+                LOGGER.error("Failed to upload file {}: {}", displayName, ex.getMessage());
+            } catch (ReceiptStorageException ex) {
+                failures.add(UploadFailure.error(displayName, ex.getMessage()));
+                LOGGER.error("Failed to upload file {}: {}", displayName, ex.getMessage());
             }
         }
 
-        return List.copyOf(uploaded);
+        return new UploadResult(uploaded, failures);
+    }
+
+    @Override
+    @Deprecated
+    public List<StoredReceiptReference> uploadFiles(List<MultipartFile> files, ReceiptOwner owner) {
+        // Delegate to new method and throw on any failure for backwards compatibility
+        UploadResult result = uploadFilesWithResults(files, owner);
+        if (result.hasFailures()) {
+            UploadFailure firstFailure = result.failures().get(0);
+            if (firstFailure.isDuplicate()) {
+                // Extract existing file name from the first duplicate failure
+                throw new DuplicateReceiptException(
+                    firstFailure.errorMessage(),
+                    "", // existing object name not available in new flow
+                    "" // hash not available
+                );
+            } else {
+                throw new ReceiptStorageException(firstFailure.errorMessage());
+            }
+        }
+        return result.uploadedReceipts();
     }
 
     @Override
