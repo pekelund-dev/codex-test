@@ -35,6 +35,12 @@ if [[ -z "${PROJECT_ID}" ]]; then
   exit 1
 fi
 
+# Validate DAYS parameter
+if [[ ! "${DAYS}" =~ ^[0-9]+$ ]] || [[ "${DAYS}" -le 0 ]]; then
+  echo "Error: DAYS must be a positive integer (got: ${DAYS})" >&2
+  exit 1
+fi
+
 # Pricing per build-minute by machine type (USD)
 declare -A MACHINE_PRICING=(
   ["N1_STANDARD_1"]=0.003
@@ -110,14 +116,22 @@ while IFS= read -r build; do
   fi
 done < <(echo "${BUILDS_JSON}" | jq -c '.[]')
 
-# Verify we have builds to calculate with
-if [[ ${BUILD_COUNT} -eq 0 ]] || [[ ${TOTAL_SECONDS} -eq 0 ]]; then
+# Verify we have valid build data to calculate with
+if [[ ${BUILD_COUNT} -eq 0 ]]; then
   echo ""
-  echo "No build data available to calculate costs."
+  echo "No builds found to calculate costs."
   echo "This might mean:"
-  echo "  - Builds didn't record timing information"
+  echo "  - No builds have been run in the specified time period"
   echo "  - All builds failed or were cancelled"
   echo "  - The time filter excluded all builds"
+  exit 0
+fi
+
+if [[ ${TOTAL_SECONDS} -eq 0 ]]; then
+  echo ""
+  echo "Build timing data is incomplete or missing."
+  echo "Found ${BUILD_COUNT} build(s) but no duration information."
+  echo "Cannot calculate costs without build duration."
   exit 0
 fi
 
