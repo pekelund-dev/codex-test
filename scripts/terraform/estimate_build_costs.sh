@@ -13,6 +13,19 @@
 
 set -euo pipefail
 
+# Check for required dependencies
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Error: jq is required but not installed." >&2
+  echo "Install with: apt-get install jq (Debian/Ubuntu) or brew install jq (macOS)" >&2
+  exit 1
+fi
+
+if ! command -v bc >/dev/null 2>&1; then
+  echo "Error: bc is required but not installed." >&2
+  echo "Install with: apt-get install bc (Debian/Ubuntu) or brew install bc (macOS)" >&2
+  exit 1
+fi
+
 PROJECT_ID=${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || true)}
 DAYS=${DAYS:-30}
 MACHINE_TYPE=${MACHINE_TYPE:-E2_HIGHCPU_8}
@@ -96,6 +109,17 @@ while IFS= read -r build; do
     TOTAL_SECONDS=$((TOTAL_SECONDS + duration))
   fi
 done < <(echo "${BUILDS_JSON}" | jq -c '.[]')
+
+# Verify we have builds to calculate with
+if [[ ${BUILD_COUNT} -eq 0 ]] || [[ ${TOTAL_SECONDS} -eq 0 ]]; then
+  echo ""
+  echo "No build data available to calculate costs."
+  echo "This might mean:"
+  echo "  - Builds didn't record timing information"
+  echo "  - All builds failed or were cancelled"
+  echo "  - The time filter excluded all builds"
+  exit 0
+fi
 
 # Calculate costs
 TOTAL_MINUTES=$((TOTAL_SECONDS / 60))
