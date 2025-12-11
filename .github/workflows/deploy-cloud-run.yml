@@ -1,0 +1,152 @@
+name: Deploy to Cloud Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      region:
+        description: 'GCP region'
+        required: false
+        default: 'us-east1'
+        type: string
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ inputs.region || 'us-east1' }}
+
+jobs:
+  deploy:
+    name: Build and Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Generate build metadata
+        id: meta
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "web_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "receipt_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:${TIMESTAMP}" >> $GITHUB_OUTPUT
+      
+      - name: Build and push web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.web_image }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:latest
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:${{ steps.meta.outputs.short_sha }}
+          cache-from: |
+            type=registry,ref=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:latest
+            type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            GIT_BRANCH=${{ github.ref_name }}
+            GIT_COMMIT=${{ github.sha }}
+      
+      - name: Build and push receipt-parser image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./receipt-parser/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.receipt_image }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:latest
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:${{ steps.meta.outputs.short_sha }}
+          cache-from: |
+            type=registry,ref=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:latest
+            type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            GIT_BRANCH=${{ github.ref_name }}
+            GIT_COMMIT=${{ github.sha }}
+      
+      - name: Deploy to Cloud Run using Terraform
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          # Set Terraform variables for deployment
+          export TF_VAR_web_image="${{ steps.meta.outputs.web_image }}"
+          export TF_VAR_receipt_image="${{ steps.meta.outputs.receipt_image }}"
+          
+          # Run Terraform deployment
+          cd infra/terraform/deployment
+          terraform init -input=false
+          terraform apply -input=false -auto-approve \
+            -var="project_id=${{ env.PROJECT_ID }}" \
+            -var="region=${{ env.REGION }}" \
+            -var="web_image=${{ steps.meta.outputs.web_image }}" \
+            -var="receipt_image=${{ steps.meta.outputs.receipt_image }}"
+      
+      - name: Get Cloud Run URLs
+        id: urls
+        run: |
+          WEB_URL=$(gcloud run services describe pklnd-web --region=${{ env.REGION }} --format='value(status.url)' 2>/dev/null || echo "Not deployed")
+          RECEIPT_URL=$(gcloud run services describe pklnd-receipts --region=${{ env.REGION }} --format='value(status.url)' 2>/dev/null || echo "Not deployed")
+          echo "web_url=${WEB_URL}" >> $GITHUB_OUTPUT
+          echo "receipt_url=${RECEIPT_URL}" >> $GITHUB_OUTPUT
+      
+      - name: Deployment Summary
+        run: |
+          echo "## Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** ${{ env.REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Project:** ${{ env.PROJECT_ID }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployed Services" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | URL | Image |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-----|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Web | ${{ steps.urls.outputs.web_url }} | \`${{ steps.meta.outputs.short_sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Receipt Parser | ${{ steps.urls.outputs.receipt_url }} | \`${{ steps.meta.outputs.short_sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Info" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp:** ${{ steps.meta.outputs.timestamp }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Cleanup old images
+        if: always()
+        continue-on-error: true
+        run: |
+          # Clean up old images (keep last 3 timestamped versions)
+          PROJECT_ID=${{ env.PROJECT_ID }} ./scripts/terraform/cleanup_artifacts.sh || true
