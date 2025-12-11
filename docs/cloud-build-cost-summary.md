@@ -190,7 +190,10 @@ The script will:
 To set up billing alerts in Google Cloud Console:
 
 ```bash
-# Via gcloud CLI (replace values as needed)
+# First, find your billing account ID
+gcloud billing accounts list
+
+# Then create the budget (replace YOUR_BILLING_ACCOUNT_ID with actual ID from above)
 gcloud billing budgets create \
   --billing-account=YOUR_BILLING_ACCOUNT_ID \
   --display-name="Cloud Build Monthly Budget" \

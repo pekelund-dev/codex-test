@@ -10,6 +10,18 @@
 # Usage:
 #   PROJECT_ID=your-project ./scripts/terraform/estimate_build_costs.sh
 #   PROJECT_ID=your-project DAYS=7 ./scripts/terraform/estimate_build_costs.sh
+#   PROJECT_ID=your-project MACHINE_TYPE=E2_HIGHCPU_4 ./scripts/terraform/estimate_build_costs.sh
+#
+# Requirements:
+# - gcloud CLI authenticated and configured
+# - jq (JSON processor)
+# - bc (calculator)
+#
+# Notes:
+# - Works best on Linux systems with GNU date
+# - BSD date (macOS) support included but may have edge cases with timezone parsing
+# - Estimates are based on successful builds only
+# - Actual costs may vary based on partial minutes, failures, and network usage
 
 set -euo pipefail
 
