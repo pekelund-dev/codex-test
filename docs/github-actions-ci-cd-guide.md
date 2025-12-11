@@ -332,12 +332,12 @@ gcloud iam workload-identity-pools create "github-actions" \
 
 ```bash
 gcloud iam workload-identity-pools providers create-oidc "github-provider" \
-  --project="${PROJECT_ID}" \
   --location="global" \
   --workload-identity-pool="github-actions" \
-  --display-name="GitHub Provider" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
-  --issuer-uri="https://token.actions.githubusercontent.com"
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+  --attribute-condition="assertion.repository_owner == 'pekelund-dev'" \
+  --project="${PROJECT_ID}"
 ```
 
 #### Step 4: Grant permissions to GitHub Actions
@@ -349,7 +349,7 @@ Replace `YOUR_GITHUB_ORG/YOUR_REPO` with your actual repository:
 gcloud iam service-accounts add-iam-policy-binding "cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
   --project="${PROJECT_ID}" \
   --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-actions/attribute.repository/pekelund-dev/codex-test"
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-actions/attribute.repository/YOUR_GITHUB_ORG/YOUR_REPO"
 
 # Also grant permissions to push to Artifact Registry
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \

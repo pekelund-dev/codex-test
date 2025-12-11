@@ -172,7 +172,11 @@ For manual artifact cleanup or to customize retention settings, use:
 PROJECT_ID=your-project ./scripts/terraform/cleanup_artifacts.sh
 ```
 
-See [Build Performance Optimizations](docs/build-performance-optimizations.md) for detailed information about deployment speed improvements and artifact management. For cost analysis and budget planning, see [Cloud Build Cost Analysis](docs/cloud-build-cost-analysis.md) and [Cost Summary](docs/cloud-build-cost-summary.md). For information about using GitHub Actions as an alternative to Cloud Build, see [GitHub Actions CI/CD Guide](docs/github-actions-ci-cd-guide.md).
+See the following documentation for more details:
+- [Build Performance Optimizations](docs/build-performance-optimizations.md) — Detailed information about deployment speed improvements and artifact management.
+- [Cloud Build Cost Analysis](docs/cloud-build-cost-analysis.md) — Cost analysis and budget planning.
+- [Cost Summary](docs/cloud-build-cost-summary.md) — Summary of cloud build costs.
+- [GitHub Actions CI/CD Guide](docs/github-actions-ci-cd-guide.md) — Using GitHub Actions as an alternative to Cloud Build.
 
 The scripts keep infrastructure provisioning separate from application deployment while relying on one Secret Manager secret for OAuth and optional AI keys. Earlier gcloud-based helpers now live in `scripts/legacy/` for reference.
 
