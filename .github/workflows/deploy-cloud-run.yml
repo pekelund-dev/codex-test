@@ -109,6 +109,7 @@ jobs:
           terraform init -input=false
 
           # Read service account emails from infrastructure outputs
+          # Empty values are acceptable - Terraform will skip IAM member creation when these are empty
           WEB_SA=$(terraform output -raw web_service_account_email 2>/dev/null || echo "")
           RECEIPT_SA=$(terraform output -raw receipt_service_account_email 2>/dev/null || echo "")
           BUCKET_NAME=$(terraform output -raw bucket_name 2>/dev/null || echo "")
@@ -119,11 +120,17 @@ jobs:
           echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
           echo "app_secret_name=${APP_SECRET_NAME}" >> $GITHUB_OUTPUT
 
+          # Log what was retrieved for debugging
+          if [[ -z "${WEB_SA}" || -z "${RECEIPT_SA}" ]]; then
+            echo "Warning: Service account emails not found in infrastructure outputs."
+            echo "IAM member bindings will be skipped. Ensure infrastructure is deployed first."
+          fi
+
           # Retrieve OAuth credentials from Secret Manager
           if gcloud secrets describe "${APP_SECRET_NAME}" --project "${{ env.PROJECT_ID }}" >/dev/null 2>&1; then
             SECRET_JSON=$(gcloud secrets versions access latest --secret "${APP_SECRET_NAME}" --project "${{ env.PROJECT_ID }}")
 
-            # Parse JSON fields (using jq if available, otherwise sed)
+            # Parse JSON fields - prefer jq but fallback to sed for compatibility
             if command -v jq >/dev/null 2>&1; then
               GOOGLE_CLIENT_ID=$(echo "${SECRET_JSON}" | jq -r '.google_client_id // empty')
               GOOGLE_CLIENT_SECRET=$(echo "${SECRET_JSON}" | jq -r '.google_client_secret // empty')
@@ -135,14 +142,19 @@ jobs:
             fi
 
             # Mask sensitive values in logs
-            echo "::add-mask::${GOOGLE_CLIENT_SECRET}"
-            echo "::add-mask::${AI_STUDIO_API_KEY}"
+            if [[ -n "${GOOGLE_CLIENT_SECRET}" ]]; then
+              echo "::add-mask::${GOOGLE_CLIENT_SECRET}"
+            fi
+            if [[ -n "${AI_STUDIO_API_KEY}" ]]; then
+              echo "::add-mask::${AI_STUDIO_API_KEY}"
+            fi
 
             echo "google_client_id=${GOOGLE_CLIENT_ID}" >> $GITHUB_OUTPUT
             echo "google_client_secret=${GOOGLE_CLIENT_SECRET}" >> $GITHUB_OUTPUT
             echo "ai_studio_api_key=${AI_STUDIO_API_KEY}" >> $GITHUB_OUTPUT
           else
-            echo "Secret ${APP_SECRET_NAME} not found, skipping OAuth credentials"
+            echo "Warning: Secret ${APP_SECRET_NAME} not found."
+            echo "OAuth credentials will not be available for deployment."
           fi
 
       - name: Deploy to Cloud Run using Terraform
