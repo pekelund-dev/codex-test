@@ -35,5 +35,20 @@ export TF_VAR_firestore_location="${FIRESTORE_LOCATION}"
 export TF_VAR_bucket_name="${BUCKET_NAME}"
 export TF_VAR_app_secret_name="${APP_SECRET_NAME}"
 
-terraform -chdir="${TF_DIR}" init -input=false
+# Configure Terraform state bucket
+STATE_BUCKET="pklnd-terraform-state-${PROJECT_ID}"
+
+# Create state bucket if it doesn't exist
+if ! gsutil ls "gs://${STATE_BUCKET}" >/dev/null 2>&1; then
+  echo "Creating Terraform state bucket: ${STATE_BUCKET}"
+  gsutil mb -p "${PROJECT_ID}" -l "${REGION}" "gs://${STATE_BUCKET}"
+  gsutil versioning set on "gs://${STATE_BUCKET}"
+  echo "✓ State bucket created with versioning enabled"
+else
+  echo "✓ State bucket already exists: ${STATE_BUCKET}"
+fi
+
+terraform -chdir="${TF_DIR}" init -input=false \
+  -backend-config="bucket=${STATE_BUCKET}" \
+  -backend-config="prefix=infrastructure"
 terraform -chdir="${TF_DIR}" apply -input=false -auto-approve "$@"

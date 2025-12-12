@@ -208,10 +208,12 @@ jobs:
 A manually-triggered deployment workflow has been added at `.github/workflows/deploy-cloud-run.yml`. This workflow:
 - Triggers manually via GitHub UI (Actions → Deploy to Cloud Run → Run workflow)
 - Builds and pushes Docker images to Artifact Registry
-- Deploys to Cloud Run using Terraform
+- Deploys to Cloud Run using Terraform with persistent state in GCS
 - Supports environment selection (production/staging)
 - Provides deployment summary with service URLs
 - Automatically cleans up old container images
+
+The workflow uses a GCS bucket (`pklnd-terraform-state-<project-id>`) to store Terraform state, ensuring that existing Cloud Run services are updated rather than recreated on each deployment. The state bucket is created automatically on the first deployment run.
 
 **To use the deployment workflow:**
 1. Set up Workload Identity Federation (see Phase 3 below)

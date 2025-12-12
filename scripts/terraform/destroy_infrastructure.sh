@@ -28,5 +28,18 @@ export TF_VAR_firestore_database_name="${FIRESTORE_DATABASE_NAME}"
 export TF_VAR_bucket_name="${BUCKET_NAME}"
 export TF_VAR_app_secret_name="${APP_SECRET_NAME}"
 
-terraform -chdir="${TF_DIR}" init -input=false
+# Configure Terraform state bucket
+STATE_BUCKET="pklnd-terraform-state-${PROJECT_ID}"
+
+# Initialize with backend if state bucket exists
+if gsutil ls "gs://${STATE_BUCKET}" >/dev/null 2>&1; then
+  echo "Using existing Terraform state bucket: ${STATE_BUCKET}"
+  terraform -chdir="${TF_DIR}" init -input=false \
+    -backend-config="bucket=${STATE_BUCKET}" \
+    -backend-config="prefix=infrastructure"
+else
+  echo "Warning: State bucket ${STATE_BUCKET} not found. Initializing without backend."
+  terraform -chdir="${TF_DIR}" init -input=false
+fi
+
 terraform -chdir="${TF_DIR}" destroy -input=false -auto-approve "$@"

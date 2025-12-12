@@ -129,5 +129,18 @@ allow_unauthenticated_web = ${allow_unauth_value}
 custom_domain = $(json_escape "${CUSTOM_DOMAIN}")
 EOF
 
-terraform -chdir="${DEPLOY_DIR}" init -input=false
+# Configure Terraform state bucket
+STATE_BUCKET="pklnd-terraform-state-${PROJECT_ID}"
+
+# Initialize with backend if state bucket exists
+if gsutil ls "gs://${STATE_BUCKET}" >/dev/null 2>&1; then
+  echo "Using existing Terraform state bucket: ${STATE_BUCKET}"
+  terraform -chdir="${DEPLOY_DIR}" init -input=false \
+    -backend-config="bucket=${STATE_BUCKET}" \
+    -backend-config="prefix=deployment"
+else
+  echo "Warning: State bucket ${STATE_BUCKET} not found. Initializing without backend."
+  terraform -chdir="${DEPLOY_DIR}" init -input=false
+fi
+
 terraform -chdir="${DEPLOY_DIR}" destroy -input=false -auto-approve -var-file="${tfvars_file}" "$@"
