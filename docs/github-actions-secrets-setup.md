@@ -113,11 +113,6 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/iam.serviceAccountUser"
 
-# Grant Cloud Build permissions (if using Cloud Build integration)
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/cloudbuild.builds.builder"
-
 # Grant Storage permissions (for storing build artifacts and state files)
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
@@ -189,7 +184,6 @@ You should see:
 - `roles/run.admin`
 - `roles/artifactregistry.writer`
 - `roles/iam.serviceAccountUser`
-- `roles/cloudbuild.builds.builder`
 - `roles/storage.admin`
 
 ### Verify Workload Identity Binding

@@ -236,7 +236,7 @@ Common issues:
 For detailed explanations and additional context:
 
 - 📘 [GitHub Actions Secrets Setup Guide](./github-actions-secrets-setup.md) - Complete setup instructions
-- 📘 [Quick Reference](./.github/DEPLOYMENT_SETUP.md) - Copy-paste commands
+- 📘 [Quick Reference](../.github/DEPLOYMENT_SETUP.md) - Copy-paste commands
 - 📘 [Workflows README](../.github/workflows/README.md) - Workflow usage guide
 - 📘 [GitHub Actions CI/CD Guide](./github-actions-ci-cd-guide.md) - Architecture and cost analysis
 
