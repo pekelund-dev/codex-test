@@ -42,7 +42,13 @@ done
 # Stop Firestore emulator if running
 echo ""
 echo "Checking for Firestore emulator..."
-FIRESTORE_PORT="${FIRESTORE_EMULATOR_PORT:-8085}"
+# Extract port from FIRESTORE_EMULATOR_HOST (format: host:port), default to 8085
+EMULATOR_HOST="${FIRESTORE_EMULATOR_HOST:-localhost:8085}"
+FIRESTORE_PORT="${EMULATOR_HOST##*:}"
+if [[ -z "$FIRESTORE_PORT" || "$FIRESTORE_PORT" == "$EMULATOR_HOST" ]]; then
+  FIRESTORE_PORT="8085"
+fi
+
 if command -v lsof >/dev/null 2>&1; then
   EMULATOR_PID=$(lsof -ti:$FIRESTORE_PORT 2>/dev/null || true)
   if [[ -n "$EMULATOR_PID" ]]; then
