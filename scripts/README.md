@@ -36,6 +36,12 @@ Stops all local development services including:
 ./scripts/stop-local-services.sh
 ```
 
+### `verify-local-setup.sh`
+Verifies that the local development environment is properly configured.
+```bash
+./scripts/verify-local-setup.sh
+```
+
 ## Legacy Scripts
 
 Located in `scripts/legacy/`:

@@ -26,6 +26,16 @@ Access the application at <http://localhost:8080>
 
 Default credentials: `admin / admin123` or `user / user123`
 
+### Verify Your Setup
+
+To verify that everything is properly configured, run:
+
+```bash
+./scripts/verify-local-setup.sh
+```
+
+This script checks that all required files exist, scripts are executable, and the environment is configured correctly.
+
 ## Detailed Setup Instructions
 
 ### Prerequisites
