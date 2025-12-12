@@ -104,27 +104,49 @@ jobs:
       - name: Get infrastructure outputs and secrets
         id: infra
         run: |
-          # Initialize infrastructure Terraform to read outputs
-          cd infra/terraform/infrastructure
-          terraform init -input=false
-
-          # Read service account emails from infrastructure outputs
-          # Empty values are acceptable - Terraform will skip IAM member creation when these are empty
-          WEB_SA=$(terraform output -raw web_service_account_email 2>/dev/null || echo "")
-          RECEIPT_SA=$(terraform output -raw receipt_service_account_email 2>/dev/null || echo "")
-          BUCKET_NAME=$(terraform output -raw bucket_name 2>/dev/null || echo "")
-          APP_SECRET_NAME=$(terraform output -raw app_secret_name 2>/dev/null || echo "pklnd-app-config")
+          # Query GCP directly for service accounts instead of using Terraform state
+          # This works when infrastructure is already deployed to GCP
+          
+          # Service account IDs from infrastructure defaults
+          WEB_SA_ID="cloud-run-runtime"
+          RECEIPT_SA_ID="receipt-processor"
+          
+          # Construct full service account emails
+          WEB_SA="${WEB_SA_ID}@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
+          RECEIPT_SA="${RECEIPT_SA_ID}@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
+          
+          # Verify service accounts exist in GCP
+          if ! gcloud iam service-accounts describe "${WEB_SA}" --project="${{ env.PROJECT_ID }}" >/dev/null 2>&1; then
+            echo "Warning: Web service account ${WEB_SA} not found in project ${{ env.PROJECT_ID }}"
+            echo "IAM bindings will be skipped for web service account."
+            WEB_SA=""
+          else
+            echo "✓ Found web service account: ${WEB_SA}"
+          fi
+          
+          if ! gcloud iam service-accounts describe "${RECEIPT_SA}" --project="${{ env.PROJECT_ID }}" >/dev/null 2>&1; then
+            echo "Warning: Receipt service account ${RECEIPT_SA} not found in project ${{ env.PROJECT_ID }}"
+            echo "IAM bindings will be skipped for receipt service account."
+            RECEIPT_SA=""
+          else
+            echo "✓ Found receipt service account: ${RECEIPT_SA}"
+          fi
+          
+          # Get bucket name - try common patterns
+          BUCKET_NAME="pklnd-receipts-${{ env.PROJECT_ID }}"
+          if ! gsutil ls "gs://${BUCKET_NAME}" >/dev/null 2>&1; then
+            echo "Warning: Bucket ${BUCKET_NAME} not found, will use as default"
+          else
+            echo "✓ Found bucket: ${BUCKET_NAME}"
+          fi
+          
+          # Secret name from infrastructure default
+          APP_SECRET_NAME="pklnd-app-config"
 
           echo "web_sa=${WEB_SA}" >> $GITHUB_OUTPUT
           echo "receipt_sa=${RECEIPT_SA}" >> $GITHUB_OUTPUT
           echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
           echo "app_secret_name=${APP_SECRET_NAME}" >> $GITHUB_OUTPUT
-
-          # Log what was retrieved for debugging
-          if [[ -z "${WEB_SA}" || -z "${RECEIPT_SA}" ]]; then
-            echo "Warning: Service account emails not found in infrastructure outputs."
-            echo "IAM member bindings will be skipped. Ensure infrastructure is deployed first."
-          fi
 
           # Retrieve OAuth credentials from Secret Manager
           if gcloud secrets describe "${APP_SECRET_NAME}" --project "${{ env.PROJECT_ID }}" >/dev/null 2>&1; then

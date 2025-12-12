@@ -27,16 +27,29 @@ variable "receipt_image" {
   default     = ""
 }
 
+# Service account email pattern: name@project.iam.gserviceaccount.com
+# Note: Regex is duplicated across service account variables as Terraform variable
+# validation blocks cannot reference locals or other variables (standard pattern)
 variable "web_service_account_email" {
   description = "Service account email used by the web application"
   type        = string
   default     = ""
+
+  validation {
+    condition     = var.web_service_account_email == "" || can(regex("^[a-z0-9-]+@[a-z0-9-]+\\.iam\\.gserviceaccount\\.com$", var.web_service_account_email))
+    error_message = "The web_service_account_email must be empty or a valid service account email in the format: name@project.iam.gserviceaccount.com"
+  }
 }
 
 variable "receipt_service_account_email" {
   description = "Service account email used by the receipt processor"
   type        = string
   default     = ""
+
+  validation {
+    condition     = var.receipt_service_account_email == "" || can(regex("^[a-z0-9-]+@[a-z0-9-]+\\.iam\\.gserviceaccount\\.com$", var.receipt_service_account_email))
+    error_message = "The receipt_service_account_email must be empty or a valid service account email in the format: name@project.iam.gserviceaccount.com"
+  }
 }
 
 variable "secret_name" {
