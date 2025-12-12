@@ -13,7 +13,7 @@ If you just want to get started quickly:
 # 2. Start Firestore emulator (choose one method)
 ./scripts/start-firestore-emulator.sh
 # OR
-docker-compose up -d firestore
+docker compose up -d firestore
 
 # 3. Load environment variables
 source .env.local
@@ -77,17 +77,23 @@ To stop: Press `Ctrl+C` in the terminal where it's running.
 #### Option B: Using Docker Compose
 
 ```bash
+# Docker Compose v2 (recommended)
+docker compose up -d firestore
+
+# Or Docker Compose v1
 docker-compose up -d firestore
 ```
 
 To stop:
 ```bash
-docker-compose down
+docker compose down
+# Or: docker-compose down
 ```
 
 To view logs:
 ```bash
-docker-compose logs -f firestore
+docker compose logs -f firestore
+# Or: docker-compose logs -f firestore
 ```
 
 ### Step 3: Load Environment Variables

@@ -64,15 +64,26 @@ elif command -v netstat >/dev/null 2>&1; then
 fi
 
 # Stop Docker containers if docker-compose is being used
-if [[ -f "${REPO_ROOT}/docker-compose.yml" ]] && command -v docker-compose >/dev/null 2>&1; then
+if [[ -f "${REPO_ROOT}/docker-compose.yml" ]]; then
   echo ""
   echo "Checking for Docker containers..."
   cd "${REPO_ROOT}"
-  if docker-compose ps -q 2>/dev/null | grep -q .; then
-    echo -e "${GREEN}✓${NC} Stopping Docker containers"
-    docker-compose down
-  else
-    echo "  No Docker containers running"
+  
+  # Try docker compose v2 first, then fall back to docker-compose v1
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    if docker compose ps -q 2>/dev/null | grep -q .; then
+      echo -e "${GREEN}✓${NC} Stopping Docker containers"
+      docker compose down
+    else
+      echo "  No Docker containers running"
+    fi
+  elif command -v docker-compose >/dev/null 2>&1; then
+    if docker-compose ps -q 2>/dev/null | grep -q .; then
+      echo -e "${GREEN}✓${NC} Stopping Docker containers"
+      docker-compose down
+    else
+      echo "  No Docker containers running"
+    fi
   fi
 fi
 

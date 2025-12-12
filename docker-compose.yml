@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   firestore:
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators

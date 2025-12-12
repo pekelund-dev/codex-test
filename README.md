@@ -23,7 +23,7 @@ For the fastest local development setup without needing a GCP account:
 
 # 2. Start Firestore emulator
 ./scripts/start-firestore-emulator.sh
-# OR use Docker: docker-compose up -d firestore
+# OR use Docker: docker compose up -d firestore
 
 # 3. Load environment in a new terminal
 source .env.local
