@@ -123,7 +123,10 @@ jobs:
           # Log what was retrieved for debugging
           if [[ -z "${WEB_SA}" || -z "${RECEIPT_SA}" ]]; then
             echo "Warning: Service account emails not found in infrastructure outputs."
-            echo "IAM member bindings will be skipped. Ensure infrastructure is deployed first."
+            echo "Cloud Run services will use default compute service account."
+            echo "IAM member bindings for inter-service invocation will be skipped."
+            echo "To use dedicated service accounts, ensure infrastructure is deployed first:"
+            echo "  ./scripts/terraform/apply_infrastructure.sh"
           fi
 
           # Retrieve OAuth credentials from Secret Manager

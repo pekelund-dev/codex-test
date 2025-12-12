@@ -27,6 +27,9 @@ variable "receipt_image" {
   default     = ""
 }
 
+# Service account email pattern: name@project.iam.gserviceaccount.com
+# Note: Regex is duplicated across service account variables as Terraform variable
+# validation blocks cannot reference locals or other variables (standard pattern)
 variable "web_service_account_email" {
   description = "Service account email used by the web application"
   type        = string
