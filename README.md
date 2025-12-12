@@ -177,6 +177,7 @@ See the following documentation for more details:
 - [Cloud Build Cost Analysis](docs/cloud-build-cost-analysis.md) — Cost analysis and budget planning.
 - [Cost Summary](docs/cloud-build-cost-summary.md) — Summary of cloud build costs.
 - [GitHub Actions CI/CD Guide](docs/github-actions-ci-cd-guide.md) — Using GitHub Actions as an alternative to Cloud Build.
+- [GCP Budget Enforcement](docs/gcp-budget-enforcement.md) — Automatic resource control when budget limits are reached.
 
 The scripts keep infrastructure provisioning separate from application deployment while relying on one Secret Manager secret for OAuth and optional AI keys. Earlier gcloud-based helpers now live in `scripts/legacy/` for reference.
 

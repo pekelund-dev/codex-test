@@ -59,6 +59,8 @@ Recommended thresholds:
 - 🟡 Warning at $15/month
 - 🔴 Alert at $20/month
 
+See the [GCP Budget Enforcement](docs/gcp-budget-enforcement.md) guide for instructions on setting up automatic resource control when budget limits are reached.
+
 ### 3. Review Actual Costs
 
 Check your actual costs in the [GCP Billing Console](https://console.cloud.google.com/billing)
@@ -79,6 +81,7 @@ For detailed analysis and recommendations, see:
 - 📋 **[Cost Summary](docs/cloud-build-cost-summary.md)** - Quick reference guide
 - 🚀 **[Build Performance Optimizations](docs/build-performance-optimizations.md)** - Technical details
 - 🔄 **[GitHub Actions CI/CD Guide](docs/github-actions-ci-cd-guide.md)** - Alternative to Cloud Build
+- 🛡️ **[GCP Budget Enforcement](docs/gcp-budget-enforcement.md)** - Automatic resource control at budget limits
 
 ## Quick Reference
 
