@@ -13,21 +13,44 @@ pklnd is a Spring Boot application for maintaining a personal receipt archive fo
 
 ## Getting started
 
-### Quick Setup with Environment Script
+### Quick Local Setup (No Google Cloud Required)
 
-For the fastest setup, use the provided environment script that configures all necessary Google Cloud settings and then run the
+For the fastest local development setup without needing a GCP account:
+
+```bash
+# 1. Run the setup script
+./local-setup.sh
+
+# 2. Start Firestore emulator
+./scripts/start-firestore-emulator.sh
+# OR use Docker: docker compose up -d firestore
+
+# 3. Load environment in a new terminal
+source .env.local
+
+# 4. Start the application
+./scripts/start-web-app.sh
+```
+
+Access at <http://localhost:8080> with credentials `admin / admin123`
+
+For detailed instructions, see the [Local Setup Guide](docs/local-setup-guide.md).
+
+### Quick Setup with Google Cloud
+
+For setup with Google Cloud services, use the provided environment script that configures all necessary Google Cloud settings and then run the
 web module directly. Activate the `include-web` Maven profile whenever you build or run the web module so that it participates in
 the multi-module reactor:
 
 ```bash
-# Source the environment setup script
+# Source the environment setup script (not included in repo - must be created)
 source setup-env.sh
 
 # Start the application
 ./mvnw -Pinclude-web -pl web -am spring-boot:run
 ```
 
-The `setup-env.sh` script automatically configures:
+The `setup-env.sh` script should configure:
 - Google Cloud authentication
 - Firestore database connection
 - Google Cloud Storage bucket access

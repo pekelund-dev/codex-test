@@ -45,7 +45,13 @@ build/
 !package*.json
 !tsconfig*.json
 !.vscode/*.json
+!docker-compose*.yml
+!docker-compose*.yaml
 setup-env.sh
+.env.local
+
+### Local development ###
+.local/
 
 ### Terraform ###
 .terraform/
