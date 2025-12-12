@@ -2,6 +2,12 @@
 
 The Terraform workflow provisions all Google Cloud resources and deploys both Cloud Run services while consolidating secrets into a single Secret Manager secret. Infrastructure creation is separate from application deployment so you can iterate on code without reprovisioning foundational services.
 
+## State Management
+
+Terraform state is stored in a Google Cloud Storage bucket (`pklnd-terraform-state-<project-id>`) to ensure consistency across deployments and team members. The deployment scripts automatically create this bucket with versioning enabled on the first run. This allows Terraform to track existing resources and update them instead of attempting to recreate them on each deployment.
+
+The state bucket uses separate prefixes for infrastructure (`infrastructure/`) and deployment (`deployment/`) to isolate concerns while sharing a common storage location.
+
 ## Prerequisites
 
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) 1.5 or newer

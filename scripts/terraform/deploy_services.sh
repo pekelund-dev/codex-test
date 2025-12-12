@@ -190,8 +190,22 @@ fi
 
 echo "Both images built successfully"
 
+# Configure Terraform state bucket
+STATE_BUCKET="pklnd-terraform-state-${PROJECT_ID}"
 
-terraform -chdir="${DEPLOY_DIR}" init -input=false
+# Create state bucket if it doesn't exist
+if ! gsutil ls "gs://${STATE_BUCKET}" >/dev/null 2>&1; then
+  echo "Creating Terraform state bucket: ${STATE_BUCKET}"
+  gsutil mb -p "${PROJECT_ID}" -l "${REGION}" "gs://${STATE_BUCKET}"
+  gsutil versioning set on "gs://${STATE_BUCKET}"
+  echo "✓ State bucket created with versioning enabled"
+else
+  echo "✓ State bucket already exists: ${STATE_BUCKET}"
+fi
+
+terraform -chdir="${DEPLOY_DIR}" init -input=false \
+  -backend-config="bucket=${STATE_BUCKET}" \
+  -backend-config="prefix=deployment"
 terraform -chdir="${DEPLOY_DIR}" apply -input=false -auto-approve -var-file="${tfvars_file}" "$@"
 
 # Clean up Cloud Build source cache
