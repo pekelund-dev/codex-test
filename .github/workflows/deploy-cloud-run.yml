@@ -44,11 +44,6 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.14.1"
-
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
@@ -101,124 +96,23 @@ jobs:
             GIT_BRANCH=${{ github.ref_name }}
             GIT_COMMIT=${{ github.sha }}
 
-      - name: Get infrastructure outputs and secrets
-        id: infra
+      - name: Deploy web service to Cloud Run
         run: |
-          # Query GCP directly for service accounts instead of using Terraform state
-          # This works when infrastructure is already deployed to GCP
-          
-          # Service account IDs from infrastructure defaults
-          WEB_SA_ID="cloud-run-runtime"
-          RECEIPT_SA_ID="receipt-processor"
-          
-          # Construct full service account emails
-          WEB_SA="${WEB_SA_ID}@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
-          RECEIPT_SA="${RECEIPT_SA_ID}@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
-          
-          # Verify service accounts exist in GCP
-          if ! gcloud iam service-accounts describe "${WEB_SA}" --project="${{ env.PROJECT_ID }}" >/dev/null 2>&1; then
-            echo "Warning: Web service account ${WEB_SA} not found in project ${{ env.PROJECT_ID }}"
-            echo "IAM bindings will be skipped for web service account."
-            WEB_SA=""
-          else
-            echo "✓ Found web service account: ${WEB_SA}"
-          fi
-          
-          if ! gcloud iam service-accounts describe "${RECEIPT_SA}" --project="${{ env.PROJECT_ID }}" >/dev/null 2>&1; then
-            echo "Warning: Receipt service account ${RECEIPT_SA} not found in project ${{ env.PROJECT_ID }}"
-            echo "IAM bindings will be skipped for receipt service account."
-            RECEIPT_SA=""
-          else
-            echo "✓ Found receipt service account: ${RECEIPT_SA}"
-          fi
-          
-          # Get bucket name - try common patterns
-          BUCKET_NAME="pklnd-receipts-${{ env.PROJECT_ID }}"
-          if ! gsutil ls "gs://${BUCKET_NAME}" >/dev/null 2>&1; then
-            echo "Warning: Bucket ${BUCKET_NAME} not found, will use as default"
-          else
-            echo "✓ Found bucket: ${BUCKET_NAME}"
-          fi
-          
-          # Secret name from infrastructure default
-          APP_SECRET_NAME="pklnd-app-config"
+          echo "Deploying web service with image: ${{ steps.meta.outputs.web_image }}"
+          gcloud run deploy pklnd-web \
+            --image=${{ steps.meta.outputs.web_image }} \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} \
+            --platform=managed
 
-          echo "web_sa=${WEB_SA}" >> $GITHUB_OUTPUT
-          echo "receipt_sa=${RECEIPT_SA}" >> $GITHUB_OUTPUT
-          echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
-          echo "app_secret_name=${APP_SECRET_NAME}" >> $GITHUB_OUTPUT
-
-          # Retrieve OAuth credentials from Secret Manager
-          if gcloud secrets describe "${APP_SECRET_NAME}" --project "${{ env.PROJECT_ID }}" >/dev/null 2>&1; then
-            SECRET_JSON=$(gcloud secrets versions access latest --secret "${APP_SECRET_NAME}" --project "${{ env.PROJECT_ID }}")
-
-            # Parse JSON fields - prefer jq but fallback to sed for compatibility
-            if command -v jq >/dev/null 2>&1; then
-              GOOGLE_CLIENT_ID=$(echo "${SECRET_JSON}" | jq -r '.google_client_id // empty')
-              GOOGLE_CLIENT_SECRET=$(echo "${SECRET_JSON}" | jq -r '.google_client_secret // empty')
-              AI_STUDIO_API_KEY=$(echo "${SECRET_JSON}" | jq -r '.ai_studio_api_key // empty')
-            else
-              GOOGLE_CLIENT_ID=$(echo "${SECRET_JSON}" | sed -n 's/.*"google_client_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-              GOOGLE_CLIENT_SECRET=$(echo "${SECRET_JSON}" | sed -n 's/.*"google_client_secret"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-              AI_STUDIO_API_KEY=$(echo "${SECRET_JSON}" | sed -n 's/.*"ai_studio_api_key"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-            fi
-
-            # Mask sensitive values in logs
-            if [[ -n "${GOOGLE_CLIENT_SECRET}" ]]; then
-              echo "::add-mask::${GOOGLE_CLIENT_SECRET}"
-            fi
-            if [[ -n "${AI_STUDIO_API_KEY}" ]]; then
-              echo "::add-mask::${AI_STUDIO_API_KEY}"
-            fi
-
-            echo "google_client_id=${GOOGLE_CLIENT_ID}" >> $GITHUB_OUTPUT
-            echo "google_client_secret=${GOOGLE_CLIENT_SECRET}" >> $GITHUB_OUTPUT
-            echo "ai_studio_api_key=${AI_STUDIO_API_KEY}" >> $GITHUB_OUTPUT
-          else
-            echo "Warning: Secret ${APP_SECRET_NAME} not found."
-            echo "OAuth credentials will not be available for deployment."
-          fi
-
-      - name: Deploy to Cloud Run using Terraform
-        env:
-          BRANCH_NAME: ${{ github.ref_name }}
-          COMMIT_SHA: ${{ github.sha }}
+      - name: Deploy receipt-parser service to Cloud Run
         run: |
-          # Set Terraform variables for deployment
-          export TF_VAR_web_image="${{ steps.meta.outputs.web_image }}"
-          export TF_VAR_receipt_image="${{ steps.meta.outputs.receipt_image }}"
-
-          # Configure Terraform state bucket
-          STATE_BUCKET="pklnd-terraform-state-${{ env.PROJECT_ID }}"
-          
-          # Create state bucket if it doesn't exist
-          if ! gsutil ls "gs://${STATE_BUCKET}" >/dev/null 2>&1; then
-            echo "Creating Terraform state bucket: ${STATE_BUCKET}"
-            gsutil mb -p "${{ env.PROJECT_ID }}" -l "${{ env.REGION }}" "gs://${STATE_BUCKET}"
-            gsutil versioning set on "gs://${STATE_BUCKET}"
-            echo "✓ State bucket created with versioning enabled"
-          else
-            echo "✓ State bucket already exists: ${STATE_BUCKET}"
-          fi
-
-          # Run Terraform deployment with GCS backend
-          cd infra/terraform/deployment
-          terraform init -input=false \
-            -backend-config="bucket=${STATE_BUCKET}" \
-            -backend-config="prefix=deployment"
-          
-          terraform apply -input=false -auto-approve \
-            -var="project_id=${{ env.PROJECT_ID }}" \
-            -var="region=${{ env.REGION }}" \
-            -var="web_image=${{ steps.meta.outputs.web_image }}" \
-            -var="receipt_image=${{ steps.meta.outputs.receipt_image }}" \
-            -var="web_service_account_email=${{ steps.infra.outputs.web_sa }}" \
-            -var="receipt_service_account_email=${{ steps.infra.outputs.receipt_sa }}" \
-            -var="bucket_name=${{ steps.infra.outputs.bucket_name }}" \
-            -var="secret_name=${{ steps.infra.outputs.app_secret_name }}" \
-            -var="google_client_id=${{ steps.infra.outputs.google_client_id }}" \
-            -var="google_client_secret=${{ steps.infra.outputs.google_client_secret }}" \
-            -var="ai_studio_api_key=${{ steps.infra.outputs.ai_studio_api_key }}"
+          echo "Deploying receipt-parser service with image: ${{ steps.meta.outputs.receipt_image }}"
+          gcloud run deploy pklnd-receipts \
+            --image=${{ steps.meta.outputs.receipt_image }} \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} \
+            --platform=managed
 
       - name: Get Cloud Run URLs
         id: urls
