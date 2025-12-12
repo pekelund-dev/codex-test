@@ -137,4 +137,4 @@ Expected roles:
 For complete setup instructions, troubleshooting, and security best practices:
 - 📘 [GitHub Actions Secrets Setup Guide](../docs/github-actions-secrets-setup.md)
 - 📘 [GitHub Actions CI/CD Guide](../docs/github-actions-ci-cd-guide.md)
-- 📘 [Workflows README](.github/workflows/README.md)
+- 📘 [Workflows README](./workflows/README.md)

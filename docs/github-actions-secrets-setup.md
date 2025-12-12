@@ -62,11 +62,11 @@ gcloud iam workload-identity-pools providers create-oidc "github-provider" \
   --workload-identity-pool="github-actions" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
   --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
-  --attribute-condition="assertion.repository_owner == 'pekelund-dev'" \
+  --attribute-condition="assertion.repository_owner == 'YOUR_GITHUB_USERNAME'" \
   --project="${PROJECT_ID}"
 ```
 
-**Important**: Replace `pekelund-dev` with your GitHub username or organization name.
+**Important**: Replace `YOUR_GITHUB_USERNAME` with your actual GitHub username or organization name.
 
 ### Step 4: Verify or Create Service Account
 
@@ -91,11 +91,12 @@ The service account needs several permissions to deploy to Cloud Run:
 
 ```bash
 # Allow the service account to be used by GitHub Actions via Workload Identity
+# Replace YOUR_GITHUB_USERNAME/YOUR_REPO with your actual GitHub repository (e.g., myusername/myrepo)
 gcloud iam service-accounts add-iam-policy-binding \
   cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com \
   --project="${PROJECT_ID}" \
   --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-actions/attribute.repository/pekelund-dev/codex-test"
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-actions/attribute.repository/YOUR_GITHUB_USERNAME/YOUR_REPO"
 
 # Grant Cloud Run Admin permissions (to create/update services)
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
@@ -122,8 +123,6 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/storage.admin"
 ```
-
-**Important**: Replace `pekelund-dev/codex-test` with your GitHub repository in the format `owner/repo`.
 
 ### Step 6: Get Workload Identity Provider Full Name
 
