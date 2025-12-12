@@ -98,7 +98,10 @@ jobs:
 
       - name: Deploy web service to Cloud Run
         run: |
+          set -e
           echo "Deploying web service with image: ${{ steps.meta.outputs.web_image }}"
+          # Only update the image - all other settings (service account, memory, CPU, etc.)
+          # are preserved from the existing service configuration
           gcloud run deploy pklnd-web \
             --image=${{ steps.meta.outputs.web_image }} \
             --region=${{ env.REGION }} \
@@ -107,7 +110,10 @@ jobs:
 
       - name: Deploy receipt-parser service to Cloud Run
         run: |
+          set -e
           echo "Deploying receipt-parser service with image: ${{ steps.meta.outputs.receipt_image }}"
+          # Only update the image - all other settings (service account, memory, CPU, etc.)
+          # are preserved from the existing service configuration
           gcloud run deploy pklnd-receipts \
             --image=${{ steps.meta.outputs.receipt_image }} \
             --region=${{ env.REGION }} \
