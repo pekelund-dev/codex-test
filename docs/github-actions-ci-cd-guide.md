@@ -311,6 +311,8 @@ jobs:
 
 ### Phase 3: Set Up Workload Identity Federation
 
+> 📘 **Complete Setup Guide Available**: For detailed step-by-step instructions with troubleshooting, see the [GitHub Actions Secrets Setup Guide](./github-actions-secrets-setup.md).
+
 For secure authentication without service account keys, set up Workload Identity Federation:
 
 #### Step 1: Get your GCP project number

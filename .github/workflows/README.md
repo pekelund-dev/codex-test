@@ -57,24 +57,36 @@ This directory contains GitHub Actions workflows for CI/CD automation.
 4. Click "Run workflow" button
 
 **Requirements**:
-- Workload Identity Federation configured (see setup guide below)
-- GitHub secrets configured (see below)
+- Workload Identity Federation configured
+- GitHub secrets configured
 - Terraform infrastructure already provisioned
+- Service account with proper permissions
 
 ## Setup Instructions
 
 ### Prerequisites
 
-Before using the deployment workflow, you need to:
+Before using the deployment workflow, you need to complete the setup:
 
-1. **Set up Workload Identity Federation** - See [Phase 3 in the GitHub Actions CI/CD Guide](../../docs/github-actions-ci-cd-guide.md#phase-3-set-up-workload-identity-federation)
+**📘 Complete Setup Guide**: See [GitHub Actions Secrets Setup Guide](../../docs/github-actions-secrets-setup.md) for detailed step-by-step instructions.
 
-2. **Configure GitHub Secrets** - Add these secrets in GitHub (Settings → Secrets and variables → Actions):
+Quick summary:
+
+1. **Set up Workload Identity Federation** - Allow GitHub Actions to authenticate with GCP without service account keys
+
+2. **Configure GitHub Secrets** - Add these three secrets (see guide for exact values):
    - `GCP_PROJECT_ID`: Your Google Cloud project ID
-   - `WIF_PROVIDER`: Workload Identity Provider full name
+   - `WIF_PROVIDER`: Workload Identity Provider full resource name
    - `WIF_SERVICE_ACCOUNT`: Service account email (e.g., `cloud-run-runtime@PROJECT_ID.iam.gserviceaccount.com`)
 
-3. **Provision Infrastructure** - Ensure Terraform infrastructure is already set up:
+3. **Grant Service Account Permissions** - The service account needs these roles:
+   - `roles/run.admin` - Deploy and manage Cloud Run services
+   - `roles/artifactregistry.writer` - Push Docker images
+   - `roles/iam.serviceAccountUser` - Act as service account
+   - `roles/storage.admin` - Manage GCS buckets for state
+   - `roles/iam.workloadIdentityUser` - Used by GitHub Actions
+
+4. **Provision Infrastructure** - Ensure Terraform infrastructure is already set up:
    ```bash
    PROJECT_ID=your-project ./scripts/terraform/apply_infrastructure.sh
    ```
@@ -130,10 +142,14 @@ Before using the deployment workflow, you need to:
 ### Deployment fails with authentication error
 1. Verify Workload Identity Federation is set up correctly
 2. Check that all required secrets are configured
-3. Ensure service account has necessary permissions:
+3. Ensure service account has necessary permissions (see [setup guide](../../docs/github-actions-secrets-setup.md) for details):
    - `roles/iam.workloadIdentityUser`
    - `roles/artifactregistry.writer`
    - `roles/run.admin`
+   - `roles/iam.serviceAccountUser`
+   - `roles/storage.admin`
+
+**See [Troubleshooting Section](../../docs/github-actions-secrets-setup.md#troubleshooting) in the setup guide for specific error messages and solutions.**
 
 ### Deployment fails with "image not found"
 1. Check that Artifact Registry repositories exist:
