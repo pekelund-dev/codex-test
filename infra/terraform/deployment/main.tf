@@ -189,7 +189,7 @@ resource "google_cloud_run_v2_service_iam_member" "web_public" {
 }
 
 resource "google_cloud_run_v2_service_iam_member" "receipt_web_invoker" {
-  count    = var.web_service_account_email != "" ? 1 : 0
+  count    = length(var.web_service_account_email) > 0 ? 1 : 0
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.receipts.name
@@ -198,7 +198,7 @@ resource "google_cloud_run_v2_service_iam_member" "receipt_web_invoker" {
 }
 
 resource "google_cloud_run_v2_service_iam_member" "receipt_self_invoker" {
-  count    = var.receipt_service_account_email != "" ? 1 : 0
+  count    = length(var.receipt_service_account_email) > 0 ? 1 : 0
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.receipts.name

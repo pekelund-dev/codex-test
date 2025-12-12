@@ -46,3 +46,9 @@ build/
 !tsconfig*.json
 !.vscode/*.json
 setup-env.sh
+
+### Terraform ###
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
