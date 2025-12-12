@@ -47,7 +47,10 @@ gcloud config set project "${PROJECT_ID}" --quiet
 echo "Initializing Terraform..."
 cd "${TERRAFORM_DIR}"
 
-terraform init
+if ! terraform init; then
+    echo "Error: Terraform initialization failed"
+    exit 1
+fi
 
 echo ""
 echo "Planning infrastructure changes..."

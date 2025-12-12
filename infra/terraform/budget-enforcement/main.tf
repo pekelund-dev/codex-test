@@ -4,6 +4,7 @@ provider "google" {
 }
 
 # Enable required APIs
+# Note: cloudbuild.googleapis.com is required for Cloud Functions deployment
 resource "google_project_service" "required_services" {
   for_each = toset([
     "cloudfunctions.googleapis.com",
@@ -164,6 +165,8 @@ resource "google_billing_budget" "monthly_budget" {
   }
 
   # Enable Pub/Sub notifications
+  # Note: google_pubsub_topic.budget_alerts.id returns the full path format
+  # required by the budget service: projects/{project}/topics/{topic}
   all_updates_rule {
     pubsub_topic                     = google_pubsub_topic.budget_alerts.id
     schema_version                   = "1.0"
