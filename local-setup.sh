@@ -176,7 +176,8 @@ Your local development environment is ready! Here's how to use it:
    - Standard install: gcloud components install cloud-firestore-emulator
    
    Option B - Using Docker (no installation needed):
-   docker compose up -d firestore
+   docker compose up -d firestore     # Docker Compose v2
+   docker-compose up -d firestore     # Docker Compose v1
 
 2. Load environment variables:
    source .env.local

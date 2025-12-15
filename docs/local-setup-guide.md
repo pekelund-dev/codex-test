@@ -326,7 +326,7 @@ docker-compose down -v
 **Firestore emulator component not installed?**
 - Package manager install: `sudo apt-get install google-cloud-cli-firestore-emulator`
 - Standard install: `gcloud components install cloud-firestore-emulator`
-- Or use Docker: `docker compose up -d firestore` (no installation needed)
+- Or use Docker: `docker compose up -d firestore` or `docker-compose up -d firestore` (no installation needed)
 
 **Port already in use?**
 - Run: `./scripts/stop-local-services.sh`
@@ -377,7 +377,11 @@ After installation, run the start script again:
 
 **Alternative: Use Docker (no component installation needed):**
 ```bash
+# Docker Compose v2:
 docker compose up -d firestore
+
+# Docker Compose v1:
+docker-compose up -d firestore
 ```
 
 **Docker permission denied:**
