@@ -1,8 +1,6 @@
-version: "3.9"
-
 services:
   firestore:
-    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:alpine
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
     container_name: pklnd-firestore-emulator
     command: >
       gcloud beta emulators firestore start
