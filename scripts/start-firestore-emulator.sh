@@ -25,18 +25,33 @@ if ! command -v gcloud >/dev/null 2>&1; then
 fi
 
 # Check if firestore emulator component is installed
-if ! gcloud components list --filter="id:cloud-firestore-emulator" --format="value(state.name)" 2>/dev/null | grep -q "Installed"; then
-  echo "❌ Firestore emulator component is not installed." >&2
+# Try to check component status, but if gcloud fails (e.g., network issues), we'll try to start anyway
+set +e  # Temporarily allow errors
+COMPONENT_CHECK_OUTPUT=$(gcloud components list --filter="id:cloud-firestore-emulator" --format="value(state.name)" 2>&1)
+COMPONENT_CHECK_EXIT=$?
+set -e  # Re-enable error exit
+
+if [[ $COMPONENT_CHECK_EXIT -eq 0 ]]; then
+  # gcloud succeeded, check if component is installed
+  if ! echo "$COMPONENT_CHECK_OUTPUT" | grep -q "Installed"; then
+    echo "❌ Firestore emulator component is not installed." >&2
+    echo "" >&2
+    echo "   To install it, run:" >&2
+    echo "   gcloud components install cloud-firestore-emulator" >&2
+    echo "" >&2
+    echo "   Or if using apt-get:" >&2
+    echo "   sudo apt-get install google-cloud-cli-firestore-emulator" >&2
+    echo "" >&2
+    echo "   Alternative: Use Docker Compose instead (no gcloud components needed)" >&2
+    echo "   Run: docker compose up -d firestore" >&2
+    exit 1
+  fi
+else
+  # gcloud failed (possibly network issues or component manager disabled)
+  # We'll try to start the emulator anyway and let it fail with its own error if needed
+  echo "⚠️  Could not verify component installation (gcloud components list failed)" >&2
+  echo "   Attempting to start emulator anyway..." >&2
   echo "" >&2
-  echo "   To install it, run:" >&2
-  echo "   gcloud components install cloud-firestore-emulator" >&2
-  echo "" >&2
-  echo "   Or if using apt-get:" >&2
-  echo "   sudo apt-get install google-cloud-cli-firestore-emulator" >&2
-  echo "" >&2
-  echo "   Alternative: Use Docker Compose instead (no gcloud components needed)" >&2
-  echo "   Run: docker compose up -d firestore" >&2
-  exit 1
 fi
 
 # Configuration with defaults
@@ -61,6 +76,7 @@ if [[ "${CHECK_HOST}" == "0.0.0.0" || "${CHECK_HOST}" == "*" ]]; then
 fi
 
 # Check if emulator is already running on the port
+set +e  # Allow python to exit with non-zero status
 python3 - <<PY
 import socket, sys
 host = "${CHECK_HOST}"
@@ -77,6 +93,7 @@ finally:
     sock.close()
 PY
 STATUS=$?
+set -e  # Re-enable error exit
 
 if [[ $STATUS -eq 0 ]]; then
   cat <<MSG
@@ -114,4 +131,19 @@ cat <<MSG
 MSG
 
 # Start the emulator
-exec gcloud beta emulators firestore start "${EMULATOR_ARGS[@]}" "${ADDITIONAL_ARGS[@]}"
+# Note: Not using exec so that errors are properly displayed
+set +e  # Allow gcloud to fail so we can show custom error message
+gcloud beta emulators firestore start "${EMULATOR_ARGS[@]}" "${ADDITIONAL_ARGS[@]}"
+EXIT_CODE=$?
+set -e  # Re-enable error exit
+
+if [[ $EXIT_CODE -ne 0 ]]; then
+  echo "" >&2
+  echo "❌ Firestore emulator failed to start (exit code: $EXIT_CODE)" >&2
+  echo "" >&2
+  echo "Common issues:" >&2
+  echo "  - Component not properly installed: Try 'docker compose up -d firestore' instead" >&2
+  echo "  - Port already in use: Check if another emulator is running" >&2
+  echo "  - Network issues: Ensure gcloud can access Google's servers" >&2
+  exit $EXIT_CODE
+fi
