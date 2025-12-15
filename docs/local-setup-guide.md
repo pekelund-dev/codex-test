@@ -79,12 +79,23 @@ The Firestore emulator provides a local database for user accounts and receipt d
 
 **Requirements:**
 - Google Cloud SDK (`gcloud`) must be installed
-- Firestore emulator component must be installed:
-  ```bash
-  gcloud components install cloud-firestore-emulator
-  ```
+- Firestore emulator component must be installed
 
-If the component cannot be installed (e.g., in managed installations), the script will provide clear instructions and suggest using Docker Compose instead.
+**Installing the Firestore Emulator Component:**
+
+If you installed gcloud via package manager (apt/yum), use:
+```bash
+sudo apt-get install google-cloud-cli-firestore-emulator
+# Or on Red Hat/CentOS:
+# sudo yum install google-cloud-cli-firestore-emulator
+```
+
+If you installed gcloud via the install script, use:
+```bash
+gcloud components install cloud-firestore-emulator
+```
+
+**Note:** If you see "component manager is disabled" error, your gcloud was installed via package manager and you must use the apt-get/yum method above. The script will detect this and provide the correct installation command.
 
 The emulator will:
 - Start on `localhost:8085`
@@ -310,6 +321,19 @@ docker-compose down -v
 
 ## Troubleshooting
 
+### Quick Reference
+
+**Firestore emulator component not installed?**
+- Package manager install: `sudo apt-get install google-cloud-cli-firestore-emulator`
+- Standard install: `gcloud components install cloud-firestore-emulator`
+- Or use Docker: `docker compose up -d firestore` (no installation needed)
+
+**Port already in use?**
+- Run: `./scripts/stop-local-services.sh`
+
+**Environment variables not set?**
+- Run: `source .env.local`
+
 ### Port Already in Use
 
 If you see an error about port 8080 being already in use:
@@ -327,14 +351,38 @@ lsof -ti:8080 | xargs kill -9
 **Error: "gcloud: command not found"**
 - Install the Google Cloud SDK or use Docker instead
 
-**Error: "beta component not installed"**
+**Error: "cloud-firestore-emulator component not installed"**
+
+This is the most common issue. The solution depends on how you installed gcloud:
+
+If you see "component manager is disabled" error (gcloud installed via apt/yum):
 ```bash
-gcloud components install beta
+# On Debian/Ubuntu:
+sudo apt-get update
+sudo apt-get install google-cloud-cli-firestore-emulator
+
+# On Red Hat/CentOS:
+sudo yum install google-cloud-cli-firestore-emulator
+```
+
+If you installed gcloud via install script:
+```bash
+gcloud components install cloud-firestore-emulator
+```
+
+After installation, run the start script again:
+```bash
+./scripts/start-firestore-emulator.sh
+```
+
+**Alternative: Use Docker (no component installation needed):**
+```bash
+docker compose up -d firestore
 ```
 
 **Docker permission denied:**
 ```bash
-sudo docker-compose up -d firestore
+sudo docker compose up -d firestore
 # Or add your user to the docker group
 ```
 
