@@ -237,6 +237,228 @@ curl -F "file=@test-receipt.pdf" \
      http://localhost:8081/api/parsers/hybrid/parse | jq
 ```
 
+## Testing Receipt Parsing Locally with Firestore Storage
+
+This section explains how to test the full receipt parsing workflow locally, storing results in the Firestore emulator **without needing Google Cloud Storage**.
+
+### Overview
+
+The standard workflow requires:
+- **Receipt files** (PDFs/images) → Google Cloud Storage (GCS)
+- **Receipt metadata** (parsed data) → Firestore
+
+However, for local testing, you can bypass GCS and test parsing with Firestore storage using the `/local-receipts` endpoints. This is useful for:
+- Testing parser changes without deploying to the cloud
+- Verifying Firestore integration locally
+- Developing and debugging without GCS setup
+
+### Prerequisites
+
+Before starting, ensure you have:
+
+1. **Firestore emulator running:**
+   ```bash
+   ./scripts/start-firestore-emulator.sh
+   # OR
+   docker compose up -d firestore
+   ```
+
+2. **Environment loaded:**
+   ```bash
+   source .env.local
+   ```
+   
+   Verify `FIRESTORE_EMULATOR_HOST` is set:
+   ```bash
+   echo $FIRESTORE_EMULATOR_HOST  # Should show: localhost:8085
+   ```
+
+### Method 1: Direct API Testing (Parse Only - No Storage)
+
+The simplest approach for testing parser logic without storage:
+
+```bash
+# Start receipt parser in local-receipt-test mode (no AI credentials needed)
+./scripts/start-receipt-parser.sh
+
+# Test with legacy parser
+curl -F "file=@your-receipt.pdf" \
+     http://localhost:8081/local-receipts/parse | jq
+
+# Test with codex parser
+curl -F "file=@your-receipt.pdf" \
+     http://localhost:8081/local-receipts/parse-codex | jq
+```
+
+**What this does:**
+- Parses the receipt PDF and extracts structured data
+- Returns JSON with `structuredData` and `rawResponse`
+- **Does not** store anything in Firestore
+- Useful for rapid parser testing and validation
+
+**Example response:**
+```json
+{
+  "structuredData": {
+    "store": "ICA Supermarket",
+    "date": "2025-08-20",
+    "total": "156.50",
+    "items": [...]
+  },
+  "rawResponse": "..."
+}
+```
+
+### Method 2: Full Workflow with Real GCS (Stores in Firestore Emulator)
+
+For testing the complete end-to-end flow including Firestore storage:
+
+#### Step 1: Set up minimal GCS
+
+Create a small GCS bucket (Google Cloud free tier provides 5GB):
+
+```bash
+# Create bucket (one-time setup)
+gsutil mb -p your-project-id gs://your-test-receipts-bucket
+
+# Get service account credentials and save to ~/.config/pklnd/storage.json
+```
+
+#### Step 2: Configure environment
+
+Update `.env.local`:
+
+```bash
+# Enable GCS
+export GCS_ENABLED=true
+export GCS_PROJECT_ID=your-project-id
+export GCS_BUCKET=your-test-receipts-bucket
+export GCS_CREDENTIALS_FILE=$HOME/.config/pklnd/storage.json
+
+# Keep Firestore emulator (not cloud Firestore)
+export FIRESTORE_EMULATOR_HOST=localhost:8085
+
+# Enable receipt processor integration
+export RECEIPT_PROCESSOR_ENABLED=true
+export RECEIPT_PROCESSOR_BASE_URL=http://localhost:8081
+```
+
+#### Step 3: Load credentials and restart services
+
+```bash
+# Load GCS credentials
+source ./scripts/load-secrets.sh
+
+# Restart services
+source .env.local
+./scripts/start-web-app.sh    # Terminal 1
+./scripts/start-receipt-parser.sh  # Terminal 2
+```
+
+#### Step 4: Test the full workflow
+
+1. **Via Web UI:**
+   - Access http://localhost:8080
+   - Login with your email (first user gets admin access)
+   - Upload receipts through the UI
+   - Files go to GCS, metadata to Firestore emulator
+
+2. **Via API:**
+   ```bash
+   # Upload and trigger processing
+   curl -F "file=@receipt.pdf" \
+        -F "owner=test-user" \
+        http://localhost:8080/api/receipts/upload
+   ```
+
+#### Step 5: Verify data in Firestore emulator
+
+You can inspect the Firestore emulator data using the Firestore UI or by querying collections:
+
+```bash
+# Check if data was stored (using gcloud firestore CLI)
+gcloud firestore --database-id=emulator collections list --project=pklnd-local
+
+# Or inspect the exported data files
+ls -la .local/firestore/
+```
+
+**What this achieves:**
+- Receipt files stored in real GCS bucket (minimal cost)
+- Receipt metadata stored in **local Firestore emulator** (completely local)
+- Full workflow testing without deploying to the cloud
+- Data persists locally in `.local/firestore/`
+
+### Method 3: Manual Firestore Integration Testing
+
+For advanced users who want to test Firestore write operations without the web UI:
+
+```bash
+# Start parser with Firestore access (not in local-receipt-test mode)
+export AI_STUDIO_API_KEY=your-key  # Enables full profile
+source .env.local
+./scripts/start-receipt-parser.sh
+
+# Now /api/parsers endpoints are available and can write to Firestore
+curl http://localhost:8081/api/parsers | jq
+```
+
+**Note:** This requires either GCS setup or modifying the parser to accept direct file uploads while writing to Firestore.
+
+### Comparing Methods
+
+| Method | GCS Required | Firestore Storage | Use Case |
+|--------|--------------|-------------------|----------|
+| Method 1 (Direct API) | No | No | Quick parser logic testing |
+| Method 2 (GCS + Emulator) | Yes (minimal) | Yes (emulator) | Full workflow testing locally |
+| Method 3 (Manual) | Depends | Yes (emulator) | Advanced integration testing |
+
+### Troubleshooting
+
+**Parser returns 404 for `/api/parsers` endpoints:**
+- You're in `local-receipt-test` profile (no AI credentials)
+- Use `/local-receipts` endpoints instead, or add AI credentials
+
+**Firestore data not persisting:**
+- Check `.local/firestore/` directory exists
+- Verify `FIRESTORE_EMULATOR_HOST` is set correctly
+- Ensure emulator was started with `--export-on-exit` flag
+
+**GCS upload fails:**
+- Verify `GCS_CREDENTIALS_FILE` points to valid service account key
+- Check bucket exists: `gsutil ls gs://your-bucket-name`
+- Confirm service account has Storage Admin role
+
+**Can't access Firestore data:**
+- Data is stored in `.local/firestore/` directory
+- Emulator exports data on shutdown (Ctrl+C)
+- Use `--import-data` flag to restore data on next startup
+
+### Viewing Stored Data
+
+To see what's been stored in the Firestore emulator:
+
+```bash
+# View the data directory
+ls -la .local/firestore/
+
+# If using Docker, connect to the emulator UI
+# (Note: The emulator doesn't have a built-in UI, but data is in files)
+
+# Or use gcloud to query
+gcloud firestore documents list --collection=receiptExtractions \
+       --project=pklnd-local
+```
+
+### Summary
+
+For most local development and testing:
+- **Use Method 1** for quick parser validation (no setup needed)
+- **Use Method 2** when you need to test Firestore storage integration
+- Only use real cloud deployment when testing production features
+
+This approach lets you develop and test the full application locally while keeping costs minimal and maintaining full control over your test environment.
+
 ## Configuring Google Cloud Services (Optional)
 
 If you want to test with real Google Cloud services instead of the emulator:
