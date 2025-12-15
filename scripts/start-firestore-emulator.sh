@@ -77,10 +77,10 @@ fi
 
 # Check if emulator is already running on the port
 set +e  # Allow python to exit with non-zero status
-python3 - <<PY
-import socket, sys
-host = "${CHECK_HOST}"
-port = int("${PORT}")
+CHECK_HOST_SAFE="${CHECK_HOST}" PORT_SAFE="${PORT}" python3 - <<'PY'
+import socket, sys, os
+host = os.environ.get('CHECK_HOST_SAFE', 'localhost')
+port = int(os.environ.get('PORT_SAFE', '8085'))
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.settimeout(0.5)
 try:
