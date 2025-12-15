@@ -12,6 +12,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 
 # Load Firestore credentials from a JSON file
+# Sets FIRESTORE_CREDENTIALS to file:// URI format for Spring Boot
 load_firestore_credentials() {
   if [[ -z "${FIRESTORE_CREDENTIALS_FILE:-}" ]]; then
     return
@@ -30,6 +31,7 @@ load_firestore_credentials() {
 }
 
 # Load Google OAuth credentials from a JSON file
+# Parses JSON to extract client_id and client_secret, exports as environment variables
 load_google_oauth_credentials() {
   if [[ -z "${GOOGLE_OAUTH_CREDENTIALS_FILE:-}" ]]; then
     return
@@ -90,7 +92,8 @@ PY
   fi
 }
 
-# Load GCS credentials from a JSON file
+# Load Google Cloud Storage credentials from a JSON file
+# Sets GCS_CREDENTIALS to file:// URI format for Spring Boot
 load_gcs_credentials() {
   if [[ -z "${GCS_CREDENTIALS_FILE:-}" ]]; then
     return
