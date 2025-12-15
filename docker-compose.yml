@@ -1,0 +1,20 @@
+services:
+  firestore:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    container_name: pklnd-firestore-emulator
+    command: gcloud beta emulators firestore start --project=pklnd-local --host-port=0.0.0.0:8085 --export-on-exit=/opt/data
+    ports:
+      - "8085:8085"
+    environment:
+      - FIRESTORE_PROJECT_ID=pklnd-local
+    volumes:
+      - firestore-data:/opt/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  firestore-data:
+    driver: local

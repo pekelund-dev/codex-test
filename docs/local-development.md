@@ -122,11 +122,11 @@ for spot-checking output or comparing the hybrid, legacy, and Gemini extractors:
 
 ```bash
 # discover the available parser identifiers
-curl http://localhost:8080/api/parsers | jq
+curl http://localhost:8081/api/parsers | jq
 
 # parse a PDF with one of the listed parsers
 curl -F "file=@test-receipt.pdf" \
-     http://localhost:8080/api/parsers/hybrid/parse | jq
+     http://localhost:8081/api/parsers/hybrid/parse | jq
 ```
 
 Switch the parser id in the URL to `legacy` or `gemini` to target a specific extractor. The service returns the structured data
@@ -144,7 +144,7 @@ If you only need to evaluate the legacy PDF extractor and Firestore writes—wit
 Submit a PDF for parsing:
 
 ```bash
-curl -F "file=@test-receipt.pdf" http://localhost:8080/local-receipts/parse | jq
+curl -F "file=@test-receipt.pdf" http://localhost:8081/local-receipts/parse | jq
 ```
 
 The handler writes the structured output to the Firestore emulator so you can review it in

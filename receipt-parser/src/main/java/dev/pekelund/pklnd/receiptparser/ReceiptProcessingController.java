@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * HTTP controller that receives Cloud Storage style events forwarded by the web application.
  */
 @RestController
+@org.springframework.context.annotation.Profile("!local-receipt-test")
 public class ReceiptProcessingController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptProcessingController.class);
