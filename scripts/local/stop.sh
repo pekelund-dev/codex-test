@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 COMPOSE_DIR="$ROOT_DIR/local"
 ENV_FILE="$COMPOSE_DIR/.env"
 
