@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  firestore:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:alpine
+    container_name: pklnd-firestore-emulator
+    command: >
+      gcloud beta emulators firestore start
+      --host-port=0.0.0.0:8085
+      --project=${FIRESTORE_PROJECT_ID:-pklnd-local}
+      --quiet
+      --data-dir=/opt/data
+    ports:
+      - "${FIRESTORE_EMULATOR_PORT:-8085}:8085"
+    volumes:
+      - ../.local/firestore:/opt/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8085"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    environment:
+      - CLOUDSDK_CORE_PROJECT=${FIRESTORE_PROJECT_ID:-pklnd-local}
+
+  receipt-parser:
+    build:
+      context: ..
+      dockerfile: receipt-parser/Dockerfile
+    container_name: pklnd-receipt-parser
+    depends_on:
+      firestore:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      PORT: 8081
+      PROJECT_ID: ${FIRESTORE_PROJECT_ID:-pklnd-local}
+      FIRESTORE_PROJECT_ID: ${FIRESTORE_PROJECT_ID:-pklnd-local}
+      FIRESTORE_DATABASE_ID: ${FIRESTORE_DATABASE_ID:-receipts-db}
+      FIRESTORE_EMULATOR_HOST: firestore:8085
+      LOCAL_PROJECT_ID: ${FIRESTORE_PROJECT_ID:-pklnd-local}
+    ports:
+      - "${PARSER_PORT:-8081}:8081"
+
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: pklnd-web
+    depends_on:
+      firestore:
+        condition: service_healthy
+      receipt-parser:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      FIRESTORE_ENABLED: "true"
+      FIRESTORE_EMULATOR_HOST: firestore:8085
+      FIRESTORE_PROJECT_ID: ${FIRESTORE_PROJECT_ID:-pklnd-local}
+      FIRESTORE_DATABASE_ID: ${FIRESTORE_DATABASE_ID:-receipts-db}
+      FIRESTORE_DEFAULT_ROLE: ROLE_USER
+      RECEIPT_PROCESSOR_BASE_URL: http://receipt-parser:8081
+      RECEIPT_PROCESSOR_USE_ID_TOKEN: "false"
+      RECEIPT_PROCESSOR_ENABLED: "true"
+      GCS_ENABLED: "false"
+    ports:
+      - "${WEB_PORT:-8080}:8080"

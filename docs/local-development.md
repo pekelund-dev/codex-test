@@ -1,9 +1,70 @@
 # Local development without Google Cloud
 
 Running the entire stack locally avoids container builds in Artifact Registry and keeps
-experimentation free. This guide explains how to launch the Firestore emulator, configure
-matching environment variables, and run the Spring Boot web app plus the receipt parsing
-function on your workstation.
+experimentation free. This guide explains two options:
+
+- **Quick start (recommended):** launch everything with Docker Compose, including the
+  Firestore emulator, the web app, and the receipt parser. A dedicated local-only endpoint
+  lets you upload and parse receipts via `curl` while storing both the user information and
+  receipt data in the emulator.
+- **Manual flow:** start each component yourself for finer control or when you want to run
+  the services directly on your workstation without containers.
+
+> ℹ️ The JSON key files you use locally are **not** required when the container runs on Cloud
+> Run. Google injects the attached service account automatically in managed environments, so
+> keep the downloaded keys on your workstation only.
+
+## Quick start: Docker Compose with the Firestore emulator
+
+Use the helper scripts to start and stop all services together. Docker and the Compose plugin
+are the only prerequisites for this path.
+
+### Start all services
+
+```bash
+./scripts/local/start.sh
+```
+
+The script automatically creates `local/.env` with sensible defaults (ignored by git) and
+`.local/firestore` to persist emulator data. It then builds the web and receipt-parser
+containers and starts them alongside the Firestore emulator.
+
+Default ports (override them in `local/.env` if needed):
+- Web app: `http://localhost:8080`
+- Receipt parser: `http://localhost:8081`
+- Firestore emulator: `localhost:8085`
+
+### Parse and store a receipt locally
+
+Send a PDF to the local-only ingestion endpoint. The handler parses the receipt, writes the
+result (including the uploading user) into the Firestore emulator, and returns the structured
+payload for inspection.
+
+```bash
+curl -X POST \
+  -F "file=@/path/to/receipt.pdf" \
+  -F "userId=local-user-123" \
+  -F "userEmail=local-user@example.com" \
+  -F "userName=Local Testare" \
+  http://localhost:8081/local-receipts/ingest
+```
+
+Optional extras:
+- `bucket` sets the logical bucket name used to group receipts (defaults to `local-receipts`).
+- `objectName` overrides the generated object key.
+
+### Stop all services
+
+```bash
+./scripts/local/stop.sh
+```
+
+### Local-mode visual indicator
+
+When the web app runs with the `local` Spring profile the red banner includes a badge labelled
+"Lokal testmiljö (emulator)" to make it clear the emulator is active.
+
+## Manual flow (legacy)
 
 > ℹ️ The JSON key files you use locally are **not** required when the container runs on Cloud Run. Google injects the attached service account automatically in managed environments, so keep the downloaded keys on your workstation only.
 
