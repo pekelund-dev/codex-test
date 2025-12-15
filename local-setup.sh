@@ -138,8 +138,11 @@ export GCS_ENABLED=false
 export RECEIPT_PROCESSOR_ENABLED=false
 
 # Optional: Uncomment and set these if you want to test with real Google Cloud services
+# Then run: source ./scripts/load-secrets.sh to load credentials from JSON files
 # export FIRESTORE_CREDENTIALS_FILE=$HOME/.config/pklnd/firestore.json
 # export GOOGLE_OAUTH_CREDENTIALS_FILE=$HOME/.config/pklnd/oauth-client.json
+# export GCS_CREDENTIALS_FILE=$HOME/.config/pklnd/storage.json
+# Or set these directly:
 # export GOOGLE_CLIENT_ID=your-client-id
 # export GOOGLE_CLIENT_SECRET=your-client-secret
 # export AI_STUDIO_API_KEY=your-api-key

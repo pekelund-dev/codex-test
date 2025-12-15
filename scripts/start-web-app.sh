@@ -25,7 +25,6 @@ echo ""
 if [[ -z "${PROJECT_ID:-}" ]]; then
   echo -e "${YELLOW}⚠${NC} Environment variables not set!"
   echo "  Please run: source .env.local"
-  echo "  Or source: source ./scripts/legacy/source_local_env.sh"
   echo ""
   exit 1
 fi

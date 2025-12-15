@@ -229,7 +229,7 @@ export FIRESTORE_PROJECT_ID=your-gcp-project-id
 
 4. Source the secrets loader:
 ```bash
-source ./scripts/legacy/load_local_secrets.sh
+source ./scripts/load-secrets.sh
 ```
 
 ### Google Cloud Storage
@@ -254,7 +254,7 @@ export SPRING_PROFILES_ACTIVE=local,oauth
 
 Then load the credentials:
 ```bash
-source ./scripts/legacy/load_local_secrets.sh
+source ./scripts/load-secrets.sh
 ```
 
 ## Stopping Services

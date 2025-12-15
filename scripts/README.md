@@ -42,28 +42,25 @@ Verifies that the local development environment is properly configured.
 ./scripts/verify-local-setup.sh
 ```
 
+### `load-secrets.sh`
+Loads credentials from JSON files for GCP services. Must be sourced:
+```bash
+export FIRESTORE_CREDENTIALS_FILE=$HOME/.config/pklnd/firestore.json
+export GOOGLE_OAUTH_CREDENTIALS_FILE=$HOME/.config/pklnd/oauth-client.json
+export GCS_CREDENTIALS_FILE=$HOME/.config/pklnd/storage.json
+source ./scripts/load-secrets.sh
+```
+
+This script extracts:
+- Firestore credentials from service account JSON
+- Google OAuth client ID and secret from OAuth credentials JSON
+- Google Cloud Storage credentials from service account JSON
+
 ## Legacy Scripts
 
 Located in `scripts/legacy/`:
 
-These are the original scripts that provide more granular control over the development environment.
-
-### `start_firestore_emulator.sh`
-Original Firestore emulator script with advanced configuration options.
-
-### `source_local_env.sh`
-Sets up environment variables for local development. Must be sourced:
-```bash
-source ./scripts/legacy/source_local_env.sh
-```
-
-### `load_local_secrets.sh`
-Loads credentials from JSON files. Must be sourced:
-```bash
-export FIRESTORE_CREDENTIALS_FILE=$HOME/.config/pklnd/firestore.json
-export GOOGLE_OAUTH_CREDENTIALS_FILE=$HOME/.config/pklnd/oauth-client.json
-source ./scripts/legacy/load_local_secrets.sh
-```
+These are the original scripts maintained for backward compatibility. The functionality has been incorporated into the scripts above.
 
 ## Terraform Scripts
 
