@@ -18,9 +18,23 @@ fi
 if ! command -v gcloud >/dev/null 2>&1; then
   echo "❌ gcloud must be installed to start the Firestore emulator." >&2
   echo "   Install from: https://cloud.google.com/sdk/docs/install" >&2
-  echo "   After installation, run: gcloud components install beta" >&2
   echo "" >&2
   echo "   Alternative: Use Docker Compose instead" >&2
+  echo "   Run: docker compose up -d firestore" >&2
+  exit 1
+fi
+
+# Check if firestore emulator component is installed
+if ! gcloud components list --filter="id:cloud-firestore-emulator" --format="value(state.name)" 2>/dev/null | grep -q "Installed"; then
+  echo "❌ Firestore emulator component is not installed." >&2
+  echo "" >&2
+  echo "   To install it, run:" >&2
+  echo "   gcloud components install cloud-firestore-emulator" >&2
+  echo "" >&2
+  echo "   Or if using apt-get:" >&2
+  echo "   sudo apt-get install google-cloud-cli-firestore-emulator" >&2
+  echo "" >&2
+  echo "   Alternative: Use Docker Compose instead (no gcloud components needed)" >&2
   echo "   Run: docker compose up -d firestore" >&2
   exit 1
 fi
@@ -72,18 +86,32 @@ MSG
   exit 0
 fi
 
-# Create data directory if it doesn't exist
+# Create data directory if it doesn't exist (for exports)
 mkdir -p "${DATA_DIR}"
+
+# Prepare emulator arguments
+EMULATOR_ARGS=(
+  "--project=${PROJECT_ID}"
+  "--host-port=${HOST}:${PORT}"
+)
+
+# Add export-on-exit if data directory is specified
+if [[ -n "${DATA_DIR}" && "${DATA_DIR}" != "." ]]; then
+  EMULATOR_ARGS+=("--export-on-exit=${DATA_DIR}")
+  
+  # Check for existing data to import
+  EXPORT_FILE=$(find "${DATA_DIR}" -name "*.overall_export_metadata" 2>/dev/null | head -1 || true)
+  if [[ -n "${EXPORT_FILE}" ]]; then
+    EMULATOR_ARGS+=("--import-data=${EXPORT_FILE}")
+    echo "📦 Importing existing data from ${EXPORT_FILE}"
+  fi
+fi
 
 cat <<MSG
 ▶️  Starting Firestore emulator for project "${PROJECT_ID}" on ${HOST}:${PORT}.
-   Data directory: ${DATA_DIR}
+   Data will be exported to: ${DATA_DIR}
    Use Ctrl+C to stop the emulator.
 MSG
 
 # Start the emulator
-exec gcloud beta emulators firestore start \
-  --project="${PROJECT_ID}" \
-  --host-port="${HOST}:${PORT}" \
-  --data-dir="${DATA_DIR}" \
-  "${ADDITIONAL_ARGS[@]}"
+exec gcloud beta emulators firestore start "${EMULATOR_ARGS[@]}" "${ADDITIONAL_ARGS[@]}"

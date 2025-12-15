@@ -2,7 +2,7 @@ services:
   firestore:
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
     container_name: pklnd-firestore-emulator
-    command: gcloud beta emulators firestore start --project=pklnd-local --host-port=0.0.0.0:8085 --data-dir=/opt/data
+    command: gcloud beta emulators firestore start --project=pklnd-local --host-port=0.0.0.0:8085 --export-on-exit=/opt/data
     ports:
       - "8085:8085"
     environment:

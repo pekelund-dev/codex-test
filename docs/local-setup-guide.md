@@ -71,20 +71,29 @@ This script will:
 
 The Firestore emulator provides a local database for user accounts and receipt data.
 
-#### Option A: Using gcloud (Recommended)
+#### Option A: Using gcloud
 
 ```bash
 ./scripts/start-firestore-emulator.sh
 ```
 
+**Requirements:**
+- Google Cloud SDK (`gcloud`) must be installed
+- Firestore emulator component must be installed:
+  ```bash
+  gcloud components install cloud-firestore-emulator
+  ```
+
+If the component cannot be installed (e.g., in managed installations), the script will provide clear instructions and suggest using Docker Compose instead.
+
 The emulator will:
 - Start on `localhost:8085`
-- Store data in `.local/firestore` directory
-- Persist data between restarts
+- Export data to `.local/firestore` directory on shutdown
+- Import existing data on startup if available
 
 To stop: Press `Ctrl+C` in the terminal where it's running.
 
-#### Option B: Using Docker Compose
+#### Option B: Using Docker Compose (Recommended for CI/managed environments)
 
 ```bash
 # Docker Compose v2 (recommended)
@@ -93,6 +102,16 @@ docker compose up -d firestore
 # Or Docker Compose v1
 docker-compose up -d firestore
 ```
+
+**Advantages:**
+- No gcloud components needed
+- Works in any Docker-enabled environment
+- Consistent across all platforms
+
+The emulator will:
+- Start on `localhost:8085`
+- Export data to a Docker volume on shutdown
+- Import existing data on startup if available
 
 To stop:
 ```bash
