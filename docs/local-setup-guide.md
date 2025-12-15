@@ -230,11 +230,11 @@ Once running, you can test the API:
 
 ```bash
 # List available parsers
-curl http://localhost:8080/api/parsers | jq
+curl http://localhost:8081/api/parsers | jq
 
 # Parse a PDF (replace with your receipt file)
 curl -F "file=@test-receipt.pdf" \
-     http://localhost:8080/api/parsers/hybrid/parse | jq
+     http://localhost:8081/api/parsers/hybrid/parse | jq
 ```
 
 ## Configuring Google Cloud Services (Optional)

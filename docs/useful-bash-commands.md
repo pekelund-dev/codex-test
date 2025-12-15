@@ -20,7 +20,7 @@ clear && git pull && ./scripts/legacy/deploy_receipt_processor.sh && \
 clear && git pull && ./mvnw -pl receipt-parser -am spring-boot:run \
     -Dspring-boot.run.profiles=local-receipt-test
 
-clear && curl -F "file=@test-receipt.pdf" http://localhost:8080/local-receipts/parse | jq
+clear && curl -F "file=@test-receipt.pdf" http://localhost:8081/local-receipts/parse | jq
 
 # Local-only workflow (run the emulator in its own terminal)
 ./scripts/legacy/start_firestore_emulator.sh

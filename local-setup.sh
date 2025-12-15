@@ -135,7 +135,9 @@ export RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION=receiptItemStats
 export GCS_ENABLED=false
 
 # Receipt processor (disabled for basic local setup)
+# When enabled, set the base URL to the receipt parser service
 export RECEIPT_PROCESSOR_ENABLED=false
+export RECEIPT_PROCESSOR_BASE_URL=http://localhost:8081
 
 # Optional: Uncomment and set these if you want to test with real Google Cloud services
 # Then run: source ./scripts/load-secrets.sh to load credentials from JSON files
