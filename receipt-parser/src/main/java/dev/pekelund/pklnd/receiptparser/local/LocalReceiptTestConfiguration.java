@@ -1,6 +1,8 @@
 package dev.pekelund.pklnd.receiptparser.local;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.pekelund.pklnd.receiptparser.AIReceiptExtractor;
+import dev.pekelund.pklnd.receiptparser.HybridReceiptExtractor;
 import dev.pekelund.pklnd.receiptparser.ReceiptDataExtractor;
 import dev.pekelund.pklnd.receiptparser.legacy.CodexOnlyReceiptDataExtractor;
 import dev.pekelund.pklnd.receiptparser.legacy.LegacyPdfReceiptExtractor;
@@ -23,6 +25,23 @@ public class LocalReceiptTestConfiguration {
 
     @Bean
     @Primary
+    public ChatModel chatModel() {
+        return new NoopChatModel();
+    }
+
+    @Bean
+    public AIReceiptExtractor aiReceiptExtractor(ChatModel chatModel, ObjectMapper objectMapper) {
+        return new AIReceiptExtractor(chatModel, objectMapper, null);
+    }
+
+    @Bean
+    public HybridReceiptExtractor hybridReceiptExtractor(LegacyPdfReceiptExtractor legacyPdfReceiptExtractor,
+        AIReceiptExtractor aiReceiptExtractor, ObjectMapper objectMapper) {
+        return new HybridReceiptExtractor(legacyPdfReceiptExtractor, aiReceiptExtractor, objectMapper);
+    }
+
+    @Bean
+    @Primary
     public ReceiptDataExtractor receiptDataExtractor(LegacyPdfReceiptExtractor legacyPdfReceiptExtractor) {
         return legacyPdfReceiptExtractor;
     }
@@ -30,11 +49,5 @@ public class LocalReceiptTestConfiguration {
     @Bean(name = "codexReceiptDataExtractor")
     public ReceiptDataExtractor codexReceiptDataExtractor(ObjectMapper objectMapper) {
         return new CodexOnlyReceiptDataExtractor(objectMapper);
-    }
-
-    @Bean
-    @Primary
-    public ChatModel chatModel() {
-        return new NoopChatModel();
     }
 }
