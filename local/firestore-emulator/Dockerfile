@@ -15,6 +15,7 @@ RUN set -eux; \
 
 # Create data directory with proper permissions
 RUN mkdir -p /data && chmod 777 /data
+ENV HOME=/data
 
 COPY local/firestore-emulator/entrypoint.sh /entrypoint.sh
 COPY local/firestore-emulator/firebase.json /firebase.json
