@@ -18,9 +18,11 @@ RUN mkdir -p /data && chmod 777 /data
 ENV HOME=/data
 
 COPY local/firestore-emulator/entrypoint.sh /entrypoint.sh
-COPY local/firestore-emulator/firebase.json /firebase.json
-RUN chmod +x /entrypoint.sh
+COPY local/firestore-emulator/firebase.json /opt/firestore/firebase.json
+RUN chmod +x /entrypoint.sh && \
+    mkdir -p /opt/firestore && \
+    chmod 777 /opt/firestore
 
-WORKDIR /
+WORKDIR /opt/firestore
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
