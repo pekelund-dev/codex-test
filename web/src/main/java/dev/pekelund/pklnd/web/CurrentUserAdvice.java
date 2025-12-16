@@ -11,11 +11,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.info.GitProperties;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -27,15 +31,21 @@ public class CurrentUserAdvice {
     private final ObjectProvider<FirestoreReadTracker> firestoreReadTrackerProvider;
     private final FirestoreReadTotals firestoreReadTotals;
     private final ObjectProvider<GitProperties> gitPropertiesProvider;
+    private final Environment environment;
+
+    @Value("${app.environment.label:}")
+    private String environmentLabel;
 
     public CurrentUserAdvice(
         ObjectProvider<FirestoreReadTracker> firestoreReadTrackerProvider,
         FirestoreReadTotals firestoreReadTotals,
-        ObjectProvider<GitProperties> gitPropertiesProvider
+        ObjectProvider<GitProperties> gitPropertiesProvider,
+        Environment environment
     ) {
         this.firestoreReadTrackerProvider = firestoreReadTrackerProvider;
         this.firestoreReadTotals = firestoreReadTotals;
         this.gitPropertiesProvider = gitPropertiesProvider;
+        this.environment = environment;
     }
 
     @ModelAttribute("userProfile")
@@ -113,6 +123,17 @@ public class CurrentUserAdvice {
 
         String version = gitProperties.get("build.version");
         return new GitMetadata(gitProperties.getBranch(), gitProperties.getShortCommitId(), version);
+    }
+
+    @ModelAttribute("environmentLabel")
+    public String environmentLabel() {
+        if (environment != null && environment.acceptsProfiles(Profiles.of("local"))) {
+            if (StringUtils.hasText(environmentLabel)) {
+                return environmentLabel;
+            }
+            return "Lokal miljö";
+        }
+        return null;
     }
 
     private LanguageOption buildOption(

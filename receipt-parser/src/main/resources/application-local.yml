@@ -1,0 +1,13 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  main:
+    web-application-type: servlet
+
+server:
+  port: ${PORT:8081}
+
+app:
+  logging:
+    cloud-enabled: false

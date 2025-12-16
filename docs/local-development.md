@@ -1,9 +1,96 @@
 # Local development without Google Cloud
 
 Running the entire stack locally avoids container builds in Artifact Registry and keeps
-experimentation free. This guide explains how to launch the Firestore emulator, configure
-matching environment variables, and run the Spring Boot web app plus the receipt parsing
-function on your workstation.
+experimentation free. This guide explains two options:
+
+- **Quick start (recommended):** launch everything with Docker Compose, including the
+  Firestore emulator, the web app, and the receipt parser. A dedicated local-only endpoint
+  lets you upload and parse receipts via `curl` while storing both the user information and
+  receipt data in the emulator.
+- **Manual flow:** start each component yourself for finer control or when you want to run
+  the services directly on your workstation without containers.
+
+> ℹ️ The JSON key files you use locally are **not** required when the container runs on Cloud
+> Run. Google injects the attached service account automatically in managed environments, so
+> keep the downloaded keys on your workstation only.
+
+## Quick start: Docker Compose with the Firestore emulator
+
+Run the entire stack using standard Docker Compose.
+
+> 🔧 The setup builds a Firestore emulator image that persists data to `.local/firestore`. 
+> The data is automatically exported when the container stops gracefully.
+
+### Start all services
+
+```bash
+cd local
+docker compose up -d --build
+```
+
+> **Permissions:** The Firestore emulator runs as your current user (defaulting to UID 1000) 
+> to ensure the persisted data in `.local/firestore` is readable by you. If you have 
+> existing data owned by root from a previous run, you may need to fix permissions:
+> `sudo chown -R $USER:$USER ../.local/firestore`
+
+Default ports (override them in `local/.env` if needed):
+- Web app: `http://localhost:8080`
+- Receipt parser: `http://localhost:8081`
+- Firestore emulator: `localhost:8085` (Firestore REST API on port 8080 inside container)
+- Firestore Emulator UI: `http://localhost:4000`
+
+### Parse and store a receipt locally
+
+Send a PDF to the local-only ingestion endpoint. The handler parses the receipt, writes the
+result (including the uploading user) into the Firestore emulator, and returns the structured
+payload for inspection.
+
+```bash
+curl -X POST \
+  -F "file=@/path/to/receipt.pdf" \
+  -F "userId=local-user-123" \
+  -F "userEmail=local-user@example.com" \
+  -F "userName=Local Testare" \
+  http://localhost:8081/local-receipts/ingest
+```
+
+Optional extras:
+- `bucket` sets the logical bucket name used to group receipts (defaults to `local-receipts`).
+- `objectName` overrides the generated object key.
+
+### Stop all services
+
+```bash
+cd local
+docker compose down
+```
+
+> **Note:** The Firestore emulator needs a few seconds to export data to disk. The configuration 
+> includes a grace period to ensure this happens before the container is killed.
+
+### Viewing emulator data
+
+To inspect what's stored in the Firestore emulator while it's running:
+
+```bash
+# List all documents in a collection
+curl "http://localhost:8080/v1/projects/pklnd-local/databases/(default)/documents/users" | jq
+
+# Get a specific document
+curl "http://localhost:8080/v1/projects/pklnd-local/databases/(default)/documents/users/{documentId}" | jq
+
+# List all collections (root documents)
+curl "http://localhost:8080/v1/projects/pklnd-local/databases/(default)/documents" | jq '.documents[].name'
+```
+
+The emulator REST API doesn't require authentication, making it easy to inspect data during development.
+
+### Local-mode visual indicator
+
+When the web app runs with the `local` Spring profile the red banner includes a badge labelled
+"Lokal testmiljö (emulator)" to make it clear the emulator is active.
+
+## Manual flow (legacy)
 
 > ℹ️ The JSON key files you use locally are **not** required when the container runs on Cloud Run. Google injects the attached service account automatically in managed environments, so keep the downloaded keys on your workstation only.
 

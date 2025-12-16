@@ -1,0 +1,27 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+
+firestore:
+  enabled: true
+  emulator-host: ${FIRESTORE_EMULATOR_HOST:localhost:8085}
+  project-id: ${FIRESTORE_PROJECT_ID:pklnd-local}
+  database-id: ${FIRESTORE_DATABASE_ID:receipts-db}
+  credentials: ${FIRESTORE_CREDENTIALS:}
+
+# Disable cloud storage and tokens when running locally
+gcs:
+  enabled: false
+
+receipt:
+  processing:
+    enabled: true
+    base-url: ${RECEIPT_PROCESSOR_BASE_URL:http://localhost:8081}
+    use-id-token: false
+    connect-timeout: 5s
+    read-timeout: 30s
+
+app:
+  environment:
+    label: "Lokal testmiljö (emulator)"

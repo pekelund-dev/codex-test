@@ -46,6 +46,9 @@ build/
 !tsconfig*.json
 !.vscode/*.json
 setup-env.sh
+.env.local
+.local/
+local/.env
 
 ### Terraform ###
 .terraform/
