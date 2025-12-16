@@ -7,12 +7,15 @@ services:
     stop_grace_period: 60s
     user: "${UID:-1000}:${GID:-1000}"
     ports:
-      - "${FIRESTORE_EMULATOR_PORT:-8085}:8080"
+      - "${FIRESTORE_EMULATOR_PORT:-8085}:8085"
       - "4000:4000"
+      - "4400:4400"
+      - "4500:4500"
+      - "9150:9150"
     volumes:
       - ../.local/firestore:/data
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "8080"]
+      test: ["CMD", "nc", "-z", "localhost", "8085"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -32,8 +35,8 @@ services:
       PORT: 8081
       PROJECT_ID: ${FIRESTORE_PROJECT_ID:-pklnd-local}
       FIRESTORE_PROJECT_ID: ${FIRESTORE_PROJECT_ID:-pklnd-local}
-      FIRESTORE_DATABASE_ID: ${FIRESTORE_DATABASE_ID:-receipts-db}
-      FIRESTORE_EMULATOR_HOST: firestore:8080
+      FIRESTORE_DATABASE_ID: ${FIRESTORE_DATABASE_ID:-(default)}
+      FIRESTORE_EMULATOR_HOST: firestore:8085
       LOCAL_PROJECT_ID: ${FIRESTORE_PROJECT_ID:-pklnd-local}
     ports:
       - "${PARSER_PORT:-8081}:8081"
@@ -51,9 +54,9 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: local
       FIRESTORE_ENABLED: "true"
-      FIRESTORE_EMULATOR_HOST: firestore:8080
+      FIRESTORE_EMULATOR_HOST: firestore:8085
       FIRESTORE_PROJECT_ID: ${FIRESTORE_PROJECT_ID:-pklnd-local}
-      FIRESTORE_DATABASE_ID: ${FIRESTORE_DATABASE_ID:-receipts-db}
+      FIRESTORE_DATABASE_ID: ${FIRESTORE_DATABASE_ID:-(default)}
       FIRESTORE_DEFAULT_ROLE: ROLE_USER
       RECEIPT_PROCESSOR_BASE_URL: http://receipt-parser:8081
       RECEIPT_PROCESSOR_USE_ID_TOKEN: "false"
