@@ -7,6 +7,7 @@ RUN set -eux; \
     curl \
     gnupg \
     netcat-openbsd \
+    socat \
     tini; \
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash -; \
   apt-get install -y nodejs; \
@@ -19,6 +20,7 @@ ENV HOME=/data
 
 COPY local/firestore-emulator/entrypoint.sh /entrypoint.sh
 COPY local/firestore-emulator/firebase.json /opt/firestore/firebase.json
+COPY local/firestore-emulator/firestore.rules /opt/firestore/firestore.rules
 RUN chmod +x /entrypoint.sh && \
     mkdir -p /opt/firestore && \
     chmod 777 /opt/firestore

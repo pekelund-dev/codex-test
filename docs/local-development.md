@@ -36,8 +36,9 @@ docker compose up -d --build
 Default ports (override them in `local/.env` if needed):
 - Web app: `http://localhost:8080`
 - Receipt parser: `http://localhost:8081`
-- Firestore emulator: `localhost:8085` (Firestore REST API on port 8080 inside container)
+- Firestore emulator: `localhost:8085` (Firestore REST API on port 8085 inside container)
 - Firestore Emulator UI: `http://localhost:4000`
+- Additional ports exposed for UI functionality: `4400` (Hub), `4500` (Logging), `9150` (WebSocket)
 
 ### Parse and store a receipt locally
 
