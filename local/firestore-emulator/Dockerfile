@@ -3,8 +3,9 @@ FROM gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
 RUN set -eux; \
   apt-get update; \
   apt-get install -y --no-install-recommends \
-    google-cloud-sdk-firestore-emulator \
+    default-jre-headless \
     netcat-openbsd; \
+  gcloud components install cloud-firestore-emulator --quiet; \
   rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT ["gcloud", "beta", "emulators", "firestore", "start"]
