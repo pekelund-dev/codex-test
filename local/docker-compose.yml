@@ -1,13 +1,14 @@
 services:
   firestore:
-    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    build:
+      context: ..
+      dockerfile: local/firestore-emulator/Dockerfile
     container_name: pklnd-firestore-emulator
-    command: >
-      gcloud beta emulators firestore start
-      --host-port=0.0.0.0:8085
-      --project=${FIRESTORE_PROJECT_ID:-pklnd-local}
-      --quiet
-      --data-dir=/opt/data
+    command:
+      - "--host-port=0.0.0.0:8085"
+      - "--project=${FIRESTORE_PROJECT_ID:-pklnd-local}"
+      - "--quiet"
+      - "--data-dir=/opt/data"
     ports:
       - "${FIRESTORE_EMULATOR_PORT:-8085}:8085"
     volumes:

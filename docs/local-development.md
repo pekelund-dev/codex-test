@@ -19,9 +19,10 @@ experimentation free. This guide explains two options:
 Use the helper scripts to start and stop all services together. Docker and the Compose plugin
 are the only prerequisites for this path.
 
-> 🔧 Compose uses the `google-cloud-cli:emulators` image so the Firestore emulator binaries
-> are preinstalled. If you pulled an older image, run `docker compose pull firestore` inside
-> the `local/` directory to refresh it.
+> 🔧 Compose builds a small Firestore emulator image based on `google-cloud-cli:emulators`
+> and installs the `google-cloud-sdk-firestore-emulator` package (plus `netcat` for the
+> health check). If you run into emulator startup problems after a Docker update, rebuild
+> the service from the `local/` directory with `docker compose build firestore`.
 
 ### Start all services
 
