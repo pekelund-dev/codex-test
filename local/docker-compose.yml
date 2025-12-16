@@ -4,17 +4,13 @@ services:
       context: ..
       dockerfile: local/firestore-emulator/Dockerfile
     container_name: pklnd-firestore-emulator
-    command:
-      - "--host-port=0.0.0.0:8085"
-      - "--project=${FIRESTORE_PROJECT_ID:-pklnd-local}"
-      - "--quiet"
-      - "--data-dir=/opt/data"
     ports:
-      - "${FIRESTORE_EMULATOR_PORT:-8085}:8085"
+      - "${FIRESTORE_EMULATOR_PORT:-8080}:8080"
+      - "4000:4000"
     volumes:
-      - ../.local/firestore:/opt/data
+      - ../.local/firestore:/data
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "8085"]
+      test: ["CMD", "nc", "-z", "localhost", "8080"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -35,7 +31,7 @@ services:
       PROJECT_ID: ${FIRESTORE_PROJECT_ID:-pklnd-local}
       FIRESTORE_PROJECT_ID: ${FIRESTORE_PROJECT_ID:-pklnd-local}
       FIRESTORE_DATABASE_ID: ${FIRESTORE_DATABASE_ID:-receipts-db}
-      FIRESTORE_EMULATOR_HOST: firestore:8085
+      FIRESTORE_EMULATOR_HOST: firestore:8080
       LOCAL_PROJECT_ID: ${FIRESTORE_PROJECT_ID:-pklnd-local}
     ports:
       - "${PARSER_PORT:-8081}:8081"
@@ -53,7 +49,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: local
       FIRESTORE_ENABLED: "true"
-      FIRESTORE_EMULATOR_HOST: firestore:8085
+      FIRESTORE_EMULATOR_HOST: firestore:8080
       FIRESTORE_PROJECT_ID: ${FIRESTORE_PROJECT_ID:-pklnd-local}
       FIRESTORE_DATABASE_ID: ${FIRESTORE_DATABASE_ID:-receipts-db}
       FIRESTORE_DEFAULT_ROLE: ROLE_USER

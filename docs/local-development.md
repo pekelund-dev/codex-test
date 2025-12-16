@@ -19,10 +19,10 @@ experimentation free. This guide explains two options:
 Use the helper scripts to start and stop all services together. Docker and the Compose plugin
 are the only prerequisites for this path.
 
-> 🔧 Compose builds a small Firestore emulator image based on `google-cloud-cli:emulators`
-> and installs the Firestore emulator component via `gcloud components install` (plus a
-> headless JRE and `netcat` for the health check). If you run into emulator startup
-> problems after a Docker update, rebuild the service from the `local/` directory with
+> 🔧 Compose builds a Firestore emulator image using the Firebase CLI (`firebase-tools` npm 
+> package) which provides reliable data persistence via `--import` and `--export-on-exit` 
+> flags. The emulator data is stored in `.local/firestore` and persists across container 
+> restarts. If you run into emulator startup problems after a Docker update, rebuild with 
 > `docker compose build firestore`.
 
 ### Start all services
@@ -31,14 +31,19 @@ are the only prerequisites for this path.
 ./scripts/local/start.sh
 ```
 
-The script automatically creates `local/.env` with sensible defaults (ignored by git) and
-`.local/firestore` to persist emulator data. It then builds the web and receipt-parser
-containers and starts them alongside the Firestore emulator.
+The script automatically creates `local/.env` with sensible defaults (ignored by git). It then 
+builds the web and receipt-parser containers and starts them alongside the Firestore emulator.
+
+> **Data persistence:** The Firestore emulator automatically exports data to `.local/firestore` 
+> when you stop the services with `./scripts/local/stop.sh`. When you restart, it imports 
+> the saved data, so your test users and receipts persist across sessions. To start fresh, 
+> delete the `.local/firestore` directory before starting.
 
 Default ports (override them in `local/.env` if needed):
 - Web app: `http://localhost:8080`
 - Receipt parser: `http://localhost:8081`
-- Firestore emulator: `localhost:8085`
+- Firestore emulator: `localhost:8080` (Firestore REST API on port 8080)
+- Firestore Emulator UI: `http://localhost:4000`
 
 ### Parse and store a receipt locally
 
@@ -64,6 +69,23 @@ Optional extras:
 ```bash
 ./scripts/local/stop.sh
 ```
+
+### Viewing emulator data
+
+To inspect what's stored in the Firestore emulator while it's running:
+
+```bash
+# List all documents in a collection
+curl "http://localhost:8080/v1/projects/pklnd-local/databases/(default)/documents/users" | jq
+
+# Get a specific document
+curl "http://localhost:8080/v1/projects/pklnd-local/databases/(default)/documents/users/{documentId}" | jq
+
+# List all collections (root documents)
+curl "http://localhost:8080/v1/projects/pklnd-local/databases/(default)/documents" | jq '.documents[].name'
+```
+
+The emulator REST API doesn't require authentication, making it easy to inspect data during development.
 
 ### Local-mode visual indicator
 

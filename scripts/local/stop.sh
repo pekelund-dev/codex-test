@@ -11,6 +11,6 @@ fi
 
 cd "$COMPOSE_DIR"
 echo "🛑 Stoppar lokala tjänster..."
-docker compose --env-file "$ENV_FILE" down --remove-orphans
+docker compose --env-file "$ENV_FILE" down --remove-orphans -t 60
 
 echo "✅ Alla lokala tjänster har stoppats."
