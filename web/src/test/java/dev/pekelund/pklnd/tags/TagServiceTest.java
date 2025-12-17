@@ -1,10 +1,15 @@
 package dev.pekelund.pklnd.tags;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.google.cloud.firestore.Firestore;
+import dev.pekelund.pklnd.firestore.FirestoreProperties;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class TagServiceTest {
@@ -79,5 +84,21 @@ class TagServiceTest {
             .singleElement()
             .extracting(TagView::id)
             .isEqualTo("frozen");
+    }
+
+    @Test
+    void fallsBackToMemoryWhenFirestoreDisabled() {
+        Firestore firestore = mock(Firestore.class);
+        FirestoreProperties properties = new FirestoreProperties();
+        properties.setEnabled(false);
+        TagService service = new TagService(Optional.of(firestore), properties);
+
+        service.assignTagToEan("alice", "ean", null, Map.of("sv", "Mjölk"));
+
+        assertThat(service.listTagOptions("alice", Locale.forLanguageTag("sv")))
+            .singleElement()
+            .extracting(TagView::name)
+            .isEqualTo("Mjölk");
+        verifyNoInteractions(firestore);
     }
 }

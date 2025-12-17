@@ -537,7 +537,7 @@ public class TagService {
     }
 
     private boolean isFirestoreEnabled() {
-        return firestore.isPresent();
+        return firestore.isPresent() && properties.isEnabled();
     }
 
     private String buildTagDocumentId(String ownerId, String tagId) {
