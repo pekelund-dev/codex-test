@@ -10,7 +10,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -47,7 +46,8 @@ public class TagController {
 
     @GetMapping("/tags")
     public String listTags(Model model, Authentication authentication, Locale locale) {
-        String ownerId = resolveOwnerId(authentication);
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        String ownerId = owner != null ? owner.id() : null;
         List<TagView> tagOptions;
         try {
             tagOptions = tagService.listTagOptions(ownerId, locale);
@@ -64,12 +64,15 @@ public class TagController {
             return "tags";
         }
 
-        boolean canViewAll = authentication != null
-            && authentication.getAuthorities().stream().anyMatch(a -> Objects.equals(a.getAuthority(), "ROLE_ADMIN"));
-        ReceiptOwner owner = canViewAll ? null : receiptOwnerResolver.resolve(authentication);
-        List<ParsedReceipt> receipts = canViewAll
-            ? receiptExtractionService.get().listAllReceipts()
-            : receiptExtractionService.get().listReceiptsForOwner(owner);
+        if (!StringUtils.hasText(ownerId)) {
+            model.addAttribute("pageTitle", "Taggar");
+            model.addAttribute("tags", List.of());
+            model.addAttribute("hasReceipts", false);
+            model.addAttribute("tagOptions", tagOptions);
+            return "tags";
+        }
+
+        List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
 
         Map<String, Set<TaggedItem>> tagItems;
         try {
