@@ -34,6 +34,10 @@
         <div>
             <h1 class="h3 fw-semibold text-primary mb-1" th:text="${itemName}">Item name</h1>
             <p class="text-muted mb-1" th:if="${itemEan != null}" th:text="${'EAN: ' + itemEan}">EAN: 0000000000000</p>
+            <div class="d-flex flex-wrap gap-1" th:if="${itemTags != null and !#lists.isEmpty(itemTags)}">
+                <span class="badge tag-badge" th:each="tag : ${itemTags}"
+                      th:text="${tag.name()}" th:style="${'background:' + tag.color()}">Tagg</span>
+            </div>
             <p class="text-muted mb-0"
                th:text="${purchaseCount == 1 ? '1 purchase found' : purchaseCount + ' purchases found'}">3 purchases found</p>
         </div>

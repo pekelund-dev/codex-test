@@ -238,3 +238,9 @@ details.receipt-table[open] .details-toggle-icon {
         font-size: 0.875rem;
     }
 }
+
+.tag-badge {
+    color: #fff;
+    border-radius: 999px;
+    font-weight: 600;
+}

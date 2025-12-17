@@ -9,6 +9,7 @@ pklnd is a Spring Boot application for maintaining a personal receipt archive fo
 - Responsive Thymeleaf interface powered by Bootstrap 5 for a smooth receipt overview on mobile and desktop.
 - Receipt workspace tailored for ICA and other Swedish stores, supporting PDF/image uploads that land in Google Cloud Storage.
 - Automatic categorisation, store detection, and chronological sorting so your personal receipts stay easy to find.
+- Colour-coded item tags with Swedish/English names that stay in sync across identical EAN-kodade varor.
 - Modular architecture with Spring Modulith keeping the web and receipt processing services isolated and verified.
 
 ## Getting started

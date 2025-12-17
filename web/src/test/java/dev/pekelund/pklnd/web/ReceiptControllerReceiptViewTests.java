@@ -3,19 +3,23 @@ package dev.pekelund.pklnd.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.pekelund.pklnd.config.ReceiptOwnerResolver;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
+import dev.pekelund.pklnd.tags.TagService;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,18 +39,23 @@ class ReceiptControllerReceiptViewTests {
     @Mock
     private ReceiptOwnerResolver receiptOwnerResolver;
 
+    @Mock
+    private TagService tagService;
+
     private ReceiptController controller;
     private Authentication authentication;
     private ReceiptOwner owner;
 
     @BeforeEach
     void setUp() {
-        controller = new ReceiptController(null, receiptExtractionService, receiptOwnerResolver, null);
+        controller = new ReceiptController(null, receiptExtractionService, receiptOwnerResolver, null, tagService);
         authentication = new TestingAuthenticationToken("user", "password", "ROLE_USER");
         owner = new ReceiptOwner("owner-1", "Test User", "user@example.com");
 
         when(receiptExtractionService.isEnabled()).thenReturn(true);
         when(receiptOwnerResolver.resolve(authentication)).thenReturn(owner);
+        when(tagService.tagsForEan(anyString(), anyString(), any())).thenReturn(List.of());
+        when(tagService.listTagOptions(any(), any())).thenReturn(List.of());
     }
 
     @Test
@@ -88,7 +97,7 @@ class ReceiptControllerReceiptViewTests {
         when(receiptExtractionService.findById("receipt-1")).thenReturn(Optional.of(receipt));
 
         Model model = new ExtendedModelMap();
-        String viewName = controller.viewParsedReceipt("receipt-1", "my", model, authentication);
+        String viewName = controller.viewParsedReceipt("receipt-1", "my", model, authentication, Locale.getDefault());
 
         assertThat(viewName).isEqualTo("receipt-detail");
         @SuppressWarnings("unchecked")
@@ -137,7 +146,7 @@ class ReceiptControllerReceiptViewTests {
             .thenReturn(Map.of("7310865004703", 3L, "7310867001823", 2L));
 
         Model model = new ExtendedModelMap();
-        String viewName = controller.viewParsedReceipt("receipt-1", "my", model, authentication);
+        String viewName = controller.viewParsedReceipt("receipt-1", "my", model, authentication, Locale.getDefault());
 
         assertThat(viewName).isEqualTo("receipt-detail");
         verify(receiptExtractionService).loadItemOccurrences(any(), eq(owner), eq(false));

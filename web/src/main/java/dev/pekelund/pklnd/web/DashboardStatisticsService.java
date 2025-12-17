@@ -1,9 +1,10 @@
 package dev.pekelund.pklnd.web;
 
+import dev.pekelund.pklnd.config.ReceiptOwnerResolver;
+import dev.pekelund.pklnd.firestore.FirestoreUserService;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionAccessException;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
-import dev.pekelund.pklnd.firestore.FirestoreUserService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import java.math.BigDecimal;
 import java.math.RoundingMode;

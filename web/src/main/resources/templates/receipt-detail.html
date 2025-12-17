@@ -76,6 +76,8 @@
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
             <h2 class="h5 fw-semibold mb-3">Items</h2>
+            <div th:if="${tagSuccess != null}" class="alert alert-success" th:text="${tagSuccess}">Tagg sparad.</div>
+            <div th:if="${tagError != null}" class="alert alert-danger" th:text="${tagError}">Kunde inte spara tagg.</div>
             <div th:if="${#lists.isEmpty(receiptItems)}" class="text-muted">No items were detected.</div>
             <div th:if="${!#lists.isEmpty(receiptItems)}" class="table-responsive">
                 <table class="table align-middle">
@@ -101,6 +103,40 @@
                                   class="fw-semibold"
                                   th:text="${itemName != null ? itemName : '—'}">Item name</span>
                             <div class="text-muted small" th:if="${itemEan != null}" th:text="${'EAN: ' + itemEan}">EAN</div>
+                            <div class="d-flex flex-wrap gap-1 mt-1"
+                                 th:if="${item['tags'] != null and !#lists.isEmpty(item['tags'])}">
+                                <span th:each="tag : ${item['tags']}" class="badge tag-badge"
+                                      th:text="${tag.name()}" th:style="${'background:' + tag.color()}">Tagg</span>
+                            </div>
+                            <div class="mt-2" th:if="${itemEan != null}">
+                                <form th:action="@{/tags/assign}" method="post" class="row g-2 align-items-end">
+                                    <input type="hidden" name="ean" th:value="${itemEan}">
+                                    <input type="hidden" name="redirect"
+                                           th:value="${#httpServletRequest.requestURI + (#strings.isEmpty(#httpServletRequest.queryString) ? '' : '?' + #httpServletRequest.queryString)}">
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label mb-1 small" for="existingTag" th:text="#{tags.existing.label}">Befintlig tagg</label>
+                                        <select class="form-select form-select-sm" id="existingTag" name="existingTagId">
+                                            <option value="" th:text="#{tags.existing.placeholder}">Välj befintlig tagg</option>
+                                            <option th:each="tagOption : ${availableTags}" th:value="${tagOption.id()}"
+                                                    th:text="${tagOption.name()}"></option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label mb-1 small" for="nameSv" th:text="#{tags.new.swedish}">Nytt namn (sv)</label>
+                                        <input type="text" class="form-control form-control-sm" id="nameSv" name="nameSv"
+                                               th:placeholder="#{tags.new.placeholder.sv}">
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label mb-1 small" for="nameEn" th:text="#{tags.new.english}">Nytt namn (en)</label>
+                                        <input type="text" class="form-control form-control-sm" id="nameEn" name="nameEn"
+                                               th:placeholder="#{tags.new.placeholder.en}">
+                                    </div>
+                                    <div class="col-12 col-md-2 d-grid">
+                                        <button class="btn btn-primary btn-sm" type="submit" th:text="#{tags.button.save}">Spara</button>
+                                    </div>
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                </form>
+                            </div>
                         </td>
                         <td th:text="${item['displayQuantity'] != null ? item['displayQuantity'] : (item['quantity'] != null ? item['quantity'] : '—')}">—</td>
                         <td th:text="${item['displayUnitPrice'] != null ? item['displayUnitPrice'] : (item['unitPrice'] != null ? item['unitPrice'] : '—')}">—</td>

@@ -58,6 +58,11 @@
                 </li>
                 <li class="nav-item" th:if="${userProfile.authenticated}">
                     <a class="nav-link"
+                       th:classappend="${currentUri == '/tags'} ? ' active'"
+                       th:href="@{/tags}" th:text="#{nav.tags}">Taggar</a>
+                </li>
+                <li class="nav-item" th:if="${userProfile.authenticated}">
+                    <a class="nav-link"
                        th:classappend="${currentUri == '/receipts/uploads'} ? ' active'"
                        th:href="@{/receipts/uploads}" th:text="#{nav.uploads}">Upload receipts</a>
                 </li>

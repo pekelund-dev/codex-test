@@ -1,0 +1,60 @@
+package dev.pekelund.pklnd.tags;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+
+class TagServiceTest {
+
+    private final TagService tagService = new TagService();
+
+    @Test
+    void assignsUniqueColorsUntilPaletteExhausted() {
+        for (int i = 0; i < 5; i++) {
+            tagService.assignTagToEan("alice", "12345", "tag-" + i, Map.of("sv", "Tagg " + i));
+        }
+
+        List<TagView> tags = tagService.listTagOptions("alice", Locale.forLanguageTag("sv"));
+        assertThat(tags).hasSize(5);
+        assertThat(tags.stream().map(TagView::color)).doesNotHaveDuplicates();
+    }
+
+    @Test
+    void resolvesLocalizedNames() {
+        tagService.assignTagToEan("alice", "111", "lokal", Map.of("sv", "Mjölk", "en", "Milk"));
+
+        List<TagView> swedish = tagService.tagsForEan("alice", "111", Locale.forLanguageTag("sv"));
+        List<TagView> english = tagService.tagsForEan("alice", "111", Locale.forLanguageTag("en"));
+
+        assertThat(swedish).first().extracting(TagView::name).isEqualTo("Mjölk");
+        assertThat(english).first().extracting(TagView::name).isEqualTo("Milk");
+    }
+
+    @Test
+    void keepsMappingsPerEan() {
+        tagService.assignTagToEan("alice", "222", "fresh", Map.of("sv", "Färsk"));
+        tagService.assignTagToEan("alice", "333", "fryst", Map.of("sv", "Fryst"));
+
+        assertThat(tagService.tagsForEan("alice", "222", Locale.ROOT)).hasSize(1);
+        assertThat(tagService.tagsForEan("alice", "333", Locale.ROOT)).hasSize(1);
+        assertThat(tagService.tagsForEan("alice", "444", Locale.ROOT)).isEmpty();
+    }
+
+    @Test
+    void isolatesTagsPerUser() {
+        tagService.assignTagToEan("alice", "222", "fresh", Map.of("sv", "Färsk"));
+        tagService.assignTagToEan("bob", "222", "frozen", Map.of("sv", "Fryst"));
+
+        assertThat(tagService.tagsForEan("alice", "222", Locale.ROOT))
+            .singleElement()
+            .extracting(TagView::id)
+            .isEqualTo("fresh");
+        assertThat(tagService.tagsForEan("bob", "222", Locale.ROOT))
+            .singleElement()
+            .extracting(TagView::id)
+            .isEqualTo("frozen");
+    }
+}
