@@ -43,11 +43,12 @@ public class TagController {
     @GetMapping("/tags")
     public String listTags(Model model, Authentication authentication, Locale locale) {
         String ownerId = resolveOwnerId(authentication);
+        List<TagView> tagOptions = tagService.listTagOptions(ownerId, locale);
         if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
             model.addAttribute("pageTitle", "Taggar");
             model.addAttribute("tags", List.of());
             model.addAttribute("hasReceipts", false);
-            model.addAttribute("tagOptions", tagService.listTagOptions(ownerId, locale));
+            model.addAttribute("tagOptions", tagOptions);
             return "tags";
         }
 
@@ -60,12 +61,13 @@ public class TagController {
 
         Map<String, Set<TaggedItem>> tagItems = buildTagItems(receipts, locale, ownerId);
         List<TagSummary> summaries = new ArrayList<>();
-        Map<String, TagView> tagOptions = tagService.listTagOptions(ownerId, locale).stream()
+        Map<String, TagView> tagOptionsById = tagOptions
+            .stream()
             .collect(Collectors.toMap(TagView::id, option -> option));
 
         for (Map.Entry<String, Set<TaggedItem>> entry : tagItems.entrySet()) {
             String tagId = entry.getKey();
-            TagView view = tagOptions.get(tagId);
+            TagView view = tagOptionsById.get(tagId);
             if (view == null) {
                 continue;
             }
@@ -80,7 +82,7 @@ public class TagController {
         model.addAttribute("pageTitle", "Taggar");
         model.addAttribute("tags", summaries);
         model.addAttribute("hasReceipts", !receipts.isEmpty());
-        model.addAttribute("tagOptions", tagService.listTagOptions(ownerId, locale));
+        model.addAttribute("tagOptions", tagOptions);
         return "tags";
     }
 
@@ -98,6 +100,10 @@ public class TagController {
         String ownerId = resolveOwnerId(authentication);
         if (!StringUtils.hasText(ownerId)) {
             redirectAttributes.addFlashAttribute("tagError", "Kunde inte spara tagg utan användare.");
+            return buildRedirect(redirect);
+        }
+        if (!StringUtils.hasText(ean)) {
+            redirectAttributes.addFlashAttribute("tagError", "Kunde inte spara tagg utan EAN-kod.");
             return buildRedirect(redirect);
         }
         Map<String, String> translations = new LinkedHashMap<>();
