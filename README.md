@@ -68,7 +68,7 @@ The `setup-env.sh` script automatically configures:
 
 ### Firestore configuration
 
-Firestore stores user profiles and receipt parsing output. Choose the setup style that suits your workflow:
+Firestore stores user profiles, receipt parsing output, and tag definitions/mappings (collections `tags` and `tag-mappings`). Choose the setup style that suits your workflow:
 
 - [Firestore configuration with the gcloud CLI](docs/gcp-setup-gcloud.md#configure-firestore-via-gcloud)
 - [Firestore configuration with the Cloud Console](docs/gcp-setup-cloud-console.md#configure-firestore-in-the-console)
