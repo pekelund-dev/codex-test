@@ -1,6 +1,7 @@
 package dev.pekelund.pklnd.tags;
 
 import dev.pekelund.pklnd.config.ReceiptOwnerResolver;
+import dev.pekelund.pklnd.firestore.ReceiptExtractionAccessException;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
@@ -72,7 +73,14 @@ public class TagController {
             return "tags";
         }
 
-        List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+        List<ParsedReceipt> receipts;
+        try {
+            receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+        } catch (ReceiptExtractionAccessException ex) {
+            LOGGER.warn("Failed to load receipts for tags", ex);
+            model.addAttribute("tagError", "Kunde inte läsa kvitton just nu. Försök igen senare.");
+            receipts = List.of();
+        }
 
         Map<String, Set<TaggedItem>> tagItems;
         try {

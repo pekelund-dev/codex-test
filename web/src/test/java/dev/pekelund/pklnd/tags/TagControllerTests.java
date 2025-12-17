@@ -11,8 +11,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.pekelund.pklnd.config.ReceiptOwnerResolver;
+import dev.pekelund.pklnd.firestore.ReceiptExtractionAccessException;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -86,5 +88,20 @@ class TagControllerTests {
             .perform(get("/tags"))
             .andExpect(status().isOk())
             .andExpect(model().attribute("tagError", "Kunde inte läsa taggar just nu. Försök igen senare."));
+    }
+
+    @Test
+    void showsErrorWhenReceiptsFailToLoad() throws Exception {
+        when(tagService.listTagOptions(any(), any())).thenReturn(List.of());
+        when(receiptOwnerResolver.resolve(any())).thenReturn(new ReceiptOwner("alice", "Alice", "alice@example.com"));
+        when(receiptExtractionService.isEnabled()).thenReturn(true);
+        when(receiptExtractionService.listReceiptsForOwner(any()))
+            .thenThrow(new ReceiptExtractionAccessException("firestore down"));
+
+        mockMvc
+            .perform(get("/tags"))
+            .andExpect(status().isOk())
+            .andExpect(model().attribute("tagError", "Kunde inte läsa kvitton just nu. Försök igen senare."))
+            .andExpect(model().attribute("hasReceipts", false));
     }
 }
