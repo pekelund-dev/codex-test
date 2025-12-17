@@ -15,6 +15,7 @@ import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService.ReceiptItemReference;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
+import dev.pekelund.pklnd.tags.TagAccessException;
 import dev.pekelund.pklnd.tags.TagService;
 import java.util.Locale;
 import java.time.Instant;
@@ -141,6 +142,42 @@ class ReceiptControllerItemViewTests {
         assertThat(model.getAttribute("itemName")).isEqualTo("Mjölk");
         verify(receiptExtractionService, never()).findByIds(anyCollection());
         verify(receiptExtractionService).findById("receipt-2");
+    }
+
+    @Test
+    void viewItemPurchasesShowsTagErrorsWhenLookupFails() {
+        String ean = "7310867001823";
+        ReceiptItemReference reference = new ReceiptItemReference(
+            "receipt-1",
+            owner.id(),
+            Instant.parse("2024-10-01T10:15:30Z"),
+            "2024-09-30",
+            "ICA Kvantum",
+            "ICA Kvantum",
+            "receipt-1.pdf",
+            Map.of(
+                "name",
+                "Mjölk",
+                "eanCode",
+                ean,
+                "totalPrice",
+                "15.90"
+            )
+        );
+
+        when(receiptExtractionService.findReceiptItemReferences(eq(ean), eq(owner), eq(false)))
+            .thenReturn(List.of(reference));
+        when(tagService.tagsForEan(anyString(), anyString(), any()))
+            .thenThrow(new TagAccessException("unavailable", new RuntimeException("firestore")));
+
+        Model model = new ExtendedModelMap();
+        String viewName = controller.viewItemPurchases(ean, reference.receiptId(), "my", model, authentication, Locale.getDefault());
+
+        assertThat(viewName).isEqualTo("receipt-item");
+        assertThat(model.getAttribute("tagError"))
+            .isEqualTo("Kunde inte läsa taggar just nu. Försök igen senare.");
+        assertThat(model.getAttribute("itemTags")).isInstanceOf(List.class);
+        assertThat((List<?>) model.getAttribute("itemTags")).isEmpty();
     }
 }
 

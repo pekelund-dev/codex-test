@@ -13,6 +13,7 @@ import dev.pekelund.pklnd.config.ReceiptOwnerResolver;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
+import dev.pekelund.pklnd.tags.TagAccessException;
 import dev.pekelund.pklnd.tags.TagService;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -106,6 +107,59 @@ class ReceiptControllerReceiptViewTests {
             .containsEntry("7310865004703", 3L)
             .containsEntry("7310867001823", 2L);
         verify(receiptExtractionService, never()).loadItemOccurrences(any(), any(), anyBoolean());
+    }
+
+    @Test
+    void viewParsedReceiptShowsFriendlyErrorWhenTagLookupFails() {
+        Map<String, Object> general = Map.of(
+            "storeName",
+            "ICA Maxi",
+            "receiptDate",
+            "2024-09-15"
+        );
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("name", "Mjölk");
+        item.put("ean", "7310865004703");
+
+        ParsedReceipt receipt = new ParsedReceipt(
+            "receipt-tag-error",
+            "bucket",
+            "receipt-1.pdf",
+            "gs://bucket/receipt-1.pdf",
+            owner,
+            "COMPLETED",
+            null,
+            Instant.parse("2024-09-16T12:00:00Z"),
+            general,
+            List.of(item),
+            ParsedReceipt.ReceiptItemHistory.empty(),
+            List.of(),
+            List.of(),
+            List.of(),
+            "",
+            "",
+            null
+        );
+
+        when(receiptExtractionService.findById("receipt-tag-error")).thenReturn(Optional.of(receipt));
+        when(tagService.listTagOptions(any(), any()))
+            .thenThrow(new TagAccessException("unavailable", new RuntimeException("firestore")));
+        when(tagService.tagsForEan(anyString(), anyString(), any()))
+            .thenThrow(new TagAccessException("unavailable", new RuntimeException("firestore")));
+
+        Model model = new ExtendedModelMap();
+        String viewName = controller.viewParsedReceipt("receipt-tag-error", "my", model, authentication, Locale.getDefault());
+
+        assertThat(viewName).isEqualTo("receipt-detail");
+        assertThat(model.getAttribute("tagError"))
+            .isEqualTo("Kunde inte läsa taggar just nu. Försök igen senare.");
+
+        assertThat(model.getAttribute("availableTags")).isInstanceOf(List.class);
+        assertThat((List<?>) model.getAttribute("availableTags")).isEmpty();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> receiptItems = (List<Map<String, Object>>) model.getAttribute("receiptItems");
+        assertThat(receiptItems).hasSize(1);
+        assertThat((List<?>) receiptItems.get(0).get("tags")).isEmpty();
     }
 
     @Test

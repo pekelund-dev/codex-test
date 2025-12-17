@@ -16,6 +16,7 @@ import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
 import dev.pekelund.pklnd.storage.ReceiptStorageException;
 import dev.pekelund.pklnd.storage.ReceiptStorageService;
 import dev.pekelund.pklnd.storage.StoredReceiptReference;
+import dev.pekelund.pklnd.tags.TagAccessException;
 import dev.pekelund.pklnd.tags.TagService;
 import dev.pekelund.pklnd.tags.TagView;
 import java.math.BigDecimal;
@@ -1070,14 +1071,31 @@ public class ReceiptController {
             .filter(StringUtils::hasText)
             .collect(Collectors.toCollection(LinkedHashSet::new));
         Map<String, Long> itemOccurrences = resolveItemOccurrences(receipt, normalizedEans, statsOwner, viewingAll);
-        List<Map<String, Object>> receiptItems = prepareReceiptItems(receipt.displayItems(), itemOccurrences, locale, ownerId);
+        PreparedItems preparedItems = prepareReceiptItems(receipt.displayItems(), itemOccurrences, locale, ownerId);
+
+        List<TagView> availableTags;
+        String tagError = (String) model.asMap().get("tagError");
+        try {
+            availableTags = tagService.listTagOptions(ownerId, locale);
+        } catch (TagAccessException ex) {
+            LOGGER.warn("Failed to load tag options for receipt {}", receipt.id(), ex);
+            availableTags = List.of();
+            tagError = tagError != null ? tagError : "Kunde inte läsa taggar just nu. Försök igen senare.";
+        }
+
+        if (tagError == null) {
+            tagError = preparedItems.tagError();
+        }
+        if (tagError != null) {
+            model.addAttribute("tagError", tagError);
+        }
 
         String displayName = receipt.displayName();
         model.addAttribute("pageTitle", displayName != null ? "Receipt: " + displayName : "Receipt details");
         model.addAttribute("receipt", receipt);
         model.addAttribute("itemOccurrences", itemOccurrences);
-        model.addAttribute("receiptItems", receiptItems);
-        model.addAttribute("availableTags", tagService.listTagOptions(ownerId, locale));
+        model.addAttribute("receiptItems", preparedItems.items());
+        model.addAttribute("availableTags", availableTags);
         model.addAttribute("canViewAll", canViewAll);
         model.addAttribute("scopeParam", toScopeParameter(effectiveScope));
         model.addAttribute("viewingAll", viewingAll);
@@ -1206,9 +1224,18 @@ public class ReceiptController {
         boolean hasPriceHistory = !priceHistory.isEmpty();
 
         model.addAttribute("pageTitle", "Item: " + displayItemName);
+        List<TagView> itemTags;
+        try {
+            itemTags = tagService.tagsForEan(ownerId, displayEanCode, locale);
+        } catch (TagAccessException ex) {
+            LOGGER.warn("Failed to load tags for item {}", displayEanCode, ex);
+            itemTags = List.of();
+            model.addAttribute("tagError", "Kunde inte läsa taggar just nu. Försök igen senare.");
+        }
+
         model.addAttribute("itemName", displayItemName);
         model.addAttribute("itemEan", displayEanCode);
-        model.addAttribute("itemTags", tagService.tagsForEan(ownerId, displayEanCode, locale));
+        model.addAttribute("itemTags", itemTags);
         model.addAttribute("purchases", purchases);
         model.addAttribute("purchaseCount", purchases.size());
         model.addAttribute("priceHistoryJson", priceHistoryJson);
@@ -1452,12 +1479,13 @@ public class ReceiptController {
         }
     }
 
-    private List<Map<String, Object>> prepareReceiptItems(List<Map<String, Object>> items, Map<String, Long> occurrences,
+    private PreparedItems prepareReceiptItems(List<Map<String, Object>> items, Map<String, Long> occurrences,
         Locale locale, String ownerId) {
         if (items == null || items.isEmpty()) {
-            return List.of();
+            return new PreparedItems(List.of(), null);
         }
 
+        String tagError = null;
         List<Map<String, Object>> prepared = new ArrayList<>(items.size());
         for (Map<String, Object> item : items) {
             if (item == null || item.isEmpty()) {
@@ -1472,13 +1500,25 @@ public class ReceiptController {
                 ? occurrences.getOrDefault(normalizedEan, 0L)
                 : 0L;
             copy.put("historyCount", historyCount);
-            List<TagView> tags = tagService.tagsForEan(ownerId, normalizedEan, locale);
+            List<TagView> tags;
+            try {
+                tags = tagService.tagsForEan(ownerId, normalizedEan, locale);
+            } catch (TagAccessException ex) {
+                LOGGER.warn("Failed to load tags for receipt item EAN {}", normalizedEan, ex);
+                tags = List.of();
+                if (tagError == null) {
+                    tagError = "Kunde inte läsa taggar just nu. Försök igen senare.";
+                }
+            }
             copy.put("tags", tags);
 
             prepared.add(Collections.unmodifiableMap(copy));
         }
 
-        return Collections.unmodifiableList(prepared);
+        return new PreparedItems(Collections.unmodifiableList(prepared), tagError);
+    }
+
+    private record PreparedItems(List<Map<String, Object>> items, String tagError) {
     }
 
     private String extractItemEan(Map<String, Object> item) {
