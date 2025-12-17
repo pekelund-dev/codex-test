@@ -163,14 +163,23 @@ public class TagService {
     }
 
     private String resolveColor(Map<String, TagDefinition> tags, String tagId) {
+        TagDefinition existing = tags.get(tagId);
+        if (existing != null && StringUtils.hasText(existing.color())) {
+            return existing.color();
+        }
+
         Set<String> usedColors = tags.values().stream().map(TagDefinition::color).collect(LinkedHashSet::new, Set::add, Set::addAll);
         for (String candidate : COLOR_PALETTE) {
             if (!usedColors.contains(candidate)) {
                 return candidate;
             }
         }
-        int index = random.nextInt(COLOR_PALETTE.size());
-        return COLOR_PALETTE.get(index);
+
+        String candidate;
+        do {
+            candidate = String.format("#%06x", random.nextInt(0xFFFFFF + 1));
+        } while (usedColors.contains(candidate));
+        return candidate;
     }
 
     private String resolveName(TagDefinition definition, Locale locale) {

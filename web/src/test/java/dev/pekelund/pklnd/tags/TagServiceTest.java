@@ -23,6 +23,29 @@ class TagServiceTest {
     }
 
     @Test
+    void keepsExistingColorWhenUpdatingTag() {
+        tagService.assignTagToEan("alice", "12345", "tag-1", Map.of("sv", "Första"));
+        String originalColor = tagService.listTagOptions("alice", Locale.ROOT).get(0).color();
+
+        tagService.createOrUpdateTag("alice", "tag-1", Map.of("sv", "Uppdaterad"));
+
+        List<TagView> tags = tagService.listTagOptions("alice", Locale.ROOT);
+        assertThat(tags).singleElement().extracting(TagView::color).isEqualTo(originalColor);
+    }
+
+    @Test
+    void generatesUniqueColorsBeyondPalette() {
+        int paletteSize = 10;
+        for (int i = 0; i < paletteSize + 3; i++) {
+            tagService.assignTagToEan("alice", "ean-" + i, "tag-" + i, Map.of("sv", "Tagg " + i));
+        }
+
+        List<TagView> tags = tagService.listTagOptions("alice", Locale.ROOT);
+        assertThat(tags).hasSize(paletteSize + 3);
+        assertThat(tags.stream().map(TagView::color)).doesNotHaveDuplicates();
+    }
+
+    @Test
     void resolvesLocalizedNames() {
         tagService.assignTagToEan("alice", "111", "lokal", Map.of("sv", "Mjölk", "en", "Milk"));
 
