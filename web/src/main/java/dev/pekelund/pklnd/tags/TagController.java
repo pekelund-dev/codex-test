@@ -23,8 +23,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Controller
 public class TagController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TagController.class);
 
     private final TagService tagService;
     private final Optional<ReceiptExtractionService> receiptExtractionService;
@@ -43,7 +48,14 @@ public class TagController {
     @GetMapping("/tags")
     public String listTags(Model model, Authentication authentication, Locale locale) {
         String ownerId = resolveOwnerId(authentication);
-        List<TagView> tagOptions = tagService.listTagOptions(ownerId, locale);
+        List<TagView> tagOptions;
+        try {
+            tagOptions = tagService.listTagOptions(ownerId, locale);
+        } catch (TagAccessException ex) {
+            LOGGER.warn("Failed to load tags", ex);
+            model.addAttribute("tagError", "Kunde inte läsa taggar just nu. Försök igen senare.");
+            tagOptions = List.of();
+        }
         if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
             model.addAttribute("pageTitle", "Taggar");
             model.addAttribute("tags", List.of());
@@ -59,7 +71,14 @@ public class TagController {
             ? receiptExtractionService.get().listAllReceipts()
             : receiptExtractionService.get().listReceiptsForOwner(owner);
 
-        Map<String, Set<TaggedItem>> tagItems = buildTagItems(receipts, locale, ownerId);
+        Map<String, Set<TaggedItem>> tagItems;
+        try {
+            tagItems = buildTagItems(receipts, locale, ownerId);
+        } catch (TagAccessException ex) {
+            LOGGER.warn("Failed to load tag mappings", ex);
+            model.addAttribute("tagError", "Kunde inte läsa taggar just nu. Försök igen senare.");
+            tagItems = Map.of();
+        }
         List<TagSummary> summaries = new ArrayList<>();
         Map<String, TagView> tagOptionsById = tagOptions
             .stream()
@@ -119,8 +138,13 @@ public class TagController {
         }
 
         String tagId = StringUtils.hasText(existingTagId) ? existingTagId : null;
-        tagService.assignTagToEan(ownerId, ean, tagId, translations);
-        redirectAttributes.addFlashAttribute("tagSuccess", "Tagg sparad.");
+        try {
+            tagService.assignTagToEan(ownerId, ean, tagId, translations);
+            redirectAttributes.addFlashAttribute("tagSuccess", "Tagg sparad.");
+        } catch (TagAccessException ex) {
+            LOGGER.warn("Failed to assign tag for EAN {}", ean, ex);
+            redirectAttributes.addFlashAttribute("tagError", "Kunde inte spara tagg just nu. Försök igen.");
+        }
         return buildRedirect(redirect);
     }
 
