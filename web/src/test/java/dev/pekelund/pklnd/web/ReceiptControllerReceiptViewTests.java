@@ -3,19 +3,24 @@ package dev.pekelund.pklnd.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.pekelund.pklnd.config.ReceiptOwnerResolver;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
+import dev.pekelund.pklnd.tags.TagAccessException;
+import dev.pekelund.pklnd.tags.TagService;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,18 +40,23 @@ class ReceiptControllerReceiptViewTests {
     @Mock
     private ReceiptOwnerResolver receiptOwnerResolver;
 
+    @Mock
+    private TagService tagService;
+
     private ReceiptController controller;
     private Authentication authentication;
     private ReceiptOwner owner;
 
     @BeforeEach
     void setUp() {
-        controller = new ReceiptController(null, receiptExtractionService, receiptOwnerResolver, null);
+        controller = new ReceiptController(null, receiptExtractionService, receiptOwnerResolver, null, tagService);
         authentication = new TestingAuthenticationToken("user", "password", "ROLE_USER");
         owner = new ReceiptOwner("owner-1", "Test User", "user@example.com");
 
         when(receiptExtractionService.isEnabled()).thenReturn(true);
         when(receiptOwnerResolver.resolve(authentication)).thenReturn(owner);
+        when(tagService.tagsForEan(anyString(), anyString(), any())).thenReturn(List.of());
+        when(tagService.listTagOptions(any(), any())).thenReturn(List.of());
     }
 
     @Test
@@ -88,7 +98,7 @@ class ReceiptControllerReceiptViewTests {
         when(receiptExtractionService.findById("receipt-1")).thenReturn(Optional.of(receipt));
 
         Model model = new ExtendedModelMap();
-        String viewName = controller.viewParsedReceipt("receipt-1", "my", model, authentication);
+        String viewName = controller.viewParsedReceipt("receipt-1", "my", model, authentication, Locale.getDefault());
 
         assertThat(viewName).isEqualTo("receipt-detail");
         @SuppressWarnings("unchecked")
@@ -97,6 +107,59 @@ class ReceiptControllerReceiptViewTests {
             .containsEntry("7310865004703", 3L)
             .containsEntry("7310867001823", 2L);
         verify(receiptExtractionService, never()).loadItemOccurrences(any(), any(), anyBoolean());
+    }
+
+    @Test
+    void viewParsedReceiptShowsFriendlyErrorWhenTagLookupFails() {
+        Map<String, Object> general = Map.of(
+            "storeName",
+            "ICA Maxi",
+            "receiptDate",
+            "2024-09-15"
+        );
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("name", "Mjölk");
+        item.put("ean", "7310865004703");
+
+        ParsedReceipt receipt = new ParsedReceipt(
+            "receipt-tag-error",
+            "bucket",
+            "receipt-1.pdf",
+            "gs://bucket/receipt-1.pdf",
+            owner,
+            "COMPLETED",
+            null,
+            Instant.parse("2024-09-16T12:00:00Z"),
+            general,
+            List.of(item),
+            ParsedReceipt.ReceiptItemHistory.empty(),
+            List.of(),
+            List.of(),
+            List.of(),
+            "",
+            "",
+            null
+        );
+
+        when(receiptExtractionService.findById("receipt-tag-error")).thenReturn(Optional.of(receipt));
+        when(tagService.listTagOptions(any(), any()))
+            .thenThrow(new TagAccessException("unavailable", new RuntimeException("firestore")));
+        when(tagService.tagsForEan(anyString(), anyString(), any()))
+            .thenThrow(new TagAccessException("unavailable", new RuntimeException("firestore")));
+
+        Model model = new ExtendedModelMap();
+        String viewName = controller.viewParsedReceipt("receipt-tag-error", "my", model, authentication, Locale.getDefault());
+
+        assertThat(viewName).isEqualTo("receipt-detail");
+        assertThat(model.getAttribute("tagError"))
+            .isEqualTo("Kunde inte läsa taggar just nu. Försök igen senare.");
+
+        assertThat(model.getAttribute("availableTags")).isInstanceOf(List.class);
+        assertThat((List<?>) model.getAttribute("availableTags")).isEmpty();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> receiptItems = (List<Map<String, Object>>) model.getAttribute("receiptItems");
+        assertThat(receiptItems).hasSize(1);
+        assertThat((List<?>) receiptItems.get(0).get("tags")).isEmpty();
     }
 
     @Test
@@ -137,7 +200,7 @@ class ReceiptControllerReceiptViewTests {
             .thenReturn(Map.of("7310865004703", 3L, "7310867001823", 2L));
 
         Model model = new ExtendedModelMap();
-        String viewName = controller.viewParsedReceipt("receipt-1", "my", model, authentication);
+        String viewName = controller.viewParsedReceipt("receipt-1", "my", model, authentication, Locale.getDefault());
 
         assertThat(viewName).isEqualTo("receipt-detail");
         verify(receiptExtractionService).loadItemOccurrences(any(), eq(owner), eq(false));

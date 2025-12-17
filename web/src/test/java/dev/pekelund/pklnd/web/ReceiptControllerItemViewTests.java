@@ -1,17 +1,23 @@
 package dev.pekelund.pklnd.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.pekelund.pklnd.config.ReceiptOwnerResolver;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService.ReceiptItemReference;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
+import dev.pekelund.pklnd.tags.TagAccessException;
+import dev.pekelund.pklnd.tags.TagService;
+import java.util.Locale;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -35,18 +41,23 @@ class ReceiptControllerItemViewTests {
     @Mock
     private ReceiptOwnerResolver receiptOwnerResolver;
 
+    @Mock
+    private TagService tagService;
+
     private ReceiptController controller;
     private Authentication authentication;
     private ReceiptOwner owner;
 
     @BeforeEach
     void setUp() {
-        controller = new ReceiptController(null, receiptExtractionService, receiptOwnerResolver, null);
+        controller = new ReceiptController(null, receiptExtractionService, receiptOwnerResolver, null, tagService);
         authentication = new TestingAuthenticationToken("user", "password", "ROLE_USER");
         owner = new ReceiptOwner("owner-1", "Test User", "user@example.com");
 
         when(receiptExtractionService.isEnabled()).thenReturn(true);
         when(receiptOwnerResolver.resolve(authentication)).thenReturn(owner);
+        lenient().when(tagService.tagsForEan(anyString(), anyString(), any())).thenReturn(List.of());
+        lenient().when(tagService.listTagOptions(any(), any())).thenReturn(List.of());
     }
 
     @Test
@@ -71,7 +82,8 @@ class ReceiptControllerItemViewTests {
             .thenReturn(List.of(reference));
 
         Model model = new ExtendedModelMap();
-        String viewName = controller.viewItemPurchases(ean, reference.receiptId(), "my", model, authentication);
+        String viewName = controller.viewItemPurchases(ean, reference.receiptId(), "my", model, authentication,
+            Locale.getDefault());
 
         assertThat(viewName).isEqualTo("receipt-item");
         assertThat(model.getAttribute("purchaseCount")).isEqualTo(1);
@@ -122,7 +134,7 @@ class ReceiptControllerItemViewTests {
         when(receiptExtractionService.findById("receipt-2")).thenReturn(Optional.of(sourceReceipt));
 
         Model model = new ExtendedModelMap();
-        String viewName = controller.viewItemPurchases(ean, "receipt-2", "my", model, authentication);
+        String viewName = controller.viewItemPurchases(ean, "receipt-2", "my", model, authentication, Locale.getDefault());
 
         assertThat(viewName).isEqualTo("receipt-item");
         assertThat(model.getAttribute("purchaseCount")).isEqualTo(1);
@@ -130,6 +142,42 @@ class ReceiptControllerItemViewTests {
         assertThat(model.getAttribute("itemName")).isEqualTo("Mjölk");
         verify(receiptExtractionService, never()).findByIds(anyCollection());
         verify(receiptExtractionService).findById("receipt-2");
+    }
+
+    @Test
+    void viewItemPurchasesShowsTagErrorsWhenLookupFails() {
+        String ean = "7310867001823";
+        ReceiptItemReference reference = new ReceiptItemReference(
+            "receipt-1",
+            owner.id(),
+            Instant.parse("2024-10-01T10:15:30Z"),
+            "2024-09-30",
+            "ICA Kvantum",
+            "ICA Kvantum",
+            "receipt-1.pdf",
+            Map.of(
+                "name",
+                "Mjölk",
+                "eanCode",
+                ean,
+                "totalPrice",
+                "15.90"
+            )
+        );
+
+        when(receiptExtractionService.findReceiptItemReferences(eq(ean), eq(owner), eq(false)))
+            .thenReturn(List.of(reference));
+        when(tagService.tagsForEan(anyString(), anyString(), any()))
+            .thenThrow(new TagAccessException("unavailable", new RuntimeException("firestore")));
+
+        Model model = new ExtendedModelMap();
+        String viewName = controller.viewItemPurchases(ean, reference.receiptId(), "my", model, authentication, Locale.getDefault());
+
+        assertThat(viewName).isEqualTo("receipt-item");
+        assertThat(model.getAttribute("tagError"))
+            .isEqualTo("Kunde inte läsa taggar just nu. Försök igen senare.");
+        assertThat(model.getAttribute("itemTags")).isInstanceOf(List.class);
+        assertThat((List<?>) model.getAttribute("itemTags")).isEmpty();
     }
 }
 

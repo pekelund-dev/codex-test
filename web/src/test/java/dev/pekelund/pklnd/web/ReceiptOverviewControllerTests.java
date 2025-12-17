@@ -8,11 +8,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.pekelund.pklnd.PknldApplication;
+import dev.pekelund.pklnd.config.ReceiptOwnerResolver;
 import dev.pekelund.pklnd.firestore.FirestoreReadTotals;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.ReceiptStorageService;
+import dev.pekelund.pklnd.tags.TagService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -41,6 +43,9 @@ class ReceiptOverviewControllerTests {
 
     @MockitoBean
     private ReceiptOwnerResolver receiptOwnerResolver;
+
+    @MockitoBean
+    private TagService tagService;
 
     @Test
     void overviewDataReturnsItemsForSelectedWeek() throws Exception {

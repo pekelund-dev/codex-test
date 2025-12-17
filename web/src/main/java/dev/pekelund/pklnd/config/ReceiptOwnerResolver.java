@@ -1,4 +1,4 @@
-package dev.pekelund.pklnd.web;
+package dev.pekelund.pklnd.config;
 
 import dev.pekelund.pklnd.firestore.FirestoreUserDetails;
 import dev.pekelund.pklnd.storage.ReceiptOwner;

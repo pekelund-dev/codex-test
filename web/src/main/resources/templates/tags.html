@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle}">Taggar</title>
+</head>
+<body>
+<section class="py-3 py-lg-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <a class="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center gap-1"
+           th:href="@{/receipts}">
+            <i class="bi bi-receipt"></i>
+            <span>Till kvitton</span>
+        </a>
+    </div>
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+        <div>
+            <h1 class="h3 fw-semibold text-primary mb-1">Taggar</h1>
+            <p class="text-muted mb-0">Hantera och se alla taggar.</p>
+        </div>
+    </div>
+
+    <div th:if="${tagSuccess != null}" class="alert alert-success" th:text="${tagSuccess}">Tagg sparad.</div>
+    <div th:if="${tagError != null}" class="alert alert-danger" th:text="${tagError}">Kunde inte spara tagg.</div>
+
+    <div th:if="${tagError == null and !hasReceipts}" class="alert alert-info">Inga kvitton att visa taggar för ännu.</div>
+
+    <div class="card shadow-sm border-0" th:if="${#lists.isEmpty(tags) == false}">
+        <div class="card-body p-4">
+            <div class="accordion" id="tagAccordion">
+                <div class="accordion-item" th:each="tagSummary,iterStat : ${tags}">
+                    <h2 class="accordion-header" th:id="${'heading-' + iterStat.index}">
+                        <button class="accordion-button d-flex align-items-center gap-2" type="button"
+                                data-bs-toggle="collapse"
+                                th:data-bs-target="${'#collapse-' + iterStat.index}" aria-expanded="false"
+                                th:aria-controls="${'collapse-' + iterStat.index}">
+                            <span class="badge tag-badge" th:text="${tagSummary.tag().name()}"
+                                  th:style="${'background:' + tagSummary.tag().color()}">Tagg</span>
+                            <span class="fw-semibold" th:text="${tagSummary.items().size() + ' artiklar'}">0 artiklar</span>
+                        </button>
+                    </h2>
+                    <div class="accordion-collapse collapse" th:id="${'collapse-' + iterStat.index}"
+                         th:aria-labelledby="${'heading-' + iterStat.index}" data-bs-parent="#tagAccordion">
+                        <div class="accordion-body">
+                            <div th:if="${#lists.isEmpty(tagSummary.items())}" class="text-muted">Inga artiklar ännu.</div>
+                            <ul class="list-unstyled mb-0" th:if="${!#lists.isEmpty(tagSummary.items())}">
+                                <li class="mb-2" th:each="item : ${tagSummary.items()}">
+                                    <div class="fw-semibold" th:text="${item.name()}">Artikel</div>
+                                    <div class="text-muted small" th:text="${item.receiptName() != null ? item.receiptName() : 'Okänt kvitto'}"></div>
+                                    <div class="text-muted small" th:text="${'EAN: ' + item.ean()}"></div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${#lists.isEmpty(tags)}" class="card shadow-sm border-0">
+        <div class="card-body p-4 text-muted">Inga taggar har sparats ännu.</div>
+    </div>
+</section>
+</body>
+</html>

@@ -9,10 +9,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.pekelund.pklnd.PknldApplication;
+import dev.pekelund.pklnd.config.ReceiptOwnerResolver;
 import dev.pekelund.pklnd.firestore.FirestoreReadTotals;
-import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
+import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.ReceiptStorageService;
+import dev.pekelund.pklnd.tags.TagService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -37,6 +39,9 @@ class ReceiptOverviewPageTests {
 
     @MockitoBean
     private ReceiptOwnerResolver receiptOwnerResolver;
+
+    @MockitoBean
+    private TagService tagService;
 
     @Test
     void receiptOverviewPageIncludesSelectionScript() throws Exception {

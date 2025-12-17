@@ -54,6 +54,16 @@ public class FirestoreProperties {
     private String itemStatsCollection = ReceiptItemConstants.DEFAULT_ITEM_STATS_COLLECTION;
 
     /**
+     * Firestore collection used to store tag definitions per owner.
+     */
+    private String tagsCollection = "tags";
+
+    /**
+     * Firestore collection used to store mappings between EAN codes and tag ids per owner.
+     */
+    private String tagMappingsCollection = "tag-mappings";
+
+    /**
      * Default role granted to newly registered users.
      */
     private String defaultRole = "ROLE_USER";
@@ -133,6 +143,22 @@ public class FirestoreProperties {
 
     public void setItemStatsCollection(String itemStatsCollection) {
         this.itemStatsCollection = itemStatsCollection;
+    }
+
+    public String getTagsCollection() {
+        return tagsCollection;
+    }
+
+    public void setTagsCollection(String tagsCollection) {
+        this.tagsCollection = tagsCollection;
+    }
+
+    public String getTagMappingsCollection() {
+        return tagMappingsCollection;
+    }
+
+    public void setTagMappingsCollection(String tagMappingsCollection) {
+        this.tagMappingsCollection = tagMappingsCollection;
     }
 
     public String getDefaultRole() {
