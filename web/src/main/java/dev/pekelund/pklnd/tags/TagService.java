@@ -73,6 +73,9 @@ public class TagService {
 
     public List<TagView> listTagOptions(String ownerId, Locale locale) {
         String normalizedOwner = normalizeOwner(ownerId);
+        if (normalizedOwner == null) {
+            return List.of();
+        }
         if (isFirestoreEnabled()) {
             return listTagOptionsFromFirestore(normalizedOwner, locale);
         }

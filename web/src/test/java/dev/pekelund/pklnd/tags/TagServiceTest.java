@@ -101,4 +101,17 @@ class TagServiceTest {
             .isEqualTo("Mjölk");
         verifyNoInteractions(firestore);
     }
+
+    @Test
+    void skipsListingTagsWhenOwnerMissing() {
+        Firestore firestore = mock(Firestore.class);
+        FirestoreProperties properties = new FirestoreProperties();
+        properties.setEnabled(true);
+        TagService service = new TagService(Optional.of(firestore), properties);
+
+        List<TagView> tags = service.listTagOptions(null, Locale.ROOT);
+
+        assertThat(tags).isEmpty();
+        verifyNoInteractions(firestore);
+    }
 }
