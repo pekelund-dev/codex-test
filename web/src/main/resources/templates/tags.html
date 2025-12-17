@@ -23,7 +23,7 @@
     <div th:if="${tagSuccess != null}" class="alert alert-success" th:text="${tagSuccess}">Tagg sparad.</div>
     <div th:if="${tagError != null}" class="alert alert-danger" th:text="${tagError}">Kunde inte spara tagg.</div>
 
-    <div th:if="${!hasReceipts}" class="alert alert-info">Inga kvitton att visa taggar för ännu.</div>
+    <div th:if="${tagError == null and !hasReceipts}" class="alert alert-info">Inga kvitton att visa taggar för ännu.</div>
 
     <div class="card shadow-sm border-0" th:if="${#lists.isEmpty(tags) == false}">
         <div class="card-body p-4">
