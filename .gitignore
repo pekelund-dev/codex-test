@@ -45,6 +45,7 @@ build/
 !package*.json
 !tsconfig*.json
 !.vscode/*.json
+!firestore.indexes.json
 setup-env.sh
 .env.local
 .local/
