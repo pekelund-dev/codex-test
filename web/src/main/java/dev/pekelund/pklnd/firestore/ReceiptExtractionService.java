@@ -333,24 +333,24 @@ public class ReceiptExtractionService {
         }
 
         try {
-            Iterable<DocumentReference> documents = firestore.get()
-                .collection(properties.getReceiptsCollection())
-                .listDocuments();
-            for (DocumentReference document : documents) {
-                DocumentSnapshot snapshot = document.get().get();
-                recordRead("Load receipt document before deletion", 1L);
-                if (!snapshot.exists()) {
-                    continue;
-                }
-                ParsedReceipt receipt = toParsedReceipt(snapshot);
+            Firestore db = firestore.get();
+            Query query = db.collection(properties.getReceiptsCollection())
+                .whereEqualTo("owner.id", owner.id());
+
+            QuerySnapshot snapshot = query.get().get();
+            recordRead("Load receipts for deletion", snapshot != null ? snapshot.size() : 0);
+
+            if (snapshot == null) {
+                return;
+            }
+
+            for (DocumentSnapshot document : snapshot.getDocuments()) {
+                ParsedReceipt receipt = toParsedReceipt(document);
                 if (receipt == null) {
                     continue;
                 }
-                if (!ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), owner)) {
-                    continue;
-                }
                 removeReceiptIndexes(document.getId(), receipt.owner());
-                document.delete().get();
+                document.getReference().delete().get();
             }
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();

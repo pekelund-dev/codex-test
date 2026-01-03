@@ -101,10 +101,18 @@
                     <table class="table align-middle">
                         <thead class="table-light">
                         <tr>
-                            <th scope="col">Kvitto</th>
-                            <th scope="col">Datum</th>
-                            <th scope="col">Totalsumma</th>
-                            <th scope="col" class="text-end">Uppdaterad</th>
+                            <th scope="col" class="sortable" data-sort="name">
+                                Kvitto <i class="bi bi-arrow-down-up text-muted small ms-1"></i>
+                            </th>
+                            <th scope="col" class="sortable" data-sort="date">
+                                Datum <i class="bi bi-arrow-down-up text-muted small ms-1"></i>
+                            </th>
+                            <th scope="col" class="sortable" data-sort="amount">
+                                Totalsumma <i class="bi bi-arrow-down-up text-muted small ms-1"></i>
+                            </th>
+                            <th scope="col" class="text-end sortable" data-sort="updated">
+                                Uppdaterad <i class="bi bi-arrow-down-up text-muted small ms-1"></i>
+                            </th>
                         </tr>
                         </thead>
                         <tbody data-parsed-body>

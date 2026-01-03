@@ -1,9 +1,103 @@
 (function () {
-    const poller = setupDashboardPolling();
+    const sortState = { column: 'updated', direction: 'desc' };
+    const poller = setupDashboardPolling(sortState);
     setupClearReceiptsControl(poller);
+    setupTableSorting(sortState);
 })();
 
-function setupDashboardPolling() {
+function setupTableSorting(sortState) {
+    const table = document.querySelector('[data-parsed-table] table');
+    if (!table) return;
+
+    const headers = table.querySelectorAll('th.sortable');
+
+    headers.forEach(header => {
+        header.addEventListener('click', () => {
+            const column = header.dataset.sort;
+            if (sortState.column === column) {
+                sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.column = column;
+                sortState.direction = 'asc'; // Default to ascending for new columns
+                if (column === 'date' || column === 'updated' || column === 'amount') {
+                    sortState.direction = 'desc'; // Default to descending for dates and amounts
+                }
+            }
+            sortAndRenderTable(table, sortState);
+            updateSortIcons(headers, sortState);
+        });
+    });
+    
+    // Initial sort icon update
+    updateSortIcons(headers, sortState);
+}
+
+function sortAndRenderTable(table, sort) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    rows.sort((a, b) => {
+        let valA = getCellValue(a, sort.column);
+        let valB = getCellValue(b, sort.column);
+        return compareValues(valA, valB, sort.column, sort.direction);
+    });
+
+    tbody.innerHTML = '';
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function compareValues(valA, valB, column, direction) {
+    if (column === 'amount') {
+        valA = parseAmount(valA);
+        valB = parseAmount(valB);
+        return direction === 'asc' ? valA - valB : valB - valA;
+    } else if (column === 'date' || column === 'updated') {
+         // Handle empty dates (sort them last)
+         if (!valA || valA === '—') return 1;
+         if (!valB || valB === '—') return -1;
+         return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    } else {
+        return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    }
+}
+
+function getCellValue(row, column) {
+    const cells = row.querySelectorAll('td');
+    switch (column) {
+        case 'name': return cells[0].textContent.trim();
+        case 'date': return cells[1].textContent.trim();
+        case 'amount': return cells[2].textContent.trim();
+        case 'updated': return cells[3].textContent.trim();
+        default: return '';
+    }
+}
+
+function parseAmount(amountStr) {
+    if (!amountStr || amountStr === '—') return -Infinity;
+    // Remove currency symbols and non-breaking spaces, replace comma with dot
+    const clean = amountStr.replace(/[^\d.,-]/g, '').replace(',', '.');
+    return parseFloat(clean) || 0;
+}
+
+function updateSortIcons(headers, currentSort) {
+    headers.forEach(header => {
+        const icon = header.querySelector('i');
+        if (!icon) return;
+
+        icon.className = 'bi ms-1 small';
+        if (header.dataset.sort === currentSort.column) {
+            icon.classList.add(currentSort.direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down');
+            icon.classList.add('text-primary');
+            icon.classList.remove('text-muted');
+        } else {
+            icon.classList.add('bi-arrow-down-up');
+            icon.classList.add('text-muted');
+            icon.classList.remove('text-primary');
+        }
+    });
+}
+
+function setupDashboardPolling(sortState) {
     const container = document.querySelector('[data-dashboard-url]');
     if (!container) {
         return null;
@@ -50,7 +144,7 @@ function setupDashboardPolling() {
                 throw new Error(`Unexpected status ${response.status}`);
             }
             const data = await response.json();
-            renderParsedSection(data, { parsedCountBadge, parsedEmpty, parsedTable, parsedBody, parsedError });
+            renderParsedSection(data, { parsedCountBadge, parsedEmpty, parsedTable, parsedBody, parsedError }, sortState);
         } catch (error) {
             // eslint-disable-next-line no-console
             console.error('Failed to refresh receipt data', error);
@@ -80,7 +174,7 @@ function setupDashboardPolling() {
     };
 }
 
-function renderParsedSection(data, refs) {
+function renderParsedSection(data, refs, sortState) {
     if (!refs || !refs.parsedBody) {
         return;
     }
@@ -100,9 +194,33 @@ function renderParsedSection(data, refs) {
         return;
     }
 
+    // Sort receipts before rendering if sortState is provided
+    if (sortState) {
+        receipts.sort((a, b) => {
+            let valA = getReceiptValue(a, sortState.column);
+            let valB = getReceiptValue(b, sortState.column);
+            return compareValues(valA, valB, sortState.column, sortState.direction);
+        });
+    }
+
     receipts.forEach((receipt) => {
         refs.parsedBody.appendChild(buildParsedRow(receipt));
     });
+}
+
+function getReceiptValue(receipt, column) {
+    switch (column) {
+        case 'name': 
+            return receipt.storeName || receipt.displayName || receipt.objectPath || '';
+        case 'date': 
+            return receipt.receiptDate || '';
+        case 'amount': 
+            return receipt.formattedTotalAmount || receipt.totalAmount || '';
+        case 'updated': 
+            return receipt.updatedAt || '';
+        default: 
+            return '';
+    }
 }
 
 function updateCountBadge(element, count, noun, visible) {
