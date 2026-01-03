@@ -17,14 +17,12 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -191,7 +189,7 @@ public class DashboardStatisticsService {
 
     private YearlyStatistics computeYearlyStatistics(Authentication authentication) {
         ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
-        if (owner == null || receiptExtractionService.isEmpty()) {
+        if (owner == null || receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
             return YearlyStatistics.unavailable();
         }
 
@@ -233,10 +231,10 @@ public class DashboardStatisticsService {
                     .merge(month, amount, BigDecimal::add);
             }
 
-            // Convert the nested map to immutable maps
+            // Convert the nested map to immutable maps while preserving order
             Map<Integer, Map<Month, BigDecimal>> unmodifiableMonthly = new TreeMap<>(Comparator.reverseOrder());
             for (Map.Entry<Integer, Map<Month, BigDecimal>> entry : monthlyByYear.entrySet()) {
-                unmodifiableMonthly.put(entry.getKey(), Collections.unmodifiableMap(new LinkedHashMap<>(entry.getValue())));
+                unmodifiableMonthly.put(entry.getKey(), Collections.unmodifiableMap(new TreeMap<>(entry.getValue())));
             }
 
             return new YearlyStatistics(
