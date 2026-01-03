@@ -9,14 +9,22 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +66,10 @@ public class DashboardStatisticsService {
             ? computePersonalTotals(authentication)
             : PersonalTotals.unavailable();
 
+        YearlyStatistics yearlyStats = receiptsEnabled
+            ? computeYearlyStatistics(authentication)
+            : YearlyStatistics.unavailable();
+
         return new DashboardStatistics(
             userCount,
             userCountAccurate,
@@ -67,7 +79,10 @@ public class DashboardStatisticsService {
             receiptsEnabled,
             personalTotals.lastMonth(),
             personalTotals.currentMonth(),
-            personalTotals.available()
+            personalTotals.available(),
+            yearlyStats.yearlyTotals(),
+            yearlyStats.monthlyTotals(),
+            yearlyStats.available()
         );
     }
 
@@ -174,10 +189,82 @@ public class DashboardStatisticsService {
         return instant.atZone(ZoneId.systemDefault()).toLocalDate();
     }
 
+    private YearlyStatistics computeYearlyStatistics(Authentication authentication) {
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || receiptExtractionService.isEmpty()) {
+            return YearlyStatistics.unavailable();
+        }
+
+        try {
+            List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            if (receipts.isEmpty()) {
+                return new YearlyStatistics(true, Map.of(), Map.of());
+            }
+
+            // Map to store year -> total amount
+            Map<Integer, BigDecimal> yearlyTotals = new TreeMap<>(Comparator.reverseOrder());
+            // Map to store year -> (month -> total amount)
+            Map<Integer, Map<Month, BigDecimal>> monthlyByYear = new TreeMap<>(Comparator.reverseOrder());
+
+            for (ParsedReceipt receipt : receipts) {
+                if (receipt == null) {
+                    continue;
+                }
+
+                BigDecimal amount = receipt.totalAmountValue();
+                if (amount == null) {
+                    continue;
+                }
+
+                LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
+                    .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                if (receiptDate == null) {
+                    continue;
+                }
+
+                int year = receiptDate.getYear();
+                Month month = receiptDate.getMonth();
+
+                // Update yearly total
+                yearlyTotals.merge(year, amount, BigDecimal::add);
+
+                // Update monthly total for the year
+                monthlyByYear.computeIfAbsent(year, k -> new TreeMap<>())
+                    .merge(month, amount, BigDecimal::add);
+            }
+
+            // Convert the nested map to immutable maps
+            Map<Integer, Map<Month, BigDecimal>> unmodifiableMonthly = new TreeMap<>(Comparator.reverseOrder());
+            for (Map.Entry<Integer, Map<Month, BigDecimal>> entry : monthlyByYear.entrySet()) {
+                unmodifiableMonthly.put(entry.getKey(), Collections.unmodifiableMap(new LinkedHashMap<>(entry.getValue())));
+            }
+
+            return new YearlyStatistics(
+                true,
+                Collections.unmodifiableMap(yearlyTotals),
+                Collections.unmodifiableMap(unmodifiableMonthly)
+            );
+        } catch (ReceiptExtractionAccessException ex) {
+            log.warn("Unable to load yearly statistics for dashboard.", ex);
+            return YearlyStatistics.unavailable();
+        }
+    }
+
     private record PersonalTotals(boolean available, BigDecimal lastMonth, BigDecimal currentMonth) {
 
         static PersonalTotals unavailable() {
             return new PersonalTotals(false, null, null);
+        }
+    }
+
+    private record YearlyStatistics(
+        boolean available,
+        Map<Integer, BigDecimal> yearlyTotals,
+        Map<Integer, Map<Month, BigDecimal>> monthlyTotals
+    ) {
+
+        static YearlyStatistics unavailable() {
+            return new YearlyStatistics(false, Map.of(), Map.of());
         }
     }
 
@@ -190,7 +277,10 @@ public class DashboardStatisticsService {
         boolean receiptDataAvailable,
         BigDecimal lastMonthTotal,
         BigDecimal currentMonthTotal,
-        boolean personalTotalsAvailable
+        boolean personalTotalsAvailable,
+        Map<Integer, BigDecimal> yearlyTotals,
+        Map<Integer, Map<Month, BigDecimal>> monthlyTotals,
+        boolean yearlyStatisticsAvailable
     ) {
 
         public String formatAmount(BigDecimal value) {
