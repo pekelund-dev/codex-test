@@ -159,6 +159,15 @@ details.receipt-table[open] .details-toggle-icon {
     background-color: rgba(13, 110, 253, 0.4);
 }
 
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+th.sortable:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
 .overview-week-indicators {
     display: flex;
     align-items: flex-end;

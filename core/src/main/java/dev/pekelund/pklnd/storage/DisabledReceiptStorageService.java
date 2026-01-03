@@ -34,7 +34,7 @@ public class DisabledReceiptStorageService implements ReceiptStorageService {
 
     @Override
     public void deleteReceiptsForOwner(ReceiptOwner owner) {
-        throw new ReceiptStorageException("Google Cloud Storage integration is disabled");
+        // No-op when storage is disabled
     }
 }
 

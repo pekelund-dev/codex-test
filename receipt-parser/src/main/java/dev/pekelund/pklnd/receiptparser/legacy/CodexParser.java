@@ -20,7 +20,7 @@ public class CodexParser implements ReceiptFormatParser {
     private static final Logger LOGGER = LoggerFactory.getLogger(CodexParser.class);
 
     private static final Pattern ITEM_PATTERN = Pattern.compile(
-        "^(?<name>.+?)\\s+(?<ean>\\d{8,13})\\s+(?<unit>-?\\d+,\\d{2})\\s+(?<quantity>\\d+(?:,\\d+)?\\s*\\p{L}+)\\s+(?<total>-?\\d+,\\d{2})$"
+        "^(?<name>.+?)\\s+(?<ean>\\d{4,13})\\s+(?<unit>-?\\d+,\\d{2})\\s+(?<quantity>\\d+(?:,\\d+)?\\s*\\p{L}+)\\s+(?<total>-?\\d+,\\d{2})$"
     );
     private static final Pattern DISCOUNT_PATTERN = Pattern.compile(
         "^(?<description>.+?)\\s+(?<amount>-\\d+,\\d{2})$"

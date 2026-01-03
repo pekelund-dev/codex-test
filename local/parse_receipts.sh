@@ -9,7 +9,7 @@ FULL_URL="${BASE_URL}${API_ENDPOINT}"
 RECEIPTS_DIR="receipts"
 
 # User Details (Required for ingestion)
-USER_ID="GgM7ywLGg7faiBLi68cS"
+USER_ID="zRiQY1MMPckvzqRXcPsj"
 USER_EMAIL="pekelund@gmail.com"
 USER_NAME="par"
 
