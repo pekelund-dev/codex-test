@@ -105,8 +105,26 @@ public class HomeController {
     @GetMapping("/dashboard/statistics/stores")
     public String statisticsStores(Model model, Authentication authentication) {
         model.addAttribute("pageTitleKey", "page.statistics.stores.title");
-        // Redirect to receipts page which groups by store
-        return "redirect:/receipts";
+        
+        List<DashboardStatisticsService.StoreStatistic> stores = 
+            dashboardStatisticsService.getStoreStatistics(authentication);
+        model.addAttribute("stores", stores);
+        
+        return "statistics-stores";
+    }
+
+    @GetMapping("/dashboard/statistics/stores/{storeName}")
+    public String statisticsStoreReceipts(@org.springframework.web.bind.annotation.PathVariable String storeName,
+                                           Model model,
+                                           Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.store.receipts.title");
+        model.addAttribute("storeName", storeName);
+        
+        List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
+            dashboardStatisticsService.getReceiptsForStore(storeName, authentication);
+        model.addAttribute("receipts", receipts);
+        
+        return "statistics-store-receipts";
     }
 
     @GetMapping("/dashboard/statistics/items")

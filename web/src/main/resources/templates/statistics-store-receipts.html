@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : #{page.statistics.store.receipts.title}">Kvitton för butik</title>
+</head>
+<body>
+<section>
+    <div class="row py-4">
+        <div class="col-12">
+            <h1 class="fw-bold mb-3">
+                <span th:text="#{statistics.store.receipts.heading}">Kvitton för</span>
+                <span class="text-primary" th:text="${storeName}">ICA Supermarket</span>
+            </h1>
+            <p class="text-muted mb-0">
+                <span th:text="#{statistics.store.receipts.description}">Alla kvitton från denna butik.</span>
+                <span th:if="${receipts != null}">
+                    (<span th:text="${receipts.size()}">0</span> 
+                    <span th:text="#{statistics.store.receipts.count}">kvitton</span>)
+                </span>
+            </p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div th:if="${receipts.isEmpty()}" class="alert alert-info" role="alert">
+                        <span th:text="#{statistics.store.receipts.empty}">Inga kvitton hittades för denna butik.</span>
+                    </div>
+
+                    <div th:if="${!receipts.isEmpty()}" class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{statistics.store.receipts.table.date}">Datum</th>
+                                    <th th:text="#{statistics.store.receipts.table.name}">Fil/Namn</th>
+                                    <th class="text-end" th:text="#{statistics.store.receipts.table.amount}">Belopp</th>
+                                    <th class="text-center" th:text="#{statistics.store.receipts.table.status}">Status</th>
+                                    <th class="text-center" th:text="#{statistics.store.receipts.table.actions}">Åtgärder</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="receipt : ${receipts}">
+                                    <td th:text="${receipt.receiptDate() != null ? receipt.receiptDate() : '-'}">2024-01-15</td>
+                                    <td>
+                                        <a th:href="@{/receipts/{id}(id=${receipt.id()})}" 
+                                           class="text-decoration-none"
+                                           th:text="${receipt.displayName() != null ? receipt.displayName() : receipt.id()}">kvitto.pdf</a>
+                                    </td>
+                                    <td class="text-end fw-semibold" th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() + ' kr' : '-'}">123.45 kr</td>
+                                    <td class="text-center">
+                                        <span class="badge" th:classappend="${receipt.statusBadgeClass()}" 
+                                              th:text="${receipt.status() != null ? receipt.status() : 'UNKNOWN'}">COMPLETED</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <a th:href="@{/receipts/{id}(id=${receipt.id()})}" 
+                                           class="btn btn-sm btn-outline-primary"
+                                           th:text="#{statistics.store.receipts.view}">Visa</a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <a th:href="@{/dashboard/statistics/stores}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left me-2"></i>
+                <span th:text="#{statistics.store.receipts.back.stores}">Tillbaka till butiker</span>
+            </a>
+            <a th:href="@{/dashboard/statistics}" class="btn btn-outline-secondary">
+                <span th:text="#{statistics.store.receipts.back.statistics}">Tillbaka till statistik</span>
+            </a>
+        </div>
+    </div>
+</section>
+</body>
+</html>

@@ -13,6 +13,7 @@ import java.time.Month;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -111,6 +113,100 @@ public class DashboardStatisticsService {
             stores.add(normalizedStoreName.toLowerCase(Locale.ROOT));
         }
         return stores.size();
+    }
+
+    /**
+     * Get statistics for all stores with receipt counts.
+     * Returns a list of StoreStatistic objects sorted by receipt count descending.
+     */
+    public List<StoreStatistic> getStoreStatistics(Authentication authentication) {
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return List.of();
+        }
+
+        try {
+            List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            if (receipts.isEmpty()) {
+                return List.of();
+            }
+
+            // Group receipts by store name
+            Map<String, List<ParsedReceipt>> receiptsByStore = new HashMap<>();
+            for (ParsedReceipt receipt : receipts) {
+                String storeName = receipt != null ? receipt.storeName() : null;
+                if (storeName == null || !StringUtils.hasText(storeName.trim())) {
+                    continue;
+                }
+                String normalizedStoreName = storeName.trim();
+                receiptsByStore.computeIfAbsent(normalizedStoreName, k -> new ArrayList<>()).add(receipt);
+            }
+
+            // Calculate statistics for each store
+            List<StoreStatistic> storeStats = new ArrayList<>();
+            for (Map.Entry<String, List<ParsedReceipt>> entry : receiptsByStore.entrySet()) {
+                String storeName = entry.getKey();
+                List<ParsedReceipt> storeReceipts = entry.getValue();
+                long receiptCount = storeReceipts.size();
+
+                // Calculate total spending for this store
+                BigDecimal totalSpending = BigDecimal.ZERO;
+                for (ParsedReceipt receipt : storeReceipts) {
+                    BigDecimal amount = receipt.totalAmountValue();
+                    if (amount != null) {
+                        totalSpending = totalSpending.add(amount);
+                    }
+                }
+
+                storeStats.add(new StoreStatistic(storeName, receiptCount, totalSpending));
+            }
+
+            // Sort by receipt count descending
+            storeStats.sort(Comparator.comparingLong(StoreStatistic::receiptCount).reversed());
+            return Collections.unmodifiableList(storeStats);
+        } catch (ReceiptExtractionAccessException ex) {
+            log.warn("Unable to load store statistics.", ex);
+            return List.of();
+        }
+    }
+
+    /**
+     * Get receipts for a specific store.
+     */
+    public List<ParsedReceipt> getReceiptsForStore(String storeName, Authentication authentication) {
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return List.of();
+        }
+
+        if (!StringUtils.hasText(storeName)) {
+            return List.of();
+        }
+
+        try {
+            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            String normalizedSearchName = storeName.trim();
+
+            return allReceipts.stream()
+                .filter(receipt -> {
+                    String receiptStoreName = receipt.storeName();
+                    return receiptStoreName != null && 
+                           receiptStoreName.trim().equalsIgnoreCase(normalizedSearchName);
+                })
+                .collect(Collectors.toList());
+        } catch (ReceiptExtractionAccessException ex) {
+            log.warn("Unable to load receipts for store: " + storeName, ex);
+            return List.of();
+        }
+    }
+
+    public record StoreStatistic(String storeName, long receiptCount, BigDecimal totalSpending) {
+        public String formatAmount() {
+            if (totalSpending == null) {
+                return "0.00";
+            }
+            return totalSpending.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        }
     }
 
     private long countItems(List<ParsedReceipt> receipts) {
