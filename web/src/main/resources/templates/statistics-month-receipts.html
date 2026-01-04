@@ -26,45 +26,7 @@
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <div th:if="${receipts.isEmpty()}" class="alert alert-info" role="alert">
-                        <span th:text="#{statistics.month.receipts.empty}">Inga kvitton hittades för denna månad.</span>
-                    </div>
-
-                    <div th:if="${!receipts.isEmpty()}" class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th th:text="#{statistics.month.receipts.table.date}">Datum</th>
-                                    <th th:text="#{statistics.month.receipts.table.store}">Butik</th>
-                                    <th th:text="#{statistics.month.receipts.table.name}">Fil/Namn</th>
-                                    <th class="text-end" th:text="#{statistics.month.receipts.table.amount}">Belopp</th>
-                                    <th class="text-center" th:text="#{statistics.month.receipts.table.status}">Status</th>
-                                    <th class="text-center" th:text="#{statistics.month.receipts.table.actions}">Åtgärder</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr th:each="receipt : ${receipts}">
-                                    <td th:text="${receipt.receiptDate() != null ? receipt.receiptDate() : '-'}">2024-01-15</td>
-                                    <td th:text="${receipt.storeName() != null ? receipt.storeName() : '-'}">ICA Supermarket</td>
-                                    <td>
-                                        <a th:href="@{/receipts/{id}(id=${receipt.id()})}" 
-                                           class="text-decoration-none"
-                                           th:text="${receipt.displayName() != null ? receipt.displayName() : receipt.id()}">kvitto.pdf</a>
-                                    </td>
-                                    <td class="text-end fw-semibold" th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() + ' kr' : '-'}">123.45 kr</td>
-                                    <td class="text-center">
-                                        <span class="badge" th:classappend="${receipt.statusBadgeClass()}" 
-                                              th:text="${receipt.status() != null ? receipt.status() : 'UNKNOWN'}">COMPLETED</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <a th:href="@{/receipts/{id}(id=${receipt.id()})}" 
-                                           class="btn btn-sm btn-outline-primary"
-                                           th:text="#{statistics.month.receipts.view}">Visa</a>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <div th:replace="~{fragments/receipt-list :: receiptTable(${receipts}, true, #{statistics.month.receipts.empty})}"></div>
                 </div>
             </div>
         </div>
