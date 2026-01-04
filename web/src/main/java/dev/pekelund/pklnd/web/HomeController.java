@@ -95,6 +95,49 @@ public class HomeController {
         return "dashboard-statistics";
     }
 
+    @GetMapping("/dashboard/statistics/users")
+    public String statisticsUsers(Model model, Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.users.title");
+        // Redirect to receipts page with all users' receipts
+        return "redirect:/receipts";
+    }
+
+    @GetMapping("/dashboard/statistics/stores")
+    public String statisticsStores(Model model, Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.stores.title");
+        // Redirect to receipts page which groups by store
+        return "redirect:/receipts";
+    }
+
+    @GetMapping("/dashboard/statistics/items")
+    public String statisticsItems(Model model, Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.items.title");
+        // Redirect to receipt overview page
+        return "redirect:/receipts/overview";
+    }
+
+    @GetMapping("/dashboard/statistics/year/{year}")
+    public String statisticsYear(@org.springframework.web.bind.annotation.PathVariable int year,
+                                  Model model,
+                                  Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.year.title");
+        model.addAttribute("year", year);
+        // Redirect to receipts page - could be enhanced to filter by year
+        return "redirect:/receipts";
+    }
+
+    @GetMapping("/dashboard/statistics/year/{year}/month/{month}")
+    public String statisticsYearMonth(@org.springframework.web.bind.annotation.PathVariable int year,
+                                       @org.springframework.web.bind.annotation.PathVariable int month,
+                                       Model model,
+                                       Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.month.title");
+        model.addAttribute("year", year);
+        model.addAttribute("month", month);
+        // Redirect to receipts page - could be enhanced to filter by year and month
+        return "redirect:/receipts";
+    }
+
     @PostMapping("/dashboard/admins")
     public String promoteAdministrator(@Valid @ModelAttribute("adminPromotionForm") AdminPromotionForm form,
                                        BindingResult bindingResult,
