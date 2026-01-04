@@ -209,6 +209,59 @@ public class DashboardStatisticsService {
         }
     }
 
+    /**
+     * Get receipts for a specific year.
+     */
+    public List<ParsedReceipt> getReceiptsForYear(int year, Authentication authentication) {
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return List.of();
+        }
+
+        try {
+            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            
+            return allReceipts.stream()
+                .filter(receipt -> {
+                    LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
+                        .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                    return receiptDate != null && receiptDate.getYear() == year;
+                })
+                .collect(Collectors.toList());
+        } catch (ReceiptExtractionAccessException ex) {
+            log.warn("Unable to load receipts for year: " + year, ex);
+            return List.of();
+        }
+    }
+
+    /**
+     * Get receipts for a specific year and month.
+     */
+    public List<ParsedReceipt> getReceiptsForYearMonth(int year, int month, Authentication authentication) {
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return List.of();
+        }
+
+        try {
+            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            
+            return allReceipts.stream()
+                .filter(receipt -> {
+                    LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
+                        .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                    if (receiptDate == null) {
+                        return false;
+                    }
+                    return receiptDate.getYear() == year && receiptDate.getMonthValue() == month;
+                })
+                .collect(Collectors.toList());
+        } catch (ReceiptExtractionAccessException ex) {
+            log.warn("Unable to load receipts for year: " + year + " month: " + month, ex);
+            return List.of();
+        }
+    }
+
     private long countItems(List<ParsedReceipt> receipts) {
         return receipts.stream()
             .filter(receipt -> receipt != null && receipt.items() != null)

@@ -140,8 +140,12 @@ public class HomeController {
                                   Authentication authentication) {
         model.addAttribute("pageTitleKey", "page.statistics.year.title");
         model.addAttribute("year", year);
-        // Redirect to receipts page - could be enhanced to filter by year
-        return "redirect:/receipts";
+        
+        List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
+            dashboardStatisticsService.getReceiptsForYear(year, authentication);
+        model.addAttribute("receipts", receipts);
+        
+        return "statistics-year-receipts";
     }
 
     @GetMapping("/dashboard/statistics/year/{year}/month/{month}")
@@ -152,8 +156,12 @@ public class HomeController {
         model.addAttribute("pageTitleKey", "page.statistics.month.title");
         model.addAttribute("year", year);
         model.addAttribute("month", month);
-        // Redirect to receipts page - could be enhanced to filter by year and month
-        return "redirect:/receipts";
+        
+        List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
+            dashboardStatisticsService.getReceiptsForYearMonth(year, month, authentication);
+        model.addAttribute("receipts", receipts);
+        
+        return "statistics-month-receipts";
     }
 
     @PostMapping("/dashboard/admins")

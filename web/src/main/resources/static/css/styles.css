@@ -247,3 +247,12 @@ th.sortable:hover {
         font-size: 0.875rem;
     }
 }
+
+.hover-shadow {
+    transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 0.5rem 1rem rgba(13, 110, 253, 0.15);
+    transform: translateY(-2px);
+}
