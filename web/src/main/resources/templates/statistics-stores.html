@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : #{page.statistics.stores.title}">Butiksstatistik</title>
+</head>
+<body>
+<section>
+    <div class="row py-4">
+        <div class="col-12">
+            <h1 class="fw-bold mb-3" th:text="#{statistics.stores.heading}">Butiksstatistik</h1>
+            <p class="text-muted mb-0" th:text="#{statistics.stores.description}">Översikt över alla butiker med antal kvitton och total spendering.</p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div th:if="${stores.isEmpty()}" class="alert alert-info" role="alert">
+                        <span th:text="#{statistics.stores.empty}">Inga butiker hittades.</span>
+                    </div>
+
+                    <div th:if="${!stores.isEmpty()}" class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{statistics.stores.table.name}">Butiksnamn</th>
+                                    <th class="text-end" th:text="#{statistics.stores.table.receipts}">Antal kvitton</th>
+                                    <th class="text-end" th:text="#{statistics.stores.table.total}">Total spendering</th>
+                                    <th class="text-center" th:text="#{statistics.stores.table.actions}">Åtgärder</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="store : ${stores}">
+                                    <td class="fw-semibold">
+                                        <a th:href="@{/dashboard/statistics/stores/{name}(name=${store.storeName})}" 
+                                           class="text-decoration-none"
+                                           th:text="${store.storeName}">ICA Supermarket</a>
+                                    </td>
+                                    <td class="text-end" th:text="${store.receiptCount}">42</td>
+                                    <td class="text-end" th:text="${store.formatAmount()} + ' kr'">1234.56 kr</td>
+                                    <td class="text-center">
+                                        <a th:href="@{/dashboard/statistics/stores/{name}(name=${store.storeName})}" 
+                                           class="btn btn-sm btn-outline-primary"
+                                           th:text="#{statistics.stores.view.receipts}">Visa kvitton</a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <a th:href="@{/dashboard/statistics}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>
+                <span th:text="#{statistics.stores.back}">Tillbaka till statistik</span>
+            </a>
+        </div>
+    </div>
+</section>
+</body>
+</html>
