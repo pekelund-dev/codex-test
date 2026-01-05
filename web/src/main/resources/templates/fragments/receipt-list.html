@@ -4,8 +4,49 @@
     <title>Receipt List Fragment</title>
 </head>
 <body>
-    <!-- Receipt List Table Fragment -->
-    <div th:fragment="receiptTable(receipts, showStore, emptyMessage)">
+    <!-- Receipt List Table Fragment with Filters -->
+    <div th:fragment="receiptTable(receipts, showStore, emptyMessage, filterStartDate, filterEndDate, filterStore, hasFilters)">
+        <!-- Filter Section -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <button class="btn btn-link w-100 text-start d-flex justify-content-between align-items-center p-0 text-decoration-none" 
+                        type="button" 
+                        data-bs-toggle="collapse" 
+                        th:data-bs-target="${'#filterCollapse'}" 
+                        th:attr="aria-expanded=${hasFilters ? 'false' : 'true'}">
+                    <span class="fw-semibold" th:text="#{receipt.list.filter.heading}">Filtrera kvitton</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+            <div class="collapse" th:classappend="${hasFilters ? '' : 'show'}" id="filterCollapse">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="startDate" class="form-label" th:text="#{receipt.list.filter.startDate}">Startdatum</label>
+                            <input type="date" class="form-control" id="startDate" name="startDate" 
+                                   th:value="${filterStartDate}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="endDate" class="form-label" th:text="#{receipt.list.filter.endDate}">Slutdatum</label>
+                            <input type="date" class="form-control" id="endDate" name="endDate" 
+                                   th:value="${filterEndDate}">
+                        </div>
+                        <div class="col-md-4" th:if="${showStore}">
+                            <label for="store" class="form-label" th:text="#{receipt.list.filter.store}">Butik</label>
+                            <input type="text" class="form-control" id="store" name="store" 
+                                   th:value="${filterStore}"
+                                   th:placeholder="#{receipt.list.filter.store.placeholder}">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary" th:text="#{receipt.list.filter.apply}">Tillämpa filter</button>
+                            <a th:href="@{''}" class="btn btn-outline-secondary ms-2" th:text="#{receipt.list.filter.clear}">Rensa filter</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Receipt Table -->
         <div th:if="${receipts.isEmpty()}" class="alert alert-info" role="alert">
             <span th:text="${emptyMessage}">Inga kvitton hittades.</span>
         </div>

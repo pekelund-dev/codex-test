@@ -115,6 +115,9 @@ public class HomeController {
 
     @GetMapping("/dashboard/statistics/stores/{storeName}")
     public String statisticsStoreReceipts(@org.springframework.web.bind.annotation.PathVariable String storeName,
+                                           @org.springframework.web.bind.annotation.RequestParam(required = false) String startDate,
+                                           @org.springframework.web.bind.annotation.RequestParam(required = false) String endDate,
+                                           @org.springframework.web.bind.annotation.RequestParam(required = false) String store,
                                            Model model,
                                            Authentication authentication) {
         model.addAttribute("pageTitleKey", "page.statistics.store.receipts.title");
@@ -122,6 +125,9 @@ public class HomeController {
         
         List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
             dashboardStatisticsService.getReceiptsForStore(storeName, authentication);
+        
+        // Apply additional filters
+        receipts = dashboardStatisticsService.applyFilters(receipts, startDate, endDate, store);
         model.addAttribute("receipts", receipts);
         
         return "statistics-store-receipts";
@@ -136,6 +142,9 @@ public class HomeController {
 
     @GetMapping("/dashboard/statistics/year/{year}")
     public String statisticsYear(@org.springframework.web.bind.annotation.PathVariable int year,
+                                  @org.springframework.web.bind.annotation.RequestParam(required = false) String startDate,
+                                  @org.springframework.web.bind.annotation.RequestParam(required = false) String endDate,
+                                  @org.springframework.web.bind.annotation.RequestParam(required = false) String store,
                                   Model model,
                                   Authentication authentication) {
         model.addAttribute("pageTitleKey", "page.statistics.year.title");
@@ -143,6 +152,9 @@ public class HomeController {
         
         List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
             dashboardStatisticsService.getReceiptsForYear(year, authentication);
+        
+        // Apply additional filters
+        receipts = dashboardStatisticsService.applyFilters(receipts, startDate, endDate, store);
         model.addAttribute("receipts", receipts);
         
         return "statistics-year-receipts";
@@ -151,6 +163,9 @@ public class HomeController {
     @GetMapping("/dashboard/statistics/year/{year}/month/{month}")
     public String statisticsYearMonth(@org.springframework.web.bind.annotation.PathVariable int year,
                                        @org.springframework.web.bind.annotation.PathVariable int month,
+                                       @org.springframework.web.bind.annotation.RequestParam(required = false) String startDate,
+                                       @org.springframework.web.bind.annotation.RequestParam(required = false) String endDate,
+                                       @org.springframework.web.bind.annotation.RequestParam(required = false) String store,
                                        Model model,
                                        Authentication authentication) {
         model.addAttribute("pageTitleKey", "page.statistics.month.title");
@@ -159,6 +174,9 @@ public class HomeController {
         
         List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
             dashboardStatisticsService.getReceiptsForYearMonth(year, month, authentication);
+        
+        // Apply additional filters
+        receipts = dashboardStatisticsService.applyFilters(receipts, startDate, endDate, store);
         model.addAttribute("receipts", receipts);
         
         return "statistics-month-receipts";

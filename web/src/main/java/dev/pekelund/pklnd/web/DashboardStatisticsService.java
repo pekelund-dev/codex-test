@@ -262,6 +262,63 @@ public class DashboardStatisticsService {
         }
     }
 
+    /**
+     * Apply filters to a list of receipts.
+     * Filters can be applied by start date, end date, and store name.
+     */
+    public List<ParsedReceipt> applyFilters(List<ParsedReceipt> receipts, String startDate, String endDate, String storeName) {
+        if (receipts == null || receipts.isEmpty()) {
+            return receipts;
+        }
+
+        return receipts.stream()
+            .filter(receipt -> {
+                // Filter by start date
+                if (StringUtils.hasText(startDate)) {
+                    LocalDate start = parseDate(startDate);
+                    LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
+                        .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                    if (start != null && receiptDate != null && receiptDate.isBefore(start)) {
+                        return false;
+                    }
+                }
+
+                // Filter by end date
+                if (StringUtils.hasText(endDate)) {
+                    LocalDate end = parseDate(endDate);
+                    LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
+                        .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                    if (end != null && receiptDate != null && receiptDate.isAfter(end)) {
+                        return false;
+                    }
+                }
+
+                // Filter by store name
+                if (StringUtils.hasText(storeName)) {
+                    String receiptStoreName = receipt.storeName();
+                    if (receiptStoreName == null || 
+                        !receiptStoreName.toLowerCase(Locale.ROOT).contains(storeName.trim().toLowerCase(Locale.ROOT))) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            .collect(Collectors.toList());
+    }
+
+    private LocalDate parseDate(String dateString) {
+        if (!StringUtils.hasText(dateString)) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(dateString);
+        } catch (DateTimeParseException e) {
+            log.warn("Failed to parse date: " + dateString, e);
+            return null;
+        }
+    }
+
     private long countItems(List<ParsedReceipt> receipts) {
         return receipts.stream()
             .filter(receipt -> receipt != null && receipt.items() != null)

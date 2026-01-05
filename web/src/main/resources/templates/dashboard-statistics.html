@@ -98,43 +98,6 @@
         </div>
     </div>
 
-    <!-- Yearly Statistics Section -->
-    <div class="row mt-5" th:if="${statistics.yearlyStatisticsAvailable}">
-        <div class="col-12">
-            <h2 class="h4 fw-bold mb-3" th:text="#{dashboard.statistics.yearly.heading}">Spendering per år</h2>
-            <p class="text-muted" th:text="#{dashboard.statistics.yearly.description}">Översikt över total spendering för varje år.</p>
-        </div>
-    </div>
-
-    <div class="row g-4 mt-1" th:if="${statistics.yearlyStatisticsAvailable and !statistics.yearlyTotals.isEmpty()}">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th th:text="#{dashboard.statistics.yearly.table.year}">År</th>
-                                    <th class="text-end" th:text="#{dashboard.statistics.yearly.table.total}">Total spendering</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr th:each="yearEntry : ${statistics.yearlyTotals}">
-                                    <td>
-                                        <a th:href="@{/dashboard/statistics/year/{year}(year=${yearEntry.key})}" 
-                                           class="text-decoration-none fw-semibold" 
-                                           th:text="${yearEntry.key}">2024</a>
-                                    </td>
-                                    <td class="text-end fw-bold" th:text="${statistics.formatAmount(yearEntry.value)} + ' kr'">0.00 kr</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Monthly Statistics Section -->
     <div class="row mt-5" th:if="${statistics.yearlyStatisticsAvailable and !statistics.monthlyTotals.isEmpty()}">
         <div class="col-12">
