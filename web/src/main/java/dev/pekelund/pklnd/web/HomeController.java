@@ -156,17 +156,21 @@ public class HomeController {
         model.addAttribute("pageTitleKey", "page.statistics.year.title");
         model.addAttribute("year", year);
         
-        // Add filter parameters to model
-        model.addAttribute("filterStartDate", startDate != null ? startDate : "");
-        model.addAttribute("filterEndDate", endDate != null ? endDate : "");
+        // Pre-populate date filters based on year if not explicitly provided
+        String effectiveStartDate = startDate != null ? startDate : year + "-01-01";
+        String effectiveEndDate = endDate != null ? endDate : year + "-12-31";
+        
+        // Add filter parameters to model (show in filter form)
+        model.addAttribute("filterStartDate", effectiveStartDate);
+        model.addAttribute("filterEndDate", effectiveEndDate);
         model.addAttribute("filterStore", store != null ? store : "");
         model.addAttribute("hasFilters", startDate != null || endDate != null || store != null);
         
         List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
             dashboardStatisticsService.getReceiptsForYear(year, authentication);
         
-        // Apply additional filters
-        receipts = dashboardStatisticsService.applyFilters(receipts, startDate, endDate, store);
+        // Apply additional filters (using effective dates)
+        receipts = dashboardStatisticsService.applyFilters(receipts, effectiveStartDate, effectiveEndDate, store);
         model.addAttribute("receipts", receipts);
         
         return "statistics-year-receipts";
@@ -192,17 +196,37 @@ public class HomeController {
             model.addAttribute("monthName", "unknown");
         }
         
-        // Add filter parameters to model
-        model.addAttribute("filterStartDate", startDate != null ? startDate : "");
-        model.addAttribute("filterEndDate", endDate != null ? endDate : "");
+        // Pre-populate date filters based on year/month if not explicitly provided
+        String effectiveStartDate = startDate;
+        String effectiveEndDate = endDate;
+        
+        if (startDate == null || endDate == null) {
+            try {
+                java.time.YearMonth yearMonth = java.time.YearMonth.of(year, month);
+                if (startDate == null) {
+                    effectiveStartDate = yearMonth.atDay(1).toString(); // First day of month
+                }
+                if (endDate == null) {
+                    effectiveEndDate = yearMonth.atEndOfMonth().toString(); // Last day of month
+                }
+            } catch (Exception e) {
+                // If date calculation fails, leave as null
+                effectiveStartDate = startDate;
+                effectiveEndDate = endDate;
+            }
+        }
+        
+        // Add filter parameters to model (show in filter form)
+        model.addAttribute("filterStartDate", effectiveStartDate != null ? effectiveStartDate : "");
+        model.addAttribute("filterEndDate", effectiveEndDate != null ? effectiveEndDate : "");
         model.addAttribute("filterStore", store != null ? store : "");
         model.addAttribute("hasFilters", startDate != null || endDate != null || store != null);
         
         List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
             dashboardStatisticsService.getReceiptsForYearMonth(year, month, authentication);
         
-        // Apply additional filters
-        receipts = dashboardStatisticsService.applyFilters(receipts, startDate, endDate, store);
+        // Apply additional filters (using effective dates)
+        receipts = dashboardStatisticsService.applyFilters(receipts, effectiveStartDate, effectiveEndDate, store);
         model.addAttribute("receipts", receipts);
         
         return "statistics-month-receipts";
