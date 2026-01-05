@@ -149,22 +149,45 @@
 
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
-            <h2 class="h5 fw-semibold mb-3">General discounts</h2>
-            <div th:if="${#lists.isEmpty(receipt.generalDiscounts())}" class="text-muted">No general discounts were found.</div>
-            <ul class="list-group list-group-flush"
-                th:if="${!#lists.isEmpty(receipt.generalDiscounts())}">
-                <li class="list-group-item" th:each="discount : ${receipt.generalDiscounts()}"
-                    th:text="${(discount['description'] != null ? discount['description'] : 'Discount') + ' (' + (discount['amount'] != null ? discount['amount'] : '—') + ')'}">
-                    Discount description (amount)
-                </li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="card shadow-sm border-0 mt-4">
-        <div class="card-body p-4">
             <h2 class="h5 fw-semibold mb-3" th:text="#{receipt.discount.summary.heading}">Discount summary</h2>
-            <dl class="row mb-0">
+            
+            <!-- General discounts details -->
+            <div th:if="${!#lists.isEmpty(receipt.generalDiscounts())}" class="mb-3">
+                <h3 class="h6 text-muted mb-2" th:text="#{receipt.discount.general.details}">General discounts</h3>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center" 
+                        th:each="discount : ${receipt.generalDiscounts()}">
+                        <span th:text="${discount['description'] != null ? discount['description'] : 'Discount'}">Discount description</span>
+                        <span class="badge bg-success-subtle text-success" 
+                              th:text="${discount['amount'] != null ? discount['amount'] + ' SEK' : '—'}">0.00 SEK</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Item-specific discounts details -->
+            <div th:if="${receipt.itemDiscountTotal().compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="mb-3">
+                <h3 class="h6 text-muted mb-2" th:text="#{receipt.discount.item.details}">Item-specific discounts</h3>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center"
+                        th:each="item : ${receipt.items()}"
+                        th:if="${item['discounts'] != null and !#lists.isEmpty(item['discounts'])}">
+                        <div>
+                            <div th:text="${item['name'] != null ? item['name'] : 'Item'}">Item name</div>
+                            <small class="text-muted" 
+                                   th:each="discount, iterStat : ${item['discounts']}"
+                                   th:text="${(iterStat.index > 0 ? ', ' : '') + (discount['description'] != null ? discount['description'] : 'Discount')}">
+                                Discount description
+                            </small>
+                        </div>
+                        <span class="badge bg-success-subtle text-success"
+                              th:with="itemTotal=${item['discounts'].![#this['amount']].stream().filter(a -> a != null).reduce(T(java.math.BigDecimal).ZERO, (a,b) -> a.add(b))}"
+                              th:text="${itemTotal} + ' SEK'">0.00 SEK</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Total summary -->
+            <dl class="row mb-0 mt-3 pt-3 border-top">
                 <dt class="col-sm-6" th:text="#{receipt.discount.general.total}">General discounts total</dt>
                 <dd class="col-sm-6 text-end" th:text="${receipt.formattedGeneralDiscount()} + ' SEK'">0.00 SEK</dd>
                 

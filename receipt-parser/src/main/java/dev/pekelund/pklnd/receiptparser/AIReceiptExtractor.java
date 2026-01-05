@@ -3,7 +3,9 @@ package dev.pekelund.pklnd.receiptparser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -97,7 +99,55 @@ public class AIReceiptExtractor implements ReceiptDataExtractor {
 
         ReceiptStructuredOutput structuredOutput = parseStructuredResponse(sanitised);
         Map<String, Object> structuredData = objectMapper.convertValue(structuredOutput, MAP_TYPE);
+        normalizeDiscountStructure(structuredData);
         return new ReceiptExtractionResult(structuredData, response);
+    }
+
+    /**
+     * Normalize the discount structure to match the expected format.
+     * Converts single 'discount' field to 'discounts' list for each item.
+     */
+    private void normalizeDiscountStructure(Map<String, Object> structuredData) {
+        Object itemsObj = structuredData.get("items");
+        if (!(itemsObj instanceof List<?> items)) {
+            return;
+        }
+        
+        for (Object itemObj : items) {
+            if (!(itemObj instanceof Map<?, ?> item)) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> itemMap = (Map<String, Object>) item;
+            
+            // Check if there's a single 'discount' field
+            Object discountObj = itemMap.get("discount");
+            if (discountObj != null && !itemMap.containsKey("discounts")) {
+                // Convert single discount to a list with one discount entry
+                BigDecimal discountAmount = null;
+                if (discountObj instanceof BigDecimal bd) {
+                    discountAmount = bd;
+                } else if (discountObj instanceof Number num) {
+                    discountAmount = new BigDecimal(num.toString());
+                }
+                
+                if (discountAmount != null && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
+                    List<Map<String, Object>> discountsList = new ArrayList<>();
+                    Map<String, Object> discountEntry = new LinkedHashMap<>();
+                    discountEntry.put("description", "Item discount");
+                    discountEntry.put("amount", discountAmount);
+                    discountsList.add(discountEntry);
+                    itemMap.put("discounts", discountsList);
+                } else {
+                    itemMap.put("discounts", List.of());
+                }
+                // Remove the single discount field
+                itemMap.remove("discount");
+            } else if (!itemMap.containsKey("discounts")) {
+                // Ensure discounts field exists even if empty
+                itemMap.put("discounts", List.of());
+            }
+        }
     }
 
     private ChatOptions resolveChatOptions() {
