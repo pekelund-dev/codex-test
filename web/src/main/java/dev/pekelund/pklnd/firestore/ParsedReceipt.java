@@ -147,6 +147,7 @@ public record ParsedReceipt(
 
     /**
      * Format the total discount amount for display.
+     * Always returns a formatted value since totalDiscountAmount() never returns null.
      */
     public String formattedTotalDiscount() {
         return formatAmount(totalDiscountAmount());
@@ -154,6 +155,7 @@ public record ParsedReceipt(
 
     /**
      * Format the general discount total for display.
+     * Always returns a formatted value since generalDiscountTotal() never returns null.
      */
     public String formattedGeneralDiscount() {
         return formatAmount(generalDiscountTotal());
@@ -161,6 +163,7 @@ public record ParsedReceipt(
 
     /**
      * Format the item discount total for display.
+     * Always returns a formatted value since itemDiscountTotal() never returns null.
      */
     public String formattedItemDiscount() {
         return formatAmount(itemDiscountTotal());
