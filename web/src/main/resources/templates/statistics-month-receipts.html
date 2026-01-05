@@ -10,7 +10,7 @@
         <div class="col-12">
             <h1 class="fw-bold mb-3">
                 <span th:text="#{statistics.month.receipts.heading}">Kvitton för</span>
-                <span class="text-primary" th:text="#{|dashboard.statistics.month.${T(java.time.Month).of(month).toString().toLowerCase()}|} + ' ' + ${year}">Januari 2024</span>
+                <span class="text-primary" th:text="#{|dashboard.statistics.month.${monthName}|} + ' ' + ${year}">Januari 2024</span>
             </h1>
             <p class="text-muted mb-0">
                 <span th:text="#{statistics.month.receipts.description}">Alla kvitton från denna månad.</span>

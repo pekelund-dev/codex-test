@@ -172,6 +172,14 @@ public class HomeController {
         model.addAttribute("year", year);
         model.addAttribute("month", month);
         
+        // Add month name for display
+        try {
+            String monthName = java.time.Month.of(month).toString().toLowerCase();
+            model.addAttribute("monthName", monthName);
+        } catch (Exception e) {
+            model.addAttribute("monthName", "unknown");
+        }
+        
         List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
             dashboardStatisticsService.getReceiptsForYearMonth(year, month, authentication);
         
