@@ -327,6 +327,58 @@ public class ReceiptExtractionService {
         }
     }
 
+    public List<ParsedReceipt> searchByItemName(String searchQuery, ReceiptOwner owner, boolean includeAllOwners) {
+        if (firestore.isEmpty() || !StringUtils.hasText(searchQuery)) {
+            return List.of();
+        }
+
+        if (!includeAllOwners && owner == null) {
+            return List.of();
+        }
+
+        List<ParsedReceipt> allReceipts = includeAllOwners ? listAllReceipts() : listReceiptsForOwner(owner);
+        
+        String normalizedQuery = searchQuery.trim().toLowerCase(java.util.Locale.ROOT);
+        
+        List<ParsedReceipt> matchingReceipts = new ArrayList<>();
+        for (ParsedReceipt receipt : allReceipts) {
+            if (receipt == null) {
+                continue;
+            }
+            
+            List<Map<String, Object>> items = receipt.displayItems();
+            if (items == null || items.isEmpty()) {
+                continue;
+            }
+            
+            boolean hasMatch = false;
+            for (Map<String, Object> item : items) {
+                if (item == null) {
+                    continue;
+                }
+                
+                Object nameObj = item.get("name");
+                if (nameObj == null) {
+                    continue;
+                }
+                
+                String itemName = nameObj.toString().toLowerCase(java.util.Locale.ROOT);
+                if (itemName.contains(normalizedQuery)) {
+                    hasMatch = true;
+                    break;
+                }
+            }
+            
+            if (hasMatch) {
+                matchingReceipts.add(receipt);
+            }
+        }
+        
+        matchingReceipts.sort(Comparator.comparing(ParsedReceipt::updatedAt,
+            Comparator.nullsLast(Comparator.reverseOrder())));
+        return Collections.unmodifiableList(matchingReceipts);
+    }
+
     public void deleteReceiptsForOwner(ReceiptOwner owner) {
         if (owner == null || firestore.isEmpty()) {
             return;

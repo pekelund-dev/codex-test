@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle}">Sök kvitton</title>
+</head>
+<body>
+<section class="py-3 py-lg-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <a class="btn btn-link p-0 text-decoration-none" th:href="@{/receipts(scope=${scopeParam})}">
+            <i class="bi bi-arrow-left"></i>
+            Tillbaka till kvitton
+        </a>
+    </div>
+
+    <div th:if="${canViewAll}" class="mb-3">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Kvittoomfång">
+            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
+               th:href="@{/receipts/search(scope='my', q=${searchQuery})}">Mina kvitton</a>
+            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
+               th:href="@{/receipts/search(scope='all', q=${searchQuery})}">Alla kvitton</a>
+        </div>
+        <p class="text-muted small mb-0 mt-2"
+           th:text="${viewingAll} ? 'Söker i alla tolkade kvitton.' : 'Söker endast i dina tolkade kvitton.'">
+            Söker endast i dina tolkade kvitton.
+        </p>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <h1 class="h3 fw-semibold text-primary mb-3">Sök kvitton</h1>
+            <p class="text-muted mb-4">
+                Sök efter artiklar i dina kvitton. Sök fungerar med hela eller delar av artikelnamn, till exempel "mjölk" matchar "mellanmjölk", "Eko mellanmjölk" etc.
+            </p>
+
+            <div th:if="${!parsedReceiptsEnabled}" class="alert alert-warning" role="alert">
+                Sökning är inte tillgänglig just nu. Aktivera Firestore för att slå på funktionen.
+            </div>
+
+            <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+                <span th:text="${errorMessage}">Det gick inte att söka i kvitton.</span>
+            </div>
+
+            <form th:action="@{/receipts/search}" method="get" class="mb-4">
+                <input type="hidden" name="scope" th:value="${scopeParam}">
+                <div class="input-group">
+                    <input type="text" class="form-control" name="q" 
+                           th:value="${searchQuery}"
+                           placeholder="Sök efter artikelnamn..."
+                           aria-label="Sökfråga"
+                           th:disabled="${!parsedReceiptsEnabled}">
+                    <button class="btn btn-primary" type="submit" th:disabled="${!parsedReceiptsEnabled}">
+                        <i class="bi bi-search me-2"></i>Sök
+                    </button>
+                </div>
+            </form>
+
+            <div th:if="${searchPerformed and #lists.isEmpty(searchResults)}" class="text-center text-muted py-5">
+                <p class="mb-0">Inga kvitton hittades för din sökning.</p>
+            </div>
+
+            <div th:if="${!#lists.isEmpty(searchResults)}" class="table-responsive">
+                <p class="text-muted mb-3">
+                    Hittade <span th:text="${#lists.size(searchResults)}">0</span> kvitton som matchar din sökning.
+                </p>
+                <table class="table align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col">Kvitto</th>
+                        <th scope="col">Datum</th>
+                        <th scope="col">Totalsumma</th>
+                        <th scope="col" class="text-end">Uppdaterad</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="result : ${searchResults}">
+                        <td>
+                            <a th:href="@{/receipts/{id}(id=${result.id()}, scope=${scopeParam})}" 
+                               class="fw-semibold text-decoration-none">
+                                <span th:text="${!#strings.isEmpty(result.storeName()) ? result.storeName() : (!#strings.isEmpty(result.displayName()) ? result.displayName() : result.objectPath())}">Kvitto</span>
+                            </a>
+                        </td>
+                        <td th:text="${result.receiptDate() != null ? result.receiptDate() : '—'}">—</td>
+                        <td th:text="${result.formattedTotalAmount() != null ? result.formattedTotalAmount() : (result.totalAmount() != null ? result.totalAmount() : '—')}">—</td>
+                        <td class="text-end" th:text="${result.updatedAt() != null ? result.updatedAt() : '—'}">—</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

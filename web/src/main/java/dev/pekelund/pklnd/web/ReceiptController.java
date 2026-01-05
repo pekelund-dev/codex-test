@@ -138,6 +138,62 @@ public class ReceiptController {
         return "receipts";
     }
 
+    @GetMapping("/receipts/search")
+    public String searchReceipts(
+        @RequestParam(value = "q", required = false) String query,
+        @RequestParam(value = "scope", required = false) String scopeParam,
+        Model model,
+        Authentication authentication
+    ) {
+        ReceiptViewScope scope = resolveScope(scopeParam, authentication);
+        boolean canViewAll = isAdmin(authentication);
+        boolean viewingAll = isViewingAll(scope, authentication);
+
+        model.addAttribute("pageTitle", "Sök kvitton");
+        model.addAttribute("scopeParam", toScopeParameter(scope));
+        model.addAttribute("canViewAll", canViewAll);
+        model.addAttribute("viewingAll", viewingAll);
+        model.addAttribute("searchQuery", query != null ? query : "");
+
+        boolean parsedReceiptsEnabled = receiptExtractionService.isPresent() && receiptExtractionService.get().isEnabled();
+        model.addAttribute("parsedReceiptsEnabled", parsedReceiptsEnabled);
+
+        if (!parsedReceiptsEnabled) {
+            model.addAttribute("searchResults", List.of());
+            model.addAttribute("searchPerformed", false);
+            return "receipt-search";
+        }
+
+        if (StringUtils.hasText(query)) {
+            ReceiptOwner currentOwner = receiptOwnerResolver.resolve(authentication);
+            if (currentOwner == null && !viewingAll) {
+                model.addAttribute("searchResults", List.of());
+                model.addAttribute("searchPerformed", true);
+                return "receipt-search";
+            }
+
+            try {
+                List<ParsedReceipt> results = receiptExtractionService.get()
+                    .searchByItemName(query, currentOwner, viewingAll);
+                List<ParsedReceiptEntry> entries = results.stream()
+                    .map(this::toParsedReceiptEntry)
+                    .toList();
+                model.addAttribute("searchResults", entries);
+                model.addAttribute("searchPerformed", true);
+            } catch (ReceiptExtractionAccessException ex) {
+                LOGGER.warn("Failed to search receipts", ex);
+                model.addAttribute("searchResults", List.of());
+                model.addAttribute("searchPerformed", true);
+                model.addAttribute("errorMessage", ex.getMessage());
+            }
+        } else {
+            model.addAttribute("searchResults", List.of());
+            model.addAttribute("searchPerformed", false);
+        }
+
+        return "receipt-search";
+    }
+
     @GetMapping("/receipts/overview")
     public String receiptOverview(
         @RequestParam(value = "scope", required = false) String scopeParam,
