@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : #{page.statistics.month.title}">Månadsstatistik</title>
+</head>
+<body>
+<section>
+    <div class="row py-4">
+        <div class="col-12">
+            <h1 class="fw-bold mb-3">
+                <span th:text="#{statistics.month.receipts.heading}">Kvitton för</span>
+                <span class="text-primary" th:text="#{|dashboard.statistics.month.${monthName}|} + ' ' + ${year}">Januari 2024</span>
+            </h1>
+            <p class="text-muted mb-0">
+                <span th:text="#{statistics.month.receipts.description}">Alla kvitton från denna månad.</span>
+                <span th:if="${receipts != null}">
+                    (<span th:text="${receipts.size()}">0</span> 
+                    <span th:text="#{statistics.month.receipts.count}">kvitton</span>)
+                </span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Navigation buttons -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="btn-group" role="group">
+                <a th:if="${prevMonthYear != null && prevMonth != null}" 
+                   th:href="@{/dashboard/statistics/year/{year}/month/{month}(year=${prevMonthYear}, month=${prevMonth})}" 
+                   class="btn btn-outline-primary">
+                    <i class="bi bi-chevron-left"></i>
+                    <span th:text="#{statistics.month.navigation.previous}">Föregående månad</span>
+                </a>
+                <a th:if="${nextMonthYear != null && nextMonth != null}" 
+                   th:href="@{/dashboard/statistics/year/{year}/month/{month}(year=${nextMonthYear}, month=${nextMonth})}" 
+                   class="btn btn-outline-primary">
+                    <span th:text="#{statistics.month.navigation.next}">Nästa månad</span>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div th:replace="~{fragments/receipt-list :: simpleReceiptTable(${receipts}, true, #{statistics.month.receipts.empty})}"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <a th:href="@{/dashboard/statistics/year/{year}(year=${year})}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left me-2"></i>
+                <span th:text="#{statistics.month.receipts.back.year}">Tillbaka till år</span>
+            </a>
+            <a th:href="@{/dashboard/statistics}" class="btn btn-outline-secondary">
+                <span th:text="#{statistics.month.receipts.back.statistics}">Tillbaka till statistik</span>
+            </a>
+        </div>
+    </div>
+</section>
+</body>
+</html>

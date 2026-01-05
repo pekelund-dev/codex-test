@@ -17,7 +17,9 @@
         <div class="col-lg-3 col-sm-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
-                    <h2 class="h6 fw-semibold text-uppercase text-primary" th:text="#{dashboard.statistics.cards.users}">Registrerade</h2>
+                    <h2 class="h6 fw-semibold text-uppercase text-primary">
+                        <a th:href="@{/dashboard/statistics/users}" class="text-decoration-none text-primary" th:text="#{dashboard.statistics.cards.users}">Registrerade</a>
+                    </h2>
                     <p class="display-6 fw-bold mb-0" th:text="${statistics.totalUsers}">0</p>
                     <p class="text-muted small mb-0" th:if="${!statistics.userCountAccurate}">
                         <span th:text="#{dashboard.statistics.cards.users.fallback}">Fallback</span>
@@ -28,7 +30,9 @@
         <div class="col-lg-3 col-sm-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
-                    <h2 class="h6 fw-semibold text-uppercase text-primary" th:text="#{dashboard.statistics.cards.receipts}">Kvitton</h2>
+                    <h2 class="h6 fw-semibold text-uppercase text-primary">
+                        <a th:href="@{/receipts}" class="text-decoration-none text-primary" th:text="#{dashboard.statistics.cards.receipts}">Kvitton</a>
+                    </h2>
                     <p class="display-6 fw-bold mb-0"
                        th:text="${statistics.receiptDataAvailable} ? ${statistics.totalReceipts} : '--'">--</p>
                     <p class="text-muted small mb-0" th:if="${!statistics.receiptDataAvailable}">
@@ -40,7 +44,9 @@
         <div class="col-lg-3 col-sm-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
-                    <h2 class="h6 fw-semibold text-uppercase text-primary" th:text="#{dashboard.statistics.cards.stores}">Butiker</h2>
+                    <h2 class="h6 fw-semibold text-uppercase text-primary">
+                        <a th:href="@{/dashboard/statistics/stores}" class="text-decoration-none text-primary" th:text="#{dashboard.statistics.cards.stores}">Butiker</a>
+                    </h2>
                     <p class="display-6 fw-bold mb-0"
                        th:text="${statistics.receiptDataAvailable} ? ${statistics.totalStores} : '--'">--</p>
                     <p class="text-muted small mb-0" th:if="${!statistics.receiptDataAvailable}">
@@ -52,7 +58,9 @@
         <div class="col-lg-3 col-sm-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
-                    <h2 class="h6 fw-semibold text-uppercase text-primary" th:text="#{dashboard.statistics.cards.items}">Artiklar</h2>
+                    <h2 class="h6 fw-semibold text-uppercase text-primary">
+                        <a th:href="@{/dashboard/statistics/items}" class="text-decoration-none text-primary" th:text="#{dashboard.statistics.cards.items}">Artiklar</a>
+                    </h2>
                     <p class="display-6 fw-bold mb-0"
                        th:text="${statistics.receiptDataAvailable} ? ${statistics.totalItems} : '--'">--</p>
                     <p class="text-muted small mb-0" th:if="${!statistics.receiptDataAvailable}">
@@ -86,6 +94,55 @@
                         <span th:text="#{dashboard.statistics.cards.this-month.fallback}">Info</span>
                     </p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Statistics Section -->
+    <div class="row mt-5" th:if="${statistics.yearlyStatisticsAvailable and !statistics.monthlyTotals.isEmpty()}">
+        <div class="col-12">
+            <h2 class="h4 fw-bold mb-3" th:text="#{dashboard.statistics.monthly.heading}">Månadsspendering per år</h2>
+            <p class="text-muted" th:text="#{dashboard.statistics.monthly.description}">Detaljerad uppdelning av spendering per månad för varje år.</p>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1" th:if="${statistics.yearlyStatisticsAvailable}">
+        <div class="col-12" th:each="yearEntry : ${statistics.monthlyTotals}">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h3 class="h5 mb-0 fw-bold">
+                        <a th:href="@{/dashboard/statistics/year/{year}(year=${yearEntry.key})}" 
+                           class="text-decoration-none" 
+                           th:text="${yearEntry.key}">2024</a>
+                        <span class="ms-2 text-muted fw-normal" th:text="'(' + ${statistics.formatAmount(statistics.yearlyTotals.get(yearEntry.key))} + ' kr)'">
+                            (1234.56 kr)
+                        </span>
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-lg-3 col-md-4 col-sm-6" th:each="monthEntry : ${yearEntry.value}">
+                            <a th:href="@{/dashboard/statistics/year/{year}/month/{month}(year=${yearEntry.key},month=${monthEntry.key.getValue()})}" 
+                               class="text-decoration-none">
+                                <div class="card h-100 border-primary-subtle hover-shadow">
+                                    <div class="card-body text-center p-3">
+                                        <h4 class="h6 fw-semibold mb-2 text-primary" 
+                                            th:text="#{|dashboard.statistics.month.${monthEntry.key.toString().toLowerCase()}|}">Januari</h4>
+                                        <p class="mb-0 fw-bold text-dark" th:text="${statistics.formatAmount(monthEntry.value)} + ' kr'">0.00 kr</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3" th:if="${statistics.yearlyStatisticsAvailable and statistics.yearlyTotals.isEmpty()}">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <span th:text="#{dashboard.statistics.yearly.empty}">Ingen spenderingsdata tillgänglig ännu.</span>
             </div>
         </div>
     </div>

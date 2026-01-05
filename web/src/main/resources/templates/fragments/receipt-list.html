@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Receipt List Fragment</title>
+</head>
+<body>
+    <!-- Receipt List Table Fragment - Simple version without filters -->
+    <div th:fragment="simpleReceiptTable(receipts, showStore, emptyMessage)">
+        <!-- Receipt Table -->
+        <div th:if="${receipts.isEmpty()}" class="alert alert-info" role="alert">
+            <span th:text="${emptyMessage}">Inga kvitton hittades.</span>
+        </div>
+
+        <div th:if="${!receipts.isEmpty()}" class="table-responsive">
+            <table class="table table-hover sortable-table" data-sort-column="0" data-sort-direction="desc">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort-type="date" th:text="#{receipt.list.table.date}">Datum</th>
+                        <th th:if="${showStore}" class="sortable" data-sort-type="text" th:text="#{receipt.list.table.store}">Butik</th>
+                        <th class="text-end sortable" data-sort-type="number" th:text="#{receipt.list.table.amount}">Belopp</th>
+                        <th class="text-center" th:text="#{receipt.list.table.actions}">Åtgärder</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="receipt : ${receipts}">
+                        <td th:attr="data-sort-value=${receipt.receiptDate() != null ? receipt.receiptDate() : '0000-00-00'}" 
+                            th:text="${receipt.receiptDate() != null ? receipt.receiptDate() : '-'}">2024-01-15</td>
+                        <td th:if="${showStore}" 
+                            th:attr="data-sort-value=${receipt.storeName() != null ? receipt.storeName() : ''}"
+                            th:text="${receipt.storeName() != null ? receipt.storeName() : '-'}">ICA Supermarket</td>
+                        <td class="text-end fw-semibold" 
+                            th:attr="data-sort-value=${receipt.totalAmountValue() != null ? receipt.totalAmountValue() : 0}"
+                            th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() + ' kr' : '-'}">123.45 kr</td>
+                        <td class="text-center">
+                            <a th:href="@{/receipts/{id}(id=${receipt.id()})}" 
+                               class="btn btn-sm btn-outline-primary"
+                               th:text="#{receipt.list.view}">Visa</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Receipt List Table Fragment with Filters -->
+    <div th:fragment="receiptTable(receipts, showStore, emptyMessage, filterStartDate, filterEndDate, filterStore, hasFilters)">
+        <!-- Filter Section -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <button class="btn btn-link w-100 text-start d-flex justify-content-between align-items-center p-0 text-decoration-none" 
+                        type="button" 
+                        data-bs-toggle="collapse" 
+                        th:data-bs-target="${'#filterCollapse'}" 
+                        th:attr="aria-expanded=${hasFilters ? 'false' : 'true'}">
+                    <span class="fw-semibold" th:text="#{receipt.list.filter.heading}">Filtrera kvitton</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+            <div class="collapse" th:classappend="${hasFilters ? '' : 'show'}" id="filterCollapse">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="startDate" class="form-label" th:text="#{receipt.list.filter.startDate}">Startdatum</label>
+                            <input type="date" class="form-control" id="startDate" name="startDate" 
+                                   th:value="${filterStartDate}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="endDate" class="form-label" th:text="#{receipt.list.filter.endDate}">Slutdatum</label>
+                            <input type="date" class="form-control" id="endDate" name="endDate" 
+                                   th:value="${filterEndDate}">
+                        </div>
+                        <div class="col-md-4" th:if="${showStore}">
+                            <label for="store" class="form-label" th:text="#{receipt.list.filter.store}">Butik</label>
+                            <input type="text" class="form-control" id="store" name="store" 
+                                   th:value="${filterStore}"
+                                   th:placeholder="#{receipt.list.filter.store.placeholder}">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary" th:text="#{receipt.list.filter.apply}">Tillämpa filter</button>
+                            <a th:href="@{''}" class="btn btn-outline-secondary ms-2" th:text="#{receipt.list.filter.clear}">Rensa filter</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Receipt Table -->
+        <div th:if="${receipts.isEmpty()}" class="alert alert-info" role="alert">
+            <span th:text="${emptyMessage}">Inga kvitton hittades.</span>
+        </div>
+
+        <div th:if="${!receipts.isEmpty()}" class="table-responsive">
+            <table class="table table-hover sortable-table" data-sort-column="0" data-sort-direction="desc">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort-type="date" th:text="#{receipt.list.table.date}">Datum</th>
+                        <th th:if="${showStore}" class="sortable" data-sort-type="text" th:text="#{receipt.list.table.store}">Butik</th>
+                        <th class="text-end sortable" data-sort-type="number" th:text="#{receipt.list.table.amount}">Belopp</th>
+                        <th class="text-center" th:text="#{receipt.list.table.actions}">Åtgärder</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="receipt : ${receipts}">
+                        <td th:attr="data-sort-value=${receipt.receiptDate() != null ? receipt.receiptDate() : '0000-00-00'}" 
+                            th:text="${receipt.receiptDate() != null ? receipt.receiptDate() : '-'}">2024-01-15</td>
+                        <td th:if="${showStore}" 
+                            th:attr="data-sort-value=${receipt.storeName() != null ? receipt.storeName() : ''}"
+                            th:text="${receipt.storeName() != null ? receipt.storeName() : '-'}">ICA Supermarket</td>
+                        <td class="text-end fw-semibold" 
+                            th:attr="data-sort-value=${receipt.totalAmountValue() != null ? receipt.totalAmountValue() : 0}"
+                            th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() + ' kr' : '-'}">123.45 kr</td>
+                        <td class="text-center">
+                            <a th:href="@{/receipts/{id}(id=${receipt.id()})}" 
+                               class="btn btn-sm btn-outline-primary"
+                               th:text="#{receipt.list.view}">Visa</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

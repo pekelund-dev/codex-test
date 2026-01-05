@@ -9,14 +9,22 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +66,10 @@ public class DashboardStatisticsService {
             ? computePersonalTotals(authentication)
             : PersonalTotals.unavailable();
 
+        YearlyStatistics yearlyStats = receiptsEnabled
+            ? computeYearlyStatistics(authentication)
+            : YearlyStatistics.unavailable();
+
         return new DashboardStatistics(
             userCount,
             userCountAccurate,
@@ -67,7 +79,10 @@ public class DashboardStatisticsService {
             receiptsEnabled,
             personalTotals.lastMonth(),
             personalTotals.currentMonth(),
-            personalTotals.available()
+            personalTotals.available(),
+            yearlyStats.yearlyTotals(),
+            yearlyStats.monthlyTotals(),
+            yearlyStats.available()
         );
     }
 
@@ -98,6 +113,210 @@ public class DashboardStatisticsService {
             stores.add(normalizedStoreName.toLowerCase(Locale.ROOT));
         }
         return stores.size();
+    }
+
+    /**
+     * Get statistics for all stores with receipt counts.
+     * Returns a list of StoreStatistic objects sorted by receipt count descending.
+     */
+    public List<StoreStatistic> getStoreStatistics(Authentication authentication) {
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return List.of();
+        }
+
+        try {
+            List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            if (receipts.isEmpty()) {
+                return List.of();
+            }
+
+            // Group receipts by store name
+            Map<String, List<ParsedReceipt>> receiptsByStore = new HashMap<>();
+            for (ParsedReceipt receipt : receipts) {
+                String storeName = receipt != null ? receipt.storeName() : null;
+                if (storeName == null || !StringUtils.hasText(storeName.trim())) {
+                    continue;
+                }
+                String normalizedStoreName = storeName.trim();
+                receiptsByStore.computeIfAbsent(normalizedStoreName, k -> new ArrayList<>()).add(receipt);
+            }
+
+            // Calculate statistics for each store
+            List<StoreStatistic> storeStats = new ArrayList<>();
+            for (Map.Entry<String, List<ParsedReceipt>> entry : receiptsByStore.entrySet()) {
+                String storeName = entry.getKey();
+                List<ParsedReceipt> storeReceipts = entry.getValue();
+                long receiptCount = storeReceipts.size();
+
+                // Calculate total spending for this store
+                BigDecimal totalSpending = BigDecimal.ZERO;
+                for (ParsedReceipt receipt : storeReceipts) {
+                    BigDecimal amount = receipt.totalAmountValue();
+                    if (amount != null) {
+                        totalSpending = totalSpending.add(amount);
+                    }
+                }
+
+                storeStats.add(new StoreStatistic(storeName, receiptCount, totalSpending));
+            }
+
+            // Sort by receipt count descending
+            storeStats.sort(Comparator.comparingLong(StoreStatistic::receiptCount).reversed());
+            return Collections.unmodifiableList(storeStats);
+        } catch (ReceiptExtractionAccessException ex) {
+            log.warn("Unable to load store statistics.", ex);
+            return List.of();
+        }
+    }
+
+    /**
+     * Get receipts for a specific store.
+     */
+    public List<ParsedReceipt> getReceiptsForStore(String storeName, Authentication authentication) {
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return List.of();
+        }
+
+        if (!StringUtils.hasText(storeName)) {
+            return List.of();
+        }
+
+        try {
+            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            String normalizedSearchName = storeName.trim();
+
+            return allReceipts.stream()
+                .filter(receipt -> {
+                    String receiptStoreName = receipt.storeName();
+                    return receiptStoreName != null && 
+                           receiptStoreName.trim().equalsIgnoreCase(normalizedSearchName);
+                })
+                .collect(Collectors.toList());
+        } catch (ReceiptExtractionAccessException ex) {
+            log.warn("Unable to load receipts for store: " + storeName, ex);
+            return List.of();
+        }
+    }
+
+    public record StoreStatistic(String storeName, long receiptCount, BigDecimal totalSpending) {
+        public String formatAmount() {
+            if (totalSpending == null) {
+                return "0.00";
+            }
+            return totalSpending.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        }
+    }
+
+    /**
+     * Get receipts for a specific year.
+     */
+    public List<ParsedReceipt> getReceiptsForYear(int year, Authentication authentication) {
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return List.of();
+        }
+
+        try {
+            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            
+            return allReceipts.stream()
+                .filter(receipt -> {
+                    LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
+                        .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                    return receiptDate != null && receiptDate.getYear() == year;
+                })
+                .collect(Collectors.toList());
+        } catch (ReceiptExtractionAccessException ex) {
+            log.warn("Unable to load receipts for year: " + year, ex);
+            return List.of();
+        }
+    }
+
+    /**
+     * Get receipts for a specific year and month.
+     */
+    public List<ParsedReceipt> getReceiptsForYearMonth(int year, int month, Authentication authentication) {
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return List.of();
+        }
+
+        try {
+            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            
+            return allReceipts.stream()
+                .filter(receipt -> {
+                    LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
+                        .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                    if (receiptDate == null) {
+                        return false;
+                    }
+                    return receiptDate.getYear() == year && receiptDate.getMonthValue() == month;
+                })
+                .collect(Collectors.toList());
+        } catch (ReceiptExtractionAccessException ex) {
+            log.warn("Unable to load receipts for year: " + year + " month: " + month, ex);
+            return List.of();
+        }
+    }
+
+    /**
+     * Apply filters to a list of receipts.
+     * Filters can be applied by start date, end date, and store name.
+     */
+    public List<ParsedReceipt> applyFilters(List<ParsedReceipt> receipts, String startDate, String endDate, String storeName) {
+        if (receipts == null || receipts.isEmpty()) {
+            return receipts;
+        }
+
+        return receipts.stream()
+            .filter(receipt -> {
+                // Filter by start date
+                if (StringUtils.hasText(startDate)) {
+                    LocalDate start = parseDate(startDate);
+                    LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
+                        .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                    if (start != null && receiptDate != null && receiptDate.isBefore(start)) {
+                        return false;
+                    }
+                }
+
+                // Filter by end date
+                if (StringUtils.hasText(endDate)) {
+                    LocalDate end = parseDate(endDate);
+                    LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
+                        .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                    if (end != null && receiptDate != null && receiptDate.isAfter(end)) {
+                        return false;
+                    }
+                }
+
+                // Filter by store name
+                if (StringUtils.hasText(storeName)) {
+                    String receiptStoreName = receipt.storeName();
+                    if (receiptStoreName == null || 
+                        !receiptStoreName.toLowerCase(Locale.ROOT).contains(storeName.trim().toLowerCase(Locale.ROOT))) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            .collect(Collectors.toList());
+    }
+
+    private LocalDate parseDate(String dateString) {
+        if (!StringUtils.hasText(dateString)) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(dateString);
+        } catch (DateTimeParseException e) {
+            log.warn("Failed to parse date: " + dateString, e);
+            return null;
+        }
     }
 
     private long countItems(List<ParsedReceipt> receipts) {
@@ -174,10 +393,82 @@ public class DashboardStatisticsService {
         return instant.atZone(ZoneId.systemDefault()).toLocalDate();
     }
 
+    private YearlyStatistics computeYearlyStatistics(Authentication authentication) {
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return YearlyStatistics.unavailable();
+        }
+
+        try {
+            List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            if (receipts.isEmpty()) {
+                return new YearlyStatistics(true, Map.of(), Map.of());
+            }
+
+            // Map to store year -> total amount
+            Map<Integer, BigDecimal> yearlyTotals = new TreeMap<>(Comparator.reverseOrder());
+            // Map to store year -> (month -> total amount)
+            Map<Integer, Map<Month, BigDecimal>> monthlyByYear = new TreeMap<>(Comparator.reverseOrder());
+
+            for (ParsedReceipt receipt : receipts) {
+                if (receipt == null) {
+                    continue;
+                }
+
+                BigDecimal amount = receipt.totalAmountValue();
+                if (amount == null) {
+                    continue;
+                }
+
+                LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
+                    .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                if (receiptDate == null) {
+                    continue;
+                }
+
+                int year = receiptDate.getYear();
+                Month month = receiptDate.getMonth();
+
+                // Update yearly total
+                yearlyTotals.merge(year, amount, BigDecimal::add);
+
+                // Update monthly total for the year
+                monthlyByYear.computeIfAbsent(year, k -> new TreeMap<>())
+                    .merge(month, amount, BigDecimal::add);
+            }
+
+            // Convert the nested map to immutable maps while preserving order
+            Map<Integer, Map<Month, BigDecimal>> unmodifiableMonthly = new TreeMap<>(Comparator.reverseOrder());
+            for (Map.Entry<Integer, Map<Month, BigDecimal>> entry : monthlyByYear.entrySet()) {
+                unmodifiableMonthly.put(entry.getKey(), Collections.unmodifiableMap(new TreeMap<>(entry.getValue())));
+            }
+
+            return new YearlyStatistics(
+                true,
+                Collections.unmodifiableMap(yearlyTotals),
+                Collections.unmodifiableMap(unmodifiableMonthly)
+            );
+        } catch (ReceiptExtractionAccessException ex) {
+            log.warn("Unable to load yearly statistics for dashboard.", ex);
+            return YearlyStatistics.unavailable();
+        }
+    }
+
     private record PersonalTotals(boolean available, BigDecimal lastMonth, BigDecimal currentMonth) {
 
         static PersonalTotals unavailable() {
             return new PersonalTotals(false, null, null);
+        }
+    }
+
+    private record YearlyStatistics(
+        boolean available,
+        Map<Integer, BigDecimal> yearlyTotals,
+        Map<Integer, Map<Month, BigDecimal>> monthlyTotals
+    ) {
+
+        static YearlyStatistics unavailable() {
+            return new YearlyStatistics(false, Map.of(), Map.of());
         }
     }
 
@@ -190,7 +481,10 @@ public class DashboardStatisticsService {
         boolean receiptDataAvailable,
         BigDecimal lastMonthTotal,
         BigDecimal currentMonthTotal,
-        boolean personalTotalsAvailable
+        boolean personalTotalsAvailable,
+        Map<Integer, BigDecimal> yearlyTotals,
+        Map<Integer, Map<Month, BigDecimal>> monthlyTotals,
+        boolean yearlyStatisticsAvailable
     ) {
 
         public String formatAmount(BigDecimal value) {

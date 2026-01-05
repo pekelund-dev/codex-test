@@ -95,6 +95,115 @@ public class HomeController {
         return "dashboard-statistics";
     }
 
+    @GetMapping("/dashboard/statistics/users")
+    public String statisticsUsers(Model model, Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.users.title");
+        // Redirect to receipts page with all users' receipts
+        return "redirect:/receipts";
+    }
+
+    @GetMapping("/dashboard/statistics/stores")
+    public String statisticsStores(Model model, Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.stores.title");
+        
+        List<DashboardStatisticsService.StoreStatistic> stores = 
+            dashboardStatisticsService.getStoreStatistics(authentication);
+        model.addAttribute("stores", stores);
+        
+        return "statistics-stores";
+    }
+
+    @GetMapping("/dashboard/statistics/stores/{storeName}")
+    public String statisticsStoreReceipts(@org.springframework.web.bind.annotation.PathVariable String storeName,
+                                           @org.springframework.web.bind.annotation.RequestParam(required = false) String startDate,
+                                           @org.springframework.web.bind.annotation.RequestParam(required = false) String endDate,
+                                           @org.springframework.web.bind.annotation.RequestParam(required = false) String store,
+                                           Model model,
+                                           Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.store.receipts.title");
+        model.addAttribute("storeName", storeName);
+        
+        // Add filter parameters to model
+        model.addAttribute("filterStartDate", startDate != null ? startDate : "");
+        model.addAttribute("filterEndDate", endDate != null ? endDate : "");
+        model.addAttribute("filterStore", store != null ? store : "");
+        model.addAttribute("hasFilters", startDate != null || endDate != null || store != null);
+        
+        List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
+            dashboardStatisticsService.getReceiptsForStore(storeName, authentication);
+        
+        // Apply additional filters
+        receipts = dashboardStatisticsService.applyFilters(receipts, startDate, endDate, store);
+        model.addAttribute("receipts", receipts);
+        
+        return "statistics-store-receipts";
+    }
+
+    @GetMapping("/dashboard/statistics/items")
+    public String statisticsItems(Model model, Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.items.title");
+        // Redirect to receipt overview page
+        return "redirect:/receipts/overview";
+    }
+
+    @GetMapping("/dashboard/statistics/year/{year}")
+    public String statisticsYear(@org.springframework.web.bind.annotation.PathVariable int year,
+                                  Model model,
+                                  Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.year.title");
+        model.addAttribute("year", year);
+        
+        // Calculate previous and next year for navigation
+        model.addAttribute("prevYear", year - 1);
+        model.addAttribute("nextYear", year + 1);
+        
+        List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
+            dashboardStatisticsService.getReceiptsForYear(year, authentication);
+        
+        model.addAttribute("receipts", receipts);
+        
+        return "statistics-year-receipts";
+    }
+
+    @GetMapping("/dashboard/statistics/year/{year}/month/{month}")
+    public String statisticsYearMonth(@org.springframework.web.bind.annotation.PathVariable int year,
+                                       @org.springframework.web.bind.annotation.PathVariable int month,
+                                       Model model,
+                                       Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.month.title");
+        model.addAttribute("year", year);
+        model.addAttribute("month", month);
+        
+        // Add month name for display
+        try {
+            String monthName = java.time.Month.of(month).toString().toLowerCase();
+            model.addAttribute("monthName", monthName);
+        } catch (Exception e) {
+            model.addAttribute("monthName", "unknown");
+        }
+        
+        // Calculate previous and next month for navigation
+        try {
+            java.time.YearMonth currentYearMonth = java.time.YearMonth.of(year, month);
+            java.time.YearMonth previousYearMonth = currentYearMonth.minusMonths(1);
+            java.time.YearMonth nextYearMonth = currentYearMonth.plusMonths(1);
+            
+            model.addAttribute("prevMonthYear", previousYearMonth.getYear());
+            model.addAttribute("prevMonth", previousYearMonth.getMonthValue());
+            model.addAttribute("nextMonthYear", nextYearMonth.getYear());
+            model.addAttribute("nextMonth", nextYearMonth.getMonthValue());
+        } catch (Exception e) {
+            // If calculation fails, don't add navigation buttons
+        }
+        
+        List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
+            dashboardStatisticsService.getReceiptsForYearMonth(year, month, authentication);
+        
+        model.addAttribute("receipts", receipts);
+        
+        return "statistics-month-receipts";
+    }
+
     @PostMapping("/dashboard/admins")
     public String promoteAdministrator(@Valid @ModelAttribute("adminPromotionForm") AdminPromotionForm form,
                                        BindingResult bindingResult,

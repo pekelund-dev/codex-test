@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : #{page.statistics.year.title}">Årsstatistik</title>
+</head>
+<body>
+<section>
+    <div class="row py-4">
+        <div class="col-12">
+            <h1 class="fw-bold mb-3">
+                <span th:text="#{statistics.year.receipts.heading}">Kvitton för år</span>
+                <span class="text-primary" th:text="${year}">2024</span>
+            </h1>
+            <p class="text-muted mb-0">
+                <span th:text="#{statistics.year.receipts.description}">Alla kvitton från detta år.</span>
+                <span th:if="${receipts != null}">
+                    (<span th:text="${receipts.size()}">0</span> 
+                    <span th:text="#{statistics.year.receipts.count}">kvitton</span>)
+                </span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Navigation buttons -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="btn-group" role="group">
+                <a th:if="${prevYear != null}" 
+                   th:href="@{/dashboard/statistics/year/{year}(year=${prevYear})}" 
+                   class="btn btn-outline-primary">
+                    <i class="bi bi-chevron-left"></i>
+                    <span th:text="#{statistics.year.navigation.previous}">Föregående år</span>
+                </a>
+                <a th:if="${nextYear != null}" 
+                   th:href="@{/dashboard/statistics/year/{year}(year=${nextYear})}" 
+                   class="btn btn-outline-primary">
+                    <span th:text="#{statistics.year.navigation.next}">Nästa år</span>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div th:replace="~{fragments/receipt-list :: simpleReceiptTable(${receipts}, true, #{statistics.year.receipts.empty})}"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <a th:href="@{/dashboard/statistics}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>
+                <span th:text="#{statistics.year.receipts.back}">Tillbaka till statistik</span>
+            </a>
+        </div>
+    </div>
+</section>
+</body>
+</html>
