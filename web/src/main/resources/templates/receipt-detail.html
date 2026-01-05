@@ -166,13 +166,13 @@
             <h2 class="h5 fw-semibold mb-3" th:text="#{receipt.discount.summary.heading}">Discount summary</h2>
             <dl class="row mb-0">
                 <dt class="col-sm-6" th:text="#{receipt.discount.general.total}">General discounts total</dt>
-                <dd class="col-sm-6 text-end" th:text="${receipt.formattedGeneralDiscount() != null ? receipt.formattedGeneralDiscount() + ' SEK' : '0.00 SEK'}">0.00 SEK</dd>
+                <dd class="col-sm-6 text-end" th:text="${receipt.formattedGeneralDiscount()} + ' SEK'">0.00 SEK</dd>
                 
                 <dt class="col-sm-6" th:text="#{receipt.discount.item.total}">Item-specific discounts total</dt>
-                <dd class="col-sm-6 text-end" th:text="${receipt.formattedItemDiscount() != null ? receipt.formattedItemDiscount() + ' SEK' : '0.00 SEK'}">0.00 SEK</dd>
+                <dd class="col-sm-6 text-end" th:text="${receipt.formattedItemDiscount()} + ' SEK'">0.00 SEK</dd>
                 
                 <dt class="col-sm-6 fw-bold" th:text="#{receipt.discount.total.savings}">Total savings</dt>
-                <dd class="col-sm-6 text-end fw-bold text-success" th:text="${receipt.formattedTotalDiscount() != null ? receipt.formattedTotalDiscount() + ' SEK' : '0.00 SEK'}">0.00 SEK</dd>
+                <dd class="col-sm-6 text-end fw-bold text-success" th:text="${receipt.formattedTotalDiscount()} + ' SEK'">0.00 SEK</dd>
             </dl>
         </div>
     </div>
