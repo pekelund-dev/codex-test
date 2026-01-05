@@ -146,6 +146,37 @@ public record ParsedReceipt(
     }
 
     /**
+     * Calculate the discount total for a specific item.
+     * Utility method for template use.
+     */
+    public static BigDecimal calculateItemDiscountTotal(Map<String, Object> item) {
+        if (item == null) {
+            return BigDecimal.ZERO;
+        }
+        Object discountsObj = item.get("discounts");
+        if (!(discountsObj instanceof List<?> discountsList)) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        for (Object discountObj : discountsList) {
+            if (!(discountObj instanceof Map<?, ?> discountMap)) {
+                continue;
+            }
+            Object amountObj = discountMap.get("amount");
+            BigDecimal amount = null;
+            if (amountObj instanceof BigDecimal bd) {
+                amount = bd;
+            } else if (amountObj instanceof Number num) {
+                amount = new BigDecimal(num.toString());
+            }
+            if (amount != null) {
+                total = total.add(amount.abs());
+            }
+        }
+        return total;
+    }
+
+    /**
      * Format the total discount amount for display.
      * Returns a non-null formatted string since totalDiscountAmount() returns BigDecimal.ZERO for receipts without discounts.
      */

@@ -180,8 +180,7 @@
                             </small>
                         </div>
                         <span class="badge bg-success-subtle text-success"
-                              th:with="itemTotal=${item['discounts'].![#this['amount']].stream().filter(a -> a != null).reduce(T(java.math.BigDecimal).ZERO, (a,b) -> a.add(b))}"
-                              th:text="${itemTotal} + ' SEK'">0.00 SEK</span>
+                              th:text="${T(dev.pekelund.pklnd.firestore.ParsedReceipt).calculateItemDiscountTotal(item).setScale(2, T(java.math.RoundingMode).HALF_UP).toPlainString()} + ' SEK'">0.00 SEK</span>
                     </li>
                 </ul>
             </div>
