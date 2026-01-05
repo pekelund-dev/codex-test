@@ -123,6 +123,12 @@ public class HomeController {
         model.addAttribute("pageTitleKey", "page.statistics.store.receipts.title");
         model.addAttribute("storeName", storeName);
         
+        // Add filter parameters to model
+        model.addAttribute("filterStartDate", startDate != null ? startDate : "");
+        model.addAttribute("filterEndDate", endDate != null ? endDate : "");
+        model.addAttribute("filterStore", store != null ? store : "");
+        model.addAttribute("hasFilters", startDate != null || endDate != null || store != null);
+        
         List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
             dashboardStatisticsService.getReceiptsForStore(storeName, authentication);
         
@@ -149,6 +155,12 @@ public class HomeController {
                                   Authentication authentication) {
         model.addAttribute("pageTitleKey", "page.statistics.year.title");
         model.addAttribute("year", year);
+        
+        // Add filter parameters to model
+        model.addAttribute("filterStartDate", startDate != null ? startDate : "");
+        model.addAttribute("filterEndDate", endDate != null ? endDate : "");
+        model.addAttribute("filterStore", store != null ? store : "");
+        model.addAttribute("hasFilters", startDate != null || endDate != null || store != null);
         
         List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
             dashboardStatisticsService.getReceiptsForYear(year, authentication);
@@ -179,6 +191,12 @@ public class HomeController {
         } catch (Exception e) {
             model.addAttribute("monthName", "unknown");
         }
+        
+        // Add filter parameters to model
+        model.addAttribute("filterStartDate", startDate != null ? startDate : "");
+        model.addAttribute("filterEndDate", endDate != null ? endDate : "");
+        model.addAttribute("filterStore", store != null ? store : "");
+        model.addAttribute("hasFilters", startDate != null || endDate != null || store != null);
         
         List<dev.pekelund.pklnd.firestore.ParsedReceipt> receipts = 
             dashboardStatisticsService.getReceiptsForYearMonth(year, month, authentication);

@@ -26,7 +26,7 @@
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <div th:replace="~{fragments/receipt-list :: receiptTable(${receipts}, true, #{statistics.month.receipts.empty}, ${param.startDate != null ? param.startDate[0] : ''}, ${param.endDate != null ? param.endDate[0] : ''}, ${param.store != null ? param.store[0] : ''}, ${param.startDate != null || param.endDate != null || param.store != null})}"></div>
+                    <div th:replace="~{fragments/receipt-list :: receiptTable(${receipts}, true, #{statistics.month.receipts.empty}, ${filterStartDate}, ${filterEndDate}, ${filterStore}, ${hasFilters})}"></div>
                 </div>
             </div>
         </div>
