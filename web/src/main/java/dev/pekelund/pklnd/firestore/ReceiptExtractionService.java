@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -338,7 +339,7 @@ public class ReceiptExtractionService {
 
         List<ParsedReceipt> allReceipts = includeAllOwners ? listAllReceipts() : listReceiptsForOwner(owner);
         
-        String normalizedQuery = searchQuery.trim().toLowerCase(java.util.Locale.ROOT);
+        String normalizedQuery = searchQuery.trim().toLowerCase(Locale.ROOT);
         
         List<ParsedReceipt> matchingReceipts = new ArrayList<>();
         for (ParsedReceipt receipt : allReceipts) {
@@ -362,7 +363,7 @@ public class ReceiptExtractionService {
                     continue;
                 }
                 
-                String itemName = nameObj.toString().toLowerCase(java.util.Locale.ROOT);
+                String itemName = nameObj.toString().toLowerCase(Locale.ROOT);
                 if (itemName.contains(normalizedQuery)) {
                     hasMatch = true;
                     break;

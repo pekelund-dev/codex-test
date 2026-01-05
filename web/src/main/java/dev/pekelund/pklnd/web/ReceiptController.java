@@ -149,7 +149,7 @@ public class ReceiptController {
         boolean canViewAll = isAdmin(authentication);
         boolean viewingAll = isViewingAll(scope, authentication);
 
-        model.addAttribute("pageTitle", "Sök kvitton");
+        model.addAttribute("pageTitleKey", "page.receipts.search.title");
         model.addAttribute("scopeParam", toScopeParameter(scope));
         model.addAttribute("canViewAll", canViewAll);
         model.addAttribute("viewingAll", viewingAll);

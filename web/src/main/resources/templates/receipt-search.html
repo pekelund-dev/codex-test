@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
 <head>
-    <title th:text="${pageTitle}">Sök kvitton</title>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : #{page.receipts.search.title}">Sök kvitton</title>
 </head>
 <body>
 <section class="py-3 py-lg-4">
