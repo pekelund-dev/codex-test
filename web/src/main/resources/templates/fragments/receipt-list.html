@@ -4,6 +4,44 @@
     <title>Receipt List Fragment</title>
 </head>
 <body>
+    <!-- Receipt List Table Fragment - Simple version without filters -->
+    <div th:fragment="simpleReceiptTable(receipts, showStore, emptyMessage)">
+        <!-- Receipt Table -->
+        <div th:if="${receipts.isEmpty()}" class="alert alert-info" role="alert">
+            <span th:text="${emptyMessage}">Inga kvitton hittades.</span>
+        </div>
+
+        <div th:if="${!receipts.isEmpty()}" class="table-responsive">
+            <table class="table table-hover sortable-table" data-sort-column="0" data-sort-direction="desc">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort-type="date" th:text="#{receipt.list.table.date}">Datum</th>
+                        <th th:if="${showStore}" class="sortable" data-sort-type="text" th:text="#{receipt.list.table.store}">Butik</th>
+                        <th class="text-end sortable" data-sort-type="number" th:text="#{receipt.list.table.amount}">Belopp</th>
+                        <th class="text-center" th:text="#{receipt.list.table.actions}">Åtgärder</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="receipt : ${receipts}">
+                        <td th:attr="data-sort-value=${receipt.receiptDate() != null ? receipt.receiptDate() : '0000-00-00'}" 
+                            th:text="${receipt.receiptDate() != null ? receipt.receiptDate() : '-'}">2024-01-15</td>
+                        <td th:if="${showStore}" 
+                            th:attr="data-sort-value=${receipt.storeName() != null ? receipt.storeName() : ''}"
+                            th:text="${receipt.storeName() != null ? receipt.storeName() : '-'}">ICA Supermarket</td>
+                        <td class="text-end fw-semibold" 
+                            th:attr="data-sort-value=${receipt.totalAmountValue() != null ? receipt.totalAmountValue() : 0}"
+                            th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() + ' kr' : '-'}">123.45 kr</td>
+                        <td class="text-center">
+                            <a th:href="@{/receipts/{id}(id=${receipt.id()})}" 
+                               class="btn btn-sm btn-outline-primary"
+                               th:text="#{receipt.list.view}">Visa</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Receipt List Table Fragment with Filters -->
     <div th:fragment="receiptTable(receipts, showStore, emptyMessage, filterStartDate, filterEndDate, filterStore, hasFilters)">
         <!-- Filter Section -->

@@ -211,8 +211,6 @@ public class DashboardStatisticsService {
 
     /**
      * Get receipts for a specific year.
-     * Note: This method returns ALL receipts for the user. The year parameter is used for context,
-     * but actual filtering is done by applyFilters() to allow flexible date range adjustment.
      */
     public List<ParsedReceipt> getReceiptsForYear(int year, Authentication authentication) {
         ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
@@ -221,8 +219,15 @@ public class DashboardStatisticsService {
         }
 
         try {
-            // Return all receipts - filtering will be done by applyFilters()
-            return receiptExtractionService.get().listReceiptsForOwner(owner);
+            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            
+            return allReceipts.stream()
+                .filter(receipt -> {
+                    LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
+                        .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                    return receiptDate != null && receiptDate.getYear() == year;
+                })
+                .collect(Collectors.toList());
         } catch (ReceiptExtractionAccessException ex) {
             log.warn("Unable to load receipts for year: " + year, ex);
             return List.of();
@@ -231,8 +236,6 @@ public class DashboardStatisticsService {
 
     /**
      * Get receipts for a specific year and month.
-     * Note: This method returns ALL receipts for the user. The year/month parameters are used for context,
-     * but actual filtering is done by applyFilters() to allow flexible date range adjustment.
      */
     public List<ParsedReceipt> getReceiptsForYearMonth(int year, int month, Authentication authentication) {
         ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
@@ -241,8 +244,18 @@ public class DashboardStatisticsService {
         }
 
         try {
-            // Return all receipts - filtering will be done by applyFilters()
-            return receiptExtractionService.get().listReceiptsForOwner(owner);
+            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            
+            return allReceipts.stream()
+                .filter(receipt -> {
+                    LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
+                        .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
+                    if (receiptDate == null) {
+                        return false;
+                    }
+                    return receiptDate.getYear() == year && receiptDate.getMonthValue() == month;
+                })
+                .collect(Collectors.toList());
         } catch (ReceiptExtractionAccessException ex) {
             log.warn("Unable to load receipts for year: " + year + " month: " + month, ex);
             return List.of();

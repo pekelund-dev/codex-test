@@ -22,11 +22,31 @@
         </div>
     </div>
 
+    <!-- Navigation buttons -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="btn-group" role="group">
+                <a th:if="${prevMonthYear != null && prevMonth != null}" 
+                   th:href="@{/dashboard/statistics/year/{year}/month/{month}(year=${prevMonthYear}, month=${prevMonth})}" 
+                   class="btn btn-outline-primary">
+                    <i class="bi bi-chevron-left"></i>
+                    <span th:text="#{statistics.month.navigation.previous}">Föregående månad</span>
+                </a>
+                <a th:if="${nextMonthYear != null && nextMonth != null}" 
+                   th:href="@{/dashboard/statistics/year/{year}/month/{month}(year=${nextMonthYear}, month=${nextMonth})}" 
+                   class="btn btn-outline-primary">
+                    <span th:text="#{statistics.month.navigation.next}">Nästa månad</span>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
     <div class="row mt-4">
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <div th:replace="~{fragments/receipt-list :: receiptTable(${receipts}, true, #{statistics.month.receipts.empty}, ${filterStartDate}, ${filterEndDate}, ${filterStore}, ${hasFilters})}"></div>
+                    <div th:replace="~{fragments/receipt-list :: simpleReceiptTable(${receipts}, true, #{statistics.month.receipts.empty})}"></div>
                 </div>
             </div>
         </div>
