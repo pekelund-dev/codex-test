@@ -89,6 +89,83 @@ public record ParsedReceipt(
         return valueFromGeneral("format");
     }
 
+    /**
+     * Calculate total savings from general discounts.
+     */
+    public BigDecimal generalDiscountTotal() {
+        if (generalDiscounts == null || generalDiscounts.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        for (Map<String, Object> discount : generalDiscounts) {
+            if (discount == null) {
+                continue;
+            }
+            BigDecimal amount = parseBigDecimal(discount.get("amount"));
+            if (amount != null) {
+                total = total.add(amount.abs());
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Calculate total savings from item-specific discounts.
+     */
+    public BigDecimal itemDiscountTotal() {
+        if (items == null || items.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        for (Map<String, Object> item : items) {
+            if (item == null) {
+                continue;
+            }
+            Object discountsObj = item.get("discounts");
+            if (!(discountsObj instanceof List<?> discountsList)) {
+                continue;
+            }
+            for (Object discountObj : discountsList) {
+                if (!(discountObj instanceof Map<?, ?> discountMap)) {
+                    continue;
+                }
+                BigDecimal amount = parseBigDecimal(discountMap.get("amount"));
+                if (amount != null) {
+                    total = total.add(amount.abs());
+                }
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Calculate total savings from all discounts (general + item-specific).
+     */
+    public BigDecimal totalDiscountAmount() {
+        return generalDiscountTotal().add(itemDiscountTotal());
+    }
+
+    /**
+     * Format the total discount amount for display.
+     */
+    public String formattedTotalDiscount() {
+        return formatAmount(totalDiscountAmount());
+    }
+
+    /**
+     * Format the general discount total for display.
+     */
+    public String formattedGeneralDiscount() {
+        return formatAmount(generalDiscountTotal());
+    }
+
+    /**
+     * Format the item discount total for display.
+     */
+    public String formattedItemDiscount() {
+        return formatAmount(itemDiscountTotal());
+    }
+
     public String statusBadgeClass() {
         if (status == null || status.isBlank()) {
             return "bg-secondary-subtle text-secondary";

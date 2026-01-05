@@ -162,6 +162,11 @@ public class HomeController {
         
         model.addAttribute("receipts", receipts);
         
+        // Calculate total discount savings for the year
+        java.math.BigDecimal totalDiscounts = dashboardStatisticsService.calculateTotalDiscounts(receipts);
+        model.addAttribute("totalDiscounts", totalDiscounts);
+        model.addAttribute("formattedTotalDiscounts", dashboardStatisticsService.formatDiscountAmount(totalDiscounts));
+        
         return "statistics-year-receipts";
     }
 
@@ -200,6 +205,11 @@ public class HomeController {
             dashboardStatisticsService.getReceiptsForYearMonth(year, month, authentication);
         
         model.addAttribute("receipts", receipts);
+        
+        // Calculate total discount savings for the month
+        java.math.BigDecimal totalDiscounts = dashboardStatisticsService.calculateTotalDiscounts(receipts);
+        model.addAttribute("totalDiscounts", totalDiscounts);
+        model.addAttribute("formattedTotalDiscounts", dashboardStatisticsService.formatDiscountAmount(totalDiscounts));
         
         return "statistics-month-receipts";
     }
