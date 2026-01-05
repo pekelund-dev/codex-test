@@ -90,4 +90,135 @@ class ParsedReceiptTest {
             null
         );
     }
+
+    @Test
+    void calculatesGeneralDiscountTotal() {
+        ParsedReceipt receipt = new ParsedReceipt(
+            "id",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            Map.of(),
+            List.of(),
+            ParsedReceipt.ReceiptItemHistory.empty(),
+            List.of(),
+            List.of(
+                Map.of("description", "Medlemsrabatt", "amount", new BigDecimal("5.00")),
+                Map.of("description", "Kampanj", "amount", new BigDecimal("10.50"))
+            ),
+            List.of(),
+            null,
+            null,
+            null
+        );
+
+        assertThat(receipt.generalDiscountTotal()).isEqualByComparingTo(new BigDecimal("15.50"));
+        assertThat(receipt.formattedGeneralDiscount()).isEqualTo("15.50");
+    }
+
+    @Test
+    void calculatesItemDiscountTotal() {
+        ParsedReceipt receipt = receiptWithItems(List.of(
+            Map.of(
+                "name", "Yoghurt",
+                "totalPrice", new BigDecimal("20.00"),
+                "discounts", List.of(
+                    Map.of("description", "Item discount", "amount", new BigDecimal("2.00"))
+                )
+            ),
+            Map.of(
+                "name", "Juice",
+                "totalPrice", new BigDecimal("15.00"),
+                "discounts", List.of(
+                    Map.of("description", "Item discount", "amount", new BigDecimal("3.50"))
+                )
+            )
+        ));
+
+        assertThat(receipt.itemDiscountTotal()).isEqualByComparingTo(new BigDecimal("5.50"));
+        assertThat(receipt.formattedItemDiscount()).isEqualTo("5.50");
+    }
+
+    @Test
+    void calculatesTotalDiscountAmount() {
+        ParsedReceipt receipt = new ParsedReceipt(
+            "id",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            Map.of(),
+            List.of(
+                Map.of(
+                    "name", "Yoghurt",
+                    "totalPrice", new BigDecimal("20.00"),
+                    "discounts", List.of(
+                        Map.of("description", "Item discount", "amount", new BigDecimal("2.00"))
+                    )
+                )
+            ),
+            ParsedReceipt.ReceiptItemHistory.empty(),
+            List.of(),
+            List.of(
+                Map.of("description", "Medlemsrabatt", "amount", new BigDecimal("5.00"))
+            ),
+            List.of(),
+            null,
+            null,
+            null
+        );
+
+        assertThat(receipt.totalDiscountAmount()).isEqualByComparingTo(new BigDecimal("7.00"));
+        assertThat(receipt.formattedTotalDiscount()).isEqualTo("7.00");
+    }
+
+    @Test
+    void returnsZeroWhenNoDiscountsPresent() {
+        ParsedReceipt receipt = receiptWithItems(List.of(
+            Map.of(
+                "name", "Yoghurt",
+                "totalPrice", new BigDecimal("20.00")
+            )
+        ));
+
+        assertThat(receipt.generalDiscountTotal()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(receipt.itemDiscountTotal()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(receipt.totalDiscountAmount()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(receipt.formattedTotalDiscount()).isEqualTo("0.00");
+    }
+
+    @Test
+    void handlesNegativeDiscountAmounts() {
+        ParsedReceipt receipt = new ParsedReceipt(
+            "id",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            Map.of(),
+            List.of(),
+            ParsedReceipt.ReceiptItemHistory.empty(),
+            List.of(),
+            List.of(
+                Map.of("description", "Rabatt", "amount", new BigDecimal("-5.00"))
+            ),
+            List.of(),
+            null,
+            null,
+            null
+        );
+
+        // Should use absolute value for negative discounts
+        assertThat(receipt.generalDiscountTotal()).isEqualByComparingTo(new BigDecimal("5.00"));
+    }
 }
