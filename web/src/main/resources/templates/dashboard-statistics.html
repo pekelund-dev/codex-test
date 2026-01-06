@@ -169,9 +169,11 @@
                                         <p class="mb-0 fw-bold text-dark" th:text="${statistics.formatAmount(monthEntry.value)} + ' kr'">0.00 kr</p>
                                         <!-- Monthly discount information -->
                                         <p th:if="${statistics.monthlyDiscounts.containsKey(yearEntry.key) and statistics.monthlyDiscounts.get(yearEntry.key).containsKey(monthEntry.key)}" 
-                                           class="mb-0 mt-1 small text-success">
-                                            <i class="bi bi-piggy-bank-fill"></i>
-                                            <span th:text="${statistics.formatAmount(statistics.monthlyDiscounts.get(yearEntry.key).get(monthEntry.key))} + ' kr'">0.00 kr</span>
+                                           class="mb-0 mt-2">
+                                            <span class="badge bg-success-subtle text-success small">
+                                                <i class="bi bi-piggy-bank-fill me-1"></i>
+                                                <span th:text="${statistics.formatAmount(statistics.monthlyDiscounts.get(yearEntry.key).get(monthEntry.key))} + ' kr sparade'">0.00 kr sparade</span>
+                                            </span>
                                         </p>
                                     </div>
                                 </div>
