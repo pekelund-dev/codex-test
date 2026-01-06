@@ -110,14 +110,52 @@
         <div class="col-12" th:each="yearEntry : ${statistics.monthlyTotals}">
             <div class="card shadow-sm">
                 <div class="card-header bg-light">
-                    <h3 class="h5 mb-0 fw-bold">
-                        <a th:href="@{/dashboard/statistics/year/{year}(year=${yearEntry.key})}" 
-                           class="text-decoration-none" 
-                           th:text="${yearEntry.key}">2024</a>
-                        <span class="ms-2 text-muted fw-normal" th:text="'(' + ${statistics.formatAmount(statistics.yearlyTotals.get(yearEntry.key))} + ' kr)'">
-                            (1234.56 kr)
-                        </span>
-                    </h3>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="h5 mb-0 fw-bold d-inline">
+                                <a th:href="@{/dashboard/statistics/year/{year}(year=${yearEntry.key})}" 
+                                   class="text-decoration-none" 
+                                   th:text="${yearEntry.key}">2024</a>
+                                <span class="ms-2 text-muted fw-normal" th:text="'(' + ${statistics.formatAmount(statistics.yearlyTotals.get(yearEntry.key))} + ' kr)'">
+                                    (1234.56 kr)
+                                </span>
+                            </h3>
+                            <!-- Discount information with expandable details -->
+                            <span th:if="${statistics.yearlyDiscounts.containsKey(yearEntry.key) and statistics.yearlyDiscounts.get(yearEntry.key).compareTo(T(java.math.BigDecimal).ZERO) > 0}" 
+                                  class="ms-2">
+                                <span class="badge bg-success-subtle text-success">
+                                    <i class="bi bi-piggy-bank-fill me-1"></i>
+                                    <span th:text="${statistics.formatAmount(statistics.yearlyDiscounts.get(yearEntry.key))} + ' kr sparade'">0.00 kr sparade</span>
+                                </span>
+                                <button class="btn btn-sm btn-link text-success p-0 ms-1" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        th:attr="data-bs-target=${'#discountDetails' + yearEntry.key}"
+                                        th:aria-controls="${'discountDetails' + yearEntry.key}"
+                                        aria-expanded="false">
+                                    <i class="bi bi-chevron-down"></i>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Expandable discount breakdown -->
+                    <div th:if="${statistics.yearlyDiscounts.containsKey(yearEntry.key) and statistics.yearlyDiscounts.get(yearEntry.key).compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                         class="collapse mt-2" 
+                         th:id="${'discountDetails' + yearEntry.key}">
+                        <div class="card card-body bg-white small">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Allmänna rabatter:</strong>
+                                    <span th:text="${statistics.yearlyGeneralDiscounts.containsKey(yearEntry.key) ? statistics.formatAmount(statistics.yearlyGeneralDiscounts.get(yearEntry.key)) + ' kr' : '0.00 kr'}">0.00 kr</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Varuspecifika rabatter:</strong>
+                                    <span th:with="itemDiscounts=${statistics.yearlyDiscounts.get(yearEntry.key).subtract(statistics.yearlyGeneralDiscounts.getOrDefault(yearEntry.key, T(java.math.BigDecimal).ZERO))}"
+                                          th:text="${statistics.formatAmount(itemDiscounts)} + ' kr'">0.00 kr</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
@@ -129,6 +167,12 @@
                                         <h4 class="h6 fw-semibold mb-2 text-primary" 
                                             th:text="#{|dashboard.statistics.month.${monthEntry.key.toString().toLowerCase()}|}">Januari</h4>
                                         <p class="mb-0 fw-bold text-dark" th:text="${statistics.formatAmount(monthEntry.value)} + ' kr'">0.00 kr</p>
+                                        <!-- Monthly discount information -->
+                                        <p th:if="${statistics.monthlyDiscounts.containsKey(yearEntry.key) and statistics.monthlyDiscounts.get(yearEntry.key).containsKey(monthEntry.key)}" 
+                                           class="mb-0 mt-1 small text-success">
+                                            <i class="bi bi-piggy-bank-fill"></i>
+                                            <span th:text="${statistics.formatAmount(statistics.monthlyDiscounts.get(yearEntry.key).get(monthEntry.key))} + ' kr'">0.00 kr</span>
+                                        </p>
                                     </div>
                                 </div>
                             </a>

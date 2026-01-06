@@ -84,6 +84,8 @@ public class DashboardStatisticsService {
             yearlyStats.monthlyTotals(),
             yearlyStats.yearlyDiscounts(),
             yearlyStats.monthlyDiscounts(),
+            yearlyStats.yearlyGeneralDiscounts(),
+            yearlyStats.monthlyGeneralDiscounts(),
             yearlyStats.available()
         );
     }
@@ -434,7 +436,7 @@ public class DashboardStatisticsService {
         try {
             List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
             if (receipts.isEmpty()) {
-                return new YearlyStatistics(true, Map.of(), Map.of(), Map.of(), Map.of());
+                return new YearlyStatistics(true, Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
             }
 
             // Map to store year -> total amount
@@ -445,6 +447,10 @@ public class DashboardStatisticsService {
             Map<Integer, BigDecimal> yearlyDiscounts = new TreeMap<>(Comparator.reverseOrder());
             // Map to store year -> (month -> total discount savings)
             Map<Integer, Map<Month, BigDecimal>> monthlyDiscountsByYear = new TreeMap<>(Comparator.reverseOrder());
+            // Map to store year -> general discount savings
+            Map<Integer, BigDecimal> yearlyGeneralDiscounts = new TreeMap<>(Comparator.reverseOrder());
+            // Map to store year -> (month -> general discount savings)
+            Map<Integer, Map<Month, BigDecimal>> monthlyGeneralDiscountsByYear = new TreeMap<>(Comparator.reverseOrder());
 
             for (ParsedReceipt receipt : receipts) {
                 if (receipt == null) {
@@ -453,6 +459,7 @@ public class DashboardStatisticsService {
 
                 BigDecimal amount = receipt.totalAmountValue();
                 BigDecimal discountAmount = receipt.totalDiscountAmount();
+                BigDecimal generalDiscountAmount = receipt.generalDiscountTotal();
 
                 LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
                     .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
@@ -484,6 +491,17 @@ public class DashboardStatisticsService {
                     monthlyDiscountsByYear.computeIfAbsent(year, k -> new TreeMap<>())
                         .merge(month, discountAmount, BigDecimal::add);
                 }
+
+                // Update yearly general discount total
+                if (generalDiscountAmount != null && generalDiscountAmount.compareTo(BigDecimal.ZERO) > 0) {
+                    yearlyGeneralDiscounts.merge(year, generalDiscountAmount, BigDecimal::add);
+                }
+
+                // Update monthly general discount total for the year
+                if (generalDiscountAmount != null && generalDiscountAmount.compareTo(BigDecimal.ZERO) > 0) {
+                    monthlyGeneralDiscountsByYear.computeIfAbsent(year, k -> new TreeMap<>())
+                        .merge(month, generalDiscountAmount, BigDecimal::add);
+                }
             }
 
             // Convert the nested maps to immutable maps while preserving order
@@ -497,12 +515,19 @@ public class DashboardStatisticsService {
                 unmodifiableMonthlyDiscounts.put(entry.getKey(), Collections.unmodifiableMap(new TreeMap<>(entry.getValue())));
             }
 
+            Map<Integer, Map<Month, BigDecimal>> unmodifiableMonthlyGeneralDiscounts = new TreeMap<>(Comparator.reverseOrder());
+            for (Map.Entry<Integer, Map<Month, BigDecimal>> entry : monthlyGeneralDiscountsByYear.entrySet()) {
+                unmodifiableMonthlyGeneralDiscounts.put(entry.getKey(), Collections.unmodifiableMap(new TreeMap<>(entry.getValue())));
+            }
+
             return new YearlyStatistics(
                 true,
                 Collections.unmodifiableMap(yearlyTotals),
                 Collections.unmodifiableMap(unmodifiableMonthly),
                 Collections.unmodifiableMap(yearlyDiscounts),
-                Collections.unmodifiableMap(unmodifiableMonthlyDiscounts)
+                Collections.unmodifiableMap(unmodifiableMonthlyDiscounts),
+                Collections.unmodifiableMap(yearlyGeneralDiscounts),
+                Collections.unmodifiableMap(unmodifiableMonthlyGeneralDiscounts)
             );
         } catch (ReceiptExtractionAccessException ex) {
             log.warn("Unable to load yearly statistics for dashboard.", ex);
@@ -522,11 +547,13 @@ public class DashboardStatisticsService {
         Map<Integer, BigDecimal> yearlyTotals,
         Map<Integer, Map<Month, BigDecimal>> monthlyTotals,
         Map<Integer, BigDecimal> yearlyDiscounts,
-        Map<Integer, Map<Month, BigDecimal>> monthlyDiscounts
+        Map<Integer, Map<Month, BigDecimal>> monthlyDiscounts,
+        Map<Integer, BigDecimal> yearlyGeneralDiscounts,
+        Map<Integer, Map<Month, BigDecimal>> monthlyGeneralDiscounts
     ) {
 
         static YearlyStatistics unavailable() {
-            return new YearlyStatistics(false, Map.of(), Map.of(), Map.of(), Map.of());
+            return new YearlyStatistics(false, Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
         }
     }
 
@@ -544,6 +571,8 @@ public class DashboardStatisticsService {
         Map<Integer, Map<Month, BigDecimal>> monthlyTotals,
         Map<Integer, BigDecimal> yearlyDiscounts,
         Map<Integer, Map<Month, BigDecimal>> monthlyDiscounts,
+        Map<Integer, BigDecimal> yearlyGeneralDiscounts,
+        Map<Integer, Map<Month, BigDecimal>> monthlyGeneralDiscounts,
         boolean yearlyStatisticsAvailable
     ) {
 
