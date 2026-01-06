@@ -60,7 +60,7 @@
                     <dl class="row mb-0">
                         <dt class="col-sm-4">Updated</dt>
                         <dd class="col-sm-8"
-                            th:text="${receipt.updatedAt() != null ? #temporals.format(receipt.updatedAt(), 'yyyy-MM-dd HH:mm:ss') : '—'}">
+                            th:text="${receipt.updatedAtZoned() != null ? #temporals.format(receipt.updatedAtZoned(), 'yyyy-MM-dd HH:mm:ss') : '—'}">
                             2024-01-01 10:30:00
                         </dd>
                         <dt class="col-sm-4">Status message</dt>

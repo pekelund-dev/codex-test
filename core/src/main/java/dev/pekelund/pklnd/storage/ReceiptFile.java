@@ -3,8 +3,21 @@ package dev.pekelund.pklnd.storage;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 public record ReceiptFile(String name, long size, Instant updated, String contentType, ReceiptOwner owner) {
+
+    /**
+     * Get the updated timestamp in the system's default timezone.
+     * This is useful for displaying the timestamp in the user's local time.
+     */
+    public ZonedDateTime updatedZoned() {
+        if (updated == null) {
+            return null;
+        }
+        return updated.atZone(ZoneId.systemDefault());
+    }
 
     public String formattedSize() {
         if (size <= 0) {

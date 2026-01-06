@@ -149,7 +149,7 @@
                             </td>
                             <td class="text-end" th:text="${file.formattedSize()}">24.5 KB</td>
                             <td th:text="${file.ownerDisplayName()}">—</td>
-                            <td th:text="${file.updated() != null ? #temporals.format(file.updated(), 'yyyy-MM-dd HH:mm:ss') : '—'}">2024-01-01 10:30:00</td>
+                            <td th:text="${file.updatedZoned() != null ? #temporals.format(file.updatedZoned(), 'yyyy-MM-dd HH:mm:ss') : '—'}">2024-01-01 10:30:00</td>
                             <td th:with="status=${fileStatuses != null ? fileStatuses[file.name()] : null}">
                                 <div class="d-flex flex-column gap-1">
                                     <span class="badge text-uppercase fw-semibold file-status-badge"

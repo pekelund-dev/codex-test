@@ -4,6 +4,8 @@ import dev.pekelund.pklnd.storage.ReceiptOwner;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -87,6 +89,17 @@ public record ParsedReceipt(
 
     public String format() {
         return valueFromGeneral("format");
+    }
+
+    /**
+     * Get the updated timestamp in the system's default timezone.
+     * This is useful for displaying the timestamp in the user's local time.
+     */
+    public ZonedDateTime updatedAtZoned() {
+        if (updatedAt == null) {
+            return null;
+        }
+        return updatedAt.atZone(ZoneId.systemDefault());
     }
 
     /**

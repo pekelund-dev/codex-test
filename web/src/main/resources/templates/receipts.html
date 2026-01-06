@@ -125,7 +125,7 @@
                             <td th:text="${parsed.receiptDate() != null ? parsed.receiptDate() : '—'}">—</td>
                             <td th:text="${parsed.formattedTotalAmount() != null ? parsed.formattedTotalAmount() : (parsed.totalAmount() != null ? parsed.totalAmount() : '—')}">—</td>
                             <td class="text-end"
-                                th:text="${parsed.updatedAt() != null ? #temporals.format(parsed.updatedAt(), 'yyyy-MM-dd HH:mm:ss') : '—'}">
+                                th:text="${parsed.updatedAtZoned() != null ? #temporals.format(parsed.updatedAtZoned(), 'yyyy-MM-dd HH:mm:ss') : '—'}">
                                 2024-01-01 10:30:00
                             </td>
                         </tr>
