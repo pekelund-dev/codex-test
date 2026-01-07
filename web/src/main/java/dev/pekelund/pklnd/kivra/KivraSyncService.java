@@ -97,15 +97,15 @@ public class KivraSyncService {
             .uploadFilesWithResults(files, owner);
 
         // Notify receipt processor if configured
-        if (receiptProcessingClient.isPresent() && !uploadResult.uploaded().isEmpty()) {
+        if (receiptProcessingClient.isPresent() && !uploadResult.uploadedReceipts().isEmpty()) {
             try {
-                receiptProcessingClient.get().notifyUploads(uploadResult.uploaded());
+                receiptProcessingClient.get().notifyUploads(uploadResult.uploadedReceipts());
             } catch (Exception ex) {
                 LOGGER.warn("Failed to notify receipt processor", ex);
             }
         }
 
-        int successCount = uploadResult.uploaded().size();
+        int successCount = uploadResult.uploadedReceipts().size();
         int failureCount = uploadResult.failures().size();
         String message = String.format("Synkade %d kvitton från Kivra", successCount);
         if (failureCount > 0) {
