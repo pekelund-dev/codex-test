@@ -36,3 +36,10 @@ receipt:
     connect-timeout: ${RECEIPT_PROCESSOR_CONNECT_TIMEOUT:5s}
     read-timeout: ${RECEIPT_PROCESSOR_READ_TIMEOUT:30s}
 
+kivra:
+  enabled: ${KIVRA_ENABLED:false}
+  personal-number: ${KIVRA_PERSONAL_NUMBER:}
+  api-base-url: ${KIVRA_API_BASE_URL:https://app.kivra.com}
+  max-documents: ${KIVRA_MAX_DOCUMENTS:100}
+  pdf-only: ${KIVRA_PDF_ONLY:true}
+
