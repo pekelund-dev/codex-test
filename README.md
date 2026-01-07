@@ -8,6 +8,7 @@ pklnd is a Spring Boot application for maintaining a personal receipt archive fo
 - Secure personal accounts via Spring Security with hashed credentials in Firestore and optional Google OAuth 2.0 login.
 - Responsive Thymeleaf interface powered by Bootstrap 5 for a smooth receipt overview on mobile and desktop.
 - Receipt workspace tailored for ICA and other Swedish stores, supporting PDF/image uploads that land in Google Cloud Storage.
+- **Kivra integration** for automatically fetching receipts from your Kivra digital mailbox (see [Kivra integration guide](docs/kivra-integration.md)).
 - Automatic categorisation, store detection, and chronological sorting so your personal receipts stay easy to find.
 - Modular architecture with Spring Modulith keeping the web and receipt processing services isolated and verified.
 
