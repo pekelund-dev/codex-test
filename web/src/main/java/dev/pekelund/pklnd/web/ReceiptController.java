@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionAccessException;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
+import dev.pekelund.pklnd.firestore.SearchItemResult;
 import dev.pekelund.pklnd.receipts.ReceiptProcessingClient;
 import dev.pekelund.pklnd.receipts.ReceiptProcessingClient.ProcessingFailure;
 import dev.pekelund.pklnd.receipts.ReceiptProcessingClient.ProcessingResult;
@@ -163,6 +164,7 @@ public class ReceiptController {
 
         if (!parsedReceiptsEnabled) {
             model.addAttribute("searchResults", List.of());
+            model.addAttribute("searchItemResults", List.of());
             model.addAttribute("searchPerformed", false);
             return "receipt-search";
         }
@@ -171,11 +173,18 @@ public class ReceiptController {
             ReceiptOwner currentOwner = receiptOwnerResolver.resolve(authentication);
             if (currentOwner == null && !viewingAll) {
                 model.addAttribute("searchResults", List.of());
+                model.addAttribute("searchItemResults", List.of());
                 model.addAttribute("searchPerformed", true);
                 return "receipt-search";
             }
 
             try {
+                // Get matching items
+                List<SearchItemResult> itemResults = receiptExtractionService.get()
+                    .searchItemsByName(query, currentOwner, viewingAll);
+                model.addAttribute("searchItemResults", itemResults);
+                
+                // Get matching receipts
                 List<ParsedReceipt> results = receiptExtractionService.get()
                     .searchByItemName(query, currentOwner, viewingAll);
                 List<ParsedReceiptEntry> entries = results.stream()
@@ -186,11 +195,13 @@ public class ReceiptController {
             } catch (ReceiptExtractionAccessException ex) {
                 LOGGER.warn("Failed to search receipts", ex);
                 model.addAttribute("searchResults", List.of());
+                model.addAttribute("searchItemResults", List.of());
                 model.addAttribute("searchPerformed", true);
                 model.addAttribute("errorMessage", ex.getMessage());
             }
         } else {
             model.addAttribute("searchResults", List.of());
+            model.addAttribute("searchItemResults", List.of());
             model.addAttribute("searchPerformed", false);
         }
 

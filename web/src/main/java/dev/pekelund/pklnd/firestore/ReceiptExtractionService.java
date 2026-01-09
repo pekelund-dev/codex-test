@@ -380,6 +380,73 @@ public class ReceiptExtractionService {
         return Collections.unmodifiableList(matchingReceipts);
     }
 
+    public List<SearchItemResult> searchItemsByName(String searchQuery, ReceiptOwner owner, boolean includeAllOwners) {
+        if (firestore.isEmpty() || !StringUtils.hasText(searchQuery)) {
+            return List.of();
+        }
+
+        if (!includeAllOwners && owner == null) {
+            return List.of();
+        }
+
+        List<ParsedReceipt> allReceipts = includeAllOwners ? listAllReceipts() : listReceiptsForOwner(owner);
+        
+        String normalizedQuery = searchQuery.trim().toLowerCase(Locale.ROOT);
+        
+        List<SearchItemResult> matchingItems = new ArrayList<>();
+        for (ParsedReceipt receipt : allReceipts) {
+            if (receipt == null) {
+                continue;
+            }
+            
+            List<Map<String, Object>> items = receipt.displayItems();
+            if (items == null || items.isEmpty()) {
+                continue;
+            }
+            
+            String receiptDisplayName = receipt.displayName();
+            if (receiptDisplayName == null || receiptDisplayName.isBlank()) {
+                receiptDisplayName = receipt.objectPath();
+            }
+            
+            for (Map<String, Object> item : items) {
+                if (item == null) {
+                    continue;
+                }
+                
+                Object nameObj = item.get("name");
+                if (nameObj == null) {
+                    continue;
+                }
+                
+                String itemName = nameObj.toString();
+                if (itemName.toLowerCase(Locale.ROOT).contains(normalizedQuery)) {
+                    String price = asString(item.get("price"));
+                    String quantity = asString(item.get("quantity"));
+                    String total = asString(item.get("total"));
+                    
+                    matchingItems.add(new SearchItemResult(
+                        receipt.id(),
+                        receiptDisplayName,
+                        receipt.receiptDate(),
+                        receipt.updatedAt(),
+                        itemName,
+                        price,
+                        quantity,
+                        total
+                    ));
+                }
+            }
+        }
+        
+        // Sort by receipt updated time descending, then by item name
+        matchingItems.sort(Comparator
+            .comparing(SearchItemResult::receiptUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(SearchItemResult::itemName, String.CASE_INSENSITIVE_ORDER));
+        
+        return Collections.unmodifiableList(matchingItems);
+    }
+
     public void deleteReceiptsForOwner(ReceiptOwner owner) {
         if (owner == null || firestore.isEmpty()) {
             return;

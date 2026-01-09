@@ -54,37 +54,80 @@
                 </div>
             </form>
 
-            <div th:if="${searchPerformed and #lists.isEmpty(searchResults)}" class="text-center text-muted py-5">
+            <div th:if="${searchPerformed and #lists.isEmpty(searchItemResults) and #lists.isEmpty(searchResults)}" class="text-center text-muted py-5">
                 <p class="mb-0">Inga kvitton hittades för din sökning.</p>
             </div>
 
-            <div th:if="${!#lists.isEmpty(searchResults)}" class="table-responsive">
+            <!-- Individual items table -->
+            <div th:if="${!#lists.isEmpty(searchItemResults)}" class="mb-5">
+                <h2 class="h5 fw-semibold mb-3">Hittade artiklar</h2>
                 <p class="text-muted mb-3">
-                    Hittade <span th:text="${#lists.size(searchResults)}">0</span> kvitton som matchar din sökning.
+                    Hittade <span th:text="${#lists.size(searchItemResults)}">0</span> artiklar som matchar din sökning.
                 </p>
-                <table class="table align-middle">
-                    <thead class="table-light">
-                    <tr>
-                        <th scope="col">Kvitto</th>
-                        <th scope="col">Datum</th>
-                        <th scope="col">Totalsumma</th>
-                        <th scope="col" class="text-end">Uppdaterad</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="result : ${searchResults}">
-                        <td>
-                            <a th:href="@{/receipts/{id}(id=${result.id()}, scope=${scopeParam})}" 
-                               class="fw-semibold text-decoration-none">
-                                <span th:text="${!#strings.isEmpty(result.storeName()) ? result.storeName() : (!#strings.isEmpty(result.displayName()) ? result.displayName() : result.objectPath())}">Kvitto</span>
-                            </a>
-                        </td>
-                        <td th:text="${result.receiptDate() != null ? result.receiptDate() : '—'}">—</td>
-                        <td th:text="${result.formattedTotalAmount() != null ? result.formattedTotalAmount() : (result.totalAmount() != null ? result.totalAmount() : '—')}">—</td>
-                        <td class="text-end" th:text="${result.updatedAt() != null ? result.updatedAt() : '—'}">—</td>
-                    </tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th scope="col">Artikelnamn</th>
+                            <th scope="col">Kvitto</th>
+                            <th scope="col">Datum</th>
+                            <th scope="col" class="text-end">Pris</th>
+                            <th scope="col" class="text-end">Antal</th>
+                            <th scope="col" class="text-end">Totalt</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="item : ${searchItemResults}">
+                            <td>
+                                <span class="fw-semibold" th:text="${item.itemName()}">Artikelnamn</span>
+                            </td>
+                            <td>
+                                <a th:href="@{/receipts/{id}(id=${item.receiptId()}, scope=${scopeParam})}" 
+                                   class="text-decoration-none">
+                                    <span th:text="${item.receiptDisplayName()}">Kvitto</span>
+                                </a>
+                            </td>
+                            <td th:text="${item.receiptDate() != null ? item.receiptDate() : '—'}">—</td>
+                            <td class="text-end" th:text="${item.itemPrice() != null ? item.itemPrice() : '—'}">—</td>
+                            <td class="text-end" th:text="${item.itemQuantity() != null ? item.itemQuantity() : '—'}">—</td>
+                            <td class="text-end" th:text="${item.itemTotal() != null ? item.itemTotal() : '—'}">—</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Receipts table -->
+            <div th:if="${!#lists.isEmpty(searchResults)}">
+                <h2 class="h5 fw-semibold mb-3">Kvitton med matchande artiklar</h2>
+                <p class="text-muted mb-3">
+                    Hittade <span th:text="${#lists.size(searchResults)}">0</span> kvitton som innehåller matchande artiklar.
+                </p>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th scope="col">Kvitto</th>
+                            <th scope="col">Datum</th>
+                            <th scope="col">Totalsumma</th>
+                            <th scope="col" class="text-end">Uppdaterad</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="result : ${searchResults}">
+                            <td>
+                                <a th:href="@{/receipts/{id}(id=${result.id()}, scope=${scopeParam})}" 
+                                   class="fw-semibold text-decoration-none">
+                                    <span th:text="${!#strings.isEmpty(result.storeName()) ? result.storeName() : (!#strings.isEmpty(result.displayName()) ? result.displayName() : result.objectPath())}">Kvitto</span>
+                                </a>
+                            </td>
+                            <td th:text="${result.receiptDate() != null ? result.receiptDate() : '—'}">—</td>
+                            <td th:text="${result.formattedTotalAmount() != null ? result.formattedTotalAmount() : (result.totalAmount() != null ? result.totalAmount() : '—')}">—</td>
+                            <td class="text-end" th:text="${result.updatedAt() != null ? result.updatedAt() : '—'}">—</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
