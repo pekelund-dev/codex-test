@@ -110,7 +110,7 @@ public class CodexParser implements ReceiptFormatParser {
             }
 
             if (line.startsWith("Betalningsinformation")
-                || line.startsWith("Erhållen rabatt")
+                || (line.startsWith("Erhållen rabatt") && !DISCOUNT_PATTERN.matcher(line).matches())
                 || line.startsWith("Avrundning")
                 || line.startsWith("Kort")) {
                 inItems = false;
