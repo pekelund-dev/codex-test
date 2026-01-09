@@ -76,11 +76,29 @@ public class ReceiptExtractionRepository {
         if (detailedMessage != null && !detailedMessage.equals(errorMessage)) {
             combined = errorMessage + ": " + detailedMessage;
         }
-        updateDocument(bucket, objectName, owner, ReceiptProcessingStatus.FAILED, combined, null, combined);
+
+        String stackTrace = null;
+        if (error != null) {
+            java.io.StringWriter sw = new java.io.StringWriter();
+            java.io.PrintWriter pw = new java.io.PrintWriter(sw);
+            error.printStackTrace(pw);
+            String fullTrace = sw.toString();
+            // Keep only first 5 lines
+            stackTrace = java.util.stream.Stream.of(fullTrace.split("\\r?\\n"))
+                .limit(5)
+                .collect(java.util.stream.Collectors.joining("\n"));
+        }
+
+        updateDocument(bucket, objectName, owner, ReceiptProcessingStatus.FAILED, combined, null, combined, stackTrace);
     }
 
     private void updateDocument(String bucket, String objectName, ReceiptOwner owner,
         ReceiptProcessingStatus status, String message, ReceiptExtractionResult extractionResult, String errorMessage) {
+        updateDocument(bucket, objectName, owner, status, message, extractionResult, errorMessage, null);
+    }
+
+    private void updateDocument(String bucket, String objectName, ReceiptOwner owner,
+        ReceiptProcessingStatus status, String message, ReceiptExtractionResult extractionResult, String errorMessage, String stackTrace) {
 
         String documentId = buildDocumentId(bucket, objectName);
         Timestamp updateTimestamp = Timestamp.now();
@@ -109,6 +127,10 @@ public class ReceiptExtractionRepository {
 
             if (errorMessage != null) {
                 payload.put("error", errorMessage);
+            }
+
+            if (stackTrace != null) {
+                payload.put("stackTrace", stackTrace);
             }
 
             ItemSyncPlan syncPlan = determineSyncPlan(documentId, objectName, owner, status, general, items,

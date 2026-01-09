@@ -42,6 +42,6 @@ public class PdfParser {
             format == ReceiptFormat.UNKNOWN
                 ? "Unable to determine receipt format"
                 : "No parser registered for format " + format);
-        return new LegacyParsedReceipt(format, null, null, null, List.of(), List.of(), List.of(), List.of(error));
+        return new LegacyParsedReceipt(format, null, null, null, List.of(), List.of(), List.of(), List.of(error), ReconciliationStatus.NONE);
     }
 }

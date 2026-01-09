@@ -1,11 +1,13 @@
 (function () {
     const sortState = { column: 'updated', direction: 'desc' };
-    const poller = setupDashboardPolling(sortState);
+    // Track collapsed group state by store name. Defaults to null (not yet interacted/set).
+    const groupStates = new Map();
+    const poller = setupDashboardPolling(sortState, groupStates);
     setupClearReceiptsControl(poller);
-    setupTableSorting(sortState);
+    setupTableSorting(sortState, groupStates);
 })();
 
-function setupTableSorting(sortState) {
+function setupTableSorting(sortState, groupStates) {
     const table = document.querySelector('[data-parsed-table] table');
     if (!table) return;
 
@@ -23,7 +25,7 @@ function setupTableSorting(sortState) {
                     sortState.direction = 'desc'; // Default to descending for dates and amounts
                 }
             }
-            sortAndRenderTable(table, sortState);
+            sortAndRenderTable(table, sortState, groupStates);
             updateSortIcons(headers, sortState);
         });
     });
@@ -32,10 +34,14 @@ function setupTableSorting(sortState) {
     updateSortIcons(headers, sortState);
 }
 
-function sortAndRenderTable(table, sort) {
+function sortAndRenderTable(table, sort, groupStates) {
     const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const rows = Array.from(tbody.querySelectorAll('tr[data-receipt-id]'));
 
+    renderRows(tbody, rows, sort, groupStates);
+}
+
+function renderRows(tbody, rows, sort, groupStates) {
     rows.sort((a, b) => {
         let valA = getCellValue(a, sort.column);
         let valB = getCellValue(b, sort.column);
@@ -43,8 +49,100 @@ function sortAndRenderTable(table, sort) {
     });
 
     tbody.innerHTML = '';
-    rows.forEach(row => tbody.appendChild(row));
+
+    if (sort.column === 'name') {
+        renderGroupedByStore(tbody, rows, groupStates);
+    } else {
+        rows.forEach(row => {
+            row.classList.remove('d-none');
+            // Remove any indentation style if previously grouped
+            const firstCell = row.querySelector('td:first-child');
+            if (firstCell) firstCell.style.paddingLeft = '';
+            tbody.appendChild(row);
+        });
+    }
 }
+
+function renderGroupedByStore(tbody, rows, groupStates) {
+    const groups = new Map();
+    rows.forEach(row => {
+        const storeName = getCellValue(row, 'name');
+        if (!groups.has(storeName)) {
+            groups.set(storeName, []);
+        }
+        groups.get(storeName).push(row);
+    });
+
+    groups.forEach((groupRows, storeName) => {
+        const count = groupRows.length;
+        // Check persisted state, otherwise default to collapsed if >= 2 items
+        let isCollapsed;
+        if (groupStates && groupStates.has(storeName)) {
+            isCollapsed = groupStates.get(storeName);
+        } else {
+            isCollapsed = count >= 2;
+        }
+        
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'table-light group-header';
+        headerRow.style.cursor = 'pointer';
+        headerRow.setAttribute('data-collapsed', isCollapsed);
+        
+        const cell = document.createElement('td');
+        // Determine colspan based on the number of columns in the first row, or default to 5
+        const colCount = groupRows[0] ? groupRows[0].children.length : 5;
+        cell.colSpan = colCount;
+        
+        const iconClass = isCollapsed ? 'bi-chevron-right' : 'bi-chevron-down';
+        // Use a safe display name
+        const displayStore = storeName || 'Övrigt';
+
+        cell.innerHTML = `
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi ${iconClass} text-muted"></i>
+                <span class="fw-semibold">${displayStore}</span>
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill border">${count}</span>
+            </div>
+        `;
+        headerRow.appendChild(cell);
+        
+        headerRow.addEventListener('click', () => {
+            const currentlyCollapsed = headerRow.getAttribute('data-collapsed') === 'true';
+            const newCollapsed = !currentlyCollapsed;
+            headerRow.setAttribute('data-collapsed', newCollapsed);
+            
+            // Persist state
+            if (groupStates) {
+                groupStates.set(storeName, newCollapsed);
+            }
+            
+            const icon = headerRow.querySelector('i');
+            if (icon) {
+                 icon.className = `bi ${newCollapsed ? 'bi-chevron-right' : 'bi-chevron-down'} text-muted`;
+            }
+            
+            groupRows.forEach(r => {
+                if (newCollapsed) r.classList.add('d-none');
+                else r.classList.remove('d-none');
+            });
+        });
+        
+        tbody.appendChild(headerRow);
+
+        groupRows.forEach(row => {
+            // Add indentation to the first cell to indicate hierarchy
+            const firstCell = row.querySelector('td:first-child');
+            if (firstCell) {
+                firstCell.style.paddingLeft = '2.5rem';
+            }
+
+            if (isCollapsed) row.classList.add('d-none');
+            else row.classList.remove('d-none');
+            tbody.appendChild(row);
+        });
+    });
+}
+
 
 function compareValues(valA, valB, column, direction) {
     if (column === 'amount') {
@@ -97,7 +195,7 @@ function updateSortIcons(headers, currentSort) {
     });
 }
 
-function setupDashboardPolling(sortState) {
+function setupDashboardPolling(sortState, groupStates) {
     const container = document.querySelector('[data-dashboard-url]');
     if (!container) {
         return null;
@@ -144,7 +242,7 @@ function setupDashboardPolling(sortState) {
                 throw new Error(`Unexpected status ${response.status}`);
             }
             const data = await response.json();
-            renderParsedSection(data, { parsedCountBadge, parsedEmpty, parsedTable, parsedBody, parsedError }, sortState);
+            renderParsedSection(data, { parsedCountBadge, parsedEmpty, parsedTable, parsedBody, parsedError }, sortState, groupStates);
         } catch (error) {
             // eslint-disable-next-line no-console
             console.error('Failed to refresh receipt data', error);
@@ -174,7 +272,7 @@ function setupDashboardPolling(sortState) {
     };
 }
 
-function renderParsedSection(data, refs, sortState) {
+function renderParsedSection(data, refs, sortState, groupStates) {
     if (!refs || !refs.parsedBody) {
         return;
     }
@@ -189,38 +287,17 @@ function renderParsedSection(data, refs, sortState) {
     toggleVisibility(refs.parsedEmpty, enabled && !hasReceipts);
     updateErrorMessage(refs.parsedError, listingError);
 
-    refs.parsedBody.innerHTML = '';
+    // If no receipts, clear body and return
     if (!hasReceipts) {
+        refs.parsedBody.innerHTML = '';
         return;
     }
 
-    // Sort receipts before rendering if sortState is provided
-    if (sortState) {
-        receipts.sort((a, b) => {
-            let valA = getReceiptValue(a, sortState.column);
-            let valB = getReceiptValue(b, sortState.column);
-            return compareValues(valA, valB, sortState.column, sortState.direction);
-        });
-    }
+    // Build DOM rows
+    const rows = receipts.map(buildParsedRow);
 
-    receipts.forEach((receipt) => {
-        refs.parsedBody.appendChild(buildParsedRow(receipt));
-    });
-}
-
-function getReceiptValue(receipt, column) {
-    switch (column) {
-        case 'name': 
-            return receipt.storeName || receipt.displayName || receipt.objectPath || '';
-        case 'date': 
-            return receipt.receiptDate || '';
-        case 'amount': 
-            return receipt.formattedTotalAmount || receipt.totalAmount || '';
-        case 'updated': 
-            return receipt.updatedAt || '';
-        default: 
-            return '';
-    }
+    // Use shared rendering logic
+    renderRows(refs.parsedBody, rows, sortState, groupStates);
 }
 
 function updateCountBadge(element, count, noun, visible) {

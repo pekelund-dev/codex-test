@@ -68,6 +68,7 @@ public class LegacyPdfReceiptExtractor implements ReceiptDataExtractor {
         general.put("receiptDate", Optional.ofNullable(parsedReceipt.receiptDate()).map(Object::toString).orElse(null));
         general.put("totalAmount", parsedReceipt.totalAmount());
         general.put("format", Optional.ofNullable(parsedReceipt.format()).map(Enum::name).orElse(null));
+        general.put("reconciliationStatus", Optional.ofNullable(parsedReceipt.reconciliationStatus()).map(Enum::name).orElse("NONE"));
         general.put("fileName", fileName);
         general.put("source", SOURCE);
 

@@ -41,7 +41,7 @@ class ReceiptControllerItemViewTests {
 
     @BeforeEach
     void setUp() {
-        controller = new ReceiptController(null, receiptExtractionService, receiptOwnerResolver, null);
+        controller = new ReceiptController(null, receiptExtractionService, receiptOwnerResolver, null, null);
         authentication = new TestingAuthenticationToken("user", "password", "ROLE_USER");
         owner = new ReceiptOwner("owner-1", "Test User", "user@example.com");
 
@@ -116,6 +116,7 @@ class ReceiptControllerItemViewTests {
             List.of(),
             "",
             "",
+            null,
             null
         );
 
