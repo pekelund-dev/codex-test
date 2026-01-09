@@ -9,9 +9,29 @@ FULL_URL="${BASE_URL}${API_ENDPOINT}"
 RECEIPTS_DIR="receipts"
 
 # User Details (Required for ingestion)
-USER_ID="zRiQY1MMPckvzqRXcPsj"
 USER_EMAIL="pekelund@gmail.com"
 USER_NAME="par"
+
+# Dynamic User ID Retrieval
+FIRESTORE_HOST="localhost:8085"
+PROJECT_ID="pklnd-local"
+DATABASE_ID="(default)"
+
+echo "Fetching User ID for $USER_EMAIL from Firestore Emulator..."
+USER_ID_RESPONSE=$(curl -s "http://$FIRESTORE_HOST/v1/projects/$PROJECT_ID/databases/$DATABASE_ID/documents/users")
+
+# Parse the document name (projects/.../users/{id}) to get the ID
+USER_ID_PATH=$(echo "$USER_ID_RESPONSE" | jq -r --arg email "$USER_EMAIL" '.documents[] | select(.fields.email.stringValue == $email) | .name')
+
+if [ -z "$USER_ID_PATH" ] || [ "$USER_ID_PATH" == "null" ]; then
+    echo "Error: User with email $USER_EMAIL not found in Firestore."
+    echo "Make sure the web application is running and you have registered/logged in."
+    # Fallback to hardcoded ID if needed, or exit
+    exit 1
+fi
+
+USER_ID=$(basename "$USER_ID_PATH")
+echo "Resolved User ID: $USER_ID"
 
 # Check if receipts directory exists
 if [ ! -d "$RECEIPTS_DIR" ]; then

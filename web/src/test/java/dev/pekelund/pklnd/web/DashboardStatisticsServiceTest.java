@@ -189,6 +189,7 @@ class DashboardStatisticsServiceTest {
             List.of(),
             null,
             null,
+            null,
             null
         );
     }

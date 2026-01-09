@@ -16,7 +16,11 @@
                 <span th:text="#{statistics.month.receipts.description}">Alla kvitton från denna månad.</span>
                 <span th:if="${receipts != null}">
                     (<span th:text="${receipts.size()}">0</span> 
-                    <span th:text="#{statistics.month.receipts.count}">kvitton</span>)
+                    <span th:text="#{statistics.month.receipts.count}">kvitton</span><span th:if="${receipts != null and !receipts.isEmpty()}" 
+                          th:with="reconciledCount=${receipts.?[reconciliationStatus() == 'COMPLETE'].size()}"
+                          th:if="${reconciledCount > 0}">, 
+                        <span class="text-success fw-semibold" th:text="${reconciledCount + ' avstämda'}">0 avstämda</span>
+                    </span>)
                 </span>
             </p>
         </div>

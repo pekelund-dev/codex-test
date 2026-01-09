@@ -60,6 +60,18 @@ public class ReceiptProcessingClient {
         return new ProcessingResult(references.size(), successes, List.copyOf(failures));
     }
 
+    public void reparseReceipt(String bucket, String objectName, ReceiptOwner owner) {
+        if (!StringUtils.hasText(bucket) || !StringUtils.hasText(objectName)) {
+            throw new IllegalArgumentException("Bucket and object name must be provided");
+        }
+        StoredReceiptReference reference = new StoredReceiptReference(
+            bucket,
+            objectName,
+            owner
+        );
+        sendNotification(reference);
+    }
+
     private void sendNotification(StoredReceiptReference reference) {
         URI uri = UriComponentsBuilder.fromUriString(properties.getBaseUrl())
             .path(properties.getEventPath())

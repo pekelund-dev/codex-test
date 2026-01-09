@@ -5,6 +5,7 @@ import dev.pekelund.pklnd.firestore.ReceiptExtractionAccessException;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.firestore.FirestoreUserService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
+import org.springframework.security.core.GrantedAuthority;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -61,6 +62,7 @@ public class DashboardStatisticsService {
         long totalReceipts = receiptsEnabled ? allReceipts.size() : 0L;
         long totalStores = receiptsEnabled ? countDistinctStores(allReceipts) : 0L;
         long totalItems = receiptsEnabled ? countItems(allReceipts) : 0L;
+        long failedReceipts = receiptsEnabled ? countFailedReceipts(allReceipts) : 0L;
 
         PersonalTotals personalTotals = receiptsEnabled
             ? computePersonalTotals(authentication)
@@ -77,6 +79,7 @@ public class DashboardStatisticsService {
             totalStores,
             totalItems,
             receiptsEnabled,
+            failedReceipts,
             personalTotals.lastMonth(),
             personalTotals.currentMonth(),
             personalTotals.available(),
@@ -86,6 +89,8 @@ public class DashboardStatisticsService {
             yearlyStats.monthlyDiscounts(),
             yearlyStats.yearlyGeneralDiscounts(),
             yearlyStats.monthlyGeneralDiscounts(),
+            yearlyStats.yearlyReconciled(),
+            yearlyStats.monthlyReconciled(),
             yearlyStats.available()
         );
     }
@@ -97,6 +102,50 @@ public class DashboardStatisticsService {
             log.warn("Unable to load parsed receipts for dashboard statistics.", ex);
             return List.of();
         }
+    }
+
+    private long countFailedReceipts(List<ParsedReceipt> receipts) {
+        return receipts.stream()
+            .filter(receipt -> "FAILED".equalsIgnoreCase(receipt.status()))
+            .count();
+    }
+
+    public List<ParsedReceipt> getFailedReceipts(Authentication authentication) {
+        if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return List.of();
+        }
+
+        try {
+            List<ParsedReceipt> allReceipts;
+            if (isAdmin(authentication)) {
+                allReceipts = receiptExtractionService.get().listAllReceipts();
+            } else {
+                ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+                if (owner == null) {
+                    return List.of();
+                }
+                allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            }
+
+            return allReceipts.stream()
+                .filter(receipt -> "FAILED".equalsIgnoreCase(receipt.status()))
+                .collect(Collectors.toList());
+        } catch (ReceiptExtractionAccessException ex) {
+            log.warn("Unable to load failed receipts.", ex);
+            return List.of();
+        }
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        if (authentication == null || authentication.getAuthorities() == null) {
+            return false;
+        }
+        for (GrantedAuthority grantedAuthority : authentication.getAuthorities()) {
+            if ("ROLE_ADMIN".equals(grantedAuthority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private long countDistinctStores(List<ParsedReceipt> receipts) {
@@ -436,7 +485,7 @@ public class DashboardStatisticsService {
         try {
             List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
             if (receipts.isEmpty()) {
-                return new YearlyStatistics(true, Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
+                return new YearlyStatistics(true, Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
             }
 
             // Map to store year -> total amount
@@ -451,6 +500,10 @@ public class DashboardStatisticsService {
             Map<Integer, BigDecimal> yearlyGeneralDiscounts = new TreeMap<>(Comparator.reverseOrder());
             // Map to store year -> (month -> general discount savings)
             Map<Integer, Map<Month, BigDecimal>> monthlyGeneralDiscountsByYear = new TreeMap<>(Comparator.reverseOrder());
+            // Map to store year -> reconciled count
+            Map<Integer, Long> yearlyReconciled = new TreeMap<>(Comparator.reverseOrder());
+            // Map to store year -> (month -> reconciled count)
+            Map<Integer, Map<Month, Long>> monthlyReconciledByYear = new TreeMap<>(Comparator.reverseOrder());
 
             for (ParsedReceipt receipt : receipts) {
                 if (receipt == null) {
@@ -460,6 +513,7 @@ public class DashboardStatisticsService {
                 BigDecimal amount = receipt.totalAmountValue();
                 BigDecimal discountAmount = receipt.totalDiscountAmount();
                 BigDecimal generalDiscountAmount = receipt.generalDiscountTotal();
+                String reconciliationStatus = receipt.reconciliationStatus();
 
                 LocalDate receiptDate = parseReceiptDate(receipt.receiptDate())
                     .orElseGet(() -> deriveDateFromInstant(receipt.updatedAt()));
@@ -502,6 +556,13 @@ public class DashboardStatisticsService {
                     monthlyGeneralDiscountsByYear.computeIfAbsent(year, k -> new TreeMap<>())
                         .merge(month, generalDiscountAmount, BigDecimal::add);
                 }
+
+                // Update reconciled counts
+                if ("COMPLETE".equalsIgnoreCase(reconciliationStatus)) {
+                    yearlyReconciled.merge(year, 1L, Long::sum);
+                    monthlyReconciledByYear.computeIfAbsent(year, k -> new TreeMap<>())
+                        .merge(month, 1L, Long::sum);
+                }
             }
 
             // Convert the nested maps to immutable maps while preserving order
@@ -520,6 +581,11 @@ public class DashboardStatisticsService {
                 unmodifiableMonthlyGeneralDiscounts.put(entry.getKey(), Collections.unmodifiableMap(new TreeMap<>(entry.getValue())));
             }
 
+            Map<Integer, Map<Month, Long>> unmodifiableMonthlyReconciled = new TreeMap<>(Comparator.reverseOrder());
+            for (Map.Entry<Integer, Map<Month, Long>> entry : monthlyReconciledByYear.entrySet()) {
+                unmodifiableMonthlyReconciled.put(entry.getKey(), Collections.unmodifiableMap(new TreeMap<>(entry.getValue())));
+            }
+
             return new YearlyStatistics(
                 true,
                 Collections.unmodifiableMap(yearlyTotals),
@@ -527,7 +593,9 @@ public class DashboardStatisticsService {
                 Collections.unmodifiableMap(yearlyDiscounts),
                 Collections.unmodifiableMap(unmodifiableMonthlyDiscounts),
                 Collections.unmodifiableMap(yearlyGeneralDiscounts),
-                Collections.unmodifiableMap(unmodifiableMonthlyGeneralDiscounts)
+                Collections.unmodifiableMap(unmodifiableMonthlyGeneralDiscounts),
+                Collections.unmodifiableMap(yearlyReconciled),
+                Collections.unmodifiableMap(unmodifiableMonthlyReconciled)
             );
         } catch (ReceiptExtractionAccessException ex) {
             log.warn("Unable to load yearly statistics for dashboard.", ex);
@@ -549,11 +617,13 @@ public class DashboardStatisticsService {
         Map<Integer, BigDecimal> yearlyDiscounts,
         Map<Integer, Map<Month, BigDecimal>> monthlyDiscounts,
         Map<Integer, BigDecimal> yearlyGeneralDiscounts,
-        Map<Integer, Map<Month, BigDecimal>> monthlyGeneralDiscounts
+        Map<Integer, Map<Month, BigDecimal>> monthlyGeneralDiscounts,
+        Map<Integer, Long> yearlyReconciled,
+        Map<Integer, Map<Month, Long>> monthlyReconciled
     ) {
 
         static YearlyStatistics unavailable() {
-            return new YearlyStatistics(false, Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
+            return new YearlyStatistics(false, Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
         }
     }
 
@@ -564,6 +634,7 @@ public class DashboardStatisticsService {
         long totalStores,
         long totalItems,
         boolean receiptDataAvailable,
+        long failedReceipts,
         BigDecimal lastMonthTotal,
         BigDecimal currentMonthTotal,
         boolean personalTotalsAvailable,
@@ -573,6 +644,8 @@ public class DashboardStatisticsService {
         Map<Integer, Map<Month, BigDecimal>> monthlyDiscounts,
         Map<Integer, BigDecimal> yearlyGeneralDiscounts,
         Map<Integer, Map<Month, BigDecimal>> monthlyGeneralDiscounts,
+        Map<Integer, Long> yearlyReconciled,
+        Map<Integer, Map<Month, Long>> monthlyReconciled,
         boolean yearlyStatisticsAvailable
     ) {
 

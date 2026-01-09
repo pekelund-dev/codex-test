@@ -22,6 +22,9 @@ public class CodexParser implements ReceiptFormatParser {
     private static final Pattern ITEM_PATTERN = Pattern.compile(
         "^(?<name>.+?)\\s+(?<ean>\\d{4,13})\\s+(?<unit>-?\\d+,\\d{2})\\s+(?<quantity>\\d+(?:,\\d+)?\\s*\\p{L}+)\\s+(?<total>-?\\d+,\\d{2})$"
     );
+    private static final Pattern ITEM_NO_UNIT_PRICE_PATTERN = Pattern.compile(
+        "^(?<name>.+?)\\s+(?<ean>\\d{4,13})\\s+(?<quantity>\\d+(?:,\\d+)?\\s*\\p{L}+)\\s+(?<total>-?\\d+,\\d{2})$"
+    );
     private static final Pattern DISCOUNT_PATTERN = Pattern.compile(
         "^(?<description>.+?)\\s+(?<amount>-\\d+,\\d{2})$"
     );
@@ -32,6 +35,14 @@ public class CodexParser implements ReceiptFormatParser {
     private static final Pattern VAT_LINE_PATTERN = Pattern.compile(
         "^(?<rate>\\d+(?:,\\d+)?)\\s+(?<tax>-?\\d+,\\d{2})\\s+(?<net>-?\\d+,\\d{2})\\s+(?<gross>-?\\d+,\\d{2})$"
     );
+    private static final Pattern PANT_PATTERN = Pattern.compile(
+        "^Pant\\s+(?<unit>\\d+,\\d{2})\\s+(?<quantity>\\d+)\\s+(?<total>-?\\d+,\\d{2})$"
+    );
+     private static final Pattern PANT_HEADER_PATTERN = Pattern.compile(
+        "^Pant$",
+        Pattern.CASE_INSENSITIVE
+    );
+
     private static final Pattern TOTAL_PATTERN = Pattern.compile(
         "^Betalat\\s+(?<amount>[-\\d,]+)$",
         Pattern.CASE_INSENSITIVE
@@ -61,6 +72,7 @@ public class CodexParser implements ReceiptFormatParser {
         boolean inItems = false;
         boolean inVat = false;
         LegacyReceiptItem currentItem = null;
+        ReconciliationStatus reconciliationStatus = ReconciliationStatus.NONE;
 
         for (int index = 0; index < lines.length; index++) {
             String originalLine = lines[index];
@@ -83,10 +95,25 @@ public class CodexParser implements ReceiptFormatParser {
                 continue;
             }
 
+            if (line.contains("Delavstämning korrekt")) {
+                reconciliationStatus = ReconciliationStatus.PARTIAL;
+                inItems = false;
+                inVat = false;
+                continue;
+            }
+
+            if (line.contains("Avstämning korrekt")) {
+                reconciliationStatus = ReconciliationStatus.COMPLETE;
+                inItems = false;
+                inVat = false;
+                continue;
+            }
+
             if (line.startsWith("Betalningsinformation")
                 || line.startsWith("Erhållen rabatt")
                 || line.startsWith("Avrundning")
                 || line.startsWith("Kort")) {
+                inItems = false;
                 inVat = false;
             }
 
@@ -112,6 +139,22 @@ public class CodexParser implements ReceiptFormatParser {
                     continue;
                 }
 
+                Matcher itemNoUnitPriceMatcher = ITEM_NO_UNIT_PRICE_PATTERN.matcher(line);
+                if (itemNoUnitPriceMatcher.matches()) {
+                    LegacyReceiptItem item = createItemWithoutUnitPrice(itemNoUnitPriceMatcher);
+                    items.add(item);
+                    currentItem = item;
+                    continue;
+                }
+
+                Matcher pantMatcher = PANT_PATTERN.matcher(line);
+                if (pantMatcher.matches()) {
+                    LegacyReceiptItem item = createPantItem(pantMatcher);
+                    items.add(item);
+                    currentItem = item;
+                    continue;
+                }
+
                 Matcher discountMatcher = DISCOUNT_PATTERN.matcher(line);
                 if (discountMatcher.matches()) {
                     String description = normalizeWhitespace(discountMatcher.group("description"));
@@ -127,6 +170,15 @@ public class CodexParser implements ReceiptFormatParser {
                         generalDiscounts.add(new LegacyReceiptDiscount(description, discountAmount));
                         currentItem = null;
                     }
+                    continue;
+                }
+                
+                Matcher pantHeaderMatcher = PANT_HEADER_PATTERN.matcher(line);
+                if (pantHeaderMatcher.matches()) {
+                    continue;
+                }
+
+                if (line.equalsIgnoreCase("Retur")) {
                     continue;
                 }
 
@@ -152,7 +204,7 @@ public class CodexParser implements ReceiptFormatParser {
             }
         }
 
-        return new LegacyParsedReceipt(format, storeName, receiptDate, totalAmount, items, vats, generalDiscounts, errors);
+        return new LegacyParsedReceipt(format, storeName, receiptDate, totalAmount, items, vats, generalDiscounts, errors, reconciliationStatus);
     }
 
     private String extractStoreName(String[] lines) {
@@ -201,6 +253,22 @@ public class CodexParser implements ReceiptFormatParser {
         String quantity = normalizeQuantity(matcher.group("quantity"));
         BigDecimal totalPrice = parseAmount(matcher.group("total"));
         return new LegacyReceiptItem(name, ean, unitPrice, quantity, totalPrice);
+    }
+
+    private LegacyReceiptItem createItemWithoutUnitPrice(Matcher matcher) {
+        String name = normalizeWhitespace(matcher.group("name"));
+        String ean = matcher.group("ean");
+        String quantity = normalizeQuantity(matcher.group("quantity"));
+        BigDecimal totalPrice = parseAmount(matcher.group("total"));
+        return new LegacyReceiptItem(name, ean, null, quantity, totalPrice);
+    }
+
+    private LegacyReceiptItem createPantItem(Matcher matcher) {
+        String name = "Pant";
+        BigDecimal unitPrice = parseAmount(matcher.group("unit"));
+        String quantity = normalizeQuantity(matcher.group("quantity"));
+        BigDecimal totalPrice = parseAmount(matcher.group("total"));
+        return new LegacyReceiptItem(name, null, unitPrice, quantity, totalPrice);
     }
 
     private LegacyReceiptVat createVat(Matcher matcher) {

@@ -22,6 +22,7 @@ class CodexParserTest {
         assertThat(receipt.receiptDate()).isEqualTo(LocalDate.of(2025, 10, 2));
         assertThat(receipt.totalAmount()).isEqualByComparingTo(amount("1269.43"));
         assertThat(receipt.errors()).isEmpty();
+        assertThat(receipt.reconciliationStatus()).isEqualTo(ReconciliationStatus.NONE);
 
         assertThat(receipt.items()).containsExactlyElementsOf(expectedItems());
         assertThat(receipt.generalDiscounts()).containsExactlyElementsOf(expectedGeneralDiscounts());
@@ -35,6 +36,20 @@ class CodexParserTest {
     @Test
     void supportsUnknownFormat() {
         assertThat(parser.supportsFormat(ReceiptFormat.UNKNOWN)).isTrue();
+    }
+
+    @Test
+    void detectsCompleteReconciliation() {
+        String[] lines = {"Kvitto", "Butik", "Avstämning korrekt", "Betalat 100,00"};
+        LegacyParsedReceipt receipt = parser.parse(lines, ReceiptFormat.NEW_FORMAT);
+        assertThat(receipt.reconciliationStatus()).isEqualTo(ReconciliationStatus.COMPLETE);
+    }
+
+    @Test
+    void detectsPartialReconciliation() {
+        String[] lines = {"Kvitto", "Butik", "Delavstämning korrekt", "Betalat 100,00"};
+        LegacyParsedReceipt receipt = parser.parse(lines, ReceiptFormat.NEW_FORMAT);
+        assertThat(receipt.reconciliationStatus()).isEqualTo(ReconciliationStatus.PARTIAL);
     }
 
     private List<LegacyReceiptItem> expectedItems() {

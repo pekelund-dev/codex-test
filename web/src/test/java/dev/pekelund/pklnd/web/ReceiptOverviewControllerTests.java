@@ -42,6 +42,9 @@ class ReceiptOverviewControllerTests {
     @MockitoBean
     private ReceiptOwnerResolver receiptOwnerResolver;
 
+    @MockitoBean
+    private DashboardStatisticsService dashboardStatisticsService;
+
     @Test
     void overviewDataReturnsItemsForSelectedWeek() throws Exception {
         when(receiptStorageService.isEnabled()).thenReturn(false);
@@ -201,6 +204,7 @@ class ReceiptOverviewControllerTests {
             List.of(),
             List.of(),
             List.of(),
+            null,
             null,
             null,
             null

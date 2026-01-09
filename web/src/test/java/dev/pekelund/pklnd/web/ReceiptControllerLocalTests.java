@@ -40,6 +40,9 @@ class ReceiptControllerLocalTests {
     private ReceiptOwnerResolver receiptOwnerResolver;
 
     @MockitoBean
+    private DashboardStatisticsService dashboardStatisticsService;
+
+    @MockitoBean
     private dev.pekelund.pklnd.receipts.ReceiptProcessingClient receiptProcessingClient;
 
     @MockitoBean

@@ -87,6 +87,7 @@ class ParsedReceiptTest {
             List.of(),
             null,
             null,
+            null,
             null
         );
     }
@@ -111,6 +112,7 @@ class ParsedReceiptTest {
                 Map.of("description", "Kampanj", "amount", new BigDecimal("10.50"))
             ),
             List.of(),
+            null,
             null,
             null,
             null
@@ -172,6 +174,7 @@ class ParsedReceiptTest {
             List.of(),
             null,
             null,
+            null,
             null
         );
 
@@ -213,6 +216,7 @@ class ParsedReceiptTest {
                 Map.of("description", "Rabatt", "amount", new BigDecimal("-5.00"))
             ),
             List.of(),
+            null,
             null,
             null,
             null

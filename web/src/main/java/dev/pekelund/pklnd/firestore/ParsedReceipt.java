@@ -32,7 +32,8 @@ public record ParsedReceipt(
     List<Map<String, Object>> errors,
     String rawText,
     String rawResponse,
-    String error
+    String error,
+    String stackTrace
 ) {
 
     private static final Pattern QUANTITY_PATTERN = Pattern.compile("([-+]?\\d+(?:[.,]\\d+)?)\\s*(\\p{L}+)?");
@@ -89,6 +90,10 @@ public record ParsedReceipt(
 
     public String format() {
         return valueFromGeneral("format");
+    }
+
+    public String reconciliationStatus() {
+        return valueFromGeneral("reconciliationStatus");
     }
 
     /**

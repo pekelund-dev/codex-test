@@ -100,6 +100,11 @@ public class LocalReceiptIngestionController {
             receiptExtractionRepository.markFailure(resolvedBucket, resolvedObjectName, owner,
                 "Local parsing failed", ex);
             throw ex;
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error during local receipt ingestion for {}/{}", resolvedBucket, resolvedObjectName, ex);
+            receiptExtractionRepository.markFailure(resolvedBucket, resolvedObjectName, owner,
+                "Unexpected internal error: " + ex.getMessage(), ex);
+            throw new RuntimeException("Unexpected error processing receipt", ex);
         }
     }
 

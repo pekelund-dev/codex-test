@@ -69,6 +69,17 @@
                 </div>
             </div>
         </div>
+        <div class="col-lg-3 col-sm-6">
+            <div class="card h-100 shadow-sm" th:classappend="${statistics.failedReceipts > 0} ? 'border-danger' : ''">
+                <div class="card-body">
+                    <h2 class="h6 fw-semibold text-uppercase" th:classappend="${statistics.failedReceipts > 0} ? 'text-danger' : 'text-primary'">
+                        <a th:href="@{/receipts/errors}" class="text-decoration-none" th:classappend="${statistics.failedReceipts > 0} ? 'text-danger' : 'text-primary'">Felaktiga</a>
+                    </h2>
+                    <p class="display-6 fw-bold mb-0" th:classappend="${statistics.failedReceipts > 0} ? 'text-danger' : ''" th:text="${statistics.failedReceipts}">0</p>
+                    <p class="text-muted small mb-0">Kvitton som misslyckades</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row g-4 mt-1">
@@ -120,6 +131,12 @@
                                     (1234.56 kr)
                                 </span>
                             </h3>
+                            <!-- Reconciled count badge -->
+                            <span th:if="${statistics.yearlyReconciled.containsKey(yearEntry.key) and statistics.yearlyReconciled.get(yearEntry.key) > 0}" 
+                                  class="ms-2 badge bg-info-subtle text-info border border-info-subtle">
+                                <i class="bi bi-check2-circle me-1"></i>
+                                <span th:text="${statistics.yearlyReconciled.get(yearEntry.key)} + ' avstämda'">0 avstämda</span>
+                            </span>
                             <!-- Discount information with expandable details -->
                             <span th:if="${statistics.yearlyDiscounts.containsKey(yearEntry.key) and statistics.yearlyDiscounts.get(yearEntry.key).compareTo(T(java.math.BigDecimal).ZERO) > 0}" 
                                   class="ms-2">
@@ -167,6 +184,14 @@
                                         <h4 class="h6 fw-semibold mb-2 text-primary" 
                                             th:text="#{|dashboard.statistics.month.${monthEntry.key.toString().toLowerCase()}|}">Januari</h4>
                                         <p class="mb-0 fw-bold text-dark" th:text="${statistics.formatAmount(monthEntry.value)} + ' kr'">0.00 kr</p>
+                                        <!-- Monthly reconciled count -->
+                                        <p th:if="${statistics.monthlyReconciled.containsKey(yearEntry.key) and statistics.monthlyReconciled.get(yearEntry.key).containsKey(monthEntry.key)}"
+                                           class="mb-0 mt-1">
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle small">
+                                                <i class="bi bi-check2-circle me-1"></i>
+                                                <span th:text="${statistics.monthlyReconciled.get(yearEntry.key).get(monthEntry.key)} + ' avstämda'">0 avstämda</span>
+                                            </span>
+                                        </p>
                                         <!-- Monthly discount information -->
                                         <p th:if="${statistics.monthlyDiscounts.containsKey(yearEntry.key) and statistics.monthlyDiscounts.get(yearEntry.key).containsKey(monthEntry.key)}" 
                                            class="mb-0 mt-2">
