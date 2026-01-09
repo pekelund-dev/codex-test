@@ -91,7 +91,7 @@ public class ReceiptParser extends BaseReceiptParser {
 
         LOGGER.debug("Parsed NEW_FORMAT receipt - store: {}, date: {}, total: {}, items: {}, vat lines: {}", store,
             receiptDate, totalAmount, items.size(), vats.size());
-        return new LegacyParsedReceipt(format, store, receiptDate, totalAmount, items, vats, generalDiscounts, errors);
+        return new LegacyParsedReceipt(format, store, receiptDate, totalAmount, items, vats, generalDiscounts, errors, ReconciliationStatus.NONE);
     }
 
     private boolean isGeneralDiscount(LegacyReceiptItem lastItem, LegacyReceiptDiscount discount) {

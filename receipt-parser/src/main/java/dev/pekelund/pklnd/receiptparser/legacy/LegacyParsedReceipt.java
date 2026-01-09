@@ -12,12 +12,14 @@ public record LegacyParsedReceipt(
     List<LegacyReceiptItem> items,
     List<LegacyReceiptVat> vats,
     List<LegacyReceiptDiscount> generalDiscounts,
-    List<LegacyReceiptError> errors
+    List<LegacyReceiptError> errors,
+    ReconciliationStatus reconciliationStatus
 ) {
     public LegacyParsedReceipt {
         items = items == null ? List.of() : List.copyOf(items);
         vats = vats == null ? List.of() : List.copyOf(vats);
         generalDiscounts = generalDiscounts == null ? List.of() : List.copyOf(generalDiscounts);
         errors = errors == null ? List.of() : List.copyOf(errors);
+        reconciliationStatus = reconciliationStatus == null ? ReconciliationStatus.NONE : reconciliationStatus;
     }
 }

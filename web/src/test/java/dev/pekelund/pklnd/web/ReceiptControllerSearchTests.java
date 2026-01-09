@@ -49,6 +49,9 @@ class ReceiptControllerSearchTests {
     @MockitoBean
     private FirestoreReadTotals firestoreReadTotals;
 
+    @MockitoBean
+    private DashboardStatisticsService dashboardStatisticsService;
+
     @Test
     @WithMockUser(username = "user", roles = "USER")
     void searchReceipts_ShouldReturnEmptyResults_WhenNoQuery() throws Exception {
@@ -91,6 +94,7 @@ class ReceiptControllerSearchTests {
                 List.of(),
                 null,
                 null,
+                null,
                 null
         );
 
@@ -109,6 +113,7 @@ class ReceiptControllerSearchTests {
                 List.of(),
                 List.of(),
                 List.of(),
+                null,
                 null,
                 null,
                 null

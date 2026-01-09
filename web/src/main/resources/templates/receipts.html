@@ -83,6 +83,11 @@
                     <span class="badge bg-primary-subtle text-primary" data-parsed-count
                           th:classappend="${parsedReceipts == null or #lists.isEmpty(parsedReceipts)} ? ' d-none'"
                           th:text="${parsedReceipts != null ? parsedReceipts.size() + ' kvitton' : '0 kvitton'}">0 kvitton</span>
+                    <span class="badge bg-success-subtle text-success ms-2"
+                          th:if="${parsedReceipts != null and !#lists.isEmpty(parsedReceipts)}"
+                          th:with="reconciledCount=${parsedReceipts.?[reconciliationStatus() == 'COMPLETE'].size()}"
+                          th:text="${reconciledCount + ' avstämda'}"
+                          th:classappend="${reconciledCount == 0} ? ' d-none'">0 avstämda</span>
                 </summary>
 
                 <div th:if="${!parsedReceiptsEnabled}" class="alert alert-warning" role="alert">
@@ -111,6 +116,9 @@
                             <th scope="col" class="sortable" data-sort="date">
                                 Datum <i class="bi bi-arrow-down-up text-muted small ms-1"></i>
                             </th>
+                            <th scope="col" class="sortable" data-sort="status">
+                                Avstämning <i class="bi bi-arrow-down-up text-muted small ms-1"></i>
+                            </th>
                             <th scope="col" class="sortable" data-sort="amount">
                                 Totalsumma <i class="bi bi-arrow-down-up text-muted small ms-1"></i>
                             </th>
@@ -127,9 +135,15 @@
                                 </a>
                             </td>
                             <td th:text="${parsed.receiptDate() != null ? parsed.receiptDate() : '—'}">—</td>
+                            <td>
+                                <span th:if="${parsed.reconciliationStatus() == 'COMPLETE'}" class="badge bg-success-subtle text-success">Avstämd</span>
+                                <span th:if="${parsed.reconciliationStatus() == 'PARTIAL'}" class="badge bg-warning-subtle text-warning-emphasis">Delavstämd</span>
+                                <span th:if="${parsed.reconciliationStatus() == 'FAIL'}" class="badge bg-danger-subtle text-danger">Fel</span>
+                                <span th:if="${parsed.reconciliationStatus() == 'NONE' or parsed.reconciliationStatus() == null}" class="text-muted small">—</span>
+                            </td>
                             <td th:text="${parsed.formattedTotalAmount() != null ? parsed.formattedTotalAmount() : (parsed.totalAmount() != null ? parsed.totalAmount() : '—')}">—</td>
                             <td class="text-end"
-                                th:text="${parsed.updatedAt() != null ? #temporals.format(parsed.updatedAt(), 'yyyy-MM-dd HH:mm:ss') : '—'}">
+                                th:text="${parsed.updatedAtZoned() != null ? #temporals.format(parsed.updatedAtZoned(), 'yyyy-MM-dd HH:mm:ss') : '—'}">
                                 2024-01-01 10:30:00
                             </td>
                         </tr>

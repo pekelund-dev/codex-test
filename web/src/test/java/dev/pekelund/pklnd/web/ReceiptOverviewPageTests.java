@@ -38,6 +38,9 @@ class ReceiptOverviewPageTests {
     @MockitoBean
     private ReceiptOwnerResolver receiptOwnerResolver;
 
+    @MockitoBean
+    private DashboardStatisticsService dashboardStatisticsService;
+
     @Test
     void receiptOverviewPageIncludesSelectionScript() throws Exception {
         when(receiptStorageService.isEnabled()).thenReturn(false);

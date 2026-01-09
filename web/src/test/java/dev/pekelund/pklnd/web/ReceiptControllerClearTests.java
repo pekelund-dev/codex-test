@@ -38,6 +38,9 @@ class ReceiptControllerClearTests {
     private ReceiptExtractionService receiptExtractionService;
 
     @MockBean
+    private DashboardStatisticsService dashboardStatisticsService;
+
+    @MockBean
     private FirestoreReadTotals firestoreReadTotals;
 
     @Test

@@ -101,17 +101,20 @@ public class ReceiptController {
     private final Optional<ReceiptExtractionService> receiptExtractionService;
     private final ReceiptOwnerResolver receiptOwnerResolver;
     private final Optional<ReceiptProcessingClient> receiptProcessingClient;
+    private final DashboardStatisticsService dashboardStatisticsService;
 
     public ReceiptController(
         @Autowired(required = false) ReceiptStorageService receiptStorageService,
         @Autowired(required = false) ReceiptExtractionService receiptExtractionService,
         ReceiptOwnerResolver receiptOwnerResolver,
-        @Autowired(required = false) ReceiptProcessingClient receiptProcessingClient
+        @Autowired(required = false) ReceiptProcessingClient receiptProcessingClient,
+        DashboardStatisticsService dashboardStatisticsService
     ) {
         this.receiptStorageService = Optional.ofNullable(receiptStorageService);
         this.receiptExtractionService = Optional.ofNullable(receiptExtractionService);
         this.receiptOwnerResolver = receiptOwnerResolver;
         this.receiptProcessingClient = Optional.ofNullable(receiptProcessingClient);
+        this.dashboardStatisticsService = dashboardStatisticsService;
     }
 
     @GetMapping("/receipts")
@@ -192,6 +195,54 @@ public class ReceiptController {
         }
 
         return "receipt-search";
+    }
+
+    @GetMapping("/receipts/errors")
+    public String receiptErrors(Model model, Authentication authentication) {
+        model.addAttribute("pageTitle", "Failed Parsing");
+        List<ParsedReceipt> failedReceipts = dashboardStatisticsService.getFailedReceipts(authentication);
+        model.addAttribute("failedReceipts", failedReceipts);
+        return "receipt-errors";
+    }
+
+    @PostMapping("/receipts/{documentId}/reparse")
+    public String reparseReceipt(@PathVariable("documentId") String documentId,
+                                 RedirectAttributes redirectAttributes,
+                                 Authentication authentication) {
+        if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Receipt service unavailable.");
+            return "redirect:/receipts/errors";
+        }
+
+        ParsedReceipt receipt = receiptExtractionService.get().findById(documentId).orElse(null);
+        if (receipt == null) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Receipt not found.");
+            return "redirect:/receipts/errors";
+        }
+
+        ReceiptOwner currentOwner = receiptOwnerResolver.resolve(authentication);
+        if (!ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), currentOwner) && !isAdmin(authentication)) {
+             redirectAttributes.addFlashAttribute("errorMessage", "Permission denied.");
+             return "redirect:/receipts/errors";
+        }
+
+        if (receiptProcessingClient.isPresent()) {
+            try {
+                if (StringUtils.hasText(receipt.bucket()) && StringUtils.hasText(receipt.objectName())) {
+                    receiptProcessingClient.get().reparseReceipt(receipt.bucket(), receipt.objectName(), receipt.owner());
+                    redirectAttributes.addFlashAttribute("successMessage", "Receipt re-parsing triggered.");
+                } else {
+                    redirectAttributes.addFlashAttribute("errorMessage", "Receipt missing storage location info.");
+                }
+            } catch (Exception ex) {
+                LOGGER.error("Failed to trigger reparse", ex);
+                redirectAttributes.addFlashAttribute("errorMessage", "Failed to trigger re-parsing: " + ex.getMessage());
+            }
+        } else {
+            redirectAttributes.addFlashAttribute("errorMessage", "Processing client unavailable.");
+        }
+
+        return "redirect:/receipts/errors";
     }
 
     @GetMapping("/receipts/overview")

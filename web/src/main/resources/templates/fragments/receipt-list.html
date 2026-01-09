@@ -17,6 +17,7 @@
                     <tr>
                         <th class="sortable" data-sort-type="date" th:text="#{receipt.list.table.date}">Datum</th>
                         <th th:if="${showStore}" class="sortable" data-sort-type="text" th:text="#{receipt.list.table.store}">Butik</th>
+                        <th class="sortable" data-sort-type="text">Avstämning</th>
                         <th class="text-end sortable" data-sort-type="number" th:text="#{receipt.list.table.amount}">Belopp</th>
                         <th class="text-center" th:text="#{receipt.list.table.actions}">Åtgärder</th>
                     </tr>
@@ -28,6 +29,12 @@
                         <td th:if="${showStore}" 
                             th:attr="data-sort-value=${receipt.storeName() != null ? receipt.storeName() : ''}"
                             th:text="${receipt.storeName() != null ? receipt.storeName() : '-'}">ICA Supermarket</td>
+                        <td>
+                            <span th:if="${receipt.reconciliationStatus() == 'COMPLETE'}" class="badge bg-success-subtle text-success">Avstämd</span>
+                            <span th:if="${receipt.reconciliationStatus() == 'PARTIAL'}" class="badge bg-warning-subtle text-warning-emphasis">Delavstämd</span>
+                            <span th:if="${receipt.reconciliationStatus() == 'FAIL'}" class="badge bg-danger-subtle text-danger">Fel</span>
+                            <span th:if="${receipt.reconciliationStatus() == 'NONE' or receipt.reconciliationStatus() == null}" class="text-muted small">—</span>
+                        </td>
                         <td class="text-end fw-semibold" 
                             th:attr="data-sort-value=${receipt.totalAmountValue() != null ? receipt.totalAmountValue() : 0}"
                             th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() + ' kr' : '-'}">123.45 kr</td>
@@ -95,6 +102,7 @@
                     <tr>
                         <th class="sortable" data-sort-type="date" th:text="#{receipt.list.table.date}">Datum</th>
                         <th th:if="${showStore}" class="sortable" data-sort-type="text" th:text="#{receipt.list.table.store}">Butik</th>
+                        <th class="sortable" data-sort-type="text">Avstämning</th>
                         <th class="text-end sortable" data-sort-type="number" th:text="#{receipt.list.table.amount}">Belopp</th>
                         <th class="text-center" th:text="#{receipt.list.table.actions}">Åtgärder</th>
                     </tr>
@@ -106,6 +114,12 @@
                         <td th:if="${showStore}" 
                             th:attr="data-sort-value=${receipt.storeName() != null ? receipt.storeName() : ''}"
                             th:text="${receipt.storeName() != null ? receipt.storeName() : '-'}">ICA Supermarket</td>
+                        <td>
+                            <span th:if="${receipt.reconciliationStatus() == 'COMPLETE'}" class="badge bg-success-subtle text-success">Avstämd</span>
+                            <span th:if="${receipt.reconciliationStatus() == 'PARTIAL'}" class="badge bg-warning-subtle text-warning-emphasis">Delavstämd</span>
+                            <span th:if="${receipt.reconciliationStatus() == 'FAIL'}" class="badge bg-danger-subtle text-danger">Fel</span>
+                            <span th:if="${receipt.reconciliationStatus() == 'NONE' or receipt.reconciliationStatus() == null}" class="text-muted small">—</span>
+                        </td>
                         <td class="text-end fw-semibold" 
                             th:attr="data-sort-value=${receipt.totalAmountValue() != null ? receipt.totalAmountValue() : 0}"
                             th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() + ' kr' : '-'}">123.45 kr</td>

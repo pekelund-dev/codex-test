@@ -1,0 +1,19 @@
+File: 2026-01-06T09:57:59.291943966Z-e2674788-6132-4b08-aaae-442129e56f88-ICA_Kvantum_Malmborgs_Caroli_2025-01-08.pdf
+Parsing Errors:
+- Unrecognized item line (Line: '          Delavstämning korrekt')
+
+File: 2026-01-06T10:18:41.490609905Z-5da701a3-099d-438f-849f-4309c93278ca-ICA_Kvantum_Malmborgs_Caroli_2025-01-04.pdf
+Parsing Errors:
+- Unrecognized item line (Line: 'Kolonial ätbart 19500 1,00 st 70,90')
+
+File: 2026-01-06T09:58:13.763871788Z-9c6e907a-5c98-4554-9a91-0c8ab7e412d5-ICA_Kvantum_Malmborgs_Caroli_2025-10-12.pdf
+Parsing Errors:
+- Unrecognized item line (Line: 'Pant  3,00 2 6,00')
+
+File: 2026-01-06T09:58:20.084874363Z-4c93d450-cfde-4afb-961c-1de5ae07b7a0-ICA_Kvantum_Malmborgs_Erikslust_2025-03-10.pdf
+Parsing Errors:
+- Unrecognized item line (Line: '           Avstämning korrekt.')
+
+File: 2026-01-06T09:58:08.934865789Z-6dc70fe9-fff1-4c71-be49-eda8d54abb36-ICA_Kvantum_Malmborgs_Caroli_2025-07-12.pdf
+Parsing Errors:
+- Unrecognized item line (Line: 'Retur')

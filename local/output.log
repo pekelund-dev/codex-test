@@ -1,0 +1,1074 @@
+Fetching User ID for pekelund@gmail.com from Firestore Emulator...
+jq: error (at <stdin>:2): Cannot iterate over null (null)
+Error: User with email pekelund@gmail.com not found in Firestore.
+Make sure the web application is running and you have registered/logged in.
+Resolved User ID: test-user-id
+Starting receipt ingestion...
+Target URL: http://localhost:8081/local-receipts/ingest
+User: par (test-user-id)
+Directory: receipts
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-01-16 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-01-16 (2).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-01-16.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-02-06.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-02-13.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-04-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-05-08.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-05-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-06-06.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-07-11.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-08-03.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-08-09.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-08-28.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-09-11.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-09-18.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-10-02.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-10-18.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-11-06.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Emporia 2025-12-04.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Eslöv 2025-06-21.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Eslöv 2025-07-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Hörby 2025-02-21.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Hörby 2025-06-28.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Hörby 2025-07-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-01-04.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-01-07.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-01-08.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-01-09.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-01-10.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-01-16.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-01-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-01-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-01-24 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-01-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-01-30.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-01-31.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-02-05 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-02-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-02-07.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-02-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-02-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-02-16.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-02-17 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-02-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-02-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-02-23.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-02-27.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-01.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-04.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-06 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-06.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-07.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-09.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-12.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-13 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-13.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-19.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-20.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-25.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-26 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-28 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-03-30 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-03.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-06.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-08.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-10 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-10.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-11.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-18.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-19.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-23.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-24 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-25 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-25.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-27.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-29.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-04-30.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-01.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-04.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-08.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-09.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-14 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-16.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-21.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-23.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-25.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-28.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-05-30.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-06-03.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-06-07.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-06-10.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-06-11.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-06-12.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-06-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-06-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-06-19.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-06-20.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-06-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-06-25.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-06-26.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-02.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-04.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-11.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-12 (1).pdf
+❌ Failed (HTTP 500)
+Response:
+{"timestamp":1767949737182,"status":500,"error":"Internal Server Error","path":"/local-receipts/ingest"}----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-12.pdf
+❌ Failed (HTTP 500)
+Response:
+{"timestamp":1767949737377,"status":500,"error":"Internal Server Error","path":"/local-receipts/ingest"}----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-20 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-20.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-25.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-27 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-27.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-07-28.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-08-02.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-08-04.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-08-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-08-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-08-19.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-08-20.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-08-21 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-08-21.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-08-26.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-08-29.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-08-31.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-03.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-04.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-07.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-09.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-11.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-12.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-19.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-23.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-25 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-25 (2).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-25.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-28.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-09-30.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-10-03.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-10-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-10-09.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-10-10.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-10-12 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-10-12.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-10-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-10-23.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-10-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-10-26.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-10-28.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-01.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-02.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-08.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-13.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-18.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-19.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-20.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-21.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-23.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-27.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-11-29.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-03 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-03.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-04.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-06.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-10.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-12.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-19.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-20.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-21.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-23.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-28.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-30 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Caroli 2025-12-30.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Clemenstorget 2025-01-20.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-01-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-01-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-02-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-02-10.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-03-03.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-03-10 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-03-10.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-03-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-04-07.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-05-07.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-09-08 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-09-08.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-09-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-09-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-09-18.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-09-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-10-08.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-10-13.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-10-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-10-20.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-10-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-11-03.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-11-10.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Kvantum Malmborgs Erikslust 2025-12-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Nära Triangeln Malmö 2025-01-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Nära Triangeln Malmö 2025-02-09.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Nära Triangeln Malmö 2025-08-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-01-10.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-01-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-01-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-01-23.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-01-25.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-01-28.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-01-31.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-02-04.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-02-06.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-02-13.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-02-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-02-26.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-03-03.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-03-08.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-03-10.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-03-11.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-03-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-03-20.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-03-26 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-03-26.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-04-01 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-04-02 (2).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-04-02 (3).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-04-03.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-04-07.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-04-09.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-04-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-04-28 (2).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-04-28 (3).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-04-29.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-05-06.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-05-07 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-05-07.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-05-26.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-05-28.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-06-02.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-06-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-06-19.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-06-25.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-07-02.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-07-25.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-08-11.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-08-13.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-08-20.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-08-26.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-08-28.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-09-04.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-09-08.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-09-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-09-22 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-09-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-09-24 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-09-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-09-26.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-09-29.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-02 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-02.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-06.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-07.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-09 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-09.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-14.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-18.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-20 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-20.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-21.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-23.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-27 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-10-27.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-11-03.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-11-06.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-11-10.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-11-13 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-11-13.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-11-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-11-18.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-11-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-11-25.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-11-26.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-11-27.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-12-01.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-12-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-12-09.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-12-10 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-12-10.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-12-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-12-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Hansa 2025-12-23.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-03-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-03-29 (1).pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-04-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-04-16.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-04-26.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-05-02.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-05-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-06-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-06-27.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-07-08.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-07-23.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-07-29.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-07-30.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-08-01.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-08-16.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-08-23.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-08-30.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-09-06.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-09-13.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-10-11.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-10-29.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Höör 2025-10-30.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-02-07.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-02-11.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-02-27.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-02-28.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-03-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-03-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-05-05.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-05-13.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-08-25.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-09-02.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-09-11.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-09-16.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-10-16.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-10-17.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Rönneholm 2025-11-22.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: ICA Supermarket Söder 2025-05-24.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: Maxi ICA Stormarknad Malmö 2025-08-15.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: Maxi ICA Stormarknad Toftanäs 2025-02-19.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: Maxi ICA Stormarknad Toftanäs 2025-06-16.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: Maxi ICA Stormarknad Västra Hamnen 2025-05-27.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: Maxi ICA Stormarknad Västra Hamnen 2025-11-28.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Ingesting: Maxi ICA Stormarknad Västra Hamnen 2025-12-19 (1).pdf
+❌ Failed (HTTP 500)
+Response:
+{"timestamp":1767949772180,"status":500,"error":"Internal Server Error","path":"/local-receipts/ingest"}----------------------------------------
+Ingesting: Maxi ICA Stormarknad Västra Hamnen 2025-12-19 (2).pdf
+❌ Failed (HTTP 500)
+Response:
+{"timestamp":1767949772296,"status":500,"error":"Internal Server Error","path":"/local-receipts/ingest"}----------------------------------------
+Ingesting: Maxi ICA Stormarknad Västra Hamnen 2025-12-19.pdf
+✅ Success (HTTP 200)
+----------------------------------------
+Finished processing 353 files.

@@ -387,24 +387,45 @@ public class ReceiptExtractionService {
 
         try {
             Firestore db = firestore.get();
+            // 1. Fetch all receipts for the owner
             Query query = db.collection(properties.getReceiptsCollection())
                 .whereEqualTo("owner.id", owner.id());
 
-            QuerySnapshot snapshot = query.get().get();
-            recordRead("Load receipts for deletion", snapshot != null ? snapshot.size() : 0);
+            QuerySnapshot receiptSnapshot = query.get().get();
+            recordRead("Load receipts for deletion", receiptSnapshot != null ? receiptSnapshot.size() : 0);
 
-            if (snapshot == null) {
+            if (receiptSnapshot == null || receiptSnapshot.isEmpty()) {
                 return;
             }
 
-            for (DocumentSnapshot document : snapshot.getDocuments()) {
-                ParsedReceipt receipt = toParsedReceipt(document);
-                if (receipt == null) {
-                    continue;
-                }
-                removeReceiptIndexes(document.getId(), receipt.owner());
-                document.getReference().delete().get();
+            // 2. Collect IDs and References
+            List<String> receiptIds = new ArrayList<>();
+            List<DocumentReference> receiptRefs = new ArrayList<>();
+            for (DocumentSnapshot doc : receiptSnapshot.getDocuments()) {
+                receiptIds.add(doc.getId());
+                receiptRefs.add(doc.getReference());
             }
+
+            // 3. Process items in batches (Query by receiptId IN chunk to reduce N+1 queries)
+            Map<String, Long> globalDeltas = new HashMap<>();
+            
+            // Firestore 'in' limit is 30
+            int chunkSize = 30;
+            for (int i = 0; i < receiptIds.size(); i += chunkSize) {
+                int end = Math.min(receiptIds.size(), i + chunkSize);
+                List<String> chunk = receiptIds.subList(i, end);
+                
+                deleteItemsForReceiptBatch(db, chunk, owner, globalDeltas);
+            }
+
+            // 4. Batch delete the receipt documents themselves
+            batchDeleteDocuments(db, receiptRefs);
+
+            // 5. Update stats
+            if (!globalDeltas.isEmpty()) {
+                applyStatsUpdates(db, globalDeltas);
+            }
+
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             log.warn("Interrupted while deleting parsed receipts from Firestore", ex);
@@ -415,48 +436,79 @@ public class ReceiptExtractionService {
         }
     }
 
-    private void removeReceiptIndexes(String receiptId, ReceiptOwner owner)
-        throws InterruptedException, ExecutionException {
-
-        Firestore db = firestore.get();
-        QuerySnapshot snapshot = db.collection(receiptItemsCollection)
-            .whereEqualTo("receiptId", receiptId)
+    private void deleteItemsForReceiptBatch(Firestore db, List<String> receiptIds, ReceiptOwner owner, Map<String, Long> globalDeltas) 
+            throws ExecutionException, InterruptedException {
+        QuerySnapshot itemsSnapshot = db.collection(receiptItemsCollection)
+            .whereIn("receiptId", receiptIds)
             .get()
             .get();
-        recordRead("Load receipt items before deletion", snapshot != null ? snapshot.size() : 0);
-        if (snapshot == null || snapshot.isEmpty()) {
+        
+        recordRead("Load receipt items batch (" + receiptIds.size() + ")", itemsSnapshot != null ? itemsSnapshot.size() : 0);
+        
+        if (itemsSnapshot == null || itemsSnapshot.isEmpty()) {
             return;
         }
 
-        WriteBatch batch = db.batch();
-        Map<String, Long> deltas = new HashMap<>();
-        for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
-            batch.delete(document.getReference());
+        List<DocumentReference> itemRefs = new ArrayList<>();
+        
+        for (QueryDocumentSnapshot document : itemsSnapshot.getDocuments()) {
+            itemRefs.add(document.getReference());
+            
             String ownerId = document.getString("ownerId");
             String normalizedEan = document.getString("normalizedEan");
             if (!StringUtils.hasText(normalizedEan)) {
                 continue;
             }
+            
             if (StringUtils.hasText(ownerId)) {
-                deltas.merge(buildStatsDocumentId(ownerId, normalizedEan), 1L, Long::sum);
+                globalDeltas.merge(buildStatsDocumentId(ownerId, normalizedEan), 1L, Long::sum);
             } else if (owner != null && StringUtils.hasText(owner.id())) {
-                deltas.merge(buildStatsDocumentId(owner.id(), normalizedEan), 1L, Long::sum);
+                globalDeltas.merge(buildStatsDocumentId(owner.id(), normalizedEan), 1L, Long::sum);
             }
-            deltas.merge(buildStatsDocumentId(ReceiptItemConstants.GLOBAL_OWNER_ID, normalizedEan), 1L, Long::sum);
+            globalDeltas.merge(buildStatsDocumentId(ReceiptItemConstants.GLOBAL_OWNER_ID, normalizedEan), 1L, Long::sum);
         }
+        
+        batchDeleteDocuments(db, itemRefs);
+    }
 
-        Timestamp updateTimestamp = Timestamp.now();
-        for (Map.Entry<String, Long> entry : deltas.entrySet()) {
-            String docId = entry.getKey();
-            long decrement = entry.getValue();
-            DocumentReference statsRef = db.collection(itemStatsCollection).document(docId);
-            Map<String, Object> updates = new HashMap<>();
-            updates.put("count", FieldValue.increment(-decrement));
-            updates.put("updatedAt", updateTimestamp);
-            batch.set(statsRef, updates, SetOptions.merge());
+    private void batchDeleteDocuments(Firestore db, List<DocumentReference> refs) throws ExecutionException, InterruptedException {
+        int batchSize = 500;
+        for (int i = 0; i < refs.size(); i += batchSize) {
+            int end = Math.min(refs.size(), i + batchSize);
+            List<DocumentReference> batchRefs = refs.subList(i, end);
+            
+            WriteBatch batch = db.batch();
+            for (DocumentReference ref : batchRefs) {
+                batch.delete(ref);
+            }
+            batch.commit().get();
         }
+    }
 
-        batch.commit().get();
+    private void applyStatsUpdates(Firestore db, Map<String, Long> deltas)
+        throws ExecutionException, InterruptedException {
+        
+        List<Map.Entry<String, Long>> updates = new ArrayList<>(deltas.entrySet());
+        int batchSize = 400; // Safe limit below 500
+
+        for (int i = 0; i < updates.size(); i += batchSize) {
+            int end = Math.min(updates.size(), i + batchSize);
+            List<Map.Entry<String, Long>> batchUpdates = updates.subList(i, end);
+            
+            WriteBatch batch = db.batch();
+            Timestamp updateTimestamp = Timestamp.now();
+            
+            for (Map.Entry<String, Long> entry : batchUpdates) {
+                String docId = entry.getKey();
+                long decrement = entry.getValue();
+                DocumentReference statsRef = db.collection(itemStatsCollection).document(docId);
+                Map<String, Object> updateData = new HashMap<>();
+                updateData.put("count", FieldValue.increment(-decrement));
+                updateData.put("updatedAt", updateTimestamp);
+                batch.set(statsRef, updateData, SetOptions.merge());
+            }
+            batch.commit().get();
+        }
     }
 
     private ParsedReceipt toParsedReceipt(DocumentSnapshot snapshot) {
@@ -487,6 +539,7 @@ public class ReceiptExtractionService {
         List<Map<String, Object>> generalDiscounts = toMapList(structuredData.get("generalDiscounts"));
         List<Map<String, Object>> errors = toMapList(structuredData.get("errors"));
         String rawText = asString(structuredData.get("rawText"));
+        String stackTrace = asString(data.get("stackTrace"));
 
         return new ParsedReceipt(
             snapshot.getId(),
@@ -505,7 +558,8 @@ public class ReceiptExtractionService {
             errors,
             rawText,
             rawResponse,
-            error
+            error,
+            stackTrace
         );
     }
 

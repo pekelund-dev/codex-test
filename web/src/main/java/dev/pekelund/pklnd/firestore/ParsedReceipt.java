@@ -4,6 +4,8 @@ import dev.pekelund.pklnd.storage.ReceiptOwner;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -30,7 +32,8 @@ public record ParsedReceipt(
     List<Map<String, Object>> errors,
     String rawText,
     String rawResponse,
-    String error
+    String error,
+    String stackTrace
 ) {
 
     private static final Pattern QUANTITY_PATTERN = Pattern.compile("([-+]?\\d+(?:[.,]\\d+)?)\\s*(\\p{L}+)?");
@@ -87,6 +90,132 @@ public record ParsedReceipt(
 
     public String format() {
         return valueFromGeneral("format");
+    }
+
+    public String reconciliationStatus() {
+        return valueFromGeneral("reconciliationStatus");
+    }
+
+    /**
+     * Get the updated timestamp in the system's default timezone.
+     * This is useful for displaying the timestamp in the user's local time.
+     */
+    public ZonedDateTime updatedAtZoned() {
+        if (updatedAt == null) {
+            return null;
+        }
+        return updatedAt.atZone(ZoneId.systemDefault());
+    }
+
+    /**
+     * Calculate total savings from general discounts.
+     */
+    public BigDecimal generalDiscountTotal() {
+        if (generalDiscounts == null || generalDiscounts.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        for (Map<String, Object> discount : generalDiscounts) {
+            if (discount == null) {
+                continue;
+            }
+            BigDecimal amount = parseBigDecimal(discount.get("amount"));
+            if (amount != null) {
+                total = total.add(amount.abs());
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Calculate total savings from item-specific discounts.
+     */
+    public BigDecimal itemDiscountTotal() {
+        if (items == null || items.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        for (Map<String, Object> item : items) {
+            if (item == null) {
+                continue;
+            }
+            Object discountsObj = item.get("discounts");
+            if (!(discountsObj instanceof List<?> discountsList)) {
+                continue;
+            }
+            for (Object discountObj : discountsList) {
+                if (!(discountObj instanceof Map<?, ?> discountMap)) {
+                    continue;
+                }
+                BigDecimal amount = parseBigDecimal(discountMap.get("amount"));
+                if (amount != null) {
+                    total = total.add(amount.abs());
+                }
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Calculate total savings from all discounts (general + item-specific).
+     */
+    public BigDecimal totalDiscountAmount() {
+        return generalDiscountTotal().add(itemDiscountTotal());
+    }
+
+    /**
+     * Calculate the discount total for a specific item.
+     * Utility method for template use.
+     */
+    public static BigDecimal calculateItemDiscountTotal(Map<String, Object> item) {
+        if (item == null) {
+            return BigDecimal.ZERO;
+        }
+        Object discountsObj = item.get("discounts");
+        if (!(discountsObj instanceof List<?> discountsList)) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        for (Object discountObj : discountsList) {
+            if (!(discountObj instanceof Map<?, ?> discountMap)) {
+                continue;
+            }
+            Object amountObj = discountMap.get("amount");
+            BigDecimal amount = null;
+            if (amountObj instanceof BigDecimal bd) {
+                amount = bd;
+            } else if (amountObj instanceof Number num) {
+                amount = new BigDecimal(num.toString());
+            }
+            if (amount != null) {
+                total = total.add(amount.abs());
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Format the total discount amount for display.
+     * Returns a non-null formatted string since totalDiscountAmount() returns BigDecimal.ZERO for receipts without discounts.
+     */
+    public String formattedTotalDiscount() {
+        return formatAmount(totalDiscountAmount());
+    }
+
+    /**
+     * Format the general discount total for display.
+     * Returns a non-null formatted string since generalDiscountTotal() returns BigDecimal.ZERO for receipts without general discounts.
+     */
+    public String formattedGeneralDiscount() {
+        return formatAmount(generalDiscountTotal());
+    }
+
+    /**
+     * Format the item discount total for display.
+     * Returns a non-null formatted string since itemDiscountTotal() returns BigDecimal.ZERO for receipts without item discounts.
+     */
+    public String formattedItemDiscount() {
+        return formatAmount(itemDiscountTotal());
     }
 
     public String statusBadgeClass() {
