@@ -427,11 +427,12 @@ public class ReceiptExtractionService {
                 
                 String itemName = nameObj.toString();
                 if (itemName.toLowerCase(Locale.ROOT).contains(normalizedQuery)) {
-                    String price = asString(item.get("price"));
-                    BigDecimal priceValue = parseBigDecimal(item.get("price"));
-                    String quantity = asString(item.get("quantity"));
-                    String total = asString(item.get("total"));
-                    BigDecimal totalValue = parseBigDecimal(item.get("total"));
+                    // Use displayUnitPrice and displayTotalPrice from displayItems()
+                    String price = asString(item.get("displayUnitPrice"));
+                    BigDecimal priceValue = parseBigDecimal(item.get("unitPrice"));
+                    String quantity = asString(item.get("displayQuantity"));
+                    String total = asString(item.get("displayTotalPrice"));
+                    BigDecimal totalValue = parseBigDecimal(item.get("totalPrice"));
                     
                     // Calculate item discount
                     BigDecimal discountValue = ParsedReceipt.calculateItemDiscountTotal(item);
