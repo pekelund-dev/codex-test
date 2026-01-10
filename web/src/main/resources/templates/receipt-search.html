@@ -330,8 +330,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Filters
-    itemFilter.addEventListener('change', filterAndSort);
-    storeFilter.addEventListener('change', filterAndSort);
+    if (itemFilter) {
+        itemFilter.addEventListener('change', filterAndSort);
+    }
+    if (storeFilter) {
+        storeFilter.addEventListener('change', filterAndSort);
+    }
     
     // Chart toggle
     if (toggleChart) {
