@@ -229,29 +229,31 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const rows = Array.from(tbody.querySelectorAll('tr'));
     
-    // Populate filters
-    const uniqueItems = new Set();
-    const uniqueStores = new Set();
-    rows.forEach(row => {
-        const itemName = row.dataset.itemName;
-        const storeName = row.dataset.storeName;
-        if (itemName) uniqueItems.add(itemName);
-        if (storeName) uniqueStores.add(storeName);
-    });
-    
-    Array.from(uniqueItems).sort().forEach(item => {
-        const option = document.createElement('option');
-        option.value = item;
-        option.textContent = item;
-        itemFilter.appendChild(option);
-    });
-    
-    Array.from(uniqueStores).sort().forEach(store => {
-        const option = document.createElement('option');
-        option.value = store;
-        option.textContent = store;
-        storeFilter.appendChild(option);
-    });
+    // Populate filters only if they exist
+    if (itemFilter && storeFilter) {
+        const uniqueItems = new Set();
+        const uniqueStores = new Set();
+        rows.forEach(row => {
+            const itemName = row.dataset.itemName;
+            const storeName = row.dataset.storeName;
+            if (itemName) uniqueItems.add(itemName);
+            if (storeName) uniqueStores.add(storeName);
+        });
+        
+        Array.from(uniqueItems).sort().forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            option.textContent = item;
+            itemFilter.appendChild(option);
+        });
+        
+        Array.from(uniqueStores).sort().forEach(store => {
+            const option = document.createElement('option');
+            option.value = store;
+            option.textContent = store;
+            storeFilter.appendChild(option);
+        });
+    }
     
     function filterAndSort() {
         const itemValue = itemFilter.value;
@@ -409,6 +411,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
+    
+    // Set initial sort indicator for default column (receiptDate, descending)
+    document.querySelectorAll('.sortable').forEach(th => {
+        if (th.dataset.column === 'receiptDate') {
+            th.querySelector('.sort-indicator').textContent = '▼';
+        }
+    });
     
     // Initial sort by date descending
     filterAndSort();
