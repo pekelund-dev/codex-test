@@ -256,8 +256,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function filterAndSort() {
-        const itemValue = itemFilter.value;
-        const storeValue = storeFilter.value;
+        const itemValue = itemFilter ? itemFilter.value : '';
+        const storeValue = storeFilter ? storeFilter.value : '';
         
         const filteredRows = rows.filter(row => {
             const itemMatch = !itemValue || row.dataset.itemName === itemValue;
@@ -345,9 +345,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (chartContainer.style.display === 'none') {
                 chartContainer.style.display = 'block';
                 this.querySelector('span').textContent = 'Dölj prisutveckling';
+                const itemValue = itemFilter ? itemFilter.value : '';
+                const storeValue = storeFilter ? storeFilter.value : '';
                 updateChart(rows.filter(row => {
-                    const itemValue = itemFilter.value;
-                    const storeValue = storeFilter.value;
                     const itemMatch = !itemValue || row.dataset.itemName === itemValue;
                     const storeMatch = !storeValue || row.dataset.storeName === storeValue;
                     return itemMatch && storeMatch;
