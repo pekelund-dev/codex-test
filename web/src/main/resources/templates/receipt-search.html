@@ -43,7 +43,7 @@
 
     <div class="card shadow-sm border-0">
         <div class="card-body p-4">
-            <h1 class="h3 fw-semibold text-primary mb-3">Sök kvitton</h1>
+            <h1 class="h3 fw-semibold text-primary mb-3">Sök artiklar</h1>
             <p class="text-muted mb-4">
                 Sök efter artiklar i dina kvitton. Sök fungerar med hela eller delar av artikelnamn, till exempel "mjölk" matchar "mellanmjölk", "Eko mellanmjölk" etc.
             </p>
@@ -138,12 +138,15 @@
                         <tbody id="itemsTableBody">
                         <tr th:each="item : ${searchItemResults}" 
                             th:data-item-name="${item.itemName()}"
-                            th:data-store-name="${item.receiptStoreName()}"
+                            th:data-receipt-store-name="${item.receiptStoreName()}"
                             th:data-receipt-date="${item.receiptDate() != null ? item.receiptDate() : ''}"
+                            th:data-item-price="${item.itemPriceValue() != null ? item.itemPriceValue() : '0'}"
+                            th:data-item-total="${item.itemTotalValue() != null ? item.itemTotalValue() : '0'}"
+                            th:data-item-discount="${item.itemDiscountValue() != null ? item.itemDiscountValue() : '0'}"
+                            th:data-item-quantity="${item.itemQuantity() != null ? item.itemQuantity() : ''}"
                             th:data-price-value="${item.itemPriceValue() != null ? item.itemPriceValue() : '0'}"
                             th:data-total-value="${item.itemTotalValue() != null ? item.itemTotalValue() : '0'}"
-                            th:data-discount-value="${item.itemDiscountValue() != null ? item.itemDiscountValue() : '0'}"
-                            th:data-quantity="${item.itemQuantity() != null ? item.itemQuantity() : ''}">
+                            th:data-discount-value="${item.itemDiscountValue() != null ? item.itemDiscountValue() : '0'}">>
                             <td>
                                 <span class="fw-semibold" th:text="${item.itemName()}">Artikelnamn</span>
                             </td>
@@ -235,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const uniqueStores = new Set();
         rows.forEach(row => {
             const itemName = row.dataset.itemName;
-            const storeName = row.dataset.storeName;
+            const storeName = row.dataset.receiptStoreName;
             if (itemName) uniqueItems.add(itemName);
             if (storeName) uniqueStores.add(storeName);
         });
@@ -261,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const filteredRows = rows.filter(row => {
             const itemMatch = !itemValue || row.dataset.itemName === itemValue;
-            const storeMatch = !storeValue || row.dataset.storeName === storeValue;
+            const storeMatch = !storeValue || row.dataset.receiptStoreName === storeValue;
             return itemMatch && storeMatch;
         });
         
@@ -270,8 +273,9 @@ document.addEventListener('DOMContentLoaded', function() {
             let aVal, bVal;
             
             if (sortColumn === 'itemPrice' || sortColumn === 'itemTotal' || sortColumn === 'itemDiscount') {
-                const dataAttr = sortColumn === 'itemPrice' ? 'priceValue' : 
-                                sortColumn === 'itemTotal' ? 'totalValue' : 'discountValue';
+                // For price columns, use the value attributes
+                const dataAttr = sortColumn === 'itemPrice' ? 'itemPrice' : 
+                                sortColumn === 'itemTotal' ? 'itemTotal' : 'itemDiscount';
                 aVal = parseFloat(a.dataset[dataAttr]);
                 bVal = parseFloat(b.dataset[dataAttr]);
                 if (isNaN(aVal)) aVal = 0;
@@ -280,6 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 aVal = a.dataset.receiptDate || '';
                 bVal = b.dataset.receiptDate || '';
             } else {
+                // For other columns, use the column name directly
                 aVal = a.dataset[sortColumn] || '';
                 bVal = b.dataset[sortColumn] || '';
             }
@@ -294,7 +299,10 @@ document.addEventListener('DOMContentLoaded', function() {
         filteredRows.forEach(row => tbody.appendChild(row));
         
         // Update counts
-        document.getElementById('visibleCount').textContent = filteredRows.length;
+        const visibleCountEl = document.getElementById('visibleCount');
+        if (visibleCountEl) {
+            visibleCountEl.textContent = filteredRows.length;
+        }
         
         // Calculate totals
         let totalPrice = 0;
@@ -306,12 +314,22 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!isNaN(discountVal)) totalDiscount += discountVal;
         });
         
-        document.getElementById('totalSum').textContent = totalPrice.toFixed(2);
-        document.getElementById('totalDiscount').textContent = totalDiscount > 0 ? totalDiscount.toFixed(2) : '—';
-        document.getElementById('itemCount').textContent = filteredRows.length;
+        const totalSumEl = document.getElementById('totalSum');
+        const totalDiscountEl = document.getElementById('totalDiscount');
+        const itemCountEl = document.getElementById('itemCount');
+        
+        if (totalSumEl) {
+            totalSumEl.textContent = totalPrice.toFixed(2);
+        }
+        if (totalDiscountEl) {
+            totalDiscountEl.textContent = totalDiscount > 0 ? totalDiscount.toFixed(2) : '—';
+        }
+        if (itemCountEl) {
+            itemCountEl.textContent = filteredRows.length;
+        }
         
         // Update chart if visible
-        if (chartContainer.style.display !== 'none') {
+        if (chartContainer && chartContainer.style.display !== 'none') {
             updateChart(filteredRows);
         }
     }
@@ -344,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Chart toggle
-    if (toggleChart) {
+    if (toggleChart && chartContainer) {
         toggleChart.addEventListener('click', function() {
             if (chartContainer.style.display === 'none') {
                 chartContainer.style.display = 'block';
@@ -353,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const storeValue = storeFilter ? storeFilter.value : '';
                 updateChart(rows.filter(row => {
                     const itemMatch = !itemValue || row.dataset.itemName === itemValue;
-                    const storeMatch = !storeValue || row.dataset.storeName === storeValue;
+                    const storeMatch = !storeValue || row.dataset.receiptStoreName === storeValue;
                     return itemMatch && storeMatch;
                 }));
             } else {
@@ -367,12 +385,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = filteredRows
             .filter(row => {
                 const date = row.dataset.receiptDate;
-                const price = parseFloat(row.dataset.priceValue);
+                const price = parseFloat(row.dataset.itemPrice);
                 return date && date !== '' && !isNaN(price) && price > 0;
             })
             .map(row => ({
                 date: row.dataset.receiptDate,
-                price: parseFloat(row.dataset.priceValue),
+                price: parseFloat(row.dataset.itemPrice),
                 item: row.dataset.itemName
             }))
             .sort((a, b) => a.date.localeCompare(b.date));
