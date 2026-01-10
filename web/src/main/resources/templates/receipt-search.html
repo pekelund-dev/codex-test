@@ -139,11 +139,11 @@
                         <tr th:each="item : ${searchItemResults}" 
                             th:data-item-name="${item.itemName()}"
                             th:data-store-name="${item.receiptStoreName()}"
-                            th:data-receipt-date="${item.receiptDate()}"
-                            th:data-price-value="${item.itemPriceValue()}"
-                            th:data-total-value="${item.itemTotalValue()}"
-                            th:data-discount-value="${item.itemDiscountValue()}"
-                            th:data-quantity="${item.itemQuantity()}">
+                            th:data-receipt-date="${item.receiptDate() != null ? item.receiptDate() : ''}"
+                            th:data-price-value="${item.itemPriceValue() != null ? item.itemPriceValue() : '0'}"
+                            th:data-total-value="${item.itemTotalValue() != null ? item.itemTotalValue() : '0'}"
+                            th:data-discount-value="${item.itemDiscountValue() != null ? item.itemDiscountValue() : '0'}"
+                            th:data-quantity="${item.itemQuantity() != null ? item.itemQuantity() : ''}">
                             <td>
                                 <span class="fw-semibold" th:text="${item.itemName()}">Artikelnamn</span>
                             </td>
@@ -272,8 +272,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (sortColumn === 'itemPrice' || sortColumn === 'itemTotal' || sortColumn === 'itemDiscount') {
                 const dataAttr = sortColumn === 'itemPrice' ? 'priceValue' : 
                                 sortColumn === 'itemTotal' ? 'totalValue' : 'discountValue';
-                aVal = parseFloat(a.dataset[dataAttr] || 0);
-                bVal = parseFloat(b.dataset[dataAttr] || 0);
+                aVal = parseFloat(a.dataset[dataAttr]);
+                bVal = parseFloat(b.dataset[dataAttr]);
+                if (isNaN(aVal)) aVal = 0;
+                if (isNaN(bVal)) bVal = 0;
             } else if (sortColumn === 'receiptDate') {
                 aVal = a.dataset.receiptDate || '';
                 bVal = b.dataset.receiptDate || '';
@@ -298,8 +300,10 @@ document.addEventListener('DOMContentLoaded', function() {
         let totalPrice = 0;
         let totalDiscount = 0;
         filteredRows.forEach(row => {
-            totalPrice += parseFloat(row.dataset.totalValue || 0);
-            totalDiscount += parseFloat(row.dataset.discountValue || 0);
+            const priceVal = parseFloat(row.dataset.totalValue);
+            const discountVal = parseFloat(row.dataset.discountValue);
+            if (!isNaN(priceVal)) totalPrice += priceVal;
+            if (!isNaN(discountVal)) totalDiscount += discountVal;
         });
         
         document.getElementById('totalSum').textContent = totalPrice.toFixed(2);
@@ -361,10 +365,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function updateChart(filteredRows) {
         const data = filteredRows
-            .filter(row => row.dataset.receiptDate && row.dataset.priceValue)
+            .filter(row => {
+                const date = row.dataset.receiptDate;
+                const price = parseFloat(row.dataset.priceValue);
+                return date && date !== '' && !isNaN(price) && price > 0;
+            })
             .map(row => ({
                 date: row.dataset.receiptDate,
-                price: parseFloat(row.dataset.priceValue || 0),
+                price: parseFloat(row.dataset.priceValue),
                 item: row.dataset.itemName
             }))
             .sort((a, b) => a.date.localeCompare(b.date));
