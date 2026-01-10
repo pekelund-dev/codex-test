@@ -1,5 +1,6 @@
 package dev.pekelund.pklnd.firestore;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
@@ -8,11 +9,16 @@ import java.time.Instant;
 public record SearchItemResult(
     String receiptId,
     String receiptDisplayName,
+    String receiptStoreName,
     String receiptDate,
     Instant receiptUpdatedAt,
     String itemName,
     String itemPrice,
+    BigDecimal itemPriceValue,
     String itemQuantity,
-    String itemTotal
+    String itemTotal,
+    BigDecimal itemTotalValue,
+    String itemDiscount,
+    BigDecimal itemDiscountValue
 ) {
 }

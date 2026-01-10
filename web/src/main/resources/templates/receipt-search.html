@@ -2,6 +2,22 @@
 <html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(null, ~{::section})}">
 <head>
     <title th:text="#{page.receipts.search.title}">Sök kvitton</title>
+    <style>
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        .sortable:hover {
+            background-color: #f8f9fa !important;
+        }
+        .sort-indicator {
+            margin-left: 0.25rem;
+            font-size: 0.75rem;
+        }
+        #priceChart {
+            max-height: 400px;
+        }
+    </style>
 </head>
 <body>
 <section class="py-3 py-lg-4">
@@ -60,39 +76,101 @@
 
             <!-- Individual items table -->
             <div th:if="${!#lists.isEmpty(searchItemResults)}" class="mb-5">
-                <h2 class="h5 fw-semibold mb-3">Hittade artiklar</h2>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 fw-semibold mb-0">Hittade artiklar</h2>
+                    <button class="btn btn-sm btn-outline-secondary" id="toggleChart" type="button">
+                        <i class="bi bi-graph-up me-1"></i>
+                        <span>Visa prisutveckling</span>
+                    </button>
+                </div>
+                
+                <!-- Price chart -->
+                <div id="chartContainer" class="mb-4" style="display: none;">
+                    <canvas id="priceChart"></canvas>
+                </div>
+
+                <!-- Filters -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label for="itemFilter" class="form-label small">Filtrera artiklar:</label>
+                        <select class="form-select form-select-sm" id="itemFilter">
+                            <option value="">Alla artiklar</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="storeFilter" class="form-label small">Filtrera butik:</label>
+                        <select class="form-select form-select-sm" id="storeFilter">
+                            <option value="">Alla butiker</option>
+                        </select>
+                    </div>
+                </div>
+
                 <p class="text-muted mb-3">
-                    Hittade <span th:text="${#lists.size(searchItemResults)}">0</span> artiklar som matchar din sökning.
+                    Visar <span id="visibleCount">0</span> av <span th:text="${#lists.size(searchItemResults)}">0</span> artiklar som matchar din sökning.
                 </p>
                 <div class="table-responsive">
-                    <table class="table align-middle">
+                    <table class="table align-middle" id="itemsTable">
                         <thead class="table-light">
                         <tr>
-                            <th scope="col">Artikelnamn</th>
-                            <th scope="col">Kvitto</th>
-                            <th scope="col">Datum</th>
-                            <th scope="col" class="text-end">Pris</th>
-                            <th scope="col" class="text-end">Antal</th>
-                            <th scope="col" class="text-end">Totalt</th>
+                            <th scope="col" class="sortable" data-column="itemName">
+                                Artikelnamn<span class="sort-indicator"></span>
+                            </th>
+                            <th scope="col" class="sortable" data-column="receiptStoreName">
+                                Butik<span class="sort-indicator"></span>
+                            </th>
+                            <th scope="col" class="sortable" data-column="receiptDate">
+                                Datum<span class="sort-indicator"></span>
+                            </th>
+                            <th scope="col" class="text-end sortable" data-column="itemPrice">
+                                Pris<span class="sort-indicator"></span>
+                            </th>
+                            <th scope="col" class="text-end sortable" data-column="itemQuantity">
+                                Antal<span class="sort-indicator"></span>
+                            </th>
+                            <th scope="col" class="text-end sortable" data-column="itemDiscount">
+                                Rabatt<span class="sort-indicator"></span>
+                            </th>
+                            <th scope="col" class="text-end sortable" data-column="itemTotal">
+                                Totalt<span class="sort-indicator"></span>
+                            </th>
                         </tr>
                         </thead>
-                        <tbody>
-                        <tr th:each="item : ${searchItemResults}">
+                        <tbody id="itemsTableBody">
+                        <tr th:each="item : ${searchItemResults}" 
+                            th:data-item-name="${item.itemName()}"
+                            th:data-store-name="${item.receiptStoreName()}"
+                            th:data-receipt-date="${item.receiptDate()}"
+                            th:data-price-value="${item.itemPriceValue()}"
+                            th:data-total-value="${item.itemTotalValue()}"
+                            th:data-discount-value="${item.itemDiscountValue()}"
+                            th:data-quantity="${item.itemQuantity()}">
                             <td>
                                 <span class="fw-semibold" th:text="${item.itemName()}">Artikelnamn</span>
                             </td>
                             <td>
                                 <a th:href="@{/receipts/{id}(id=${item.receiptId()}, scope=${scopeParam})}" 
                                    class="text-decoration-none">
-                                    <span th:text="${item.receiptDisplayName()}">Kvitto</span>
+                                    <span th:text="${item.receiptStoreName()}">Butik</span>
                                 </a>
                             </td>
                             <td th:text="${item.receiptDate() != null ? item.receiptDate() : '—'}">—</td>
                             <td class="text-end" th:text="${item.itemPrice() != null ? item.itemPrice() : '—'}">—</td>
                             <td class="text-end" th:text="${item.itemQuantity() != null ? item.itemQuantity() : '—'}">—</td>
+                            <td class="text-end" th:text="${item.itemDiscount() != null ? item.itemDiscount() : '—'}">—</td>
                             <td class="text-end" th:text="${item.itemTotal() != null ? item.itemTotal() : '—'}">—</td>
                         </tr>
                         </tbody>
+                        <tfoot class="table-light">
+                        <tr>
+                            <td colspan="5" class="text-end fw-semibold">Summering:</td>
+                            <td class="text-end fw-semibold" id="totalDiscount">—</td>
+                            <td class="text-end fw-semibold" id="totalSum">—</td>
+                        </tr>
+                        <tr>
+                            <td colspan="6" class="text-end">Antal artiklar:</td>
+                            <td class="text-end" id="itemCount">—</td>
+                        </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -132,5 +210,205 @@
         </div>
     </div>
 </section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('itemsTable');
+    const tbody = document.getElementById('itemsTableBody');
+    const itemFilter = document.getElementById('itemFilter');
+    const storeFilter = document.getElementById('storeFilter');
+    const toggleChart = document.getElementById('toggleChart');
+    const chartContainer = document.getElementById('chartContainer');
+    
+    if (!table || !tbody) return;
+    
+    let sortColumn = 'receiptDate';
+    let sortAscending = false;
+    let chartInstance = null;
+    
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Populate filters
+    const uniqueItems = new Set();
+    const uniqueStores = new Set();
+    rows.forEach(row => {
+        const itemName = row.dataset.itemName;
+        const storeName = row.dataset.storeName;
+        if (itemName) uniqueItems.add(itemName);
+        if (storeName) uniqueStores.add(storeName);
+    });
+    
+    Array.from(uniqueItems).sort().forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.textContent = item;
+        itemFilter.appendChild(option);
+    });
+    
+    Array.from(uniqueStores).sort().forEach(store => {
+        const option = document.createElement('option');
+        option.value = store;
+        option.textContent = store;
+        storeFilter.appendChild(option);
+    });
+    
+    function filterAndSort() {
+        const itemValue = itemFilter.value;
+        const storeValue = storeFilter.value;
+        
+        const filteredRows = rows.filter(row => {
+            const itemMatch = !itemValue || row.dataset.itemName === itemValue;
+            const storeMatch = !storeValue || row.dataset.storeName === storeValue;
+            return itemMatch && storeMatch;
+        });
+        
+        // Sort
+        filteredRows.sort((a, b) => {
+            let aVal, bVal;
+            
+            if (sortColumn === 'itemPrice' || sortColumn === 'itemTotal' || sortColumn === 'itemDiscount') {
+                const dataAttr = sortColumn === 'itemPrice' ? 'priceValue' : 
+                                sortColumn === 'itemTotal' ? 'totalValue' : 'discountValue';
+                aVal = parseFloat(a.dataset[dataAttr] || 0);
+                bVal = parseFloat(b.dataset[dataAttr] || 0);
+            } else if (sortColumn === 'receiptDate') {
+                aVal = a.dataset.receiptDate || '';
+                bVal = b.dataset.receiptDate || '';
+            } else {
+                aVal = a.dataset[sortColumn] || '';
+                bVal = b.dataset[sortColumn] || '';
+            }
+            
+            if (aVal < bVal) return sortAscending ? -1 : 1;
+            if (aVal > bVal) return sortAscending ? 1 : -1;
+            return 0;
+        });
+        
+        // Clear tbody
+        tbody.innerHTML = '';
+        filteredRows.forEach(row => tbody.appendChild(row));
+        
+        // Update counts
+        document.getElementById('visibleCount').textContent = filteredRows.length;
+        
+        // Calculate totals
+        let totalPrice = 0;
+        let totalDiscount = 0;
+        filteredRows.forEach(row => {
+            totalPrice += parseFloat(row.dataset.totalValue || 0);
+            totalDiscount += parseFloat(row.dataset.discountValue || 0);
+        });
+        
+        document.getElementById('totalSum').textContent = totalPrice.toFixed(2);
+        document.getElementById('totalDiscount').textContent = totalDiscount > 0 ? totalDiscount.toFixed(2) : '—';
+        document.getElementById('itemCount').textContent = filteredRows.length;
+        
+        // Update chart if visible
+        if (chartContainer.style.display !== 'none') {
+            updateChart(filteredRows);
+        }
+    }
+    
+    // Sorting
+    document.querySelectorAll('.sortable').forEach(th => {
+        th.addEventListener('click', function() {
+            const column = this.dataset.column;
+            if (sortColumn === column) {
+                sortAscending = !sortAscending;
+            } else {
+                sortColumn = column;
+                sortAscending = true;
+            }
+            
+            // Update indicators
+            document.querySelectorAll('.sort-indicator').forEach(ind => ind.textContent = '');
+            this.querySelector('.sort-indicator').textContent = sortAscending ? '▲' : '▼';
+            
+            filterAndSort();
+        });
+    });
+    
+    // Filters
+    itemFilter.addEventListener('change', filterAndSort);
+    storeFilter.addEventListener('change', filterAndSort);
+    
+    // Chart toggle
+    if (toggleChart) {
+        toggleChart.addEventListener('click', function() {
+            if (chartContainer.style.display === 'none') {
+                chartContainer.style.display = 'block';
+                this.querySelector('span').textContent = 'Dölj prisutveckling';
+                updateChart(rows.filter(row => {
+                    const itemValue = itemFilter.value;
+                    const storeValue = storeFilter.value;
+                    const itemMatch = !itemValue || row.dataset.itemName === itemValue;
+                    const storeMatch = !storeValue || row.dataset.storeName === storeValue;
+                    return itemMatch && storeMatch;
+                }));
+            } else {
+                chartContainer.style.display = 'none';
+                this.querySelector('span').textContent = 'Visa prisutveckling';
+            }
+        });
+    }
+    
+    function updateChart(filteredRows) {
+        const data = filteredRows
+            .filter(row => row.dataset.receiptDate && row.dataset.priceValue)
+            .map(row => ({
+                date: row.dataset.receiptDate,
+                price: parseFloat(row.dataset.priceValue || 0),
+                item: row.dataset.itemName
+            }))
+            .sort((a, b) => a.date.localeCompare(b.date));
+        
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+        
+        const ctx = document.getElementById('priceChart');
+        if (ctx && data.length > 0) {
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.date),
+                    datasets: [{
+                        label: 'Pris',
+                        data: data.map(d => d.price),
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        title: {
+                            display: true,
+                            text: 'Prisutveckling över tid'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Pris (kr)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // Initial sort by date descending
+    filterAndSort();
+});
+</script>
 </body>
 </html>

@@ -14,6 +14,7 @@ import com.google.cloud.firestore.WriteBatch;
 import dev.pekelund.pklnd.receipts.ReceiptItemConstants;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -409,6 +410,11 @@ public class ReceiptExtractionService {
                 receiptDisplayName = receipt.objectPath();
             }
             
+            String storeName = receipt.storeName();
+            if (storeName == null || storeName.isBlank()) {
+                storeName = "Unknown";
+            }
+            
             for (Map<String, Object> item : items) {
                 if (item == null) {
                     continue;
@@ -422,26 +428,38 @@ public class ReceiptExtractionService {
                 String itemName = nameObj.toString();
                 if (itemName.toLowerCase(Locale.ROOT).contains(normalizedQuery)) {
                     String price = asString(item.get("price"));
+                    BigDecimal priceValue = parseBigDecimal(item.get("price"));
                     String quantity = asString(item.get("quantity"));
                     String total = asString(item.get("total"));
+                    BigDecimal totalValue = parseBigDecimal(item.get("total"));
+                    
+                    // Calculate item discount
+                    BigDecimal discountValue = ParsedReceipt.calculateItemDiscountTotal(item);
+                    String discount = discountValue != null && discountValue.compareTo(BigDecimal.ZERO) > 0 
+                        ? formatAmount(discountValue) : null;
                     
                     matchingItems.add(new SearchItemResult(
                         receipt.id(),
                         receiptDisplayName,
+                        storeName,
                         receipt.receiptDate(),
                         receipt.updatedAt(),
                         itemName,
                         price,
+                        priceValue,
                         quantity,
-                        total
+                        total,
+                        totalValue,
+                        discount,
+                        discountValue
                     ));
                 }
             }
         }
         
-        // Sort by receipt updated time descending, then by item name
+        // Sort by receipt date descending by default, then by item name
         matchingItems.sort(Comparator
-            .comparing(SearchItemResult::receiptUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+            .comparing(SearchItemResult::receiptDate, Comparator.nullsLast(Comparator.reverseOrder()))
             .thenComparing(SearchItemResult::itemName, String.CASE_INSENSITIVE_ORDER));
         
         return Collections.unmodifiableList(matchingItems);
@@ -748,6 +766,31 @@ public class ReceiptExtractionService {
             return StringUtils.hasText(string) ? string : null;
         }
         return value.toString();
+    }
+
+    private BigDecimal parseBigDecimal(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof BigDecimal bd) {
+            return bd;
+        }
+        if (value instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue());
+        }
+        String text = value.toString().replace(',', '.');
+        try {
+            return new BigDecimal(text);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private String formatAmount(BigDecimal value) {
+        if (value == null) {
+            return null;
+        }
+        return value.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString();
     }
 
     public record ReceiptItemReference(
