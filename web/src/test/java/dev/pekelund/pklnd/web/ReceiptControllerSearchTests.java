@@ -164,4 +164,65 @@ class ReceiptControllerSearchTests {
                 .andExpect(model().attribute("parsedReceiptsEnabled", false))
                 .andExpect(model().attribute("searchPerformed", false));
     }
+
+    @Test
+    @WithMockUser(username = "user", roles = "USER")
+    void searchReceipts_ShouldReturnItemsWithPricesAndDiscounts() throws Exception {
+        // Arrange
+        ReceiptOwner owner = new ReceiptOwner("user", "User", "user@example.com");
+        when(receiptOwnerResolver.resolve(any())).thenReturn(owner);
+        when(receiptExtractionService.isEnabled()).thenReturn(true);
+
+        // Create a receipt with items that have price, quantity, total, and discounts
+        Map<String, Object> item1 = Map.of(
+            "name", "Mellanmjölk",
+            "price", "15.00",
+            "quantity", "2",
+            "total", "30.00",
+            "discounts", List.of(
+                Map.of("amount", "3.00", "description", "Member discount")
+            )
+        );
+        
+        Map<String, Object> item2 = Map.of(
+            "name", "Eko mellanmjölk",
+            "price", "18.00",
+            "quantity", "1",
+            "total", "18.00"
+            // No discounts for this item
+        );
+
+        ParsedReceipt receipt = new ParsedReceipt(
+                "receipt1",
+                "bucket",
+                "receipt1.pdf",
+                "receipts/receipt1.pdf",
+                owner,
+                "completed",
+                null,
+                Instant.now(),
+                Map.of("storeName", "ICA", "receiptDate", "2024-01-15"),
+                List.of(item1, item2),
+                null,
+                List.of(),
+                List.of(),
+                List.of(),
+                null,
+                null,
+                null,
+                null
+        );
+
+        when(receiptExtractionService.searchByItemName(eq("mjölk"), eq(owner), anyBoolean()))
+                .thenReturn(List.of(receipt));
+
+        // Act & Assert
+        mockMvc.perform(get("/receipts/search").param("q", "mjölk"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("receipt-search"))
+                .andExpect(model().attribute("searchPerformed", true))
+                .andExpect(model().attribute("searchQuery", "mjölk"))
+                .andExpect(model().attributeExists("searchResults"))
+                .andExpect(model().attributeExists("searchItemResults"));
+    }
 }
