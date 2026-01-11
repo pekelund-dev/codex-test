@@ -217,6 +217,7 @@ public class CategorizationController {
 
     /**
      * Assign a category to a receipt item.
+     * If the item has an EAN, also assigns to all other items with the same EAN.
      */
     @PostMapping("/receipts/{receiptId}/items/category")
     @ResponseBody
@@ -225,20 +226,32 @@ public class CategorizationController {
         @RequestBody AssignCategoryRequest request,
         Authentication authentication
     ) {
-        if (!itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
+        if (itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
         try {
             String assignedBy = authentication != null ? authentication.getName() : "anonymous";
-            itemCategorizationService.get().assignCategory(
-                receiptId,
-                request.itemIndex(),
-                request.itemEan(),
-                request.categoryId(),
-                assignedBy
-            );
-            return ResponseEntity.ok("Category assigned successfully");
+            
+            // If item has EAN, assign category to all items with that EAN
+            if (request.itemEan() != null && !request.itemEan().isBlank()) {
+                int count = itemCategorizationService.get().assignCategoryByEan(
+                    request.itemEan(),
+                    request.categoryId(),
+                    assignedBy
+                );
+                return ResponseEntity.ok("Category assigned to " + count + " items with EAN " + request.itemEan());
+            } else {
+                // No EAN, just assign to this specific item
+                itemCategorizationService.get().assignCategory(
+                    receiptId,
+                    request.itemIndex(),
+                    request.itemEan(),
+                    request.categoryId(),
+                    assignedBy
+                );
+                return ResponseEntity.ok("Category assigned successfully");
+            }
         } catch (IllegalArgumentException | IllegalStateException ex) {
             log.warn("Failed to assign category: {}", ex.getMessage());
             return ResponseEntity.badRequest().body(ex.getMessage());

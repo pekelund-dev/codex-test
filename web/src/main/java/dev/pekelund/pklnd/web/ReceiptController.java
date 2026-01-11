@@ -1207,13 +1207,37 @@ public class ReceiptController {
         }
         
         // Load categorization data for this receipt
+        Map<String, String> itemCategoryMap = new HashMap<>();
+        Map<String, List<String>> itemTagsMap = new HashMap<>();
+        
         if (itemCategorizationService.isPresent() && itemCategorizationService.get().isEnabled()) {
-            model.addAttribute("itemCategories", itemCategorizationService.get().getCategoriesForReceipt(documentId));
-            model.addAttribute("itemTags", itemCategorizationService.get().getTagsForReceipt(documentId));
+            List<dev.pekelund.pklnd.firestore.ItemCategoryMapping> categoryMappings = 
+                itemCategorizationService.get().getCategoriesForReceipt(documentId);
+            List<dev.pekelund.pklnd.firestore.ItemTagMapping> tagMappings = 
+                itemCategorizationService.get().getTagsForReceipt(documentId);
+            
+            // Build map of item identifier -> category ID
+            for (dev.pekelund.pklnd.firestore.ItemCategoryMapping mapping : categoryMappings) {
+                String itemId = mapping.itemEan() != null ? mapping.itemEan() : mapping.itemIndex();
+                itemCategoryMap.put(itemId, mapping.categoryId());
+            }
+            
+            // Build map of item identifier -> list of tag IDs
+            for (dev.pekelund.pklnd.firestore.ItemTagMapping mapping : tagMappings) {
+                String itemId = mapping.itemEan() != null ? mapping.itemEan() : mapping.itemIndex();
+                itemTagsMap.computeIfAbsent(itemId, k -> new ArrayList<>()).add(mapping.tagId());
+            }
+            
+            model.addAttribute("itemCategories", categoryMappings);
+            model.addAttribute("itemTags", tagMappings);
+            model.addAttribute("itemCategoryMap", itemCategoryMap);
+            model.addAttribute("itemTagsMap", itemTagsMap);
             model.addAttribute("categorizationEnabled", true);
         } else {
             model.addAttribute("itemCategories", List.of());
             model.addAttribute("itemTags", List.of());
+            model.addAttribute("itemCategoryMap", Map.of());
+            model.addAttribute("itemTagsMap", Map.of());
             model.addAttribute("categorizationEnabled", false);
         }
 

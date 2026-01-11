@@ -34,17 +34,20 @@ public class ItemCategorizationService {
     private final FirestoreReadRecorder readRecorder;
     private final CategoryService categoryService;
     private final TagService tagService;
+    private final Optional<ReceiptExtractionService> receiptExtractionService;
 
     public ItemCategorizationService(
         ObjectProvider<Firestore> firestoreProvider,
         FirestoreReadRecorder readRecorder,
         CategoryService categoryService,
-        TagService tagService
+        TagService tagService,
+        ObjectProvider<ReceiptExtractionService> receiptExtractionServiceProvider
     ) {
         this.firestore = Optional.ofNullable(firestoreProvider.getIfAvailable());
         this.readRecorder = readRecorder;
         this.categoryService = categoryService;
         this.tagService = tagService;
+        this.receiptExtractionService = Optional.ofNullable(receiptExtractionServiceProvider.getIfAvailable());
     }
 
     public boolean isEnabled() {
@@ -117,6 +120,83 @@ public class ItemCategorizationService {
         } catch (ExecutionException ex) {
             log.error("Failed to assign category to item", ex);
             throw new RuntimeException("Failed to assign category", ex);
+        }
+    }
+
+    /**
+     * Assign a category to all items with the specified EAN across all receipts.
+     * This is useful for ensuring consistent categorization across all instances of the same product.
+     */
+    public int assignCategoryByEan(
+        String itemEan,
+        String categoryId,
+        String assignedBy
+    ) {
+        if (firestore.isEmpty()) {
+            throw new IllegalStateException("Firestore is not enabled");
+        }
+
+        if (!StringUtils.hasText(itemEan)) {
+            throw new IllegalArgumentException("Item EAN cannot be empty");
+        }
+
+        if (!StringUtils.hasText(categoryId)) {
+            throw new IllegalArgumentException("Category ID cannot be empty");
+        }
+
+        // Verify category exists
+        Optional<Category> category = categoryService.findById(categoryId);
+        if (category.isEmpty()) {
+            throw new IllegalArgumentException("Category not found: " + categoryId);
+        }
+
+        if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            log.warn("Cannot assign category by EAN: receipt extraction service not available");
+            return 0;
+        }
+
+        try {
+            // Get all receipts
+            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listAllReceipts();
+            int assignedCount = 0;
+            Firestore db = firestore.get();
+            Instant now = Instant.now();
+
+            // Iterate through all receipts and find items with matching EAN
+            for (ParsedReceipt receipt : allReceipts) {
+                List<Map<String, Object>> items = receipt.displayItems();
+                for (int i = 0; i < items.size(); i++) {
+                    Map<String, Object> item = items.get(i);
+                    Object normalizedEanObj = item.get("normalizedEan");
+                    
+                    if (normalizedEanObj != null && itemEan.equals(normalizedEanObj.toString())) {
+                        // Found an item with matching EAN, assign category
+                        String docId = ItemCategoryMapping.createKey(receipt.id(), itemEan);
+                        DocumentReference docRef = db.collection(ITEM_CATEGORIES_COLLECTION).document(docId);
+                        
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("receiptId", receipt.id());
+                        data.put("itemIndex", String.valueOf(i));
+                        data.put("itemEan", itemEan);
+                        data.put("categoryId", categoryId);
+                        data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
+                        data.put("assignedBy", assignedBy);
+
+                        docRef.set(data).get();
+                        assignedCount++;
+                    }
+                }
+            }
+
+            log.info("Assigned category {} to {} items with EAN {}", categoryId, assignedCount, itemEan);
+            return assignedCount;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.error("Interrupted while assigning category by EAN", ex);
+            throw new RuntimeException("Failed to assign category by EAN", ex);
+        } catch (ExecutionException ex) {
+            log.error("Failed to assign category by EAN", ex);
+            throw new RuntimeException("Failed to assign category by EAN", ex);
         }
     }
 

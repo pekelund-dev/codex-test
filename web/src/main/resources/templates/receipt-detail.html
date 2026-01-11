@@ -114,7 +114,10 @@
                             </ul>
                             <span th:if="${item['discounts'] == null or #lists.isEmpty(item['discounts'])}" class="text-muted">—</span>
                         </td>
-                        <td th:if="${categorizationEnabled}">
+                        <td th:if="${categorizationEnabled}" 
+                            th:with="itemIdentifier=${item['normalizedEan'] != null ? item['normalizedEan'] : iterStat.index},
+                                     assignedCategory=${itemCategoryMap.get(itemIdentifier.toString())},
+                                     assignedTags=${itemTagsMap.get(itemIdentifier.toString())}">
                             <div class="d-flex flex-column gap-2">
                                 <!-- Category dropdown -->
                                 <div class="input-group input-group-sm">
@@ -126,9 +129,11 @@
                                         <optgroup th:each="entry : ${categoriesHierarchy}" 
                                                   th:label="${entry.key.name()}">
                                             <option th:value="${entry.key.id()}" 
+                                                    th:selected="${assignedCategory != null && assignedCategory == entry.key.id()}"
                                                     th:text="${entry.key.name()}">Category</option>
                                             <option th:each="subcategory : ${entry.value}"
-                                                    th:value="${subcategory.id()}" 
+                                                    th:value="${subcategory.id()}"
+                                                    th:selected="${assignedCategory != null && assignedCategory == subcategory.id()}"
                                                     th:text="${'  ' + subcategory.name()}">Subcategory</option>
                                         </optgroup>
                                     </select>
@@ -147,7 +152,8 @@
                                             th:data-item-index="${iterStat.index}"
                                             th:data-item-ean="${item['normalizedEan']}">
                                         <option th:each="tag : ${tags}" 
-                                                th:value="${tag.id()}" 
+                                                th:value="${tag.id()}"
+                                                th:selected="${assignedTags != null && #lists.contains(assignedTags, tag.id())}"
                                                 th:text="${tag.name()}">Tag</option>
                                     </select>
                                     <button class="btn btn-outline-secondary btn-sm add-tag-btn" 
