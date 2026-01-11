@@ -103,19 +103,28 @@ public class ReceiptController {
     private final ReceiptOwnerResolver receiptOwnerResolver;
     private final Optional<ReceiptProcessingClient> receiptProcessingClient;
     private final DashboardStatisticsService dashboardStatisticsService;
+    private final Optional<dev.pekelund.pklnd.firestore.CategoryService> categoryService;
+    private final Optional<dev.pekelund.pklnd.firestore.TagService> tagService;
+    private final Optional<dev.pekelund.pklnd.firestore.ItemCategorizationService> itemCategorizationService;
 
     public ReceiptController(
         @Autowired(required = false) ReceiptStorageService receiptStorageService,
         @Autowired(required = false) ReceiptExtractionService receiptExtractionService,
         ReceiptOwnerResolver receiptOwnerResolver,
         @Autowired(required = false) ReceiptProcessingClient receiptProcessingClient,
-        DashboardStatisticsService dashboardStatisticsService
+        DashboardStatisticsService dashboardStatisticsService,
+        @Autowired(required = false) dev.pekelund.pklnd.firestore.CategoryService categoryService,
+        @Autowired(required = false) dev.pekelund.pklnd.firestore.TagService tagService,
+        @Autowired(required = false) dev.pekelund.pklnd.firestore.ItemCategorizationService itemCategorizationService
     ) {
         this.receiptStorageService = Optional.ofNullable(receiptStorageService);
         this.receiptExtractionService = Optional.ofNullable(receiptExtractionService);
         this.receiptOwnerResolver = receiptOwnerResolver;
         this.receiptProcessingClient = Optional.ofNullable(receiptProcessingClient);
         this.dashboardStatisticsService = dashboardStatisticsService;
+        this.categoryService = Optional.ofNullable(categoryService);
+        this.tagService = Optional.ofNullable(tagService);
+        this.itemCategorizationService = Optional.ofNullable(itemCategorizationService);
     }
 
     @GetMapping("/receipts")
@@ -1181,6 +1190,32 @@ public class ReceiptController {
             .collect(Collectors.toCollection(LinkedHashSet::new));
         Map<String, Long> itemOccurrences = resolveItemOccurrences(receipt, normalizedEans, statsOwner, viewingAll);
         List<Map<String, Object>> receiptItems = prepareReceiptItems(receipt.displayItems(), itemOccurrences);
+
+        // Load categories and tags data
+        if (categoryService.isPresent() && categoryService.get().isEnabled()) {
+            model.addAttribute("categoriesHierarchy", categoryService.get().getCategoriesHierarchy());
+            model.addAttribute("categories", categoryService.get().listCategories());
+        } else {
+            model.addAttribute("categoriesHierarchy", Map.of());
+            model.addAttribute("categories", List.of());
+        }
+        
+        if (tagService.isPresent() && tagService.get().isEnabled()) {
+            model.addAttribute("tags", tagService.get().listTags());
+        } else {
+            model.addAttribute("tags", List.of());
+        }
+        
+        // Load categorization data for this receipt
+        if (itemCategorizationService.isPresent() && itemCategorizationService.get().isEnabled()) {
+            model.addAttribute("itemCategories", itemCategorizationService.get().getCategoriesForReceipt(documentId));
+            model.addAttribute("itemTags", itemCategorizationService.get().getTagsForReceipt(documentId));
+            model.addAttribute("categorizationEnabled", true);
+        } else {
+            model.addAttribute("itemCategories", List.of());
+            model.addAttribute("itemTags", List.of());
+            model.addAttribute("categorizationEnabled", false);
+        }
 
         String displayName = receipt.displayName();
         model.addAttribute("pageTitle", displayName != null ? "Receipt: " + displayName : "Receipt details");

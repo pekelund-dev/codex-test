@@ -86,10 +86,11 @@
                         <th scope="col">Unit price</th>
                         <th scope="col">Total price</th>
                         <th scope="col">Discounts</th>
+                        <th scope="col" th:if="${categorizationEnabled}">Category & Tags</th>
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="item : ${receiptItems}">
+                    <tr th:each="item, iterStat : ${receiptItems}">
                         <td th:with="itemName=${item['name'] != null ? #strings.trim(item['name']) : null},
                                        itemEan=${item['normalizedEan'] != null ? item['normalizedEan'] : null},
                                        historyCount=${item['historyCount'] != null ? item['historyCount'] : 0L}">
@@ -112,6 +113,50 @@
                                     th:text="${(discount['description'] != null ? discount['description'] : 'Discount') + ' (' + (discount['amount'] != null ? discount['amount'] : '—') + ')'}">Discount</li>
                             </ul>
                             <span th:if="${item['discounts'] == null or #lists.isEmpty(item['discounts'])}" class="text-muted">—</span>
+                        </td>
+                        <td th:if="${categorizationEnabled}">
+                            <div class="d-flex flex-column gap-2">
+                                <!-- Category dropdown -->
+                                <div class="input-group input-group-sm">
+                                    <select class="form-select form-select-sm category-select" 
+                                            th:data-receipt-id="${receipt.id()}"
+                                            th:data-item-index="${iterStat.index}"
+                                            th:data-item-ean="${item['normalizedEan']}">
+                                        <option value="">-- Välj kategori --</option>
+                                        <optgroup th:each="entry : ${categoriesHierarchy}" 
+                                                  th:label="${entry.key.name()}">
+                                            <option th:value="${entry.key.id()}" 
+                                                    th:text="${entry.key.name()}">Category</option>
+                                            <option th:each="subcategory : ${entry.value}"
+                                                    th:value="${subcategory.id()}" 
+                                                    th:text="${'  ' + subcategory.name()}">Subcategory</option>
+                                        </optgroup>
+                                    </select>
+                                    <button class="btn btn-outline-secondary btn-sm add-category-btn" 
+                                            type="button" 
+                                            title="Skapa ny kategori">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Tags multi-select -->
+                                <div class="input-group input-group-sm">
+                                    <select class="form-select form-select-sm tags-select" 
+                                            multiple
+                                            th:data-receipt-id="${receipt.id()}"
+                                            th:data-item-index="${iterStat.index}"
+                                            th:data-item-ean="${item['normalizedEan']}">
+                                        <option th:each="tag : ${tags}" 
+                                                th:value="${tag.id()}" 
+                                                th:text="${tag.name()}">Tag</option>
+                                    </select>
+                                    <button class="btn btn-outline-secondary btn-sm add-tag-btn" 
+                                            type="button"
+                                            title="Skapa ny tagg">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     </tbody>
@@ -237,6 +282,123 @@
             </details>
         </div>
     </div>
+    
+    <!-- Category and Tag Management JavaScript -->
+    <script th:if="${categorizationEnabled}">
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle category selection
+            document.querySelectorAll('.category-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const receiptId = this.dataset.receiptId;
+                    const itemIndex = this.dataset.itemIndex;
+                    const itemEan = this.dataset.itemEan;
+                    const categoryId = this.value;
+                    
+                    if (!categoryId) {
+                        // Remove category
+                        const itemIdentifier = itemEan || itemIndex;
+                        fetch(`/api/categorization/receipts/${receiptId}/items/category?itemIdentifier=${itemIdentifier}`, {
+                            method: 'DELETE',
+                            headers: { 'X-CSRF-TOKEN': getCsrfToken() }
+                        }).catch(err => console.error('Failed to remove category:', err));
+                        return;
+                    }
+                    
+                    // Assign category
+                    fetch(`/api/categorization/receipts/${receiptId}/items/category`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': getCsrfToken()
+                        },
+                        body: JSON.stringify({
+                            itemIndex: itemIndex,
+                            itemEan: itemEan,
+                            categoryId: categoryId
+                        })
+                    }).catch(err => console.error('Failed to assign category:', err));
+                });
+            });
+            
+            // Handle tag selection
+            document.querySelectorAll('.tags-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const receiptId = this.dataset.receiptId;
+                    const itemIndex = this.dataset.itemIndex;
+                    const itemEan = this.dataset.itemEan;
+                    const selectedTags = Array.from(this.selectedOptions).map(opt => opt.value);
+                    
+                    // For simplicity, we'll assign all selected tags
+                    // In a production app, you'd track which tags were added/removed
+                    selectedTags.forEach(tagId => {
+                        fetch(`/api/categorization/receipts/${receiptId}/items/tags`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': getCsrfToken()
+                            },
+                            body: JSON.stringify({
+                                itemIndex: itemIndex,
+                                itemEan: itemEan,
+                                tagId: tagId
+                            })
+                        }).catch(err => console.error('Failed to assign tag:', err));
+                    });
+                });
+            });
+            
+            // Handle add category button
+            document.querySelectorAll('.add-category-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const categoryName = prompt('Ange kategorinamn:');
+                    if (!categoryName) return;
+                    
+                    fetch('/api/categorization/categories', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': getCsrfToken()
+                        },
+                        body: JSON.stringify({ name: categoryName, parentId: null })
+                    })
+                    .then(response => response.json())
+                    .then(category => {
+                        // Reload page to show new category
+                        location.reload();
+                    })
+                    .catch(err => console.error('Failed to create category:', err));
+                });
+            });
+            
+            // Handle add tag button
+            document.querySelectorAll('.add-tag-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tagName = prompt('Ange taggnamn:');
+                    if (!tagName) return;
+                    
+                    fetch('/api/categorization/tags', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': getCsrfToken()
+                        },
+                        body: JSON.stringify({ name: tagName })
+                    })
+                    .then(response => response.json())
+                    .then(tag => {
+                        // Reload page to show new tag
+                        location.reload();
+                    })
+                    .catch(err => console.error('Failed to create tag:', err));
+                });
+            });
+            
+            function getCsrfToken() {
+                const meta = document.querySelector('meta[name="_csrf"]');
+                return meta ? meta.getAttribute('content') : '';
+            }
+        });
+    </script>
 </section>
 </body>
 </html>
