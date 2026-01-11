@@ -125,10 +125,11 @@
                                     <small>
                                         <i class="bi bi-exclamation-triangle"></i>
                                         Inga kategorier tillgängliga. 
-                                        <a href="/api/admin/categorization/initialize" 
-                                           onclick="event.preventDefault(); fetch(this.href, {method: 'POST', headers: {'X-CSRF-TOKEN': document.querySelector('meta[name=_csrf]')?.content || ''}}).then(() => location.reload());">
+                                        <a href="#" id="initializeCategoriesLink" 
+                                           onclick="event.preventDefault(); initializeCategories();">
                                             Klicka här för att initiera
                                         </a>
+                                        <span id="initializeStatus" class="ms-2"></span>
                                     </small>
                                 </div>
                                 
@@ -421,6 +422,63 @@
                 return meta ? meta.getAttribute('content') : '';
             }
         });
+        
+        // Function to initialize categories (outside DOMContentLoaded so it's globally accessible)
+        function initializeCategories() {
+            const statusSpan = document.getElementById('initializeStatus');
+            const link = document.getElementById('initializeCategoriesLink');
+            
+            if (link) {
+                link.style.pointerEvents = 'none';
+                link.style.opacity = '0.6';
+            }
+            
+            if (statusSpan) {
+                statusSpan.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Initierar...';
+            }
+            
+            const csrfToken = document.querySelector('meta[name="_csrf"]')?.content || '';
+            
+            fetch('/api/admin/categorization/initialize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('HTTP error! status: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    if (statusSpan) {
+                        statusSpan.innerHTML = '<i class="bi bi-check-circle text-success"></i> Klart!';
+                    }
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    if (statusSpan) {
+                        statusSpan.innerHTML = '<i class="bi bi-exclamation-circle text-danger"></i> Fel: ' + (data.message || 'Okänt fel');
+                    }
+                    if (link) {
+                        link.style.pointerEvents = 'auto';
+                        link.style.opacity = '1';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Failed to initialize categories:', error);
+                if (statusSpan) {
+                    statusSpan.innerHTML = '<i class="bi bi-exclamation-circle text-danger"></i> Fel: ' + error.message;
+                }
+                if (link) {
+                    link.style.pointerEvents = 'auto';
+                    link.style.opacity = '1';
+                }
+            });
+        }
     </script>
 </section>
 </body>
