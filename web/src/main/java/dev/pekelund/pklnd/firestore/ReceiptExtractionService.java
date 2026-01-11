@@ -14,6 +14,7 @@ import com.google.cloud.firestore.WriteBatch;
 import dev.pekelund.pklnd.receipts.ReceiptItemConstants;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -327,6 +329,143 @@ public class ReceiptExtractionService {
         }
     }
 
+    public List<ParsedReceipt> searchByItemName(String searchQuery, ReceiptOwner owner, boolean includeAllOwners) {
+        if (firestore.isEmpty() || !StringUtils.hasText(searchQuery)) {
+            return List.of();
+        }
+
+        if (!includeAllOwners && owner == null) {
+            return List.of();
+        }
+
+        List<ParsedReceipt> allReceipts = includeAllOwners ? listAllReceipts() : listReceiptsForOwner(owner);
+        
+        String normalizedQuery = searchQuery.trim().toLowerCase(Locale.ROOT);
+        
+        List<ParsedReceipt> matchingReceipts = new ArrayList<>();
+        for (ParsedReceipt receipt : allReceipts) {
+            if (receipt == null) {
+                continue;
+            }
+            
+            List<Map<String, Object>> items = receipt.displayItems();
+            if (items == null || items.isEmpty()) {
+                continue;
+            }
+            
+            boolean hasMatch = false;
+            for (Map<String, Object> item : items) {
+                if (item == null) {
+                    continue;
+                }
+                
+                Object nameObj = item.get("name");
+                if (nameObj == null) {
+                    continue;
+                }
+                
+                String itemName = nameObj.toString().toLowerCase(Locale.ROOT);
+                if (itemName.contains(normalizedQuery)) {
+                    hasMatch = true;
+                    break;
+                }
+            }
+            
+            if (hasMatch) {
+                matchingReceipts.add(receipt);
+            }
+        }
+        
+        matchingReceipts.sort(Comparator.comparing(ParsedReceipt::updatedAt,
+            Comparator.nullsLast(Comparator.reverseOrder())));
+        return Collections.unmodifiableList(matchingReceipts);
+    }
+
+    public List<SearchItemResult> searchItemsByName(String searchQuery, ReceiptOwner owner, boolean includeAllOwners) {
+        if (firestore.isEmpty() || !StringUtils.hasText(searchQuery)) {
+            return List.of();
+        }
+
+        if (!includeAllOwners && owner == null) {
+            return List.of();
+        }
+
+        List<ParsedReceipt> allReceipts = includeAllOwners ? listAllReceipts() : listReceiptsForOwner(owner);
+        
+        String normalizedQuery = searchQuery.trim().toLowerCase(Locale.ROOT);
+        
+        List<SearchItemResult> matchingItems = new ArrayList<>();
+        for (ParsedReceipt receipt : allReceipts) {
+            if (receipt == null) {
+                continue;
+            }
+            
+            List<Map<String, Object>> items = receipt.displayItems();
+            if (items == null || items.isEmpty()) {
+                continue;
+            }
+            
+            String receiptDisplayName = receipt.displayName();
+            if (receiptDisplayName == null || receiptDisplayName.isBlank()) {
+                receiptDisplayName = receipt.objectPath();
+            }
+            
+            String storeName = receipt.storeName();
+            if (storeName == null || storeName.isBlank()) {
+                storeName = "Unknown";
+            }
+            
+            for (Map<String, Object> item : items) {
+                if (item == null) {
+                    continue;
+                }
+                
+                Object nameObj = item.get("name");
+                if (nameObj == null) {
+                    continue;
+                }
+                
+                String itemName = nameObj.toString();
+                if (itemName.toLowerCase(Locale.ROOT).contains(normalizedQuery)) {
+                    // Use displayUnitPrice and displayTotalPrice from displayItems()
+                    String price = asString(item.get("displayUnitPrice"));
+                    BigDecimal priceValue = parseBigDecimal(item.get("unitPrice"));
+                    String quantity = asString(item.get("displayQuantity"));
+                    String total = asString(item.get("displayTotalPrice"));
+                    BigDecimal totalValue = parseBigDecimal(item.get("totalPrice"));
+                    
+                    // Calculate item discount
+                    BigDecimal discountValue = ParsedReceipt.calculateItemDiscountTotal(item);
+                    String discount = discountValue != null && discountValue.compareTo(BigDecimal.ZERO) > 0 
+                        ? formatAmount(discountValue) : null;
+                    
+                    matchingItems.add(new SearchItemResult(
+                        receipt.id(),
+                        receiptDisplayName,
+                        storeName,
+                        receipt.receiptDate(),
+                        receipt.updatedAt(),
+                        itemName,
+                        price,
+                        priceValue,
+                        quantity,
+                        total,
+                        totalValue,
+                        discount,
+                        discountValue
+                    ));
+                }
+            }
+        }
+        
+        // Sort by receipt date descending by default, then by item name
+        matchingItems.sort(Comparator
+            .comparing(SearchItemResult::receiptDate, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(SearchItemResult::itemName, String.CASE_INSENSITIVE_ORDER));
+        
+        return Collections.unmodifiableList(matchingItems);
+    }
+
     public void deleteReceiptsForOwner(ReceiptOwner owner) {
         if (owner == null || firestore.isEmpty()) {
             return;
@@ -628,6 +767,31 @@ public class ReceiptExtractionService {
             return StringUtils.hasText(string) ? string : null;
         }
         return value.toString();
+    }
+
+    private BigDecimal parseBigDecimal(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof BigDecimal bd) {
+            return bd;
+        }
+        if (value instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue());
+        }
+        String text = value.toString().replace(',', '.');
+        try {
+            return new BigDecimal(text);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private String formatAmount(BigDecimal value) {
+        if (value == null) {
+            return null;
+        }
+        return value.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString();
     }
 
     public record ReceiptItemReference(

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(null, ~{::section})}">
+<head>
+    <title th:text="#{page.receipts.search.title}">Sök kvitton</title>
+    <style>
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        .sortable:hover {
+            background-color: #f8f9fa !important;
+        }
+        .sort-indicator {
+            margin-left: 0.25rem;
+            font-size: 0.75rem;
+        }
+        #priceChart {
+            max-height: 400px;
+        }
+    </style>
+</head>
+<body>
+<section class="py-3 py-lg-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <a class="btn btn-link p-0 text-decoration-none" th:href="@{/receipts(scope=${scopeParam})}">
+            <i class="bi bi-arrow-left"></i>
+            Tillbaka till kvitton
+        </a>
+    </div>
+
+    <div th:if="${canViewAll}" class="mb-3">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Kvittoomfång">
+            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
+               th:href="@{/receipts/search(scope='my', q=${searchQuery})}">Mina kvitton</a>
+            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
+               th:href="@{/receipts/search(scope='all', q=${searchQuery})}">Alla kvitton</a>
+        </div>
+        <p class="text-muted small mb-0 mt-2"
+           th:text="${viewingAll} ? 'Söker i alla tolkade kvitton.' : 'Söker endast i dina tolkade kvitton.'">
+            Söker endast i dina tolkade kvitton.
+        </p>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <h1 class="h3 fw-semibold text-primary mb-3">Sök artiklar</h1>
+            <p class="text-muted mb-4">
+                Sök efter artiklar i dina kvitton. Sök fungerar med hela eller delar av artikelnamn, till exempel "mjölk" matchar "mellanmjölk", "Eko mellanmjölk" etc.
+            </p>
+
+            <div th:if="${!parsedReceiptsEnabled}" class="alert alert-warning" role="alert">
+                Sökning är inte tillgänglig just nu. Aktivera Firestore för att slå på funktionen.
+            </div>
+
+            <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+                <span th:text="${errorMessage}">Det gick inte att söka i kvitton.</span>
+            </div>
+
+            <form th:action="@{/receipts/search}" method="get" class="mb-4">
+                <input type="hidden" name="scope" th:value="${scopeParam}">
+                <div class="input-group">
+                    <input type="text" class="form-control" name="q" 
+                           th:value="${searchQuery}"
+                           placeholder="Sök efter artikelnamn..."
+                           aria-label="Sökfråga"
+                           th:disabled="${!parsedReceiptsEnabled}">
+                    <button class="btn btn-primary" type="submit" th:disabled="${!parsedReceiptsEnabled}">
+                        <i class="bi bi-search me-2"></i>Sök
+                    </button>
+                </div>
+            </form>
+
+            <div th:if="${searchPerformed and #lists.isEmpty(searchItemResults) and #lists.isEmpty(searchResults)}" class="text-center text-muted py-5">
+                <p class="mb-0">Inga kvitton hittades för din sökning.</p>
+            </div>
+
+            <!-- Individual items table -->
+            <div th:if="${!#lists.isEmpty(searchItemResults)}" class="mb-5">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 fw-semibold mb-0">Hittade artiklar</h2>
+                    <button class="btn btn-sm btn-outline-secondary" id="toggleChart" type="button">
+                        <i class="bi bi-graph-up me-1"></i>
+                        <span>Visa prisutveckling</span>
+                    </button>
+                </div>
+                
+                <!-- Price chart -->
+                <div id="chartContainer" class="mb-4" style="display: none;">
+                    <canvas id="priceChart"></canvas>
+                </div>
+
+                <!-- Filters -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label for="itemFilterButton" class="form-label small">Filtrera artiklar:</label>
+                        <div class="dropdown" id="itemFilterContainer">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center" 
+                                    type="button" id="itemFilterButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span>Alla artiklar</span>
+                            </button>
+                            <ul class="dropdown-menu w-100" id="itemFilterMenu" aria-labelledby="itemFilterButton" style="max-height: 400px; overflow-y: auto;">
+                                <!-- Items will be populated by JS -->
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="storeFilter" class="form-label small">Filtrera butik:</label>
+                        <select class="form-select form-select-sm" id="storeFilter">
+                            <option value="">Alla butiker</option>
+                        </select>
+                    </div>
+                </div>
+
+                <p class="text-muted mb-3">
+                    Visar <span id="visibleCount">0</span> av <span th:text="${#lists.size(searchItemResults)}">0</span> artiklar som matchar din sökning.
+                </p>
+                <div class="table-responsive">
+                    <table class="table align-middle" id="itemsTable">
+                        <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="sortable" data-column="itemName">
+                                Artikelnamn<span class="sort-indicator"></span>
+                            </th>
+                            <th scope="col" class="sortable" data-column="receiptStoreName">
+                                Butik<span class="sort-indicator"></span>
+                            </th>
+                            <th scope="col" class="sortable" data-column="receiptDate">
+                                Datum<span class="sort-indicator"></span>
+                            </th>
+                            <th scope="col" class="text-end sortable" data-column="itemPrice">
+                                Pris<span class="sort-indicator"></span>
+                            </th>
+                            <th scope="col" class="text-end sortable" data-column="itemQuantity">
+                                Antal<span class="sort-indicator"></span>
+                            </th>
+                            <th scope="col" class="text-end sortable" data-column="itemDiscount">
+                                Rabatt<span class="sort-indicator"></span>
+                            </th>
+                            <th scope="col" class="text-end sortable" data-column="itemTotal">
+                                Totalt<span class="sort-indicator"></span>
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody id="itemsTableBody">
+                        <tr th:each="item : ${searchItemResults}" 
+                            th:data-item-name="${item.itemName()}"
+                            th:data-receipt-store-name="${item.receiptStoreName()}"
+                            th:data-receipt-date="${item.receiptDate() != null ? item.receiptDate() : ''}"
+                            th:data-item-price="${item.itemPriceValue() != null ? item.itemPriceValue() : '0'}"
+                            th:data-item-total="${item.itemTotalValue() != null ? item.itemTotalValue() : '0'}"
+                            th:data-item-discount="${item.itemDiscountValue() != null ? item.itemDiscountValue() : '0'}"
+                            th:data-item-quantity="${item.itemQuantity() != null ? item.itemQuantity() : ''}"
+                            th:data-price-value="${item.itemPriceValue() != null ? item.itemPriceValue() : '0'}"
+                            th:data-total-value="${item.itemTotalValue() != null ? item.itemTotalValue() : '0'}"
+                            th:data-discount-value="${item.itemDiscountValue() != null ? item.itemDiscountValue() : '0'}">
+                            <td>
+                                <span class="fw-semibold" th:text="${item.itemName()}">Artikelnamn</span>
+                            </td>
+                            <td>
+                                <a th:href="@{/receipts/{id}(id=${item.receiptId()}, scope=${scopeParam})}" 
+                                   class="text-decoration-none">
+                                    <span th:text="${item.receiptStoreName()}">Butik</span>
+                                </a>
+                            </td>
+                            <td th:text="${item.receiptDate() != null ? item.receiptDate() : '—'}">—</td>
+                            <td class="text-end" th:text="${item.itemPrice() != null ? item.itemPrice() : '—'}">—</td>
+                            <td class="text-end" th:text="${item.itemQuantity() != null ? item.itemQuantity() : '—'}">—</td>
+                            <td class="text-end" th:text="${item.itemDiscount() != null ? item.itemDiscount() : '—'}">—</td>
+                            <td class="text-end" th:text="${item.itemTotal() != null ? item.itemTotal() : '—'}">—</td>
+                        </tr>
+                        </tbody>
+                        <tfoot class="table-light">
+                        <tr>
+                            <td colspan="5" class="text-end fw-semibold">Summering:</td>
+                            <td class="text-end fw-semibold" id="totalDiscount">—</td>
+                            <td class="text-end fw-semibold" id="totalSum">—</td>
+                        </tr>
+                        <tr>
+                            <td colspan="6" class="text-end">Antal artiklar:</td>
+                            <td class="text-end" id="itemCount">—</td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Receipts table -->
+            <div th:if="${!#lists.isEmpty(searchResults)}">
+                <h2 class="h5 fw-semibold mb-3">Kvitton med matchande artiklar</h2>
+                <p class="text-muted mb-3">
+                    Hittade <span th:text="${#lists.size(searchResults)}">0</span> kvitton som innehåller matchande artiklar.
+                </p>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th scope="col">Kvitto</th>
+                            <th scope="col">Datum</th>
+                            <th scope="col">Totalsumma</th>
+                            <th scope="col" class="text-end">Uppdaterad</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="result : ${searchResults}">
+                            <td>
+                                <a th:href="@{/receipts/{id}(id=${result.id()}, scope=${scopeParam})}" 
+                                   class="fw-semibold text-decoration-none">
+                                    <span th:text="${!#strings.isEmpty(result.storeName()) ? result.storeName() : (!#strings.isEmpty(result.displayName()) ? result.displayName() : result.objectPath())}">Kvitto</span>
+                                </a>
+                            </td>
+                            <td th:text="${result.receiptDate() != null ? result.receiptDate() : '—'}">—</td>
+                            <td th:text="${result.formattedTotalAmount() != null ? result.formattedTotalAmount() : (result.totalAmount() != null ? result.totalAmount() : '—')}">—</td>
+                            <td class="text-end" th:text="${result.updatedAt() != null ? result.updatedAt() : '—'}">—</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('itemsTable');
+    const tbody = document.getElementById('itemsTableBody');
+    // itemFilter is now replaced by itemFilterMenu and itemFilterButton
+    const itemFilterMenu = document.getElementById('itemFilterMenu');
+    const itemFilterButton = document.getElementById('itemFilterButton');
+    const storeFilter = document.getElementById('storeFilter');
+    const toggleChart = document.getElementById('toggleChart');
+    const chartContainer = document.getElementById('chartContainer');
+    
+    if (!table || !tbody) return;
+    
+    let sortColumn = 'receiptDate';
+    let sortAscending = false;
+    let chartInstance = null;
+    let selectedItems = new Set(); // Stores cleaned item names
+    
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Helper to clean item names (remove leading *)
+    function cleanItemName(name) {
+        return name ? name.replace(/^\*\s*/, '') : '';
+    }
+
+    // Populate filters only if they exist
+    if (itemFilterMenu && storeFilter) {
+        const uniqueItems = new Set();
+        const uniqueStores = new Set();
+        rows.forEach(row => {
+            const rawName = row.dataset.itemName;
+            const cleanedName = cleanItemName(rawName);
+            const storeName = row.dataset.receiptStoreName;
+            
+            if (cleanedName) uniqueItems.add(cleanedName);
+            if (storeName) uniqueStores.add(storeName);
+        });
+        
+        // Populate Item Dropdown
+        // "Select All" / Clear option
+        const clearLi = document.createElement('li');
+        const clearLink = document.createElement('a');
+        clearLink.className = 'dropdown-item';
+        clearLink.href = '#';
+        clearLink.textContent = 'Alla artiklar';
+        clearLink.dataset.value = '';
+        clearLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            selectedItems.clear();
+            updateItemFilterUI();
+            filterAndSort();
+        });
+        clearLi.appendChild(clearLink);
+        itemFilterMenu.appendChild(clearLi);
+
+        const dividerLi = document.createElement('li');
+        dividerLi.innerHTML = '<hr class="dropdown-divider">';
+        itemFilterMenu.appendChild(dividerLi);
+        
+        Array.from(uniqueItems).sort().forEach(item => {
+            const li = document.createElement('li');
+            const link = document.createElement('a');
+            link.className = 'dropdown-item d-flex justify-content-between align-items-center';
+            link.href = '#';
+            link.dataset.value = item;
+            
+            // Checkmark span
+            const checkSpan = document.createElement('span');
+            checkSpan.className = 'ms-2 text-primary fw-bold check-mark';
+            checkSpan.style.visibility = 'hidden'; // Hidden by default
+            checkSpan.innerHTML = '&#10003;'; // Checkmark symbol
+            
+            const textSpan = document.createElement('span');
+            textSpan.textContent = item;
+            
+            link.appendChild(textSpan);
+            link.appendChild(checkSpan);
+            
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation(); // Keep dropdown open
+                
+                if (selectedItems.has(item)) {
+                    selectedItems.delete(item);
+                } else {
+                    selectedItems.add(item);
+                }
+                
+                updateItemFilterUI();
+                filterAndSort();
+            });
+            
+            li.appendChild(link);
+            itemFilterMenu.appendChild(li);
+        });
+        
+        // Populate Store Select
+        Array.from(uniqueStores).sort().forEach(store => {
+            const option = document.createElement('option');
+            option.value = store;
+            option.textContent = store;
+            storeFilter.appendChild(option);
+        });
+    }
+
+    function updateItemFilterUI() {
+        // Update checkmarks
+        const items = itemFilterMenu.querySelectorAll('a.dropdown-item[data-value]');
+        items.forEach(link => {
+            const val = link.dataset.value;
+            if (!val) return; // Skip "All" option
+            
+            const checkMark = link.querySelector('.check-mark');
+            if (checkMark) {
+                checkMark.style.visibility = selectedItems.has(val) ? 'visible' : 'hidden';
+            }
+            if (selectedItems.has(val)) {
+                link.classList.add('bg-light');
+            } else {
+                link.classList.remove('bg-light');
+            }
+        });
+
+        // Update Button Text
+        const span = itemFilterButton.querySelector('span');
+        if (selectedItems.size === 0) {
+            span.textContent = 'Alla artiklar';
+        } else if (selectedItems.size === 1) {
+            span.textContent = Array.from(selectedItems)[0];
+        } else {
+            span.textContent = selectedItems.size + ' artiklar valda';
+        }
+    }
+    
+    function filterAndSort() {
+        const storeValue = storeFilter ? storeFilter.value : '';
+        
+        const filteredRows = rows.filter(row => {
+            const rowCleanName = cleanItemName(row.dataset.itemName);
+            const itemMatch = selectedItems.size === 0 || selectedItems.has(rowCleanName);
+            const storeMatch = !storeValue || row.dataset.receiptStoreName === storeValue;
+            return itemMatch && storeMatch;
+        });
+        
+        // Sort
+        filteredRows.sort((a, b) => {
+            let aVal, bVal;
+            
+            if (sortColumn === 'itemPrice' || sortColumn === 'itemTotal' || sortColumn === 'itemDiscount') {
+                // For price columns, use the value attributes
+                const dataAttr = sortColumn === 'itemPrice' ? 'itemPrice' : 
+                                sortColumn === 'itemTotal' ? 'itemTotal' : 'itemDiscount';
+                aVal = parseFloat(a.dataset[dataAttr]);
+                bVal = parseFloat(b.dataset[dataAttr]);
+                if (isNaN(aVal)) aVal = 0;
+                if (isNaN(bVal)) bVal = 0;
+            } else if (sortColumn === 'receiptDate') {
+                aVal = a.dataset.receiptDate || '';
+                bVal = b.dataset.receiptDate || '';
+            } else {
+                // For other columns, use the column name directly
+                aVal = a.dataset[sortColumn] || '';
+                bVal = b.dataset[sortColumn] || '';
+            }
+            
+            if (aVal < bVal) return sortAscending ? -1 : 1;
+            if (aVal > bVal) return sortAscending ? 1 : -1;
+            return 0;
+        });
+        
+        // Clear tbody
+        tbody.innerHTML = '';
+        filteredRows.forEach(row => tbody.appendChild(row));
+        
+        // Update counts
+        const visibleCountEl = document.getElementById('visibleCount');
+        if (visibleCountEl) {
+            visibleCountEl.textContent = filteredRows.length;
+        }
+        
+        // Calculate totals
+        let totalPrice = 0;
+        let totalDiscount = 0;
+        filteredRows.forEach(row => {
+            const priceVal = parseFloat(row.dataset.totalValue);
+            const discountVal = parseFloat(row.dataset.discountValue);
+            if (!isNaN(priceVal)) totalPrice += priceVal;
+            if (!isNaN(discountVal)) totalDiscount += discountVal;
+        });
+        
+        const totalSumEl = document.getElementById('totalSum');
+        const totalDiscountEl = document.getElementById('totalDiscount');
+        const itemCountEl = document.getElementById('itemCount');
+        
+        if (totalSumEl) {
+            totalSumEl.textContent = totalPrice.toFixed(2);
+        }
+        if (totalDiscountEl) {
+            totalDiscountEl.textContent = totalDiscount > 0 ? totalDiscount.toFixed(2) : '—';
+        }
+        if (itemCountEl) {
+            itemCountEl.textContent = filteredRows.length;
+        }
+        
+        // Update chart if visible
+        if (chartContainer && chartContainer.style.display !== 'none') {
+            updateChart(filteredRows);
+        }
+    }
+    
+    // Sorting
+    document.querySelectorAll('.sortable').forEach(th => {
+        th.addEventListener('click', function() {
+            const column = this.dataset.column;
+            if (sortColumn === column) {
+                sortAscending = !sortAscending;
+            } else {
+                sortColumn = column;
+                sortAscending = true;
+            }
+            
+            // Update indicators
+            document.querySelectorAll('.sort-indicator').forEach(ind => ind.textContent = '');
+            this.querySelector('.sort-indicator').textContent = sortAscending ? '▲' : '▼';
+            
+            filterAndSort();
+        });
+    });
+    
+    // Filters
+    // Removed itemFilter event, now handled by dropdown clicks
+    if (storeFilter) {
+        storeFilter.addEventListener('change', filterAndSort);
+    }
+    
+    // Chart toggle
+    if (toggleChart && chartContainer) {
+        toggleChart.addEventListener('click', function() {
+            if (chartContainer.style.display === 'none') {
+                chartContainer.style.display = 'block';
+                this.querySelector('span').textContent = 'Dölj prisutveckling';
+                const storeValue = storeFilter ? storeFilter.value : '';
+                updateChart(rows.filter(row => {
+                    const rowCleanName = cleanItemName(row.dataset.itemName);
+                    const itemMatch = selectedItems.size === 0 || selectedItems.has(rowCleanName);
+                    const storeMatch = !storeValue || row.dataset.receiptStoreName === storeValue;
+                    return itemMatch && storeMatch;
+                }));
+            } else {
+                chartContainer.style.display = 'none';
+                this.querySelector('span').textContent = 'Visa prisutveckling';
+            }
+        });
+    }
+    
+    function updateChart(filteredRows) {
+        const data = filteredRows
+            .filter(row => {
+                const date = row.dataset.receiptDate;
+                const price = parseFloat(row.dataset.itemPrice);
+                return date && date !== '' && !isNaN(price) && price > 0;
+            })
+            .map(row => ({
+                date: row.dataset.receiptDate,
+                price: parseFloat(row.dataset.itemPrice),
+                item: row.dataset.itemName
+            }))
+            .sort((a, b) => a.date.localeCompare(b.date));
+        
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+        
+        const ctx = document.getElementById('priceChart');
+        if (ctx && data.length > 0) {
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.date),
+                    datasets: [{
+                        label: 'Pris',
+                        data: data.map(d => d.price),
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        title: {
+                            display: true,
+                            text: 'Prisutveckling över tid'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Pris (kr)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // Set initial sort indicator for default column (receiptDate, descending)
+    document.querySelectorAll('.sortable').forEach(th => {
+        if (th.dataset.column === 'receiptDate') {
+            th.querySelector('.sort-indicator').textContent = '▼';
+        }
+    });
+    
+    // Initial sort by date descending
+    filterAndSort();
+});
+</script>
+</section>
+</body>
+</html>
