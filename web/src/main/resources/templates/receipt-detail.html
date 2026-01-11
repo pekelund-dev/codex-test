@@ -117,14 +117,28 @@
                         <td th:if="${categorizationEnabled}" 
                             th:with="itemIdentifier=${item['normalizedEan'] != null ? item['normalizedEan'] : iterStat.index},
                                      assignedCategory=${itemCategoryMap.get(itemIdentifier.toString())},
-                                     assignedTags=${itemTagsMap.get(itemIdentifier.toString())}">
+                                     assignedTags=${itemTagsMap.get(itemIdentifier.toString())},
+                                     hasCategories=${!#maps.isEmpty(categoriesHierarchy)}">
                             <div class="d-flex flex-column gap-2">
+                                <!-- Show warning if no categories are available -->
+                                <div th:if="${!hasCategories && iterStat.index == 0}" class="alert alert-warning alert-sm mb-2 p-2">
+                                    <small>
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                        Inga kategorier tillgängliga. 
+                                        <a href="/api/admin/categorization/initialize" 
+                                           onclick="event.preventDefault(); fetch(this.href, {method: 'POST', headers: {'X-CSRF-TOKEN': document.querySelector('meta[name=_csrf]')?.content || ''}}).then(() => location.reload());">
+                                            Klicka här för att initiera
+                                        </a>
+                                    </small>
+                                </div>
+                                
                                 <!-- Category dropdown -->
                                 <div class="input-group input-group-sm">
                                     <select class="form-select form-select-sm category-select" 
                                             th:data-receipt-id="${receipt.id()}"
                                             th:data-item-index="${iterStat.index}"
-                                            th:data-item-ean="${item['normalizedEan']}">
+                                            th:data-item-ean="${item['normalizedEan']}"
+                                            th:disabled="${!hasCategories}">
                                         <option value="">-- Välj kategori --</option>
                                         <optgroup th:each="entry : ${categoriesHierarchy}" 
                                                   th:label="${entry.key.name()}">
@@ -139,7 +153,8 @@
                                     </select>
                                     <button class="btn btn-outline-secondary btn-sm add-category-btn" 
                                             type="button" 
-                                            title="Skapa ny kategori">
+                                            title="Skapa ny kategori"
+                                            th:disabled="${!hasCategories}">
                                         <i class="bi bi-plus"></i>
                                     </button>
                                 </div>
@@ -150,7 +165,8 @@
                                             multiple
                                             th:data-receipt-id="${receipt.id()}"
                                             th:data-item-index="${iterStat.index}"
-                                            th:data-item-ean="${item['normalizedEan']}">
+                                            th:data-item-ean="${item['normalizedEan']}"
+                                            th:disabled="${#lists.isEmpty(tags)}">
                                         <option th:each="tag : ${tags}" 
                                                 th:value="${tag.id()}"
                                                 th:selected="${assignedTags != null && #lists.contains(assignedTags, tag.id())}"
@@ -158,7 +174,8 @@
                                     </select>
                                     <button class="btn btn-outline-secondary btn-sm add-tag-btn" 
                                             type="button"
-                                            title="Skapa ny tagg">
+                                            title="Skapa ny tagg"
+                                            th:disabled="${#lists.isEmpty(tags)}">
                                         <i class="bi bi-plus"></i>
                                     </button>
                                 </div>
