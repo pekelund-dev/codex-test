@@ -92,10 +92,16 @@
                 <!-- Filters -->
                 <div class="row g-2 mb-3">
                     <div class="col-md-6">
-                        <label for="itemFilter" class="form-label small">Filtrera artiklar:</label>
-                        <select class="form-select form-select-sm" id="itemFilter">
-                            <option value="">Alla artiklar</option>
-                        </select>
+                        <label for="itemFilterButton" class="form-label small">Filtrera artiklar:</label>
+                        <div class="dropdown" id="itemFilterContainer">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center" 
+                                    type="button" id="itemFilterButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span>Alla artiklar</span>
+                            </button>
+                            <ul class="dropdown-menu w-100" id="itemFilterMenu" aria-labelledby="itemFilterButton" style="max-height: 400px; overflow-y: auto;">
+                                <!-- Items will be populated by JS -->
+                            </ul>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <label for="storeFilter" class="form-label small">Filtrera butik:</label>
@@ -146,7 +152,7 @@
                             th:data-item-quantity="${item.itemQuantity() != null ? item.itemQuantity() : ''}"
                             th:data-price-value="${item.itemPriceValue() != null ? item.itemPriceValue() : '0'}"
                             th:data-total-value="${item.itemTotalValue() != null ? item.itemTotalValue() : '0'}"
-                            th:data-discount-value="${item.itemDiscountValue() != null ? item.itemDiscountValue() : '0'}">>
+                            th:data-discount-value="${item.itemDiscountValue() != null ? item.itemDiscountValue() : '0'}">
                             <td>
                                 <span class="fw-semibold" th:text="${item.itemName()}">Artikelnamn</span>
                             </td>
@@ -212,14 +218,15 @@
             </div>
         </div>
     </div>
-</section>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script th:inline="javascript">
 document.addEventListener('DOMContentLoaded', function() {
     const table = document.getElementById('itemsTable');
     const tbody = document.getElementById('itemsTableBody');
-    const itemFilter = document.getElementById('itemFilter');
+    // itemFilter is now replaced by itemFilterMenu and itemFilterButton
+    const itemFilterMenu = document.getElementById('itemFilterMenu');
+    const itemFilterButton = document.getElementById('itemFilterButton');
     const storeFilter = document.getElementById('storeFilter');
     const toggleChart = document.getElementById('toggleChart');
     const chartContainer = document.getElementById('chartContainer');
@@ -229,27 +236,87 @@ document.addEventListener('DOMContentLoaded', function() {
     let sortColumn = 'receiptDate';
     let sortAscending = false;
     let chartInstance = null;
+    let selectedItems = new Set(); // Stores cleaned item names
     
     const rows = Array.from(tbody.querySelectorAll('tr'));
     
+    // Helper to clean item names (remove leading *)
+    function cleanItemName(name) {
+        return name ? name.replace(/^\*\s*/, '') : '';
+    }
+
     // Populate filters only if they exist
-    if (itemFilter && storeFilter) {
+    if (itemFilterMenu && storeFilter) {
         const uniqueItems = new Set();
         const uniqueStores = new Set();
         rows.forEach(row => {
-            const itemName = row.dataset.itemName;
+            const rawName = row.dataset.itemName;
+            const cleanedName = cleanItemName(rawName);
             const storeName = row.dataset.receiptStoreName;
-            if (itemName) uniqueItems.add(itemName);
+            
+            if (cleanedName) uniqueItems.add(cleanedName);
             if (storeName) uniqueStores.add(storeName);
         });
         
+        // Populate Item Dropdown
+        // "Select All" / Clear option
+        const clearLi = document.createElement('li');
+        const clearLink = document.createElement('a');
+        clearLink.className = 'dropdown-item';
+        clearLink.href = '#';
+        clearLink.textContent = 'Alla artiklar';
+        clearLink.dataset.value = '';
+        clearLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            selectedItems.clear();
+            updateItemFilterUI();
+            filterAndSort();
+        });
+        clearLi.appendChild(clearLink);
+        itemFilterMenu.appendChild(clearLi);
+
+        const dividerLi = document.createElement('li');
+        dividerLi.innerHTML = '<hr class="dropdown-divider">';
+        itemFilterMenu.appendChild(dividerLi);
+        
         Array.from(uniqueItems).sort().forEach(item => {
-            const option = document.createElement('option');
-            option.value = item;
-            option.textContent = item;
-            itemFilter.appendChild(option);
+            const li = document.createElement('li');
+            const link = document.createElement('a');
+            link.className = 'dropdown-item d-flex justify-content-between align-items-center';
+            link.href = '#';
+            link.dataset.value = item;
+            
+            // Checkmark span
+            const checkSpan = document.createElement('span');
+            checkSpan.className = 'ms-2 text-primary fw-bold check-mark';
+            checkSpan.style.visibility = 'hidden'; // Hidden by default
+            checkSpan.innerHTML = '&#10003;'; // Checkmark symbol
+            
+            const textSpan = document.createElement('span');
+            textSpan.textContent = item;
+            
+            link.appendChild(textSpan);
+            link.appendChild(checkSpan);
+            
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation(); // Keep dropdown open
+                
+                if (selectedItems.has(item)) {
+                    selectedItems.delete(item);
+                } else {
+                    selectedItems.add(item);
+                }
+                
+                updateItemFilterUI();
+                filterAndSort();
+            });
+            
+            li.appendChild(link);
+            itemFilterMenu.appendChild(li);
         });
         
+        // Populate Store Select
         Array.from(uniqueStores).sort().forEach(store => {
             const option = document.createElement('option');
             option.value = store;
@@ -257,13 +324,42 @@ document.addEventListener('DOMContentLoaded', function() {
             storeFilter.appendChild(option);
         });
     }
+
+    function updateItemFilterUI() {
+        // Update checkmarks
+        const items = itemFilterMenu.querySelectorAll('a.dropdown-item[data-value]');
+        items.forEach(link => {
+            const val = link.dataset.value;
+            if (!val) return; // Skip "All" option
+            
+            const checkMark = link.querySelector('.check-mark');
+            if (checkMark) {
+                checkMark.style.visibility = selectedItems.has(val) ? 'visible' : 'hidden';
+            }
+            if (selectedItems.has(val)) {
+                link.classList.add('bg-light');
+            } else {
+                link.classList.remove('bg-light');
+            }
+        });
+
+        // Update Button Text
+        const span = itemFilterButton.querySelector('span');
+        if (selectedItems.size === 0) {
+            span.textContent = 'Alla artiklar';
+        } else if (selectedItems.size === 1) {
+            span.textContent = Array.from(selectedItems)[0];
+        } else {
+            span.textContent = selectedItems.size + ' artiklar valda';
+        }
+    }
     
     function filterAndSort() {
-        const itemValue = itemFilter ? itemFilter.value : '';
         const storeValue = storeFilter ? storeFilter.value : '';
         
         const filteredRows = rows.filter(row => {
-            const itemMatch = !itemValue || row.dataset.itemName === itemValue;
+            const rowCleanName = cleanItemName(row.dataset.itemName);
+            const itemMatch = selectedItems.size === 0 || selectedItems.has(rowCleanName);
             const storeMatch = !storeValue || row.dataset.receiptStoreName === storeValue;
             return itemMatch && storeMatch;
         });
@@ -354,9 +450,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Filters
-    if (itemFilter) {
-        itemFilter.addEventListener('change', filterAndSort);
-    }
+    // Removed itemFilter event, now handled by dropdown clicks
     if (storeFilter) {
         storeFilter.addEventListener('change', filterAndSort);
     }
@@ -367,10 +461,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (chartContainer.style.display === 'none') {
                 chartContainer.style.display = 'block';
                 this.querySelector('span').textContent = 'Dölj prisutveckling';
-                const itemValue = itemFilter ? itemFilter.value : '';
                 const storeValue = storeFilter ? storeFilter.value : '';
                 updateChart(rows.filter(row => {
-                    const itemMatch = !itemValue || row.dataset.itemName === itemValue;
+                    const rowCleanName = cleanItemName(row.dataset.itemName);
+                    const itemMatch = selectedItems.size === 0 || selectedItems.has(rowCleanName);
                     const storeMatch = !storeValue || row.dataset.receiptStoreName === storeValue;
                     return itemMatch && storeMatch;
                 }));
@@ -449,5 +543,6 @@ document.addEventListener('DOMContentLoaded', function() {
     filterAndSort();
 });
 </script>
+</section>
 </body>
 </html>
