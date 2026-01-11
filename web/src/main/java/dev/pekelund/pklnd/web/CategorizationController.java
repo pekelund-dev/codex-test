@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -33,18 +34,18 @@ public class CategorizationController {
 
     private static final Logger log = LoggerFactory.getLogger(CategorizationController.class);
 
-    private final CategoryService categoryService;
-    private final TagService tagService;
-    private final ItemCategorizationService itemCategorizationService;
+    private final Optional<CategoryService> categoryService;
+    private final Optional<TagService> tagService;
+    private final Optional<ItemCategorizationService> itemCategorizationService;
 
     public CategorizationController(
-        CategoryService categoryService,
-        TagService tagService,
-        ItemCategorizationService itemCategorizationService
+        @Autowired(required = false) CategoryService categoryService,
+        @Autowired(required = false) TagService tagService,
+        @Autowired(required = false) ItemCategorizationService itemCategorizationService
     ) {
-        this.categoryService = categoryService;
-        this.tagService = tagService;
-        this.itemCategorizationService = itemCategorizationService;
+        this.categoryService = Optional.ofNullable(categoryService);
+        this.tagService = Optional.ofNullable(tagService);
+        this.itemCategorizationService = Optional.ofNullable(itemCategorizationService);
     }
 
     /**
@@ -53,11 +54,11 @@ public class CategorizationController {
     @GetMapping("/categories")
     @ResponseBody
     public ResponseEntity<Map<Category, List<Category>>> listCategories() {
-        if (!categoryService.isEnabled()) {
+        if (categoryService.isEmpty() || !categoryService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
-        Map<Category, List<Category>> hierarchy = categoryService.getCategoriesHierarchy();
+        Map<Category, List<Category>> hierarchy = categoryService.get().getCategoriesHierarchy();
         return ResponseEntity.ok(hierarchy);
     }
 
@@ -67,11 +68,11 @@ public class CategorizationController {
     @GetMapping("/categories/{id}")
     @ResponseBody
     public ResponseEntity<Category> getCategory(@PathVariable String id) {
-        if (!categoryService.isEnabled()) {
+        if (!categoryService.isEmpty() || !categoryService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
-        Optional<Category> category = categoryService.findById(id);
+        Optional<Category> category = categoryService.get().findById(id);
         return category.map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
@@ -82,12 +83,12 @@ public class CategorizationController {
     @PostMapping("/categories")
     @ResponseBody
     public ResponseEntity<Category> createCategory(@RequestBody CreateCategoryRequest request) {
-        if (!categoryService.isEnabled()) {
+        if (!categoryService.isEmpty() || !categoryService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
         try {
-            Category category = categoryService.createCategory(
+            Category category = categoryService.get().createCategory(
                 request.name(),
                 request.parentId(),
                 false // User-created categories are not predefined
@@ -108,12 +109,12 @@ public class CategorizationController {
         @PathVariable String id,
         @RequestBody UpdateCategoryRequest request
     ) {
-        if (!categoryService.isEnabled()) {
+        if (!categoryService.isEmpty() || !categoryService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
         try {
-            Category category = categoryService.updateCategory(
+            Category category = categoryService.get().updateCategory(
                 id,
                 request.name(),
                 request.parentId()
@@ -131,12 +132,12 @@ public class CategorizationController {
     @DeleteMapping("/categories/{id}")
     @ResponseBody
     public ResponseEntity<Void> deleteCategory(@PathVariable String id) {
-        if (!categoryService.isEnabled()) {
+        if (!categoryService.isEmpty() || !categoryService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
         try {
-            categoryService.deleteCategory(id);
+            categoryService.get().deleteCategory(id);
             return ResponseEntity.noContent().build();
         } catch (IllegalStateException ex) {
             log.warn("Failed to delete category: {}", ex.getMessage());
@@ -150,11 +151,11 @@ public class CategorizationController {
     @GetMapping("/tags")
     @ResponseBody
     public ResponseEntity<List<ItemTag>> listTags() {
-        if (!tagService.isEnabled()) {
+        if (!tagService.isEmpty() || !tagService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
-        List<ItemTag> tags = tagService.listTags();
+        List<ItemTag> tags = tagService.get().listTags();
         return ResponseEntity.ok(tags);
     }
 
@@ -164,11 +165,11 @@ public class CategorizationController {
     @GetMapping("/tags/{id}")
     @ResponseBody
     public ResponseEntity<ItemTag> getTag(@PathVariable String id) {
-        if (!tagService.isEnabled()) {
+        if (!tagService.isEmpty() || !tagService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
-        Optional<ItemTag> tag = tagService.findById(id);
+        Optional<ItemTag> tag = tagService.get().findById(id);
         return tag.map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
@@ -179,12 +180,12 @@ public class CategorizationController {
     @PostMapping("/tags")
     @ResponseBody
     public ResponseEntity<ItemTag> createTag(@RequestBody CreateTagRequest request) {
-        if (!tagService.isEnabled()) {
+        if (!tagService.isEmpty() || !tagService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
         try {
-            ItemTag tag = tagService.createTag(
+            ItemTag tag = tagService.get().createTag(
                 request.name(),
                 false // User-created tags are not predefined
             );
@@ -201,12 +202,12 @@ public class CategorizationController {
     @DeleteMapping("/tags/{id}")
     @ResponseBody
     public ResponseEntity<Void> deleteTag(@PathVariable String id) {
-        if (!tagService.isEnabled()) {
+        if (!tagService.isEmpty() || !tagService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
         try {
-            tagService.deleteTag(id);
+            tagService.get().deleteTag(id);
             return ResponseEntity.noContent().build();
         } catch (IllegalStateException ex) {
             log.warn("Failed to delete tag: {}", ex.getMessage());
@@ -224,13 +225,13 @@ public class CategorizationController {
         @RequestBody AssignCategoryRequest request,
         Authentication authentication
     ) {
-        if (!itemCategorizationService.isEnabled()) {
+        if (!itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
         try {
             String assignedBy = authentication != null ? authentication.getName() : "anonymous";
-            itemCategorizationService.assignCategory(
+            itemCategorizationService.get().assignCategory(
                 receiptId,
                 request.itemIndex(),
                 request.itemEan(),
@@ -253,11 +254,11 @@ public class CategorizationController {
         @PathVariable String receiptId,
         @RequestParam String itemIdentifier
     ) {
-        if (!itemCategorizationService.isEnabled()) {
+        if (!itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
-        itemCategorizationService.removeCategoryFromItem(receiptId, itemIdentifier);
+        itemCategorizationService.get().removeCategoryFromItem(receiptId, itemIdentifier);
         return ResponseEntity.noContent().build();
     }
 
@@ -271,13 +272,13 @@ public class CategorizationController {
         @RequestBody AssignTagRequest request,
         Authentication authentication
     ) {
-        if (!itemCategorizationService.isEnabled()) {
+        if (!itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
         try {
             String assignedBy = authentication != null ? authentication.getName() : "anonymous";
-            itemCategorizationService.assignTag(
+            itemCategorizationService.get().assignTag(
                 receiptId,
                 request.itemIndex(),
                 request.itemEan(),
@@ -301,11 +302,11 @@ public class CategorizationController {
         @RequestParam String itemIdentifier,
         @PathVariable String tagId
     ) {
-        if (!itemCategorizationService.isEnabled()) {
+        if (!itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
-        itemCategorizationService.removeTagFromItem(receiptId, itemIdentifier, tagId);
+        itemCategorizationService.get().removeTagFromItem(receiptId, itemIdentifier, tagId);
         return ResponseEntity.noContent().build();
     }
 

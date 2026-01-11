@@ -143,7 +143,7 @@ public class CategoryStatisticsService {
             // Create a map of item index/EAN to category ID
             Map<String, String> itemToCategoryMap = itemCategories.stream()
                 .collect(Collectors.toMap(
-                    mapping -> mapping.itemEan() != null ? mapping.itemEan() : mapping.itemIndex(),
+                    this::getItemIdentifier,
                     ItemCategoryMapping::categoryId,
                     (existing, replacement) -> existing
                 ));
@@ -152,8 +152,7 @@ public class CategoryStatisticsService {
             List<Map<String, Object>> items = receipt.displayItems();
             for (int i = 0; i < items.size(); i++) {
                 Map<String, Object> item = items.get(i);
-                String itemEan = extractEan(item);
-                String itemIdentifier = itemEan != null ? itemEan : String.valueOf(i);
+                String itemIdentifier = getItemIdentifierFromMap(item, i);
                 
                 String categoryId = itemToCategoryMap.get(itemIdentifier);
                 if (categoryId == null) {
@@ -197,6 +196,21 @@ public class CategoryStatisticsService {
             Collections.unmodifiableMap(byParent),
             totalSpending
         );
+    }
+
+    /**
+     * Get the item identifier from a mapping (prefer EAN over index).
+     */
+    private String getItemIdentifier(ItemCategoryMapping mapping) {
+        return mapping.itemEan() != null ? mapping.itemEan() : mapping.itemIndex();
+    }
+
+    /**
+     * Get the item identifier from a receipt item map with its index.
+     */
+    private String getItemIdentifierFromMap(Map<String, Object> item, int index) {
+        String itemEan = extractEan(item);
+        return itemEan != null ? itemEan : String.valueOf(index);
     }
 
     private String extractEan(Map<String, Object> item) {
