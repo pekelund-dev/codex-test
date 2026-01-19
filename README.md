@@ -1,6 +1,6 @@
-# pklnd
+# KVARK
 
-pklnd is a Spring Boot application for maintaining a personal receipt archive focused on Swedish retailers such as ICA. It helps you upload, store, and organise proof of purchase so every grocery run and household buy is searchable online. The responsive web experience is secured with email/password sign-in and Google OAuth 2.0, presenting public and protected pages through a unified navigation.
+KVARK (Kvitto ARKiv - Receipt Archive) is a Spring Boot application for maintaining a personal receipt archive focused on Swedish retailers such as ICA. It helps you upload, store, and organise proof of purchase so every grocery run and household buy is searchable online. The responsive web experience is secured with email/password sign-in and Google OAuth 2.0, presenting public and protected pages through a unified navigation.
 
 ## Features
 
@@ -79,11 +79,11 @@ Use the `FIRESTORE_DATABASE_ID` environment variable to point the app at the Fir
 
 > 💡 When deploying to Cloud Run or any other Google-managed runtime, leave `FIRESTORE_CREDENTIALS` unset—the service account attached to the workload authenticates automatically via Application Default Credentials. Only download JSON keys for local development or third-party hosting.
 
-If you already generated service-account keys or OAuth credentials, keep the JSON files outside of the repository (for example `~/.config/pklnd/`). Point `FIRESTORE_CREDENTIALS_FILE` and/or `GOOGLE_OAUTH_CREDENTIALS_FILE` at those files and source the helper to populate the runtime environment without copying secrets into shell history:
+If you already generated service-account keys or OAuth credentials, keep the JSON files outside of the repository (for example `~/.config/kvark/`). Point `FIRESTORE_CREDENTIALS_FILE` and/or `GOOGLE_OAUTH_CREDENTIALS_FILE` at those files and source the helper to populate the runtime environment without copying secrets into shell history:
 
 ```bash
-export FIRESTORE_CREDENTIALS_FILE="$HOME/.config/pklnd/firestore.json"
-export GOOGLE_OAUTH_CREDENTIALS_FILE="$HOME/.config/pklnd/oauth-client.json"
+export FIRESTORE_CREDENTIALS_FILE="$HOME/.config/kvark/firestore.json"
+export GOOGLE_OAUTH_CREDENTIALS_FILE="$HOME/.config/kvark/oauth-client.json"
 source ./scripts/legacy/load_local_secrets.sh
 ```
 
@@ -147,12 +147,12 @@ Use the Terraform automation for a streamlined setup with optimized build perfor
 
 ```bash
 # 1) Seed the unified secret locally
-cat > /tmp/pklnd-secret.json <<'JSON'
+cat > /tmp/kvark-secret.json <<'JSON'
 {"google_client_id":"your-client-id","google_client_secret":"your-client-secret","ai_studio_api_key":""}
 JSON
 
 # 2) Provision infrastructure (APIs, Artifact Registry, service accounts, Firestore, storage, and the unified secret)
-PROJECT_ID=your-project APP_SECRET_FILE=/tmp/pklnd-secret.json ./scripts/terraform/apply_infrastructure.sh
+PROJECT_ID=your-project APP_SECRET_FILE=/tmp/kvark-secret.json ./scripts/terraform/apply_infrastructure.sh
 
 # 3) Build and deploy both Cloud Run services with the values pulled from the single Secret Manager secret
 PROJECT_ID=your-project ./scripts/terraform/deploy_services.sh
