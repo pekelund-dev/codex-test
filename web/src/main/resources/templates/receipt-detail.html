@@ -86,7 +86,7 @@
                         <th scope="col">Unit price</th>
                         <th scope="col">Total price</th>
                         <th scope="col">Discounts</th>
-                        <th scope="col" th:if="${categorizationEnabled}">Category & Tags</th>
+                        <th scope="col" th:if="${categorizationEnabled}">Kategori & Taggar</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -172,12 +172,12 @@
                                             <!-- Tags will be populated by JavaScript -->
                                         </span>
                                         <!-- Add tag button -->
-                                        <button class="btn btn-sm add-tag-badge-btn" 
+                                        <button class="btn btn-sm add-tag-badge-btn badge" 
                                                 type="button"
                                                 title="Lägg till taggar"
                                                 th:disabled="${#lists.isEmpty(tags)}"
-                                                style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border: 1px dashed #6c757d; background: transparent;">
-                                            <i class="bi bi-plus"></i> Tagg
+                                                style="padding: 0.35rem 0.5rem; font-size: 0.75rem; border: 1px dashed #6c757d; background: #f8f9fa; color: #6c757d; cursor: pointer;">
+                                            <i class="bi bi-plus"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -308,6 +308,20 @@
         </div>
     </div>
     
+    <!-- Toast Container for notifications -->
+    <div th:if="${categorizationEnabled}" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        <div id="notificationToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <i class="bi me-2" id="toastIcon"></i>
+                <strong class="me-auto" id="toastTitle">Meddelande</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Stäng"></button>
+            </div>
+            <div class="toast-body" id="toastMessage">
+                Meddelande kommer här
+            </div>
+        </div>
+    </div>
+    
     <!-- Tag Management Modal -->
     <div th:if="${categorizationEnabled}" class="modal fade" id="tagModal" tabindex="-1" aria-labelledby="tagModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -354,8 +368,46 @@
     </div>
     
     <!-- Category and Tag Management JavaScript -->
-    <script th:if="${categorizationEnabled}">
+    <script th:if="${categorizationEnabled}" th:inline="javascript">
+        /*<![CDATA[*/
         document.addEventListener('DOMContentLoaded', function() {
+            // Get all available tags from the server
+            const allTags = /*[[${tags}]]*/ [];
+            
+            // Toast notification function
+            function showToast(title, message, type = 'info') {
+                const toastEl = document.getElementById('notificationToast');
+                const toastIcon = document.getElementById('toastIcon');
+                const toastTitle = document.getElementById('toastTitle');
+                const toastMessage = document.getElementById('toastMessage');
+                const toastHeader = toastEl.querySelector('.toast-header');
+                
+                // Reset classes
+                toastHeader.className = 'toast-header';
+                toastIcon.className = 'bi me-2';
+                
+                // Set icon and styling based on type
+                if (type === 'success') {
+                    toastIcon.classList.add('bi-check-circle-fill', 'text-success');
+                    toastHeader.classList.add('bg-success', 'text-white');
+                } else if (type === 'error') {
+                    toastIcon.classList.add('bi-exclamation-circle-fill', 'text-danger');
+                    toastHeader.classList.add('bg-danger', 'text-white');
+                } else if (type === 'warning') {
+                    toastIcon.classList.add('bi-exclamation-triangle-fill', 'text-warning');
+                    toastHeader.classList.add('bg-warning', 'text-dark');
+                } else {
+                    toastIcon.classList.add('bi-info-circle-fill', 'text-info');
+                    toastHeader.classList.add('bg-info', 'text-white');
+                }
+                
+                toastTitle.textContent = title;
+                toastMessage.textContent = message;
+                
+                const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 3000 });
+                toast.show();
+            }
+            
             // Handle category selection
             document.querySelectorAll('.category-select').forEach(select => {
                 select.addEventListener('change', function() {
@@ -401,9 +453,6 @@
                 '#fd7e14', // orange
                 '#d63384'  // pink
             ];
-            
-            // Get all available tags from the page
-            const allTags = /*[[${tags}]]*/ [];
             
             // Function to get color for a tag
             function getTagColor(tagId) {
@@ -589,7 +638,7 @@
                 const tagName = input.value.trim();
                 
                 if (!tagName) {
-                    alert('Ange ett taggnamn');
+                    showToast('Fel', 'Ange ett taggnamn', 'warning');
                     return;
                 }
                 
@@ -601,7 +650,12 @@
                     },
                     body: JSON.stringify({ name: tagName })
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('HTTP error! status: ' + response.status);
+                    }
+                    return response.json();
+                })
                 .then(tag => {
                     // Add to allTags array
                     allTags.push(tag);
@@ -611,10 +665,12 @@
                     populateTagModal();
                     // Clear input
                     input.value = '';
+                    // Show success message
+                    showToast('Framgång', 'Tagg "' + tag.name + '" skapad', 'success');
                 })
                 .catch(err => {
                     console.error('Failed to create tag:', err);
-                    alert('Kunde inte skapa tagg. Försök igen.');
+                    showToast('Fel', 'Kunde inte skapa tagg. Försök igen.', 'error');
                 });
             });
             
@@ -661,12 +717,15 @@
                         badgesDisplay.dataset.assignedTags = selectedTagIds.join(',');
                         renderItemTags(container, selectedTagIds);
                         
+                        // Show success message
+                        showToast('Framgång', 'Taggar uppdaterade', 'success');
+                        
                         // Close modal
                         bootstrap.Modal.getInstance(document.getElementById('tagModal')).hide();
                     })
                     .catch(err => {
                         console.error('Failed to update tags:', err);
-                        alert('Kunde inte uppdatera taggar. Försök igen.');
+                        showToast('Fel', 'Kunde inte uppdatera taggar. Försök igen.', 'error');
                     });
             });
             
@@ -778,6 +837,7 @@
                 }
             });
         }
+        /*]]>*/
     </script>
 </section>
 </body>
