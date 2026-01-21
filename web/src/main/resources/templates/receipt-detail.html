@@ -136,7 +136,7 @@
                                 <!-- Tags display with badges -->
                                 <div class="tags-container" 
                                      th:data-receipt-id="${receipt.id()}"
-                                     th:data-item-index="${iterStat.index}"
+                                     th:data-item-index="${#strings.toString(iterStat.index)}"
                                      th:data-item-ean="${item['normalizedEan']}">
                                     <!-- Display existing tags as colored badges -->
                                     <div class="d-flex flex-wrap gap-1 align-items-center">
@@ -642,10 +642,17 @@
                             'X-CSRF-TOKEN': getCsrfToken()
                         },
                         body: JSON.stringify({
-                            itemIndex: itemIndex,
-                            itemEan: itemEan,
+                            itemIndex: String(itemIndex),  // Ensure it's a string
+                            itemEan: itemEan || null,      // Send null if empty
                             tagId: tagId
                         })
+                    }).then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                throw new Error(`HTTP ${response.status}: ${text}`);
+                            });
+                        }
+                        return response;
                     })
                 );
                 
@@ -663,7 +670,7 @@
                     })
                     .catch(err => {
                         console.error('Failed to update tags:', err);
-                        showToast('Fel', 'Kunde inte uppdatera taggar. Försök igen.', 'error');
+                        showToast('Fel', 'Kunde inte uppdatera taggar: ' + err.message, 'error');
                     });
             });
             
