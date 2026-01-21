@@ -4,6 +4,7 @@ import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionAccessException;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.firestore.FirestoreUserService;
+import dev.pekelund.pklnd.firestore.TagService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import org.springframework.security.core.GrantedAuthority;
 import java.math.BigDecimal;
@@ -41,13 +42,16 @@ public class DashboardStatisticsService {
     private final FirestoreUserService firestoreUserService;
     private final Optional<ReceiptExtractionService> receiptExtractionService;
     private final ReceiptOwnerResolver receiptOwnerResolver;
+    private final TagService tagService;
 
     public DashboardStatisticsService(FirestoreUserService firestoreUserService,
                                       @Autowired(required = false) ReceiptExtractionService receiptExtractionService,
-                                      ReceiptOwnerResolver receiptOwnerResolver) {
+                                      ReceiptOwnerResolver receiptOwnerResolver,
+                                      TagService tagService) {
         this.firestoreUserService = firestoreUserService;
         this.receiptExtractionService = Optional.ofNullable(receiptExtractionService);
         this.receiptOwnerResolver = receiptOwnerResolver;
+        this.tagService = tagService;
     }
 
     public DashboardStatistics loadStatistics(Authentication authentication) {
@@ -72,6 +76,8 @@ public class DashboardStatisticsService {
             ? computeYearlyStatistics(authentication)
             : YearlyStatistics.unavailable();
 
+        long totalTags = tagService.isEnabled() ? tagService.listTags().size() : 0L;
+
         return new DashboardStatistics(
             userCount,
             userCountAccurate,
@@ -91,7 +97,8 @@ public class DashboardStatisticsService {
             yearlyStats.monthlyGeneralDiscounts(),
             yearlyStats.yearlyReconciled(),
             yearlyStats.monthlyReconciled(),
-            yearlyStats.available()
+            yearlyStats.available(),
+            totalTags
         );
     }
 
@@ -646,7 +653,8 @@ public class DashboardStatisticsService {
         Map<Integer, Map<Month, BigDecimal>> monthlyGeneralDiscounts,
         Map<Integer, Long> yearlyReconciled,
         Map<Integer, Map<Month, Long>> monthlyReconciled,
-        boolean yearlyStatisticsAvailable
+        boolean yearlyStatisticsAvailable,
+        long totalTags
     ) {
 
         public String formatAmount(BigDecimal value) {

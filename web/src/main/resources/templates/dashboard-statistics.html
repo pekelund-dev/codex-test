@@ -70,6 +70,17 @@
             </div>
         </div>
         <div class="col-lg-3 col-sm-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h2 class="h6 fw-semibold text-uppercase text-primary">
+                        <a th:href="@{/dashboard/statistics/tags}" class="text-decoration-none text-primary">Taggar</a>
+                    </h2>
+                    <p class="display-6 fw-bold mb-0" th:text="${statistics.totalTags}">0</p>
+                    <p class="text-muted small mb-0">Tillgängliga taggar</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-sm-6">
             <div class="card h-100 shadow-sm" th:classappend="${statistics.failedReceipts > 0} ? 'border-danger' : ''">
                 <div class="card-body">
                     <h2 class="h6 fw-semibold text-uppercase" th:classappend="${statistics.failedReceipts > 0} ? 'text-danger' : 'text-primary'">

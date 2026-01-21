@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : 'Tag produkter'">Tag produkter</title>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // Color palette for tags
+        const TAG_COLORS = [
+            '#0d6efd', '#198754', '#dc3545', '#ffc107',
+            '#0dcaf0', '#6f42c1', '#fd7e14', '#d63384'
+        ];
+
+        function getTagColor(tagId) {
+            const hash = Array.from(tagId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            return TAG_COLORS[hash % TAG_COLORS.length];
+        }
+        /*]]>*/
+    </script>
+</head>
+<body>
+<section>
+    <div class="row py-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a th:href="@{/dashboard}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a th:href="@{/dashboard/statistics}">Statistik</a></li>
+                    <li class="breadcrumb-item"><a th:href="@{/dashboard/statistics/tags}">Taggar</a></li>
+                    <li class="breadcrumb-item active" aria-current="page" th:text="${tag.name}">Tag</li>
+                </ol>
+            </nav>
+            <h1 class="fw-bold mb-3">
+                Produkter med tagg: 
+                <span class="badge" 
+                      th:id="'tag-badge-' + ${tag.id}"
+                      th:attr="data-tag-id=${tag.id}"
+                      th:text="${tag.name}"
+                      style="font-size: 1rem;">Tag Name</span>
+            </h1>
+            <p class="text-muted mb-0">
+                <span th:text="${totalItems}">0</span> produkter med denna tagg
+            </p>
+        </div>
+    </div>
+
+    <div class="row g-4" th:if="${receiptsWithItems != null and !receiptsWithItems.isEmpty()}">
+        <div class="col-12" th:each="receiptWithItems : ${receiptsWithItems}">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="h5 mb-0 fw-bold">
+                                <a th:href="@{/receipts/{id}(id=${receiptWithItems.receipt.id})}" 
+                                   class="text-decoration-none"
+                                   th:text="${receiptWithItems.receipt.storeName}">
+                                    Store Name
+                                </a>
+                            </h3>
+                            <span class="text-muted small" 
+                                  th:text="${#temporals.format(receiptWithItems.receipt.transactionDate, 'yyyy-MM-dd HH:mm')}">
+                                2024-01-01 12:00
+                            </span>
+                        </div>
+                        <div>
+                            <span class="fw-bold" 
+                                  th:text="${receiptWithItems.receipt.formattedTotal}">
+                                0.00 kr
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Produkt</th>
+                                    <th class="text-end">Antal</th>
+                                    <th class="text-end">Pris</th>
+                                    <th class="text-end">Summa</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="taggedItem : ${receiptWithItems.taggedItems}">
+                                    <td th:with="item=${receiptWithItems.receipt.displayItems[T(Integer).parseInt(taggedItem.itemIndex)]}">
+                                        <span th:text="${item != null ? item.name : 'Okänd produkt'}">Product Name</span>
+                                        <br/>
+                                        <small class="text-muted" th:if="${taggedItem.itemEan != null}">
+                                            EAN: <span th:text="${taggedItem.itemEan}">1234567890</span>
+                                        </small>
+                                    </td>
+                                    <td class="text-end" th:with="item=${receiptWithItems.receipt.displayItems[T(Integer).parseInt(taggedItem.itemIndex)]}">
+                                        <span th:text="${item != null ? item.displayQuantity : '-'}">1</span>
+                                    </td>
+                                    <td class="text-end" th:with="item=${receiptWithItems.receipt.displayItems[T(Integer).parseInt(taggedItem.itemIndex)]}">
+                                        <span th:text="${item != null ? item.displayUnitPrice : '-'}">10.00</span>
+                                    </td>
+                                    <td class="text-end" th:with="item=${receiptWithItems.receipt.displayItems[T(Integer).parseInt(taggedItem.itemIndex)]}">
+                                        <span th:text="${item != null ? item.displayTotalPrice : '-'}">10.00</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3" th:if="${receiptsWithItems == null or receiptsWithItems.isEmpty()}">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                <span>Inga produkter hittades med denna tagg.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <a th:href="@{/dashboard/statistics/tags}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left me-2"></i>Tillbaka till taggar
+            </a>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // Apply color to the tag badge
+        document.addEventListener('DOMContentLoaded', function() {
+            const badge = document.querySelector('[data-tag-id]');
+            if (badge) {
+                const tagId = badge.getAttribute('data-tag-id');
+                const color = getTagColor(tagId);
+                badge.style.backgroundColor = color;
+                badge.style.color = 'white';
+            }
+        });
+        /*]]>*/
+    </script>
+</section>
+</body>
+</html>

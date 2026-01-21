@@ -594,6 +594,56 @@ public class ItemCategorizationService {
         return null;
     }
 
+    /**
+     * Get all items that have a specific tag assigned across all receipts.
+     * Returns a list of tuples containing the receipt and item index.
+     */
+    public List<TaggedItemInfo> getItemsByTag(String tagId) {
+        if (firestore.isEmpty() || !StringUtils.hasText(tagId)) {
+            return List.of();
+        }
+
+        try {
+            Firestore db = firestore.get();
+            QuerySnapshot snapshot = db.collection(ITEM_TAGS_COLLECTION)
+                .whereEqualTo("tagId", tagId)
+                .get()
+                .get();
+            recordRead("Load items by tag", snapshot.size());
+
+            List<TaggedItemInfo> items = new ArrayList<>();
+            for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                ItemTagMapping mapping = toItemTagMapping(doc);
+                if (mapping != null) {
+                    items.add(new TaggedItemInfo(
+                        mapping.receiptId(),
+                        mapping.itemIndex(),
+                        mapping.itemEan(),
+                        mapping.assignedAt()
+                    ));
+                }
+            }
+            return Collections.unmodifiableList(items);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while loading items by tag", ex);
+            return List.of();
+        } catch (ExecutionException ex) {
+            log.error("Failed to load items by tag", ex);
+            return List.of();
+        }
+    }
+
+    /**
+     * Simple record to hold information about an item that has a tag assigned.
+     */
+    public record TaggedItemInfo(
+        String receiptId,
+        String itemIndex,
+        String itemEan,
+        Instant assignedAt
+    ) {}
+
     private void recordRead(String description, long count) {
         if (readRecorder != null) {
             readRecorder.record(description, count);

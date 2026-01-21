@@ -2,11 +2,18 @@ package dev.pekelund.pklnd.web;
 
 import dev.pekelund.pklnd.firestore.FirestoreUserService;
 import dev.pekelund.pklnd.firestore.UserRoleUpdateException;
+import dev.pekelund.pklnd.firestore.TagService;
+import dev.pekelund.pklnd.firestore.ItemTag;
+import dev.pekelund.pklnd.firestore.ItemCategorizationService;
+import dev.pekelund.pklnd.firestore.ParsedReceipt;
+import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.web.DashboardStatisticsService.DashboardStatistics;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -27,13 +34,22 @@ public class HomeController {
     private final FirestoreUserService firestoreUserService;
     private final DashboardStatisticsService dashboardStatisticsService;
     private final MessageSource messageSource;
+    private final TagService tagService;
+    private final ItemCategorizationService itemCategorizationService;
+    private final ReceiptExtractionService receiptExtractionService;
 
     public HomeController(FirestoreUserService firestoreUserService,
                           DashboardStatisticsService dashboardStatisticsService,
-                          MessageSource messageSource) {
+                          MessageSource messageSource,
+                          TagService tagService,
+                          ItemCategorizationService itemCategorizationService,
+                          ReceiptExtractionService receiptExtractionService) {
         this.firestoreUserService = firestoreUserService;
         this.dashboardStatisticsService = dashboardStatisticsService;
         this.messageSource = messageSource;
+        this.tagService = tagService;
+        this.itemCategorizationService = itemCategorizationService;
+        this.receiptExtractionService = receiptExtractionService;
     }
 
     @GetMapping({"/", "/home"})
@@ -338,6 +354,68 @@ public class HomeController {
 
         return "redirect:/dashboard#admin-management";
     }
+
+    @GetMapping("/dashboard/statistics/tags")
+    public String statisticsTags(Model model, Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.tags.title");
+        
+        // Load all tags
+        List<ItemTag> tags = tagService.listTags();
+        model.addAttribute("tags", tags);
+        model.addAttribute("tagsAvailable", !tags.isEmpty());
+        
+        return "statistics-tags";
+    }
+
+    @GetMapping("/dashboard/statistics/tags/{tagId}")
+    public String statisticsTagItems(@org.springframework.web.bind.annotation.PathVariable String tagId,
+                                      Model model,
+                                      Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.statistics.tag.items.title");
+        
+        // Get the tag details
+        ItemTag tag = tagService.findById(tagId).orElse(null);
+        if (tag == null) {
+            return "redirect:/dashboard/statistics/tags";
+        }
+        
+        model.addAttribute("tag", tag);
+        
+        // Get all items with this tag
+        List<ItemCategorizationService.TaggedItemInfo> taggedItems = 
+            itemCategorizationService.getItemsByTag(tagId);
+        
+        // Group items by receipt and enrich with receipt and item details
+        Map<String, List<ItemCategorizationService.TaggedItemInfo>> itemsByReceipt =
+            taggedItems.stream()
+                .collect(Collectors.groupingBy(ItemCategorizationService.TaggedItemInfo::receiptId));
+        
+        // Load receipt details for each group
+        List<ReceiptWithTaggedItems> receiptsWithItems = itemsByReceipt.entrySet().stream()
+            .map(entry -> {
+                String receiptId = entry.getKey();
+                List<ItemCategorizationService.TaggedItemInfo> items = entry.getValue();
+                
+                // Load receipt details
+                ParsedReceipt receipt = receiptExtractionService.getReceipt(receiptId).orElse(null);
+                
+                return new ReceiptWithTaggedItems(receipt, items);
+            })
+            .filter(r -> r.receipt() != null)
+            .sorted((a, b) -> b.receipt().transactionDate().compareTo(a.receipt().transactionDate()))
+            .collect(Collectors.toList());
+        
+        model.addAttribute("receiptsWithItems", receiptsWithItems);
+        model.addAttribute("totalItems", taggedItems.size());
+        
+        return "statistics-tag-items";
+    }
+
+    // Helper record to hold receipt with tagged items
+    public record ReceiptWithTaggedItems(
+        ParsedReceipt receipt,
+        List<ItemCategorizationService.TaggedItemInfo> taggedItems
+    ) {}
 
     @GetMapping("/login")
     public String login(Model model) {
