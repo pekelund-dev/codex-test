@@ -144,11 +144,10 @@
                                         <span class="tag-badges-display" th:data-assigned-tags="${assignedTags != null ? #strings.listJoin(assignedTags, ',') : ''}">
                                             <!-- Tags will be populated by JavaScript -->
                                         </span>
-                                        <!-- Add tag button -->
+                                        <!-- Add tag button - always visible -->
                                         <button class="btn btn-sm add-tag-badge-btn badge" 
                                                 type="button"
                                                 title="Lägg till taggar"
-                                                th:disabled="${#lists.isEmpty(tags)}"
                                                 style="padding: 0.35rem 0.5rem; font-size: 0.75rem; border: 1px dashed #6c757d; background: #f8f9fa; color: #6c757d; cursor: pointer;">
                                             <i class="bi bi-plus"></i>
                                         </button>

@@ -277,6 +277,7 @@ public class CategorizationController {
 
     /**
      * Assign a tag to a receipt item.
+     * If the item has an EAN, also assigns to all other items with the same EAN.
      */
     @PostMapping("/receipts/{receiptId}/items/tags")
     @ResponseBody
@@ -291,14 +292,26 @@ public class CategorizationController {
 
         try {
             String assignedBy = authentication != null ? authentication.getName() : "anonymous";
-            itemCategorizationService.get().assignTag(
-                receiptId,
-                request.itemIndex(),
-                request.itemEan(),
-                request.tagId(),
-                assignedBy
-            );
-            return ResponseEntity.ok("Tag assigned successfully");
+            
+            // If item has EAN, use EAN-based assignment to propagate to all items with same EAN
+            if (request.itemEan() != null && !request.itemEan().isEmpty()) {
+                int assignedCount = itemCategorizationService.get().assignTagByEan(
+                    request.itemEan(),
+                    request.tagId(),
+                    assignedBy
+                );
+                return ResponseEntity.ok("Tag assigned to " + assignedCount + " items with EAN " + request.itemEan());
+            } else {
+                // No EAN, just assign to this specific item by index
+                itemCategorizationService.get().assignTag(
+                    receiptId,
+                    request.itemIndex(),
+                    request.itemEan(),
+                    request.tagId(),
+                    assignedBy
+                );
+                return ResponseEntity.ok("Tag assigned successfully");
+            }
         } catch (IllegalArgumentException | IllegalStateException ex) {
             log.warn("Failed to assign tag: {}", ex.getMessage());
             return ResponseEntity.badRequest().body(ex.getMessage());

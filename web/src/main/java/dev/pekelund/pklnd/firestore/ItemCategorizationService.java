@@ -356,6 +356,89 @@ public class ItemCategorizationService {
     }
 
     /**
+     * Assign a tag to all items with the same EAN code across all receipts.
+     * Similar to assignCategoryByEan, but for tags.
+     * 
+     * @param itemEan The EAN code to search for
+     * @param tagId The tag ID to assign
+     * @param assignedBy The user assigning the tag
+     * @return The number of items that were assigned the tag
+     */
+    public int assignTagByEan(String itemEan, String tagId, String assignedBy) {
+        if (firestore.isEmpty() || !StringUtils.hasText(itemEan) || !StringUtils.hasText(tagId)) {
+            return 0;
+        }
+
+        if (!receiptExtractionService.isPresent()) {
+            log.warn("ReceiptExtractionService not available for EAN-based tag assignment");
+            return 0;
+        }
+
+        // Verify tag exists
+        Optional<ItemTag> tag = tagService.findById(tagId);
+        if (tag.isEmpty()) {
+            throw new IllegalArgumentException("Tag not found: " + tagId);
+        }
+
+        try {
+            Firestore db = firestore.get();
+            
+            // Find all receipts
+            QuerySnapshot receiptsSnapshot = db.collection("receipts").get().get();
+            recordRead("Load receipts for EAN-based tag assignment", receiptsSnapshot.size());
+            
+            int assignedCount = 0;
+            Instant now = Instant.now();
+            
+            // For each receipt, check if any items have the matching EAN
+            for (DocumentSnapshot receiptDoc : receiptsSnapshot.getDocuments()) {
+                String receiptId = receiptDoc.getId();
+                
+                // Get the parsed receipt to access items
+                Optional<dev.pekelund.pklnd.ParsedReceipt> parsedReceipt = 
+                    receiptExtractionService.get().getReceiptById(receiptId);
+                
+                if (parsedReceipt.isPresent()) {
+                    List<Map<String, Object>> items = parsedReceipt.get().items();
+                    if (items != null) {
+                        for (int i = 0; i < items.size(); i++) {
+                            Map<String, Object> item = items.get(i);
+                            String itemNormalizedEan = (String) item.get("normalizedEan");
+                            
+                            if (itemEan.equals(itemNormalizedEan)) {
+                                // Assign tag to this item
+                                String docId = ItemTagMapping.createKey(receiptId, itemEan, tagId);
+                                DocumentReference docRef = db.collection(ITEM_TAGS_COLLECTION).document(docId);
+                                
+                                Map<String, Object> data = new HashMap<>();
+                                data.put("receiptId", receiptId);
+                                data.put("itemIndex", String.valueOf(i));
+                                data.put("itemEan", itemEan);
+                                data.put("tagId", tagId);
+                                data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
+                                data.put("assignedBy", assignedBy);
+                                
+                                docRef.set(data).get();
+                                assignedCount++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            log.info("Assigned tag {} to {} items with EAN {}", tagId, assignedCount, itemEan);
+            return assignedCount;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.error("Interrupted while assigning tag by EAN", ex);
+            throw new RuntimeException("Failed to assign tag by EAN", ex);
+        } catch (ExecutionException ex) {
+            log.error("Failed to assign tag by EAN", ex);
+            throw new RuntimeException("Failed to assign tag by EAN", ex);
+        }
+    }
+
+    /**
      * Get all tags assigned to a receipt item.
      */
     public List<ItemTagMapping> getTagsForItem(String receiptId, String itemIdentifier) {
