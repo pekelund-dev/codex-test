@@ -365,13 +365,16 @@ public class ItemCategorizationService {
      * @return The number of items that were assigned the tag
      */
     public int assignTagByEan(String itemEan, String tagId, String assignedBy) {
-        if (firestore.isEmpty() || !StringUtils.hasText(itemEan) || !StringUtils.hasText(tagId)) {
-            return 0;
+        if (firestore.isEmpty()) {
+            throw new IllegalStateException("Firestore is not enabled");
         }
 
-        if (!receiptExtractionService.isPresent()) {
-            log.warn("ReceiptExtractionService not available for EAN-based tag assignment");
-            return 0;
+        if (!StringUtils.hasText(itemEan)) {
+            throw new IllegalArgumentException("Item EAN cannot be empty");
+        }
+
+        if (!StringUtils.hasText(tagId)) {
+            throw new IllegalArgumentException("Tag ID cannot be empty");
         }
 
         // Verify tag exists
@@ -380,52 +383,44 @@ public class ItemCategorizationService {
             throw new IllegalArgumentException("Tag not found: " + tagId);
         }
 
+        if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            log.warn("Cannot assign tag by EAN: receipt extraction service not available");
+            return 0;
+        }
+
         try {
-            Firestore db = firestore.get();
-            
-            // Find all receipts
-            QuerySnapshot receiptsSnapshot = db.collection("receipts").get().get();
-            recordRead("Load receipts for EAN-based tag assignment", receiptsSnapshot.size());
-            
+            // Get all receipts
+            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listAllReceipts();
             int assignedCount = 0;
+            Firestore db = firestore.get();
             Instant now = Instant.now();
-            
-            // For each receipt, check if any items have the matching EAN
-            for (DocumentSnapshot receiptDoc : receiptsSnapshot.getDocuments()) {
-                String receiptId = receiptDoc.getId();
-                
-                // Get the parsed receipt to access items
-                Optional<dev.pekelund.pklnd.ParsedReceipt> parsedReceipt = 
-                    receiptExtractionService.get().getReceiptById(receiptId);
-                
-                if (parsedReceipt.isPresent()) {
-                    List<Map<String, Object>> items = parsedReceipt.get().items();
-                    if (items != null) {
-                        for (int i = 0; i < items.size(); i++) {
-                            Map<String, Object> item = items.get(i);
-                            String itemNormalizedEan = (String) item.get("normalizedEan");
-                            
-                            if (itemEan.equals(itemNormalizedEan)) {
-                                // Assign tag to this item
-                                String docId = ItemTagMapping.createKey(receiptId, itemEan, tagId);
-                                DocumentReference docRef = db.collection(ITEM_TAGS_COLLECTION).document(docId);
-                                
-                                Map<String, Object> data = new HashMap<>();
-                                data.put("receiptId", receiptId);
-                                data.put("itemIndex", String.valueOf(i));
-                                data.put("itemEan", itemEan);
-                                data.put("tagId", tagId);
-                                data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
-                                data.put("assignedBy", assignedBy);
-                                
-                                docRef.set(data).get();
-                                assignedCount++;
-                            }
-                        }
+
+            // Iterate through all receipts and find items with matching EAN
+            for (ParsedReceipt receipt : allReceipts) {
+                List<Map<String, Object>> items = receipt.displayItems();
+                for (int i = 0; i < items.size(); i++) {
+                    Map<String, Object> item = items.get(i);
+                    Object normalizedEanObj = item.get("normalizedEan");
+                    
+                    if (normalizedEanObj != null && itemEan.equals(normalizedEanObj.toString())) {
+                        // Found an item with matching EAN, assign tag
+                        String docId = ItemTagMapping.createKey(receipt.id(), itemEan, tagId);
+                        DocumentReference docRef = db.collection(ITEM_TAGS_COLLECTION).document(docId);
+                        
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("receiptId", receipt.id());
+                        data.put("itemIndex", String.valueOf(i));
+                        data.put("itemEan", itemEan);
+                        data.put("tagId", tagId);
+                        data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
+                        data.put("assignedBy", assignedBy);
+
+                        docRef.set(data).get();
+                        assignedCount++;
                     }
                 }
             }
-            
+
             log.info("Assigned tag {} to {} items with EAN {}", tagId, assignedCount, itemEan);
             return assignedCount;
         } catch (InterruptedException ex) {
