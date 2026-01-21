@@ -401,27 +401,14 @@ public class ItemCategorizationService {
 
             // Iterate through all receipts and find items with matching EAN
             for (ParsedReceipt receipt : allReceipts) {
-                // USE RAW ITEMS, NOT displayItems() - displayItems() might not preserve all fields!
-                List<Map<String, Object>> items = receipt.items();
+                // Use displayItems() like assignCategoryByEan does - it has normalizedEan at top level
+                List<Map<String, Object>> items = receipt.displayItems();
                 for (int i = 0; i < items.size(); i++) {
                     Map<String, Object> item = items.get(i);
                     itemsChecked++;
                     
-                    // Try multiple EAN field names to be robust
+                    // Check for normalizedEan field (same as assignCategoryByEan)
                     Object normalizedEanObj = item.get("normalizedEan");
-                    if (normalizedEanObj == null) {
-                        normalizedEanObj = item.get("ean");
-                    }
-                    if (normalizedEanObj == null) {
-                        normalizedEanObj = item.get("EAN");
-                    }
-                    // Check nested itemData.eanCode field
-                    if (normalizedEanObj == null) {
-                        Object itemData = item.get("itemData");
-                        if (itemData instanceof Map) {
-                            normalizedEanObj = ((Map<?, ?>) itemData).get("eanCode");
-                        }
-                    }
                     
                     if (normalizedEanObj != null) {
                         itemsWithEan++;
@@ -433,19 +420,19 @@ public class ItemCategorizationService {
                         }
                         
                         if (itemEan.equals(itemEanStr)) {
-                        // Found an item with matching EAN, assign tag
-                        // Use itemIndex as the identifier in the document ID for clarity
-                        String itemIdentifier = String.valueOf(i);
-                        String docId = ItemTagMapping.createKey(receipt.id(), itemIdentifier, tagId);
-                        DocumentReference docRef = db.collection(ITEM_TAGS_COLLECTION).document(docId);
-                        
-                        Map<String, Object> data = new HashMap<>();
-                        data.put("receiptId", receipt.id());
-                        data.put("itemIndex", itemIdentifier);
-                        data.put("itemEan", itemEan);
-                        data.put("tagId", tagId);
-                        data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
-                        data.put("assignedBy", assignedBy);
+                            // Found an item with matching EAN, assign tag
+                            // Use itemIndex as the identifier in the document ID
+                            String itemIdentifier = String.valueOf(i);
+                            String docId = ItemTagMapping.createKey(receipt.id(), itemIdentifier, tagId);
+                            DocumentReference docRef = db.collection(ITEM_TAGS_COLLECTION).document(docId);
+                            
+                            Map<String, Object> data = new HashMap<>();
+                            data.put("receiptId", receipt.id());
+                            data.put("itemIndex", itemIdentifier);
+                            data.put("itemEan", itemEan);
+                            data.put("tagId", tagId);
+                            data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
+                            data.put("assignedBy", assignedBy);
 
                             docRef.set(data).get();
                             assignedCount++;
