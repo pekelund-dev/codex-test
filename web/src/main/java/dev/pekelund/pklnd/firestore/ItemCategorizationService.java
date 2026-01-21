@@ -415,6 +415,13 @@ public class ItemCategorizationService {
                     if (normalizedEanObj == null) {
                         normalizedEanObj = item.get("EAN");
                     }
+                    // Check nested itemData.eanCode field
+                    if (normalizedEanObj == null) {
+                        Object itemData = item.get("itemData");
+                        if (itemData instanceof Map) {
+                            normalizedEanObj = ((Map<?, ?>) itemData).get("eanCode");
+                        }
+                    }
                     
                     if (normalizedEanObj != null) {
                         itemsWithEan++;
