@@ -396,15 +396,35 @@ public class ItemCategorizationService {
             Instant now = Instant.now();
             
             log.info("Scanning {} receipts for items with EAN: {}", allReceipts.size(), itemEan);
+            int itemsChecked = 0;
+            int itemsWithEan = 0;
 
             // Iterate through all receipts and find items with matching EAN
             for (ParsedReceipt receipt : allReceipts) {
                 List<Map<String, Object>> items = receipt.displayItems();
                 for (int i = 0; i < items.size(); i++) {
                     Map<String, Object> item = items.get(i);
-                    Object normalizedEanObj = item.get("normalizedEan");
+                    itemsChecked++;
                     
-                    if (normalizedEanObj != null && itemEan.equals(normalizedEanObj.toString())) {
+                    // Try multiple EAN field names to be robust
+                    Object normalizedEanObj = item.get("normalizedEan");
+                    if (normalizedEanObj == null) {
+                        normalizedEanObj = item.get("ean");
+                    }
+                    if (normalizedEanObj == null) {
+                        normalizedEanObj = item.get("EAN");
+                    }
+                    
+                    if (normalizedEanObj != null) {
+                        itemsWithEan++;
+                        String itemEanStr = normalizedEanObj.toString();
+                        
+                        // Log first few comparisons for debugging
+                        if (itemsWithEan <= 3) {
+                            log.debug("Comparing EAN '{}' with '{}'", itemEan, itemEanStr);
+                        }
+                        
+                        if (itemEan.equals(itemEanStr)) {
                         // Found an item with matching EAN, assign tag
                         // Use itemIndex as the identifier in the document ID for clarity
                         String itemIdentifier = String.valueOf(i);
@@ -419,15 +439,17 @@ public class ItemCategorizationService {
                         data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
                         data.put("assignedBy", assignedBy);
 
-                        docRef.set(data).get();
-                        assignedCount++;
-                        log.debug("Assigned tag {} to item {} in receipt {} (EAN: {})", 
-                            tagId, itemIdentifier, receipt.id(), itemEan);
+                            docRef.set(data).get();
+                            assignedCount++;
+                            log.debug("Assigned tag {} to item {} in receipt {} (EAN: {})", 
+                                tagId, itemIdentifier, receipt.id(), itemEan);
+                        }
                     }
                 }
             }
 
-            log.info("Assigned tag {} to {} items with EAN {}", tagId, assignedCount, itemEan);
+            log.info("Scanned {} items total, {} had EAN codes. Assigned tag {} to {} items with EAN {}", 
+                itemsChecked, itemsWithEan, tagId, assignedCount, itemEan);
             return assignedCount;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
