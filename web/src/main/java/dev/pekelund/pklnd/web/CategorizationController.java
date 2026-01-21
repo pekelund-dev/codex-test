@@ -68,7 +68,7 @@ public class CategorizationController {
     @GetMapping("/categories/{id}")
     @ResponseBody
     public ResponseEntity<Category> getCategory(@PathVariable String id) {
-        if (!categoryService.isEmpty() || !categoryService.get().isEnabled()) {
+        if (categoryService.isEmpty() || !categoryService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
@@ -83,7 +83,7 @@ public class CategorizationController {
     @PostMapping("/categories")
     @ResponseBody
     public ResponseEntity<Category> createCategory(@RequestBody CreateCategoryRequest request) {
-        if (!categoryService.isEmpty() || !categoryService.get().isEnabled()) {
+        if (categoryService.isEmpty() || !categoryService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
@@ -109,7 +109,7 @@ public class CategorizationController {
         @PathVariable String id,
         @RequestBody UpdateCategoryRequest request
     ) {
-        if (!categoryService.isEmpty() || !categoryService.get().isEnabled()) {
+        if (categoryService.isEmpty() || !categoryService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
@@ -132,7 +132,7 @@ public class CategorizationController {
     @DeleteMapping("/categories/{id}")
     @ResponseBody
     public ResponseEntity<Void> deleteCategory(@PathVariable String id) {
-        if (!categoryService.isEmpty() || !categoryService.get().isEnabled()) {
+        if (categoryService.isEmpty() || !categoryService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
@@ -151,7 +151,7 @@ public class CategorizationController {
     @GetMapping("/tags")
     @ResponseBody
     public ResponseEntity<List<ItemTag>> listTags() {
-        if (!tagService.isEmpty() || !tagService.get().isEnabled()) {
+        if (tagService.isEmpty() || !tagService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
@@ -165,7 +165,7 @@ public class CategorizationController {
     @GetMapping("/tags/{id}")
     @ResponseBody
     public ResponseEntity<ItemTag> getTag(@PathVariable String id) {
-        if (!tagService.isEmpty() || !tagService.get().isEnabled()) {
+        if (tagService.isEmpty() || !tagService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
@@ -180,7 +180,7 @@ public class CategorizationController {
     @PostMapping("/tags")
     @ResponseBody
     public ResponseEntity<ItemTag> createTag(@RequestBody CreateTagRequest request) {
-        if (!tagService.isEmpty() || !tagService.get().isEnabled()) {
+        if (tagService.isEmpty() || !tagService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
@@ -202,7 +202,7 @@ public class CategorizationController {
     @DeleteMapping("/tags/{id}")
     @ResponseBody
     public ResponseEntity<Void> deleteTag(@PathVariable String id) {
-        if (!tagService.isEmpty() || !tagService.get().isEnabled()) {
+        if (tagService.isEmpty() || !tagService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
@@ -267,7 +267,7 @@ public class CategorizationController {
         @PathVariable String receiptId,
         @RequestParam String itemIdentifier
     ) {
-        if (!itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
+        if (itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
@@ -285,7 +285,7 @@ public class CategorizationController {
         @RequestBody AssignTagRequest request,
         Authentication authentication
     ) {
-        if (!itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
+        if (itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
@@ -315,7 +315,7 @@ public class CategorizationController {
         @RequestParam String itemIdentifier,
         @PathVariable String tagId
     ) {
-        if (!itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
+        if (itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
