@@ -403,6 +403,17 @@ public class ItemCategorizationService {
             for (ParsedReceipt receipt : allReceipts) {
                 // Use displayItems() like assignCategoryByEan does - it has normalizedEan at top level
                 List<Map<String, Object>> items = receipt.displayItems();
+                
+                // Debug: log first receipt's first item structure
+                if (itemsChecked == 0 && !items.isEmpty()) {
+                    Map<String, Object> firstItem = items.get(0);
+                    log.info("DEBUG: First item keys: {}", firstItem.keySet());
+                    log.info("DEBUG: First item has normalizedEan: {}", firstItem.containsKey("normalizedEan"));
+                    if (firstItem.containsKey("normalizedEan")) {
+                        log.info("DEBUG: normalizedEan value: {}", firstItem.get("normalizedEan"));
+                    }
+                }
+                
                 for (int i = 0; i < items.size(); i++) {
                     Map<String, Object> item = items.get(i);
                     itemsChecked++;
@@ -410,35 +421,27 @@ public class ItemCategorizationService {
                     // Check for normalizedEan field (same as assignCategoryByEan)
                     Object normalizedEanObj = item.get("normalizedEan");
                     
-                    if (normalizedEanObj != null) {
+                    if (normalizedEanObj != null && itemEan.equals(normalizedEanObj.toString())) {
+                        // Found an item with matching EAN, assign tag
                         itemsWithEan++;
-                        String itemEanStr = normalizedEanObj.toString();
                         
-                        // Log first few comparisons for debugging
-                        if (itemsWithEan <= 3) {
-                            log.debug("Comparing EAN '{}' with '{}'", itemEan, itemEanStr);
-                        }
+                        // Use itemIndex as the identifier in the document ID
+                        String itemIdentifier = String.valueOf(i);
+                        String docId = ItemTagMapping.createKey(receipt.id(), itemIdentifier, tagId);
+                        DocumentReference docRef = db.collection(ITEM_TAGS_COLLECTION).document(docId);
                         
-                        if (itemEan.equals(itemEanStr)) {
-                            // Found an item with matching EAN, assign tag
-                            // Use itemIndex as the identifier in the document ID
-                            String itemIdentifier = String.valueOf(i);
-                            String docId = ItemTagMapping.createKey(receipt.id(), itemIdentifier, tagId);
-                            DocumentReference docRef = db.collection(ITEM_TAGS_COLLECTION).document(docId);
-                            
-                            Map<String, Object> data = new HashMap<>();
-                            data.put("receiptId", receipt.id());
-                            data.put("itemIndex", itemIdentifier);
-                            data.put("itemEan", itemEan);
-                            data.put("tagId", tagId);
-                            data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
-                            data.put("assignedBy", assignedBy);
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("receiptId", receipt.id());
+                        data.put("itemIndex", itemIdentifier);
+                        data.put("itemEan", itemEan);
+                        data.put("tagId", tagId);
+                        data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
+                        data.put("assignedBy", assignedBy);
 
-                            docRef.set(data).get();
-                            assignedCount++;
-                            log.debug("Assigned tag {} to item {} in receipt {} (EAN: {})", 
-                                tagId, itemIdentifier, receipt.id(), itemEan);
-                        }
+                        docRef.set(data).get();
+                        assignedCount++;
+                        log.debug("Assigned tag {} to item {} in receipt {} (EAN: {})", 
+                            tagId, itemIdentifier, receipt.id(), itemEan);
                     }
                 }
             }
