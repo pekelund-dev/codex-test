@@ -401,7 +401,8 @@ public class ItemCategorizationService {
 
             // Iterate through all receipts and find items with matching EAN
             for (ParsedReceipt receipt : allReceipts) {
-                List<Map<String, Object>> items = receipt.displayItems();
+                // USE RAW ITEMS, NOT displayItems() - displayItems() might not preserve all fields!
+                List<Map<String, Object>> items = receipt.items();
                 for (int i = 0; i < items.size(); i++) {
                     Map<String, Object> item = items.get(i);
                     itemsChecked++;
