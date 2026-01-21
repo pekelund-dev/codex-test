@@ -293,16 +293,25 @@ public class CategorizationController {
         try {
             String assignedBy = authentication != null ? authentication.getName() : "anonymous";
             
+            // Log the incoming request for debugging
+            log.info("Assigning tag: receiptId={}, itemIndex={}, itemEan='{}', tagId={}", 
+                receiptId, request.itemIndex(), request.itemEan(), request.tagId());
+            
             // If item has EAN, use EAN-based assignment to propagate to all items with same EAN
-            if (request.itemEan() != null && !request.itemEan().isEmpty()) {
+            // Use StringUtils.hasText to properly check for null, empty, or whitespace-only strings
+            if (StringUtils.hasText(request.itemEan())) {
+                log.info("Using EAN-based assignment for EAN: {}", request.itemEan());
                 int assignedCount = itemCategorizationService.get().assignTagByEan(
                     request.itemEan(),
                     request.tagId(),
                     assignedBy
                 );
-                return ResponseEntity.ok("Tag assigned to " + assignedCount + " items with EAN " + request.itemEan());
+                String message = "Tag assigned to " + assignedCount + " items with EAN " + request.itemEan();
+                log.info(message);
+                return ResponseEntity.ok(message);
             } else {
                 // No EAN, just assign to this specific item by index
+                log.info("Using index-based assignment for item index: {}", request.itemIndex());
                 itemCategorizationService.get().assignTag(
                     receiptId,
                     request.itemIndex(),

@@ -394,6 +394,8 @@ public class ItemCategorizationService {
             int assignedCount = 0;
             Firestore db = firestore.get();
             Instant now = Instant.now();
+            
+            log.info("Scanning {} receipts for items with EAN: {}", allReceipts.size(), itemEan);
 
             // Iterate through all receipts and find items with matching EAN
             for (ParsedReceipt receipt : allReceipts) {
@@ -404,12 +406,14 @@ public class ItemCategorizationService {
                     
                     if (normalizedEanObj != null && itemEan.equals(normalizedEanObj.toString())) {
                         // Found an item with matching EAN, assign tag
-                        String docId = ItemTagMapping.createKey(receipt.id(), itemEan, tagId);
+                        // Use itemIndex as the identifier in the document ID for clarity
+                        String itemIdentifier = String.valueOf(i);
+                        String docId = ItemTagMapping.createKey(receipt.id(), itemIdentifier, tagId);
                         DocumentReference docRef = db.collection(ITEM_TAGS_COLLECTION).document(docId);
                         
                         Map<String, Object> data = new HashMap<>();
                         data.put("receiptId", receipt.id());
-                        data.put("itemIndex", String.valueOf(i));
+                        data.put("itemIndex", itemIdentifier);
                         data.put("itemEan", itemEan);
                         data.put("tagId", tagId);
                         data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
@@ -417,6 +421,8 @@ public class ItemCategorizationService {
 
                         docRef.set(data).get();
                         assignedCount++;
+                        log.debug("Assigned tag {} to item {} in receipt {} (EAN: {})", 
+                            tagId, itemIdentifier, receipt.id(), itemEan);
                     }
                 }
             }

@@ -643,7 +643,7 @@
                         },
                         body: JSON.stringify({
                             itemIndex: String(itemIndex),  // Ensure it's a string
-                            itemEan: itemEan || null,      // Send null if empty
+                            itemEan: (itemEan && itemEan !== 'undefined') ? itemEan : null,  // Send null if empty or undefined
                             tagId: tagId
                         })
                     }).then(response => {
