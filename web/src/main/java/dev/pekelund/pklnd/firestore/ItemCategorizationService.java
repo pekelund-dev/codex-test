@@ -401,27 +401,17 @@ public class ItemCategorizationService {
 
             // Iterate through all receipts and find items with matching EAN
             for (ParsedReceipt receipt : allReceipts) {
-                // Use displayItems() like assignCategoryByEan does - it has normalizedEan at top level
+                // Use displayItems() - it has eanCode at top level
                 List<Map<String, Object>> items = receipt.displayItems();
-                
-                // Debug: log first receipt's first item structure
-                if (itemsChecked == 0 && !items.isEmpty()) {
-                    Map<String, Object> firstItem = items.get(0);
-                    log.info("DEBUG: First item keys: {}", firstItem.keySet());
-                    log.info("DEBUG: First item has normalizedEan: {}", firstItem.containsKey("normalizedEan"));
-                    if (firstItem.containsKey("normalizedEan")) {
-                        log.info("DEBUG: normalizedEan value: {}", firstItem.get("normalizedEan"));
-                    }
-                }
                 
                 for (int i = 0; i < items.size(); i++) {
                     Map<String, Object> item = items.get(i);
                     itemsChecked++;
                     
-                    // Check for normalizedEan field (same as assignCategoryByEan)
-                    Object normalizedEanObj = item.get("normalizedEan");
+                    // Check for eanCode field (the actual field name in displayItems)
+                    Object eanCodeObj = item.get("eanCode");
                     
-                    if (normalizedEanObj != null && itemEan.equals(normalizedEanObj.toString())) {
+                    if (eanCodeObj != null && itemEan.equals(eanCodeObj.toString())) {
                         // Found an item with matching EAN, assign tag
                         itemsWithEan++;
                         
