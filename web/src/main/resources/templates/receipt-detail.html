@@ -160,25 +160,26 @@
                                     </button>
                                 </div>
                                 
-                                <!-- Tags multi-select -->
-                                <div class="input-group input-group-sm">
-                                    <select class="form-select form-select-sm tags-select" 
-                                            multiple
-                                            th:data-receipt-id="${receipt.id()}"
-                                            th:data-item-index="${iterStat.index}"
-                                            th:data-item-ean="${item['normalizedEan']}"
-                                            th:disabled="${#lists.isEmpty(tags)}">
-                                        <option th:each="tag : ${tags}" 
-                                                th:value="${tag.id()}"
-                                                th:selected="${assignedTags != null && #lists.contains(assignedTags, tag.id())}"
-                                                th:text="${tag.name()}">Tag</option>
-                                    </select>
-                                    <button class="btn btn-outline-secondary btn-sm add-tag-btn" 
-                                            type="button"
-                                            title="Skapa ny tagg"
-                                            th:disabled="${#lists.isEmpty(tags)}">
-                                        <i class="bi bi-plus"></i>
-                                    </button>
+                                <!-- Tags display with badges -->
+                                <div class="tags-container" 
+                                     th:data-receipt-id="${receipt.id()}"
+                                     th:data-item-index="${iterStat.index}"
+                                     th:data-item-ean="${item['normalizedEan']}">
+                                    <!-- Display existing tags as colored badges -->
+                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                        <!-- Assigned tags will be rendered here by JavaScript -->
+                                        <span class="tag-badges-display" th:data-assigned-tags="${assignedTags != null ? #strings.listJoin(assignedTags, ',') : ''}">
+                                            <!-- Tags will be populated by JavaScript -->
+                                        </span>
+                                        <!-- Add tag button -->
+                                        <button class="btn btn-sm add-tag-badge-btn" 
+                                                type="button"
+                                                title="Lägg till taggar"
+                                                th:disabled="${#lists.isEmpty(tags)}"
+                                                style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border: 1px dashed #6c757d; background: transparent;">
+                                            <i class="bi bi-plus"></i> Tagg
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </td>
@@ -307,6 +308,51 @@
         </div>
     </div>
     
+    <!-- Tag Management Modal -->
+    <div th:if="${categorizationEnabled}" class="modal fade" id="tagModal" tabindex="-1" aria-labelledby="tagModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="tagModalLabel">Hantera taggar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Stäng"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Selected tags preview -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Valda taggar:</label>
+                        <div id="selectedTagsPreview" class="d-flex flex-wrap gap-1 p-2 border rounded bg-light" style="min-height: 2.5rem;">
+                            <span class="text-muted small" id="noTagsSelected">Inga taggar valda</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Available tags -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Tillgängliga taggar:</label>
+                        <div id="availableTagsList" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                            <!-- Tags will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <!-- Create new tag -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Skapa ny tagg:</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control" id="newTagName" placeholder="Taggnamn..." maxlength="50">
+                            <button class="btn btn-outline-primary" type="button" id="createNewTagBtn">
+                                <i class="bi bi-plus-circle"></i> Skapa
+                            </button>
+                        </div>
+                        <div class="form-text small">Taggen får automatiskt en färg</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Avbryt</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="saveTagsBtn">Spara ändringar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Category and Tag Management JavaScript -->
     <script th:if="${categorizationEnabled}">
         document.addEventListener('DOMContentLoaded', function() {
@@ -344,32 +390,308 @@
                 });
             });
             
-            // Handle tag selection
-            document.querySelectorAll('.tags-select').forEach(select => {
-                select.addEventListener('change', function() {
-                    const receiptId = this.dataset.receiptId;
-                    const itemIndex = this.dataset.itemIndex;
-                    const itemEan = this.dataset.itemEan;
-                    const selectedTags = Array.from(this.selectedOptions).map(opt => opt.value);
+            // Tag color palette (8 distinct colors)
+            const tagColors = [
+                '#0d6efd', // blue
+                '#198754', // green
+                '#dc3545', // red
+                '#ffc107', // yellow
+                '#0dcaf0', // cyan
+                '#6f42c1', // purple
+                '#fd7e14', // orange
+                '#d63384'  // pink
+            ];
+            
+            // Get all available tags from the page
+            const allTags = /*[[${tags}]]*/ [];
+            
+            // Function to get color for a tag
+            function getTagColor(tagId) {
+                // Use tag ID hash to consistently assign colors
+                let hash = 0;
+                for (let i = 0; i < tagId.length; i++) {
+                    hash = ((hash << 5) - hash) + tagId.charCodeAt(i);
+                    hash = hash & hash;
+                }
+                return tagColors[Math.abs(hash) % tagColors.length];
+            }
+            
+            // Function to create a badge element
+            function createTagBadge(tag, showRemove = false, onClick = null) {
+                const color = getTagColor(tag.id);
+                const badge = document.createElement('span');
+                badge.className = 'badge';
+                badge.style.backgroundColor = color;
+                badge.style.color = '#fff';
+                badge.style.fontSize = '0.75rem';
+                badge.style.padding = '0.35rem 0.5rem';
+                badge.style.marginRight = '0.25rem';
+                badge.style.display = 'inline-flex';
+                badge.style.alignItems = 'center';
+                badge.style.gap = '0.25rem';
+                badge.style.cursor = onClick ? 'pointer' : 'default';
+                
+                const textSpan = document.createElement('span');
+                textSpan.textContent = tag.name;
+                badge.appendChild(textSpan);
+                
+                if (showRemove) {
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'btn-close btn-close-white';
+                    removeBtn.style.fontSize = '0.5rem';
+                    removeBtn.style.padding = '0';
+                    removeBtn.style.width = '0.75rem';
+                    removeBtn.style.height = '0.75rem';
+                    removeBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        if (onClick) onClick(tag);
+                    };
+                    badge.appendChild(removeBtn);
+                }
+                
+                if (onClick && !showRemove) {
+                    badge.onclick = () => onClick(tag);
+                }
+                
+                return badge;
+            }
+            
+            // Function to render tags for an item
+            function renderItemTags(container, assignedTagIds) {
+                const badgesDisplay = container.querySelector('.tag-badges-display');
+                badgesDisplay.innerHTML = '';
+                
+                if (!assignedTagIds || assignedTagIds.length === 0) {
+                    return;
+                }
+                
+                assignedTagIds.forEach(tagId => {
+                    const tag = allTags.find(t => t.id === tagId);
+                    if (tag) {
+                        const badge = createTagBadge(tag, true, (removedTag) => {
+                            removeTagFromItem(container, removedTag.id);
+                        });
+                        badgesDisplay.appendChild(badge);
+                    }
+                });
+            }
+            
+            // Initialize tag displays
+            document.querySelectorAll('.tags-container').forEach(container => {
+                const badgesDisplay = container.querySelector('.tag-badges-display');
+                const assignedTagsStr = badgesDisplay.dataset.assignedTags;
+                const assignedTags = assignedTagsStr ? assignedTagsStr.split(',').filter(id => id) : [];
+                renderItemTags(container, assignedTags);
+            });
+            
+            // Modal state
+            let currentTagModal = null;
+            let selectedTagIds = [];
+            
+            // Handle add tag badge button clicks
+            document.querySelectorAll('.add-tag-badge-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const container = this.closest('.tags-container');
+                    const receiptId = container.dataset.receiptId;
+                    const itemIndex = container.dataset.itemIndex;
+                    const itemEan = container.dataset.itemEan;
                     
-                    // For simplicity, we'll assign all selected tags
-                    // In a production app, you'd track which tags were added/removed
-                    selectedTags.forEach(tagId => {
-                        fetch(`/api/categorization/receipts/${receiptId}/items/tags`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': getCsrfToken()
-                            },
-                            body: JSON.stringify({
-                                itemIndex: itemIndex,
-                                itemEan: itemEan,
-                                tagId: tagId
-                            })
-                        }).catch(err => console.error('Failed to assign tag:', err));
-                    });
+                    // Get currently assigned tags
+                    const badgesDisplay = container.querySelector('.tag-badges-display');
+                    const assignedTagsStr = badgesDisplay.dataset.assignedTags;
+                    selectedTagIds = assignedTagsStr ? assignedTagsStr.split(',').filter(id => id) : [];
+                    
+                    // Store current context
+                    currentTagModal = {
+                        container: container,
+                        receiptId: receiptId,
+                        itemIndex: itemIndex,
+                        itemEan: itemEan
+                    };
+                    
+                    // Populate modal
+                    populateTagModal();
+                    
+                    // Show modal
+                    const modal = new bootstrap.Modal(document.getElementById('tagModal'));
+                    modal.show();
                 });
             });
+            
+            // Populate tag modal
+            function populateTagModal() {
+                const availableList = document.getElementById('availableTagsList');
+                availableList.innerHTML = '';
+                
+                allTags.forEach(tag => {
+                    const div = document.createElement('div');
+                    div.className = 'form-check mb-2';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'form-check-input';
+                    checkbox.id = 'tag-check-' + tag.id;
+                    checkbox.value = tag.id;
+                    checkbox.checked = selectedTagIds.includes(tag.id);
+                    checkbox.onchange = () => updateSelectedTags();
+                    
+                    const label = document.createElement('label');
+                    label.className = 'form-check-label d-flex align-items-center';
+                    label.htmlFor = 'tag-check-' + tag.id;
+                    
+                    const badge = createTagBadge(tag, false);
+                    label.appendChild(badge);
+                    
+                    div.appendChild(checkbox);
+                    div.appendChild(label);
+                    availableList.appendChild(div);
+                });
+                
+                updateSelectedTagsPreview();
+            }
+            
+            // Update selected tags based on checkboxes
+            function updateSelectedTags() {
+                const checkboxes = document.querySelectorAll('#availableTagsList input[type="checkbox"]');
+                selectedTagIds = Array.from(checkboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+                updateSelectedTagsPreview();
+            }
+            
+            // Update the preview of selected tags in modal
+            function updateSelectedTagsPreview() {
+                const preview = document.getElementById('selectedTagsPreview');
+                const noTagsMsg = document.getElementById('noTagsSelected');
+                
+                preview.innerHTML = '';
+                
+                if (selectedTagIds.length === 0) {
+                    if (noTagsMsg) {
+                        const msg = noTagsMsg.cloneNode(true);
+                        preview.appendChild(msg);
+                    }
+                } else {
+                    selectedTagIds.forEach(tagId => {
+                        const tag = allTags.find(t => t.id === tagId);
+                        if (tag) {
+                            const badge = createTagBadge(tag, false);
+                            preview.appendChild(badge);
+                        }
+                    });
+                }
+            }
+            
+            // Handle create new tag in modal
+            document.getElementById('createNewTagBtn').addEventListener('click', function() {
+                const input = document.getElementById('newTagName');
+                const tagName = input.value.trim();
+                
+                if (!tagName) {
+                    alert('Ange ett taggnamn');
+                    return;
+                }
+                
+                fetch('/api/categorization/tags', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken()
+                    },
+                    body: JSON.stringify({ name: tagName })
+                })
+                .then(response => response.json())
+                .then(tag => {
+                    // Add to allTags array
+                    allTags.push(tag);
+                    // Add to selected
+                    selectedTagIds.push(tag.id);
+                    // Refresh modal
+                    populateTagModal();
+                    // Clear input
+                    input.value = '';
+                })
+                .catch(err => {
+                    console.error('Failed to create tag:', err);
+                    alert('Kunde inte skapa tagg. Försök igen.');
+                });
+            });
+            
+            // Handle save tags button
+            document.getElementById('saveTagsBtn').addEventListener('click', function() {
+                if (!currentTagModal) return;
+                
+                const { container, receiptId, itemIndex, itemEan } = currentTagModal;
+                const badgesDisplay = container.querySelector('.tag-badges-display');
+                const oldTagIds = badgesDisplay.dataset.assignedTags ? 
+                    badgesDisplay.dataset.assignedTags.split(',').filter(id => id) : [];
+                
+                // Determine which tags to add and remove
+                const tagsToAdd = selectedTagIds.filter(id => !oldTagIds.includes(id));
+                const tagsToRemove = oldTagIds.filter(id => !selectedTagIds.includes(id));
+                
+                // Remove tags
+                const removePromises = tagsToRemove.map(tagId => 
+                    fetch(`/api/categorization/receipts/${receiptId}/items/tags/${tagId}?itemIdentifier=${itemEan || itemIndex}`, {
+                        method: 'DELETE',
+                        headers: { 'X-CSRF-TOKEN': getCsrfToken() }
+                    })
+                );
+                
+                // Add tags
+                const addPromises = tagsToAdd.map(tagId =>
+                    fetch(`/api/categorization/receipts/${receiptId}/items/tags`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': getCsrfToken()
+                        },
+                        body: JSON.stringify({
+                            itemIndex: itemIndex,
+                            itemEan: itemEan,
+                            tagId: tagId
+                        })
+                    })
+                );
+                
+                Promise.all([...removePromises, ...addPromises])
+                    .then(() => {
+                        // Update the display
+                        badgesDisplay.dataset.assignedTags = selectedTagIds.join(',');
+                        renderItemTags(container, selectedTagIds);
+                        
+                        // Close modal
+                        bootstrap.Modal.getInstance(document.getElementById('tagModal')).hide();
+                    })
+                    .catch(err => {
+                        console.error('Failed to update tags:', err);
+                        alert('Kunde inte uppdatera taggar. Försök igen.');
+                    });
+            });
+            
+            // Function to remove tag from item
+            function removeTagFromItem(container, tagId) {
+                const receiptId = container.dataset.receiptId;
+                const itemIndex = container.dataset.itemIndex;
+                const itemEan = container.dataset.itemEan;
+                const itemIdentifier = itemEan || itemIndex;
+                
+                fetch(`/api/categorization/receipts/${receiptId}/items/tags/${tagId}?itemIdentifier=${itemIdentifier}`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-TOKEN': getCsrfToken() }
+                })
+                .then(() => {
+                    // Update the display
+                    const badgesDisplay = container.querySelector('.tag-badges-display');
+                    const currentTags = badgesDisplay.dataset.assignedTags ? 
+                        badgesDisplay.dataset.assignedTags.split(',').filter(id => id) : [];
+                    const updatedTags = currentTags.filter(id => id !== tagId);
+                    badgesDisplay.dataset.assignedTags = updatedTags.join(',');
+                    renderItemTags(container, updatedTags);
+                })
+                .catch(err => console.error('Failed to remove tag:', err));
+            }
             
             // Handle add category button
             document.querySelectorAll('.add-category-btn').forEach(btn => {
@@ -391,29 +713,6 @@
                         location.reload();
                     })
                     .catch(err => console.error('Failed to create category:', err));
-                });
-            });
-            
-            // Handle add tag button
-            document.querySelectorAll('.add-tag-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const tagName = prompt('Ange taggnamn:');
-                    if (!tagName) return;
-                    
-                    fetch('/api/categorization/tags', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': getCsrfToken()
-                        },
-                        body: JSON.stringify({ name: tagName })
-                    })
-                    .then(response => response.json())
-                    .then(tag => {
-                        // Reload page to show new tag
-                        location.reload();
-                    })
-                    .catch(err => console.error('Failed to create tag:', err));
                 });
             });
             
