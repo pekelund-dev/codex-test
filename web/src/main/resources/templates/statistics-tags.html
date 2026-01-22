@@ -101,7 +101,7 @@
                 const tagId = badge.getAttribute('data-tag-id');
                 const color = getTagColor(tagId);
                 badge.style.backgroundColor = color;
-                badge.style.color = '#000000'; // Black text for better visibility
+                badge.style.setProperty('--bs-badge-color', '#000000'); // Black text via CSS variable
                 badge.style.fontWeight = '600';
             });
         });
