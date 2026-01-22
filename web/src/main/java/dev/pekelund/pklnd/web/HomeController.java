@@ -397,12 +397,19 @@ public class HomeController {
                 List<ItemCategorizationService.TaggedItemInfo> items = entry.getValue();
                 
                 // Load receipt details
-                ParsedReceipt receipt = receiptExtractionService.getReceipt(receiptId).orElse(null);
+                ParsedReceipt receipt = receiptExtractionService.findById(receiptId).orElse(null);
                 
                 return new ReceiptWithTaggedItems(receipt, items);
             })
             .filter(r -> r.receipt() != null)
-            .sorted((a, b) -> b.receipt().transactionDate().compareTo(a.receipt().transactionDate()))
+            .sorted((a, b) -> {
+                String dateA = a.receipt().receiptDate();
+                String dateB = b.receipt().receiptDate();
+                if (dateA == null || dateB == null) {
+                    return 0;
+                }
+                return dateB.compareTo(dateA);
+            })
             .collect(Collectors.toList());
         
         model.addAttribute("receiptsWithItems", receiptsWithItems);
