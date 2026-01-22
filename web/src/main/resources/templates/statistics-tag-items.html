@@ -82,21 +82,23 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr th:each="taggedItem : ${receiptWithItems.taggedItems}">
-                                    <td th:with="item=${receiptWithItems.receipt.displayItems[T(Integer).parseInt(taggedItem.itemIndex)]}">
+                                <tr th:each="taggedItem : ${receiptWithItems.taggedItems}" 
+                                    th:with="itemIdx=${#strings.isEmpty(taggedItem.itemIndex) ? 0 : #numbers.formatInteger(taggedItem.itemIndex, 0)},
+                                             item=${receiptWithItems.receipt.displayItems[itemIdx]}">
+                                    <td>
                                         <span th:text="${item != null ? item.name : 'Okänd produkt'}">Product Name</span>
                                         <br/>
                                         <small class="text-muted" th:if="${taggedItem.itemEan != null}">
                                             EAN: <span th:text="${taggedItem.itemEan}">1234567890</span>
                                         </small>
                                     </td>
-                                    <td class="text-end" th:with="item=${receiptWithItems.receipt.displayItems[T(Integer).parseInt(taggedItem.itemIndex)]}">
+                                    <td class="text-end">
                                         <span th:text="${item != null ? item.displayQuantity : '-'}">1</span>
                                     </td>
-                                    <td class="text-end" th:with="item=${receiptWithItems.receipt.displayItems[T(Integer).parseInt(taggedItem.itemIndex)]}">
+                                    <td class="text-end">
                                         <span th:text="${item != null ? item.displayUnitPrice : '-'}">10.00</span>
                                     </td>
-                                    <td class="text-end" th:with="item=${receiptWithItems.receipt.displayItems[T(Integer).parseInt(taggedItem.itemIndex)]}">
+                                    <td class="text-end">
                                         <span th:text="${item != null ? item.displayTotalPrice : '-'}">10.00</span>
                                     </td>
                                 </tr>
