@@ -108,7 +108,7 @@ Add or update `@ApplicationModule` annotations for new feature packages.
 ## 2) Observability & Health
 
 ### Ticket 2.1 — Add Actuator to `web`
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Enable health and metrics endpoints for the web service.
@@ -121,10 +121,17 @@ Enable health and metrics endpoints for the web service.
 - `/actuator/health` returns `UP` locally.
 - Readiness/liveness probes enabled in config.
 
+**Completion note**
+- Summary:
+  - Added Spring Boot Actuator to the web module and exposed health/info endpoints.
+  - Enabled readiness and liveness probes for the web service.
+- Tests run: Not run (health endpoints not verified locally).
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 2.2 — Add Actuator to `receipt-parser`
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Enable health endpoints for the receipt parser service.
@@ -136,10 +143,17 @@ Enable health endpoints for the receipt parser service.
 **Acceptance criteria**
 - `/actuator/health` returns `UP` locally.
 
+**Completion note**
+- Summary:
+  - Added Spring Boot Actuator to the receipt parser module and exposed health/info endpoints.
+  - Enabled readiness and liveness probes for the receipt parser service.
+- Tests run: Not run (health endpoints not verified locally).
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 2.3 — Add request correlation IDs
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Propagate a request ID across web → receipt‑parser calls and logs.
@@ -152,6 +166,15 @@ Propagate a request ID across web → receipt‑parser calls and logs.
 **Acceptance criteria**
 - Logs show request IDs on both services.
 - Downstream requests receive the ID header.
+
+**Completion note**
+- Summary:
+  - Added request ID filters for web and receipt parser that inject `X-Request-Id` and populate MDC for logging.
+  - Propagated request IDs to receipt-parser calls and updated logging patterns to include the request ID.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test -Dtest=RequestIdFilterTests -Dsurefire.failIfNoSpecifiedTests=false`
+  - `./mvnw -pl receipt-parser -am test -Dtest=RequestIdFilterTests -Dsurefire.failIfNoSpecifiedTests=false`
+- Follow-up tasks: None.
 
 ---
 

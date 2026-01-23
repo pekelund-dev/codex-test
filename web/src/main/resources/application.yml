@@ -8,6 +8,21 @@ spring:
 server:
   forward-headers-strategy: framework
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
 firestore:
   enabled: ${FIRESTORE_ENABLED:false}
   credentials: ${FIRESTORE_CREDENTIALS:}
@@ -35,4 +50,3 @@ receipt:
     audience: ${RECEIPT_PROCESSOR_AUDIENCE:}
     connect-timeout: ${RECEIPT_PROCESSOR_CONNECT_TIMEOUT:5s}
     read-timeout: ${RECEIPT_PROCESSOR_READ_TIMEOUT:30s}
-
