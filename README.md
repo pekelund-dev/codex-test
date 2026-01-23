@@ -141,6 +141,27 @@ Run the targeted Modulith verification tests to ensure boundaries stay intact:
 ./mvnw -pl receipt-parser -am test -Dtest=ModularityVerificationTests
 ```
 
+### Feature packaging plan
+
+The web module will move toward a package-by-feature structure so controllers, templates, and services are grouped by user-facing
+capability instead of technical layers. The table below captures the current route ownership and the proposed feature packages.
+
+| Routes / responsibilities | Current controller | Proposed package |
+| --- | --- | --- |
+| `/`, `/home`, `/about` | `HomeController` | `dev.pekelund.pklnd.web.home` |
+| `/dashboard`, admin management actions under `/dashboard/admins` | `HomeController` | `dev.pekelund.pklnd.web.dashboard` |
+| `/dashboard/statistics/**` (overview, users, stores, items, tags) | `HomeController` | `dev.pekelund.pklnd.web.statistics` |
+| `/login`, `/register` | `HomeController`, `AuthController` | `dev.pekelund.pklnd.web.auth` |
+| `/receipts`, `/receipts/search`, `/receipts/uploads`, `/receipts/overview`, `/receipts/errors`, `/receipts/**/reparse`, JSON endpoints under `/receipts/**` | `ReceiptController` | `dev.pekelund.pklnd.web.receipts` |
+| `/api/categorization/**` | `CategorizationController` | `dev.pekelund.pklnd.web.categorization` |
+| `/api/admin/categorization/**` | `CategorizationAdminController` | `dev.pekelund.pklnd.web.admin.categorization` |
+
+Planned splits from `HomeController`:
+- Home/about routes (`/`, `/home`, `/about`) will live in the `web.home` package.
+- Dashboard routes (`/dashboard` and `/dashboard/admins/**`) will move into `web.dashboard`.
+- Statistics routes (`/dashboard/statistics/**`) will move into `web.statistics`.
+- Login route (`/login`) will move into `web.auth` alongside registration.
+
 #### Quick Deployment
 
 Use the Terraform automation for a streamlined setup with optimized build performance:

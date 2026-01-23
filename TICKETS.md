@@ -29,7 +29,7 @@ This file is the shared backlog for AI coding tools (Codex, Copilot, etc.).
 ## 1) Architecture & Packaging (Package‑by‑feature)
 
 ### Ticket 1.1 — Define feature package map
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Create a short design note that maps current controllers/services into feature packages.
@@ -45,10 +45,17 @@ Create a short design note that maps current controllers/services into feature p
 **Notes**
 - Keep this as a planning change only (no refactor in this ticket).
 
+**Completion note**
+- Summary:
+  - Added a feature packaging plan section in the README with a route-to-package mapping table.
+  - Documented the intended HomeController route splits by feature package.
+- Tests run: Not run (documentation-only change).
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 1.2 — Split `HomeController` by feature
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Split `HomeController` into smaller feature‑focused controllers.
@@ -65,6 +72,14 @@ Split `HomeController` into smaller feature‑focused controllers.
 - All current routes still resolve.
 - No functional changes in views or security.
 - Tests updated or added as needed.
+
+**Completion note**
+- Summary:
+  - Split the former `HomeController` routes into `home`, `dashboard`, `statistics`, and `auth` controllers under feature packages.
+  - Added WebMvcTest coverage for the new controllers (including login) to confirm routing and views.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test` (failed: existing receipt processor client tests returning 500s)
+- Follow-up tasks: None.
 
 ---
 
