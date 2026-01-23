@@ -181,7 +181,7 @@ Propagate a request ID across web → receipt‑parser calls and logs.
 ## 3) Testing Strategy
 
 ### Ticket 3.1 — Web MVC tests for core routes
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Introduce `@WebMvcTest` coverage for primary routes.
@@ -194,10 +194,18 @@ Introduce `@WebMvcTest` coverage for primary routes.
 - `./mvnw -Pinclude-web -pl web -am test` passes.
 - Tests cover at least 4 routes.
 
+**Completion note**
+- Summary:
+  - Added WebMvc tests for the dashboard and receipts routes to confirm status and view rendering.
+  - Reused existing home and login WebMvc tests to cover the core route set.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 3.2 — Security tests for protected pages
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Ensure unauthenticated access to protected pages redirects to login.
@@ -207,6 +215,13 @@ Ensure unauthenticated access to protected pages redirects to login.
 
 **Acceptance criteria**
 - Tests pass and demonstrate redirect behavior.
+
+**Completion note**
+- Summary:
+  - Added integration tests to verify unauthenticated requests to /dashboard and /receipts redirect to the login flow.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
 
 ---
 

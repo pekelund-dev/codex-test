@@ -1,6 +1,7 @@
 package dev.pekelund.pklnd.web;
 
 import dev.pekelund.pklnd.PknldApplication;
+import dev.pekelund.pklnd.firestore.FirestoreReadTotals;
 import dev.pekelund.pklnd.firestore.ItemCategorizationService;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.firestore.TagService;
@@ -11,6 +12,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -40,7 +42,11 @@ class StatisticsControllerTests {
     @MockitoBean
     private ReceiptExtractionService receiptExtractionService;
 
+    @MockitoBean
+    private FirestoreReadTotals firestoreReadTotals;
+
     @Test
+    @WithMockUser(username = "user", roles = "USER")
     void statisticsDashboard_ShouldRenderStatisticsView() throws Exception {
         when(dashboardStatisticsService.loadStatistics(any()))
             .thenReturn(new DashboardStatistics(
