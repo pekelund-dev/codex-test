@@ -19,6 +19,7 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 
 @Configuration
 public class SecurityConfig {
@@ -57,6 +58,26 @@ public class SecurityConfig {
             .logout(logout -> logout
                 .logoutSuccessUrl("/")
                 .permitAll()
+            )
+            .headers(headers -> headers
+                .contentSecurityPolicy(policy -> policy.policyDirectives(
+                    "default-src 'self'; "
+                        + "script-src 'self' https://cdn.jsdelivr.net; "
+                        + "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+                        + "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; "
+                        + "img-src 'self' https: data:; "
+                        + "connect-src 'self'; "
+                        + "object-src 'none'; "
+                        + "base-uri 'self'; "
+                        + "form-action 'self'; "
+                        + "frame-ancestors 'none'"
+                ))
+                .referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.SAME_ORIGIN))
+                .frameOptions(frame -> frame.deny())
+                .httpStrictTransportSecurity(hsts -> hsts
+                    .includeSubDomains(true)
+                    .preload(true)
+                    .maxAgeInSeconds(31536000))
             )
             .csrf(Customizer.withDefaults());
 

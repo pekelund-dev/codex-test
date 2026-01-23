@@ -132,65 +132,7 @@
 </footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-<script>
-    window.addEventListener('load', function () {
-        const splash = document.getElementById('splash-screen');
-        if (splash) {
-            splash.classList.add('hidden');
-            setTimeout(() => splash.remove(), 600);
-        }
-    });
-
-    (function () {
-        const toggler = document.querySelector('.navbar-toggler');
-        if (!toggler) {
-            return;
-        }
-
-        const targetSelector = toggler.getAttribute('data-bs-target')
-            || toggler.getAttribute('aria-controls');
-        if (!targetSelector) {
-            return;
-        }
-
-        const target = document.querySelector(targetSelector);
-        if (!target) {
-            return;
-        }
-
-        const supportsBootstrapCollapse = () =>
-            typeof window.bootstrap !== 'undefined'
-            && window.bootstrap !== null
-            && typeof window.bootstrap.Collapse === 'function';
-
-        toggler.addEventListener('click', (event) => {
-            if (supportsBootstrapCollapse()) {
-                return;
-            }
-
-            event.preventDefault();
-            const isShown = target.classList.toggle('show');
-            toggler.classList.toggle('collapsed', !isShown);
-            toggler.setAttribute('aria-expanded', isShown ? 'true' : 'false');
-        });
-
-        target.querySelectorAll('a.nav-link, button').forEach((element) => {
-            element.addEventListener('click', () => {
-                if (supportsBootstrapCollapse()) {
-                    return;
-                }
-
-                if (!target.classList.contains('show')) {
-                    return;
-                }
-
-                target.classList.remove('show');
-                toggler.classList.add('collapsed');
-                toggler.setAttribute('aria-expanded', 'false');
-            });
-        });
-    })();
-</script>
+<script th:src="@{/js/layout.js}"></script>
 <script th:src="@{/js/table-sort.js}"></script>
 </body>
 </html>

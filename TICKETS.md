@@ -228,7 +228,7 @@ Ensure unauthenticated access to protected pages redirects to login.
 ## 4) Security Hardening
 
 ### Ticket 4.1 — Remove inline JS from `layout.html`
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Move inline JS into static assets to allow strict CSP.
@@ -242,10 +242,18 @@ Move inline JS into static assets to allow strict CSP.
 - `layout.html` has no inline `<script>` blocks.
 - UI behavior remains intact.
 
+**Completion note**
+- Summary:
+  - Moved splash screen and navbar toggle logic into a dedicated layout.js asset.
+  - Updated the shared layout template to load the new script instead of inline JavaScript.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 4.2 — Add CSP and security headers
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Harden HTTP security headers.
@@ -257,6 +265,14 @@ Harden HTTP security headers.
 **Acceptance criteria**
 - Headers present on responses.
 - No inline JS is required for core pages.
+
+**Completion note**
+- Summary:
+  - Added CSP, HSTS, referrer policy, and frame options headers in the web security configuration.
+  - Kept script/style sources aligned with the shared layout assets and CDN dependencies.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
 
 ---
 
