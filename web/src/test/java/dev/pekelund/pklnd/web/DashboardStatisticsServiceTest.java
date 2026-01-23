@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import dev.pekelund.pklnd.firestore.FirestoreUserService;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
+import dev.pekelund.pklnd.firestore.TagService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.web.DashboardStatisticsService.DashboardStatistics;
 import java.math.BigDecimal;
@@ -26,6 +27,7 @@ class DashboardStatisticsServiceTest {
     private FirestoreUserService firestoreUserService;
     private ReceiptExtractionService receiptExtractionService;
     private ReceiptOwnerResolver receiptOwnerResolver;
+    private TagService tagService;
     private DashboardStatisticsService service;
 
     @BeforeEach
@@ -33,6 +35,7 @@ class DashboardStatisticsServiceTest {
         firestoreUserService = mock(FirestoreUserService.class);
         receiptExtractionService = mock(ReceiptExtractionService.class);
         receiptOwnerResolver = mock(ReceiptOwnerResolver.class);
+        tagService = mock(TagService.class);
 
         when(firestoreUserService.isEnabled()).thenReturn(true);
         when(firestoreUserService.countUsers()).thenReturn(10L);
@@ -40,7 +43,8 @@ class DashboardStatisticsServiceTest {
         service = new DashboardStatisticsService(
             firestoreUserService,
             receiptExtractionService,
-            receiptOwnerResolver
+            receiptOwnerResolver,
+            tagService
         );
     }
 

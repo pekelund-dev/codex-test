@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : 'Taggar'">Taggar</title>
+    <style>
+        .hover-shadow:hover {
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+        }
+    </style>
+</head>
+<body>
+<section>
+    <div class="row py-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a th:href="@{/dashboard}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a th:href="@{/dashboard/statistics}">Statistik</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Taggar</li>
+                </ol>
+            </nav>
+            <h1 class="fw-bold mb-3">Taggar</h1>
+            <p class="text-muted mb-0">Alla tillgängliga taggar och deras produkter</p>
+        </div>
+    </div>
+
+    <div class="row g-4" th:if="${tagsAvailable}">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h2 class="h5 mb-0 fw-bold">Tillgängliga taggar</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-lg-3 col-md-4 col-sm-6" th:each="tag : ${tags}">
+                            <a th:href="@{/dashboard/statistics/tags/{tagId}(tagId=${tag.id})}" 
+                               class="text-decoration-none">
+                                <div class="card h-100 border-primary-subtle hover-shadow">
+                                    <div class="card-body text-center p-3">
+                                        <h4 class="h6 fw-semibold mb-2">
+                                            <span class="badge fs-6 py-2 px-3" 
+                                                  th:id="'tag-badge-' + ${tag.id}"
+                                                  th:attr="data-tag-id=${tag.id}"
+                                                  th:text="${tag.name()}"
+                                                  style="display: inline-block;">Tag Name</span>
+                                        </h4>
+                                        <p class="text-muted small mb-0">Klicka för att se produkter</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3" th:unless="${tagsAvailable}">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                <span>Inga taggar tillgängliga ännu. Skapa taggar genom att tagga produkter på kvitton.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <a th:href="@{/dashboard/statistics}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left me-2"></i>Tillbaka till statistik
+            </a>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // Color palette for tags (same as in receipt detail page)
+        const TAG_COLORS = [
+            '#0d6efd', // blue
+            '#198754', // green
+            '#dc3545', // red
+            '#ffc107', // yellow
+            '#0dcaf0', // cyan
+            '#6f42c1', // purple
+            '#fd7e14', // orange
+            '#d63384'  // pink
+        ];
+
+        function getTagColor(tagId) {
+            const hash = Array.from(tagId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            return TAG_COLORS[hash % TAG_COLORS.length];
+        }
+
+        // Apply colors to all tag badges
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('[data-tag-id]').forEach(badge => {
+                const tagId = badge.getAttribute('data-tag-id');
+                const color = getTagColor(tagId);
+                badge.style.backgroundColor = color;
+                badge.style.color = '#000000'; // Black text for visibility
+                badge.style.fontWeight = '600';
+            });
+        });
+        /*]]>*/
+    </script>
+</section>
+</body>
+</html>
