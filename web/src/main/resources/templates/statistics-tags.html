@@ -58,14 +58,14 @@
                                class="text-decoration-none">
                                 <div class="card h-100 border-primary-subtle hover-shadow">
                                     <div class="card-body text-center p-3">
-                                        <span class="badge fs-5 py-2 px-3" 
-                                              th:id="'tag-badge-' + ${tag.id}"
-                                              th:attr="data-tag-id=${tag.id}"
-                                              th:text="${tag.name()}"
-                                              style="display: inline-block;">Tag Name</span>
-                                        <p class="text-muted small mt-2 mb-0">
-                                            Klicka för att se produkter
-                                        </p>
+                                        <h4 class="h6 fw-semibold mb-2">
+                                            <span class="badge fs-6 py-2 px-3" 
+                                                  th:id="'tag-badge-' + ${tag.id}"
+                                                  th:attr="data-tag-id=${tag.id}"
+                                                  th:text="${tag.name()}"
+                                                  style="display: inline-block;">Tag Name</span>
+                                        </h4>
+                                        <p class="text-muted small mb-0">Klicka för att se produkter</p>
                                     </div>
                                 </div>
                             </a>
