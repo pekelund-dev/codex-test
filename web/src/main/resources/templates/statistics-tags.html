@@ -8,26 +8,6 @@
             box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
         }
     </style>
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        // Color palette for tags (same as in receipt detail page)
-        const TAG_COLORS = [
-            '#0d6efd', // blue
-            '#198754', // green
-            '#dc3545', // red
-            '#ffc107', // yellow
-            '#0dcaf0', // cyan
-            '#6f42c1', // purple
-            '#fd7e14', // orange
-            '#d63384'  // pink
-        ];
-
-        function getTagColor(tagId) {
-            const hash = Array.from(tagId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            return TAG_COLORS[hash % TAG_COLORS.length];
-        }
-        /*]]>*/
-    </script>
 </head>
 <body>
 <section>
@@ -95,6 +75,23 @@
 
     <script th:inline="javascript">
         /*<![CDATA[*/
+        // Color palette for tags (same as in receipt detail page)
+        const TAG_COLORS = [
+            '#0d6efd', // blue
+            '#198754', // green
+            '#dc3545', // red
+            '#ffc107', // yellow
+            '#0dcaf0', // cyan
+            '#6f42c1', // purple
+            '#fd7e14', // orange
+            '#d63384'  // pink
+        ];
+
+        function getTagColor(tagId) {
+            const hash = Array.from(tagId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            return TAG_COLORS[hash % TAG_COLORS.length];
+        }
+
         // Apply colors to all tag badges
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('[data-tag-id]').forEach(badge => {
