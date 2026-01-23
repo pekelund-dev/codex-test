@@ -78,13 +78,13 @@ Split `HomeController` into smaller feature‑focused controllers.
   - Split the former `HomeController` routes into `home`, `dashboard`, `statistics`, and `auth` controllers under feature packages.
   - Added WebMvcTest coverage for the new controllers (including login) to confirm routing and views.
 - Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test` (failed: existing receipt processor client tests returning 500s)
+  - `./mvnw -Pinclude-web -pl web -am test` (failed: ReceiptProcessingClientTest.recordsFailuresWhenProcessorReturnsError hit HttpServerErrorException 500 on POST http://localhost/events/storage; overall summary: Tests run 54, Failures 2, Errors 3)
 - Follow-up tasks: None.
 
 ---
 
 ### Ticket 1.3 — Modulith annotations for new packages
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Add or update `@ApplicationModule` annotations for new feature packages.
@@ -95,6 +95,13 @@ Add or update `@ApplicationModule` annotations for new feature packages.
 
 **Acceptance criteria**
 - Modulith verification tests pass after refactor.
+
+**Completion note**
+- Summary:
+  - Added ApplicationModule package-info descriptors for the new home, dashboard, statistics, and auth feature packages.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test -Dtest=ModularityVerificationTests`
+- Follow-up tasks: None.
 
 ---
 
