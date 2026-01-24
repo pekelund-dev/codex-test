@@ -65,6 +65,23 @@ The `setup-env.sh` script automatically configures:
 
 6. Navigate to <http://localhost:8080> to explore the experience.
 
+### Frontend asset pipeline
+
+The web module ships with a small Vite build that bundles and versions the JavaScript and CSS assets referenced by the
+Thymeleaf templates. Install the Node dependencies and build the assets before running a production build:
+
+```bash
+cd web
+npm install
+npm run build
+```
+
+To validate frontend code quality locally, use the lint scripts:
+
+```bash
+npm run lint
+```
+
 ### Firestore configuration
 
 Firestore stores user profiles and receipt parsing output. Choose the setup style that suits your workflow:

@@ -6,12 +6,14 @@ import dev.pekelund.pklnd.firestore.ItemCategorizationService;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.firestore.TagService;
 import dev.pekelund.pklnd.web.DashboardStatisticsService.DashboardStatistics;
+import dev.pekelund.pklnd.web.assets.ViteManifest;
 import dev.pekelund.pklnd.web.statistics.StatisticsController;
 import java.math.BigDecimal;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -25,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(StatisticsController.class)
 @ContextConfiguration(classes = PknldApplication.class)
+@Import(ViteManifest.class)
 class StatisticsControllerTests {
 
     @Autowired

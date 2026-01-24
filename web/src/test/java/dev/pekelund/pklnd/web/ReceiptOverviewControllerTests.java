@@ -13,6 +13,7 @@ import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.ReceiptStorageService;
+import dev.pekelund.pklnd.web.assets.ViteManifest;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -27,7 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ReceiptController.class)
 @ContextConfiguration(classes = PknldApplication.class)
-@Import(FirestoreReadTotals.class)
+@Import({FirestoreReadTotals.class, ViteManifest.class})
 class ReceiptOverviewControllerTests {
 
     @Autowired

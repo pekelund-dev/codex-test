@@ -3,6 +3,7 @@ package dev.pekelund.pklnd.web;
 import dev.pekelund.pklnd.PknldApplication;
 import dev.pekelund.pklnd.config.SecurityConfig;
 import dev.pekelund.pklnd.firestore.FirestoreReadTotals;
+import dev.pekelund.pklnd.web.assets.ViteManifest;
 import dev.pekelund.pklnd.web.auth.LoginController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(LoginController.class)
 @ContextConfiguration(classes = PknldApplication.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, ViteManifest.class})
 class LoginControllerTests {
 
     @Autowired

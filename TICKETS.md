@@ -279,7 +279,7 @@ Harden HTTP security headers.
 ## 5) Frontend Production Readiness
 
 ### Ticket 5.1 — Introduce asset pipeline
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Create a minimal frontend build pipeline for JS/CSS.
@@ -293,10 +293,18 @@ Create a minimal frontend build pipeline for JS/CSS.
 - Build outputs are versioned and referenced by templates.
 - Existing functionality unaffected.
 
+**Completion note**
+- Summary:
+  - Added a Vite build pipeline with versioned asset output under the web static resources.
+  - Updated Thymeleaf templates to resolve bundled CSS/JS via the Vite manifest with static fallbacks.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 5.2 — Add linting for JS/CSS
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Introduce linting for frontend assets.
@@ -307,6 +315,14 @@ Introduce linting for frontend assets.
 
 **Acceptance criteria**
 - Lint command runs cleanly.
+
+**Completion note**
+- Summary:
+  - Added ESLint and Stylelint configurations plus npm scripts to lint frontend JS and CSS sources.
+  - Documented the new lint workflow alongside the asset pipeline instructions.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
 
 ---
 

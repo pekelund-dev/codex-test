@@ -1,0 +1,19 @@
+{
+  "name": "pklnd-web-assets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "lint:js": "eslint \"src/main/frontend/**/*.js\" \"src/main/resources/static/js/main.js\"",
+    "lint:css": "stylelint \"src/main/frontend/**/*.css\"",
+    "lint": "npm run lint:js && npm run lint:css"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "eslint": "^9.32.0",
+    "globals": "^15.15.0",
+    "stylelint": "^16.23.0",
+    "stylelint-config-standard": "^36.0.1",
+    "vite": "^5.4.19"
+  }
+}
