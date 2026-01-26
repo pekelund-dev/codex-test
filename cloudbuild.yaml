@@ -1,4 +1,12 @@
 steps:
+  # Run tests before building the Docker image
+  - name: 'maven:3.9.9-eclipse-temurin-21'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - './mvnw -Pinclude-web -pl web -am test'
+    timeout: 1200s
+
   # Build the web application Docker image with Docker BuildKit for better caching
   - name: 'gcr.io/cloud-builders/docker'
     args:

@@ -329,7 +329,7 @@ Introduce linting for frontend assets.
 ## 6) Deployment & Release Hardening
 
 ### Ticket 6.1 — Add tests before Cloud Build
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Ensure tests run in CI before Docker build.
@@ -340,10 +340,17 @@ Ensure tests run in CI before Docker build.
 **Acceptance criteria**
 - Build fails on test failure.
 
+**Completion note**
+- Summary:
+  - Added a Maven test step to Cloud Build before the Docker build step.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 6.2 — Release versioning automation
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Automate release versioning and changelog updates.
@@ -355,12 +362,19 @@ Automate release versioning and changelog updates.
 **Acceptance criteria**
 - README includes release steps and versioning rules.
 
+**Completion note**
+- Summary:
+  - Documented the release flow and semantic versioning rules in the README.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ## 7) Data & Reliability
 
 ### Ticket 7.1 — Document Firestore indexes
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Make required Firestore indexes explicit.
@@ -373,10 +387,18 @@ Make required Firestore indexes explicit.
 - Index requirements are clearly described.
 - README points to the new doc.
 
+**Completion note**
+- Summary:
+  - Added Firestore index documentation with the key composite index requirements.
+  - Linked the Firestore index guide from the README.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 7.2 — Document backup & retention strategy
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Define data backup and retention guidance.
@@ -388,6 +410,14 @@ Define data backup and retention guidance.
 **Acceptance criteria**
 - Backup/retention steps are documented.
 - README links to the new doc.
+
+**Completion note**
+- Summary:
+  - Added backup and retention guidance for Firestore exports and receipt storage.
+  - Linked the backup strategy doc from the README.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
 
 ---
 

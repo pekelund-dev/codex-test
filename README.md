@@ -82,6 +82,27 @@ To validate frontend code quality locally, use the lint scripts:
 npm run lint
 ```
 
+### Release process
+
+Releases follow semantic versioning (`MAJOR.MINOR.PATCH`) and are tagged in Git. To cut a release:
+
+1. Decide the next version number (e.g. `1.2.0`).
+2. Update module versions in `pom.xml` and any documentation references.
+3. Commit the version bump with a message like `chore(release): 1.2.0`.
+4. Tag the release and push it:
+
+   ```bash
+   git tag -a v1.2.0 -m "Release 1.2.0"
+   git push origin main --tags
+   ```
+
+### Firestore indexes and backups
+
+Review the Firestore index requirements and backup guidance before deploying to production:
+
+- [Firestore indexes](docs/firestore-indexes.md)
+- [Backup and retention strategy](docs/backup-retention.md)
+
 ### Firestore configuration
 
 Firestore stores user profiles and receipt parsing output. Choose the setup style that suits your workflow:
