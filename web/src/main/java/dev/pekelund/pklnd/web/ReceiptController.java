@@ -869,6 +869,7 @@ public class ReceiptController {
             parsed.totalAmount(),
             parsed.formattedTotalAmount(),
             updatedAt,
+            parsed.reconciliationStatus(),
             parsed.status(),
             parsed.statusMessage(),
             parsed.statusBadgeClass(),
@@ -919,6 +920,7 @@ public class ReceiptController {
         String totalAmount,
         String formattedTotalAmount,
         String updatedAt,
+        String reconciliationStatus,
         String status,
         String statusMessage,
         String statusBadgeClass,
@@ -2088,4 +2090,3 @@ public class ReceiptController {
     }
 
 }
-
