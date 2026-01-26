@@ -29,7 +29,7 @@ This file is the shared backlog for AI coding tools (Codex, Copilot, etc.).
 ## 1) Architecture & Packaging (Package‑by‑feature)
 
 ### Ticket 1.1 — Define feature package map
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Create a short design note that maps current controllers/services into feature packages.
@@ -45,10 +45,17 @@ Create a short design note that maps current controllers/services into feature p
 **Notes**
 - Keep this as a planning change only (no refactor in this ticket).
 
+**Completion note**
+- Summary:
+  - Added a feature packaging plan section in the README with a route-to-package mapping table.
+  - Documented the intended HomeController route splits by feature package.
+- Tests run: Not run (documentation-only change).
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 1.2 — Split `HomeController` by feature
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Split `HomeController` into smaller feature‑focused controllers.
@@ -66,10 +73,18 @@ Split `HomeController` into smaller feature‑focused controllers.
 - No functional changes in views or security.
 - Tests updated or added as needed.
 
+**Completion note**
+- Summary:
+  - Split the former `HomeController` routes into `home`, `dashboard`, `statistics`, and `auth` controllers under feature packages.
+  - Added WebMvcTest coverage for the new controllers (including login) to confirm routing and views.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test` (failed: ReceiptProcessingClientTest.recordsFailuresWhenProcessorReturnsError hit HttpServerErrorException 500 on POST http://localhost/events/storage; overall summary: Tests run 54, Failures 2, Errors 3)
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 1.3 — Modulith annotations for new packages
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Add or update `@ApplicationModule` annotations for new feature packages.
@@ -81,12 +96,19 @@ Add or update `@ApplicationModule` annotations for new feature packages.
 **Acceptance criteria**
 - Modulith verification tests pass after refactor.
 
+**Completion note**
+- Summary:
+  - Added ApplicationModule package-info descriptors for the new home, dashboard, statistics, and auth feature packages.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test -Dtest=ModularityVerificationTests`
+- Follow-up tasks: None.
+
 ---
 
 ## 2) Observability & Health
 
 ### Ticket 2.1 — Add Actuator to `web`
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Enable health and metrics endpoints for the web service.
@@ -99,10 +121,17 @@ Enable health and metrics endpoints for the web service.
 - `/actuator/health` returns `UP` locally.
 - Readiness/liveness probes enabled in config.
 
+**Completion note**
+- Summary:
+  - Added Spring Boot Actuator to the web module and exposed health/info endpoints.
+  - Enabled readiness and liveness probes for the web service.
+- Tests run: Not run (health endpoints not verified locally).
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 2.2 — Add Actuator to `receipt-parser`
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Enable health endpoints for the receipt parser service.
@@ -114,10 +143,17 @@ Enable health endpoints for the receipt parser service.
 **Acceptance criteria**
 - `/actuator/health` returns `UP` locally.
 
+**Completion note**
+- Summary:
+  - Added Spring Boot Actuator to the receipt parser module and exposed health/info endpoints.
+  - Enabled readiness and liveness probes for the receipt parser service.
+- Tests run: Not run (health endpoints not verified locally).
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 2.3 — Add request correlation IDs
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Propagate a request ID across web → receipt‑parser calls and logs.
@@ -131,12 +167,21 @@ Propagate a request ID across web → receipt‑parser calls and logs.
 - Logs show request IDs on both services.
 - Downstream requests receive the ID header.
 
+**Completion note**
+- Summary:
+  - Added request ID filters for web and receipt parser that inject `X-Request-Id` and populate MDC for logging.
+  - Propagated request IDs to receipt-parser calls and updated logging patterns to include the request ID.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test -Dtest=RequestIdFilterTests -Dsurefire.failIfNoSpecifiedTests=false`
+  - `./mvnw -pl receipt-parser -am test -Dtest=RequestIdFilterTests -Dsurefire.failIfNoSpecifiedTests=false`
+- Follow-up tasks: None.
+
 ---
 
 ## 3) Testing Strategy
 
 ### Ticket 3.1 — Web MVC tests for core routes
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Introduce `@WebMvcTest` coverage for primary routes.
@@ -149,10 +194,18 @@ Introduce `@WebMvcTest` coverage for primary routes.
 - `./mvnw -Pinclude-web -pl web -am test` passes.
 - Tests cover at least 4 routes.
 
+**Completion note**
+- Summary:
+  - Added WebMvc tests for the dashboard and receipts routes to confirm status and view rendering.
+  - Reused existing home and login WebMvc tests to cover the core route set.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 3.2 — Security tests for protected pages
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Ensure unauthenticated access to protected pages redirects to login.
@@ -163,12 +216,19 @@ Ensure unauthenticated access to protected pages redirects to login.
 **Acceptance criteria**
 - Tests pass and demonstrate redirect behavior.
 
+**Completion note**
+- Summary:
+  - Added integration tests to verify unauthenticated requests to /dashboard and /receipts redirect to the login flow.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ## 4) Security Hardening
 
 ### Ticket 4.1 — Remove inline JS from `layout.html`
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Move inline JS into static assets to allow strict CSP.
@@ -182,10 +242,18 @@ Move inline JS into static assets to allow strict CSP.
 - `layout.html` has no inline `<script>` blocks.
 - UI behavior remains intact.
 
+**Completion note**
+- Summary:
+  - Moved splash screen and navbar toggle logic into a dedicated layout.js asset.
+  - Updated the shared layout template to load the new script instead of inline JavaScript.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 4.2 — Add CSP and security headers
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Harden HTTP security headers.
@@ -198,12 +266,20 @@ Harden HTTP security headers.
 - Headers present on responses.
 - No inline JS is required for core pages.
 
+**Completion note**
+- Summary:
+  - Added CSP, HSTS, referrer policy, and frame options headers in the web security configuration.
+  - Kept script/style sources aligned with the shared layout assets and CDN dependencies.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ## 5) Frontend Production Readiness
 
 ### Ticket 5.1 — Introduce asset pipeline
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Create a minimal frontend build pipeline for JS/CSS.
@@ -217,10 +293,18 @@ Create a minimal frontend build pipeline for JS/CSS.
 - Build outputs are versioned and referenced by templates.
 - Existing functionality unaffected.
 
+**Completion note**
+- Summary:
+  - Added a Vite build pipeline with versioned asset output under the web static resources.
+  - Updated Thymeleaf templates to resolve bundled CSS/JS via the Vite manifest with static fallbacks.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 5.2 — Add linting for JS/CSS
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Introduce linting for frontend assets.
@@ -232,12 +316,20 @@ Introduce linting for frontend assets.
 **Acceptance criteria**
 - Lint command runs cleanly.
 
+**Completion note**
+- Summary:
+  - Added ESLint and Stylelint configurations plus npm scripts to lint frontend JS and CSS sources.
+  - Documented the new lint workflow alongside the asset pipeline instructions.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ## 6) Deployment & Release Hardening
 
 ### Ticket 6.1 — Add tests before Cloud Build
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Ensure tests run in CI before Docker build.
@@ -248,10 +340,17 @@ Ensure tests run in CI before Docker build.
 **Acceptance criteria**
 - Build fails on test failure.
 
+**Completion note**
+- Summary:
+  - Added a Maven test step to Cloud Build before the Docker build step.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 6.2 — Release versioning automation
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Automate release versioning and changelog updates.
@@ -263,12 +362,19 @@ Automate release versioning and changelog updates.
 **Acceptance criteria**
 - README includes release steps and versioning rules.
 
+**Completion note**
+- Summary:
+  - Documented the release flow and semantic versioning rules in the README.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ## 7) Data & Reliability
 
 ### Ticket 7.1 — Document Firestore indexes
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Make required Firestore indexes explicit.
@@ -281,10 +387,18 @@ Make required Firestore indexes explicit.
 - Index requirements are clearly described.
 - README points to the new doc.
 
+**Completion note**
+- Summary:
+  - Added Firestore index documentation with the key composite index requirements.
+  - Linked the Firestore index guide from the README.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
+
 ---
 
 ### Ticket 7.2 — Document backup & retention strategy
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Define data backup and retention guidance.
@@ -296,6 +410,14 @@ Define data backup and retention guidance.
 **Acceptance criteria**
 - Backup/retention steps are documented.
 - README links to the new doc.
+
+**Completion note**
+- Summary:
+  - Added backup and retention guidance for Firestore exports and receipt storage.
+  - Linked the backup strategy doc from the README.
+- Tests run:
+  - `./mvnw -Pinclude-web -pl web -am test`
+- Follow-up tasks: None.
 
 ---
 

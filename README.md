@@ -65,6 +65,44 @@ The `setup-env.sh` script automatically configures:
 
 6. Navigate to <http://localhost:8080> to explore the experience.
 
+### Frontend asset pipeline
+
+The web module ships with a small Vite build that bundles and versions the JavaScript and CSS assets referenced by the
+Thymeleaf templates. Install the Node dependencies and build the assets before running a production build:
+
+```bash
+cd web
+npm install
+npm run build
+```
+
+To validate frontend code quality locally, use the lint scripts:
+
+```bash
+npm run lint
+```
+
+### Release process
+
+Releases follow semantic versioning (`MAJOR.MINOR.PATCH`) and are tagged in Git. To cut a release:
+
+1. Decide the next version number (e.g. `1.2.0`).
+2. Update module versions in `pom.xml` and any documentation references.
+3. Commit the version bump with a message like `chore(release): 1.2.0`.
+4. Tag the release and push it:
+
+   ```bash
+   git tag -a v1.2.0 -m "Release 1.2.0"
+   git push origin main --tags
+   ```
+
+### Firestore indexes and backups
+
+Review the Firestore index requirements and backup guidance before deploying to production:
+
+- [Firestore indexes](docs/firestore-indexes.md)
+- [Backup and retention strategy](docs/backup-retention.md)
+
 ### Firestore configuration
 
 Firestore stores user profiles and receipt parsing output. Choose the setup style that suits your workflow:
@@ -140,6 +178,27 @@ Run the targeted Modulith verification tests to ensure boundaries stay intact:
 # Receipt processor modules
 ./mvnw -pl receipt-parser -am test -Dtest=ModularityVerificationTests
 ```
+
+### Feature packaging plan
+
+The web module will move toward a package-by-feature structure so controllers, templates, and services are grouped by user-facing
+capability instead of technical layers. The table below captures the current route ownership and the proposed feature packages.
+
+| Routes / responsibilities | Current controller | Proposed package |
+| --- | --- | --- |
+| `/`, `/home`, `/about` | `HomeController` | `dev.pekelund.pklnd.web.home` |
+| `/dashboard`, admin management actions under `/dashboard/admins` | `HomeController` | `dev.pekelund.pklnd.web.dashboard` |
+| `/dashboard/statistics/**` (overview, users, stores, items, tags) | `HomeController` | `dev.pekelund.pklnd.web.statistics` |
+| `/login`, `/register` | `HomeController`, `AuthController` | `dev.pekelund.pklnd.web.auth` |
+| `/receipts`, `/receipts/search`, `/receipts/uploads`, `/receipts/overview`, `/receipts/errors`, `/receipts/**/reparse`, JSON endpoints under `/receipts/**` | `ReceiptController` | `dev.pekelund.pklnd.web.receipts` |
+| `/api/categorization/**` | `CategorizationController` | `dev.pekelund.pklnd.web.categorization` |
+| `/api/admin/categorization/**` | `CategorizationAdminController` | `dev.pekelund.pklnd.web.admin.categorization` |
+
+Planned splits from `HomeController`:
+- Home/about routes (`/`, `/home`, `/about`) will live in the `web.home` package.
+- Dashboard routes (`/dashboard` and `/dashboard/admins/**`) will move into `web.dashboard`.
+- Statistics routes (`/dashboard/statistics/**`) will move into `web.statistics`.
+- Login route (`/login`) will move into `web.auth` alongside registration.
 
 #### Quick Deployment
 

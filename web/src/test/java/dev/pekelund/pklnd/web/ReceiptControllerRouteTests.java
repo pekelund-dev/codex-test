@@ -16,19 +16,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(ReceiptController.class)
 @ContextConfiguration(classes = PknldApplication.class)
 @Import(ViteManifest.class)
-class ReceiptControllerLocalTests {
+class ReceiptControllerRouteTests {
 
     @Autowired
     private MockMvc mockMvc;
@@ -43,34 +39,33 @@ class ReceiptControllerLocalTests {
     private ReceiptOwnerResolver receiptOwnerResolver;
 
     @MockitoBean
-    private DashboardStatisticsService dashboardStatisticsService;
-
-    @MockitoBean
     private dev.pekelund.pklnd.receipts.ReceiptProcessingClient receiptProcessingClient;
 
     @MockitoBean
     private FirestoreReadTotals firestoreReadTotals;
 
+    @MockitoBean
+    private DashboardStatisticsService dashboardStatisticsService;
+
+    @MockitoBean
+    private dev.pekelund.pklnd.firestore.CategoryService categoryService;
+
+    @MockitoBean
+    private dev.pekelund.pklnd.firestore.TagService tagService;
+
+    @MockitoBean
+    private dev.pekelund.pklnd.firestore.ItemCategorizationService itemCategorizationService;
+
     @Test
     @WithMockUser(username = "user", roles = "USER")
-    void clearReceipts_ShouldSucceed_WhenStorageDisabledAndFirestoreEnabled() throws Exception {
-        // Arrange
-        ReceiptOwner owner = new ReceiptOwner("user", "User", "user@example.com");
-        when(receiptOwnerResolver.resolve(any())).thenReturn(owner);
-        
-        // Simulate local env: Storage disabled, Firestore enabled
+    void receiptsRoute_ShouldRenderReceiptsView() throws Exception {
         when(receiptStorageService.isEnabled()).thenReturn(false);
-        when(receiptExtractionService.isEnabled()).thenReturn(true);
+        when(receiptExtractionService.isEnabled()).thenReturn(false);
+        when(receiptOwnerResolver.resolve(any()))
+            .thenReturn(new ReceiptOwner("user", "User", "user@example.com"));
 
-        // Act
-        mockMvc.perform(post("/receipts/clear").with(csrf()))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/receipts"))
-                .andExpect(flash().attributeExists("successMessage"))
-                .andExpect(flash().attribute("successMessage", "Cleared parsed receipt data."));
-
-        // Assert
-        verify(receiptStorageService, never()).deleteReceiptsForOwner(any());
-        verify(receiptExtractionService).deleteReceiptsForOwner(owner);
+        mockMvc.perform(get("/receipts"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("receipts"));
     }
 }

@@ -17,6 +17,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -29,6 +30,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class ReceiptProcessingClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptProcessingClient.class);
+    private static final String REQUEST_ID_HEADER = "X-Request-Id";
+    private static final String REQUEST_ID_MDC_KEY = "request.id";
 
     private final RestTemplate restTemplate;
     private final ReceiptProcessingProperties properties;
@@ -86,6 +89,10 @@ public class ReceiptProcessingClient {
         headers.add("ce-subject", "objects/" + reference.objectName());
         headers.add("ce-id", UUID.randomUUID().toString());
         headers.add("ce-time", Instant.now().toString());
+        String requestId = MDC.get(REQUEST_ID_MDC_KEY);
+        if (StringUtils.hasText(requestId)) {
+            headers.add(REQUEST_ID_HEADER, requestId);
+        }
 
         if (properties.isUseIdToken()) {
             headers.setBearerAuth(fetchIdToken());

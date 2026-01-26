@@ -13,6 +13,7 @@ import dev.pekelund.pklnd.firestore.FirestoreReadTotals;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptStorageService;
+import dev.pekelund.pklnd.web.assets.ViteManifest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -23,7 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ReceiptController.class)
 @ContextConfiguration(classes = PknldApplication.class)
-@Import(FirestoreReadTotals.class)
+@Import({FirestoreReadTotals.class, ViteManifest.class})
 class ReceiptOverviewPageTests {
 
     @Autowired

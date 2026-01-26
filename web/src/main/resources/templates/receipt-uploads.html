@@ -169,7 +169,7 @@
         </div>
     </div>
 
-    <script defer th:src="@{/js/receipt-uploads.js}"></script>
+    <script type="module" th:src="@{${@viteManifest.asset('receipt-uploads.js')}}"></script>
 </section>
 </body>
 </html>

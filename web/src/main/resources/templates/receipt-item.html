@@ -86,7 +86,7 @@
 
     <th:block th:if="${hasPriceHistory}">
         <script defer th:src="@{/webjars/chart.js/dist/chart.umd.js}"></script>
-        <script defer th:src="@{/js/price-history.js}"></script>
+        <script type="module" th:src="@{${@viteManifest.asset('price-history.js')}}"></script>
     </th:block>
 </section>
 </body>
