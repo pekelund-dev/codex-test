@@ -164,8 +164,9 @@ function getCellValue(row, column) {
     switch (column) {
         case 'name': return cells[0].textContent.trim();
         case 'date': return cells[1].textContent.trim();
-        case 'amount': return cells[2].textContent.trim();
-        case 'updated': return cells[3].textContent.trim();
+        case 'status': return cells[2].textContent.trim();
+        case 'amount': return cells[3].textContent.trim();
+        case 'updated': return cells[4].textContent.trim();
         default: return '';
     }
 }
@@ -431,6 +432,22 @@ function buildParsedRow(receipt) {
     dateCell.textContent = receipt && receipt.receiptDate ? receipt.receiptDate : '—';
     row.appendChild(dateCell);
 
+    const statusCell = document.createElement('td');
+    const reconciliationStatus = receipt && receipt.reconciliationStatus ? receipt.reconciliationStatus : null;
+    if (reconciliationStatus === 'COMPLETE') {
+        statusCell.appendChild(createStatusBadge('Avstämd', 'bg-success-subtle text-success'));
+    } else if (reconciliationStatus === 'PARTIAL') {
+        statusCell.appendChild(createStatusBadge('Delavstämd', 'bg-warning-subtle text-warning-emphasis'));
+    } else if (reconciliationStatus === 'FAIL') {
+        statusCell.appendChild(createStatusBadge('Fel', 'bg-danger-subtle text-danger'));
+    } else {
+        const emptyLabel = document.createElement('span');
+        emptyLabel.className = 'text-muted small';
+        emptyLabel.textContent = '—';
+        statusCell.appendChild(emptyLabel);
+    }
+    row.appendChild(statusCell);
+
     const totalCell = document.createElement('td');
     const totalText = receipt && receipt.formattedTotalAmount
         ? receipt.formattedTotalAmount
@@ -444,6 +461,13 @@ function buildParsedRow(receipt) {
     row.appendChild(updatedCell);
 
     return row;
+}
+
+function createStatusBadge(label, className) {
+    const badge = document.createElement('span');
+    badge.className = `badge ${className}`;
+    badge.textContent = label;
+    return badge;
 }
 
 function updateErrorMessage(element, message) {
