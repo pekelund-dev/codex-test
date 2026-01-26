@@ -73,7 +73,7 @@
         </div>
     </div>
 
-    <script th:inline="javascript">
+    <script th:inline="javascript" th:attr="nonce=${cspNonce}">
         /*<![CDATA[*/
         // Color palette for tags (same as in receipt detail page)
         const TAG_COLORS = [

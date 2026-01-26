@@ -340,7 +340,7 @@
     </div>
     
     <!-- Category and Tag Management JavaScript -->
-    <script th:if="${categorizationEnabled}" th:inline="javascript">
+<script th:if="${categorizationEnabled}" th:inline="javascript" th:attr="nonce=${cspNonce}">
         /*<![CDATA[*/
         document.addEventListener('DOMContentLoaded', function() {
             // Get all available tags from the server

@@ -220,7 +220,7 @@
     </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script th:inline="javascript">
+<script th:inline="javascript" th:attr="nonce=${cspNonce}">
 document.addEventListener('DOMContentLoaded', function() {
     const table = document.getElementById('itemsTable');
     const tbody = document.getElementById('itemsTableBody');
