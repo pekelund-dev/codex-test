@@ -56,7 +56,7 @@
         </div>
     </div>
 </section>
-<script th:inline="javascript">
+<script th:inline="javascript" th:attr="nonce=${cspNonce}">
 /*<![CDATA[*/
     const goBackButton = document.querySelector('[data-action="go-back"]');
     if (goBackButton) {

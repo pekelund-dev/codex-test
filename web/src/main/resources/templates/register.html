@@ -62,7 +62,7 @@
             </div>
         </div>
     </div>
-    <script>
+    <script th:attr="nonce=${cspNonce}">
         (() => {
             const forms = document.querySelectorAll('.needs-validation');
             Array.from(forms).forEach(form => {
