@@ -3,20 +3,6 @@
       th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
 <head>
     <title th:text="${pageTitle != null} ? ${pageTitle} : 'Tag produkter'">Tag produkter</title>
-    <script th:inline="javascript" th:attr="nonce=${cspNonce}">
-        /*<![CDATA[*/
-        // Color palette for tags
-        const TAG_COLORS = [
-            '#0d6efd', '#198754', '#dc3545', '#ffc107',
-            '#0dcaf0', '#6f42c1', '#fd7e14', '#d63384'
-        ];
-
-        function getTagColor(tagId) {
-            const hash = Array.from(tagId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            return TAG_COLORS[hash % TAG_COLORS.length];
-        }
-        /*]]>*/
-    </script>
 </head>
 <body>
 <section>
@@ -129,6 +115,17 @@
 
     <script th:inline="javascript" th:attr="nonce=${cspNonce}">
         /*<![CDATA[*/
+        // Color palette for tags
+        const TAG_COLORS = [
+            '#0d6efd', '#198754', '#dc3545', '#ffc107',
+            '#0dcaf0', '#6f42c1', '#fd7e14', '#d63384'
+        ];
+
+        function getTagColor(tagId) {
+            const hash = Array.from(tagId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            return TAG_COLORS[hash % TAG_COLORS.length];
+        }
+
         // Apply color to the tag badge
         document.addEventListener('DOMContentLoaded', function() {
             const badge = document.querySelector('[data-tag-id]');
