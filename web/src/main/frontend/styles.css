@@ -79,7 +79,6 @@ video {
     /* On desktop, hide the toggler and reset flex ordering for standard layout */
     .app-navbar .navbar-toggler {
         display: none;
-        order: unset;
     }
     
     .app-navbar .navbar-brand {
