@@ -31,7 +31,19 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <a class="navbar-brand fw-bold order-1" th:href="@{/}" th:text="#{app.name}">pklnd</a>
-        <div class="collapse navbar-collapse order-2" id="navbarContent">
+        
+        <!-- Mobile user info (shown on mobile, hidden on desktop) -->
+        <div th:if="${userProfile.authenticated}" class="d-lg-none d-flex align-items-center gap-2 order-2 ms-auto">
+            <span class="badge rounded-pill bg-light text-primary firestore-read-counter d-none d-sm-inline"
+                  th:text="${#messages.msg('nav.firestoreReads', firestoreReadTotals != null ? firestoreReadTotals.totalReads : 0)}">
+                Firestore-läsningar: 0
+            </span>
+            <img th:if="${userProfile.imageUrl != null}" th:src="${userProfile.imageUrl}" alt="Profile picture"
+                 class="user-avatar user-avatar-sm">
+            <div th:if="${userProfile.imageUrl == null}" class="user-badge user-badge-sm" th:text="${userProfile.initials}">U</div>
+        </div>
+        
+        <div class="collapse navbar-collapse order-3" id="navbarContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0" th:with="currentUri=${currentRequestUri}">
                 <li class="nav-item">
                     <a class="nav-link"
@@ -64,7 +76,8 @@
                        th:href="@{/receipts/uploads}" th:text="#{nav.uploads}">Upload receipts</a>
                 </li>
             </ul>
-            <div class="d-flex align-items-center gap-3 ms-lg-auto">
+            <!-- Desktop user info and actions -->
+            <div class="d-none d-lg-flex align-items-center gap-3 ms-lg-auto">
                 <div th:if="${userProfile.authenticated}" class="d-flex align-items-center gap-2 text-white">
                     <span class="badge rounded-pill bg-light text-primary firestore-read-counter"
                           th:text="${#messages.msg('nav.firestoreReads', firestoreReadTotals != null ? firestoreReadTotals.totalReads : 0)}">
@@ -94,6 +107,48 @@
                         Språk
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+                        <li th:each="language : ${supportedLanguages}">
+                            <a class="dropdown-item"
+                               th:classappend="${#locale.language == language.code} ? ' active'"
+                               th:href="${language.href}"
+                               th:text="${#messages.msg(language.labelKey)}">
+                                Svenska
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Mobile user actions (inside collapsed menu) -->
+            <div class="d-lg-none mobile-user-actions mt-3 pt-3 border-top border-white border-opacity-25">
+                <div th:if="${userProfile.authenticated}">
+                    <div class="text-white mb-2">
+                        <span class="fw-semibold d-block mb-1" th:text="${userProfile.displayName}">Jane Doe</span>
+                        <span class="badge rounded-pill bg-light text-primary d-inline-block mb-2 firestore-read-counter"
+                              th:text="${#messages.msg('nav.firestoreReads', firestoreReadTotals != null ? firestoreReadTotals.totalReads : 0)}">
+                            Firestore-läsningar: 0
+                        </span>
+                    </div>
+                    <form th:action="@{/logout}" method="post" class="mb-2">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <button type="submit" class="btn btn-outline-light btn-sm w-100" th:text="#{nav.logout}">Logout</button>
+                    </form>
+                </div>
+                <div th:if="${!userProfile.authenticated}" class="d-flex flex-column gap-2">
+                    <a class="btn btn-outline-light btn-sm" th:href="@{/login}" th:text="#{nav.signin}">Sign in</a>
+                    <a class="btn btn-light btn-sm" th:href="@{/register}" th:text="#{nav.register}">Create account</a>
+                    <a th:if="${oauthEnabled}" class="btn btn-light btn-sm" th:href="@{/oauth2/authorization/google}" th:text="#{nav.signin.google}">Sign in with Google</a>
+                </div>
+                <div class="dropdown mt-2"
+                     th:with="currentUri=${#strings.isEmpty(currentRequestUri) ? '/' : currentRequestUri},
+                              currentLanguage=${#locale.language}">
+                    <button class="btn btn-outline-light btn-sm dropdown-toggle w-100" type="button" id="languageDropdownMobile"
+                            data-bs-toggle="dropdown" aria-expanded="false"
+                            th:text="${#messages.msg(currentLanguage == 'sv' ? 'nav.language.swedish' : 'nav.language.english')}"
+                            th:aria-label="#{nav.language.toggle}">
+                        Språk
+                    </button>
+                    <ul class="dropdown-menu w-100" aria-labelledby="languageDropdownMobile">
                         <li th:each="language : ${supportedLanguages}">
                             <a class="dropdown-item"
                                th:classappend="${#locale.language == language.code} ? ' active'"
