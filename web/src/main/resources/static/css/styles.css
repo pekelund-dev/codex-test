@@ -44,9 +44,7 @@ video {
 }
 
 .app-navbar .navbar-brand:hover,
-.app-navbar .navbar-brand:focus,
-.app-navbar .navbar-nav .nav-link:hover,
-.app-navbar .navbar-nav .nav-link:focus {
+.app-navbar .navbar-brand:focus {
     color: #ffffff;
 }
 
@@ -124,6 +122,7 @@ video {
 .app-navbar .navbar-nav .nav-link:hover,
 .app-navbar .navbar-nav .nav-link:focus {
     background-color: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
 }
 
 .nav-link.active {
@@ -177,6 +176,8 @@ video {
     visibility: hidden;
 }
 
+/* Default card styling - excludes cards with any Bootstrap border utility (border-*, border-0, etc.)
+   Note: Custom class names containing "border-" as a substring will also be excluded */
 .card:not([class*='border-']) {
     border-radius: 1rem;
     border: none;
