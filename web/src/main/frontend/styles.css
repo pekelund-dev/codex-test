@@ -55,10 +55,15 @@ video {
 .app-navbar .navbar-toggler-icon {
     background-image: none;
     width: 20px;
-    height: 2px;
-    background-color: #ffffff;
+    height: 14px;
+    background-color: transparent;
+    background-image: linear-gradient(#ffffff 0 0);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 2px;
     border-radius: 999px;
     position: relative;
+    display: inline-block;
     transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
