@@ -39,8 +39,7 @@ video {
 
 .app-navbar .navbar-brand,
 .app-navbar .navbar-nav .nav-link,
-.app-navbar .navbar-text,
-.app-navbar .navbar-nav .nav-link.disabled {
+.app-navbar .navbar-text {
     color: #f8fafc;
 }
 
