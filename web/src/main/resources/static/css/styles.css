@@ -388,9 +388,6 @@ th.sortable:hover {
         font-size: 0.8rem;
     }
 
-    main > .container {
-        padding-inline: 1rem;
-    }
 }
 
 @media (max-width: 575.98px) {
