@@ -76,8 +76,9 @@ video {
 }
 
 @media (min-width: 992px) {
-    /* On desktop, reset flex ordering for standard layout */
+    /* On desktop, hide the toggler and reset flex ordering for standard layout */
     .app-navbar .navbar-toggler {
+        display: none;
         order: unset;
     }
     
