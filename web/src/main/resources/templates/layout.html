@@ -26,12 +26,12 @@
 </div>
 <nav class="navbar navbar-expand-lg navbar-dark shadow-sm app-navbar">
     <div class="container">
-        <a class="navbar-brand fw-bold" th:href="@{/}" th:text="#{app.name}">pklnd</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+        <button class="navbar-toggler order-0 me-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
                 aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="navbarContent">
+        <a class="navbar-brand fw-bold order-1" th:href="@{/}" th:text="#{app.name}">pklnd</a>
+        <div class="collapse navbar-collapse order-2" id="navbarContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0" th:with="currentUri=${currentRequestUri}">
                 <li class="nav-item">
                     <a class="nav-link"
