@@ -123,11 +123,7 @@
             <div class="d-lg-none mobile-user-actions mt-3 pt-3 border-top border-white border-opacity-25">
                 <div th:if="${userProfile.authenticated}">
                     <div class="text-white mb-2">
-                        <span class="fw-semibold d-block mb-1" th:text="${userProfile.displayName}">Jane Doe</span>
-                        <span class="badge rounded-pill bg-light text-primary d-inline-block mb-2 firestore-read-counter"
-                              th:text="${#messages.msg('nav.firestoreReads', firestoreReadTotals != null ? firestoreReadTotals.totalReads : 0)}">
-                            Firestore-läsningar: 0
-                        </span>
+                        <span class="fw-semibold d-block mb-2" th:text="${userProfile.displayName}">Jane Doe</span>
                     </div>
                     <form th:action="@{/logout}" method="post" class="mb-2">
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
@@ -161,7 +157,6 @@
                 </div>
             </div>
         </div>
-    </div>
     </div>
 </nav>
 <div class="bg-danger text-white">

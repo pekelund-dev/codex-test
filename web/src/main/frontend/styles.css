@@ -394,15 +394,6 @@ th.sortable:hover {
     transform: scale(1.05);
 }
 
-@media (max-width: 767.98px) {
-    .user-avatar,
-    .user-badge {
-        width: 32px;
-        height: 32px;
-        font-size: 0.875rem;
-    }
-}
-
 .hover-shadow {
     transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
 }
