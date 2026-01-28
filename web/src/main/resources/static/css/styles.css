@@ -171,6 +171,13 @@ video {
     color: #0d6efd;
 }
 
+.user-avatar-sm,
+.user-badge-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+}
+
 .user-avatar-lg,
 .user-badge-lg {
     width: 96px;
@@ -387,15 +394,6 @@ th.sortable:hover {
     transform: scale(1.05);
 }
 
-@media (max-width: 767.98px) {
-    .user-avatar,
-    .user-badge {
-        width: 32px;
-        height: 32px;
-        font-size: 0.875rem;
-    }
-}
-
 .hover-shadow {
     transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
 }
@@ -408,7 +406,7 @@ th.sortable:hover {
 @media (max-width: 991.98px) {
     .app-navbar .navbar-collapse {
         margin-top: 0.75rem;
-        padding: 0.75rem;
+        padding: 1rem;
         border-radius: 1rem;
         background: rgba(255, 255, 255, 0.15);
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -418,6 +416,7 @@ th.sortable:hover {
 
     .app-navbar .navbar-nav {
         gap: 0.35rem;
+        margin-bottom: 0;
     }
 
     .app-navbar .navbar-nav .nav-link {
@@ -430,6 +429,17 @@ th.sortable:hover {
 
     .firestore-read-counter {
         font-size: 0.8rem;
+    }
+    
+    .mobile-user-actions {
+        margin-left: -1rem;
+        margin-right: -1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .mobile-user-actions .btn {
+        text-align: center;
     }
 
 }
