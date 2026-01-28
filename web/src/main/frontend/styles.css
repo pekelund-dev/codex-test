@@ -17,6 +17,7 @@ body {
     background-color: #f8fafc;
     color: #0f172a;
     min-height: 100%;
+    overflow-x: auto;
     overscroll-behavior-x: none;
 }
 
@@ -33,6 +34,25 @@ video {
 
 .app-navbar {
     background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 55%, #0a58ca 100%);
+    color: #ffffff;
+}
+
+.app-navbar .navbar-brand,
+.app-navbar .navbar-nav .nav-link,
+.app-navbar .navbar-text,
+.app-navbar .navbar-nav .nav-link.disabled {
+    color: #f8fafc;
+}
+
+.app-navbar .navbar-brand:hover,
+.app-navbar .navbar-brand:focus,
+.app-navbar .navbar-nav .nav-link:hover,
+.app-navbar .navbar-nav .nav-link:focus {
+    color: #ffffff;
+}
+
+.app-navbar .navbar-nav .nav-link.disabled {
+    color: rgba(248, 250, 252, 0.6);
 }
 
 .app-navbar .navbar-toggler {
@@ -55,15 +75,12 @@ video {
 .app-navbar .navbar-toggler-icon {
     background-image: none;
     width: 20px;
-    height: 14px;
-    background-color: transparent;
-    background-image: linear-gradient(#ffffff 0 0);
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 100% 2px;
+    height: 2px;
+    background-color: #ffffff;
     border-radius: 999px;
     position: relative;
     display: inline-block;
+    flex-shrink: 0;
     transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
@@ -161,7 +178,7 @@ video {
     visibility: hidden;
 }
 
-.card {
+.card:not([class*='border-']) {
     border-radius: 1rem;
     border: none;
     box-shadow: 0 0.75rem 1.75rem rgba(15, 23, 42, 0.08);
