@@ -63,10 +63,32 @@ video {
     align-items: center;
     justify-content: center;
     box-shadow: 0 0.35rem 0.85rem rgba(13, 110, 253, 0.35);
+    flex-shrink: 0;
 }
 
 .app-navbar .navbar-toggler:focus {
     box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.35);
+}
+
+/* The toggler is positioned on the left on mobile via order-0 */
+.app-navbar .navbar-brand {
+    flex-grow: 1;
+}
+
+@media (min-width: 992px) {
+    /* On desktop, reset flex ordering for standard layout */
+    .app-navbar .navbar-toggler {
+        order: unset;
+    }
+    
+    .app-navbar .navbar-brand {
+        flex-grow: 0;
+        order: unset;
+    }
+    
+    .app-navbar .navbar-collapse {
+        order: unset;
+    }
 }
 
 .app-navbar .navbar-toggler-icon {
