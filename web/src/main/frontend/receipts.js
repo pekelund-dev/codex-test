@@ -425,25 +425,85 @@ function buildParsedRow(receipt) {
     link.textContent = displayName;
     receiptCell.appendChild(link);
 
+    const meta = document.createElement('div');
+    meta.className = 'table-meta d-md-none';
+    addParsedMeta(meta, receipt);
+    receiptCell.appendChild(meta);
+
     row.appendChild(receiptCell);
 
     const dateCell = document.createElement('td');
+    dateCell.className = 'd-none d-md-table-cell';
     dateCell.textContent = receipt && receipt.receiptDate ? receipt.receiptDate : '—';
     row.appendChild(dateCell);
 
+    const statusCell = document.createElement('td');
+    statusCell.className = 'd-none d-md-table-cell';
+    statusCell.appendChild(buildStatusBadge(receipt));
+    row.appendChild(statusCell);
+
     const totalCell = document.createElement('td');
-    const totalText = receipt && receipt.formattedTotalAmount
-        ? receipt.formattedTotalAmount
-        : (receipt && receipt.totalAmount ? receipt.totalAmount : '—');
-    totalCell.textContent = totalText;
+    totalCell.className = 'd-none d-md-table-cell';
+    totalCell.textContent = getReceiptTotal(receipt);
     row.appendChild(totalCell);
 
     const updatedCell = document.createElement('td');
-    updatedCell.className = 'text-end';
+    updatedCell.className = 'text-end d-none d-xl-table-cell';
     updatedCell.textContent = receipt && receipt.updatedAt ? receipt.updatedAt : '—';
     row.appendChild(updatedCell);
 
     return row;
+}
+
+function buildStatusBadge(receipt) {
+    const status = receipt && receipt.reconciliationStatus ? receipt.reconciliationStatus : null;
+    const span = document.createElement('span');
+    if (status === 'COMPLETE') {
+        span.className = 'badge bg-success-subtle text-success';
+        span.textContent = 'Avstämd';
+        return span;
+    }
+    if (status === 'PARTIAL') {
+        span.className = 'badge bg-warning-subtle text-warning-emphasis';
+        span.textContent = 'Delavstämd';
+        return span;
+    }
+    if (status === 'FAIL') {
+        span.className = 'badge bg-danger-subtle text-danger';
+        span.textContent = 'Fel';
+        return span;
+    }
+    span.className = 'text-muted small';
+    span.textContent = '—';
+    return span;
+}
+
+function getReceiptTotal(receipt) {
+    if (receipt && receipt.formattedTotalAmount) {
+        return receipt.formattedTotalAmount;
+    }
+    if (receipt && receipt.totalAmount) {
+        return receipt.totalAmount;
+    }
+    return '—';
+}
+
+function addParsedMeta(container, receipt) {
+    if (!container) {
+        return;
+    }
+    addMetaItem(container, receipt && receipt.receiptDate ? receipt.receiptDate : '—');
+    container.appendChild(buildStatusBadge(receipt));
+    addMetaItem(container, getReceiptTotal(receipt));
+    if (receipt && receipt.updatedAt) {
+        addMetaItem(container, `Uppdaterad ${receipt.updatedAt}`);
+    }
+}
+
+function addMetaItem(container, value) {
+    const span = document.createElement('span');
+    span.textContent = value;
+    container.appendChild(span);
 }
 
 function updateErrorMessage(element, message) {

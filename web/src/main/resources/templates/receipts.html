@@ -107,22 +107,22 @@
 
                 <div class="table-responsive" data-parsed-table
                      th:classappend="${!parsedReceiptsEnabled or parsedReceipts == null or #lists.isEmpty(parsedReceipts)} ? ' d-none'">
-                    <table class="table align-middle">
+                    <table class="table table-modern table-compact table-mobile align-middle">
                         <thead class="table-light">
                         <tr>
                             <th scope="col" class="sortable" data-sort="name">
                                 Kvitto <i class="bi bi-arrow-down-up text-muted small ms-1"></i>
                             </th>
-                            <th scope="col" class="sortable" data-sort="date">
+                            <th scope="col" class="sortable d-none d-md-table-cell" data-sort="date">
                                 Datum <i class="bi bi-arrow-down-up text-muted small ms-1"></i>
                             </th>
-                            <th scope="col" class="sortable" data-sort="status">
+                            <th scope="col" class="sortable d-none d-md-table-cell" data-sort="status">
                                 Avstämning <i class="bi bi-arrow-down-up text-muted small ms-1"></i>
                             </th>
-                            <th scope="col" class="sortable" data-sort="amount">
+                            <th scope="col" class="sortable d-none d-md-table-cell" data-sort="amount">
                                 Totalsumma <i class="bi bi-arrow-down-up text-muted small ms-1"></i>
                             </th>
-                            <th scope="col" class="text-end sortable" data-sort="updated">
+                            <th scope="col" class="text-end sortable d-none d-xl-table-cell" data-sort="updated">
                                 Uppdaterad <i class="bi bi-arrow-down-up text-muted small ms-1"></i>
                             </th>
                         </tr>
@@ -133,16 +133,25 @@
                                 <a th:href="@{/receipts/{id}(id=${parsed.id()}, scope=${scopeParam})}" class="fw-semibold text-decoration-none">
                                     <span th:text="${!#strings.isEmpty(parsed.storeName()) ? parsed.storeName() : (!#strings.isEmpty(parsed.displayName()) ? parsed.displayName() : parsed.objectPath())}">Kvitto</span>
                                 </a>
+                                <div class="table-meta d-md-none">
+                                    <span th:text="${parsed.receiptDate() != null ? parsed.receiptDate() : '—'}">—</span>
+                                    <span th:if="${parsed.reconciliationStatus() == 'COMPLETE'}" class="badge bg-success-subtle text-success">Avstämd</span>
+                                    <span th:if="${parsed.reconciliationStatus() == 'PARTIAL'}" class="badge bg-warning-subtle text-warning-emphasis">Delavstämd</span>
+                                    <span th:if="${parsed.reconciliationStatus() == 'FAIL'}" class="badge bg-danger-subtle text-danger">Fel</span>
+                                    <span th:if="${parsed.reconciliationStatus() == 'NONE' or parsed.reconciliationStatus() == null}" class="text-muted small">—</span>
+                                    <span th:text="${parsed.formattedTotalAmount() != null ? parsed.formattedTotalAmount() : (parsed.totalAmount() != null ? parsed.totalAmount() : '—')}">—</span>
+                                    <span class="text-muted" th:text="${parsed.updatedAtZoned() != null ? 'Uppdaterad ' + #temporals.format(parsed.updatedAtZoned(), 'yyyy-MM-dd HH:mm') : ''}"></span>
+                                </div>
                             </td>
-                            <td th:text="${parsed.receiptDate() != null ? parsed.receiptDate() : '—'}">—</td>
-                            <td>
+                            <td class="d-none d-md-table-cell" th:text="${parsed.receiptDate() != null ? parsed.receiptDate() : '—'}">—</td>
+                            <td class="d-none d-md-table-cell">
                                 <span th:if="${parsed.reconciliationStatus() == 'COMPLETE'}" class="badge bg-success-subtle text-success">Avstämd</span>
                                 <span th:if="${parsed.reconciliationStatus() == 'PARTIAL'}" class="badge bg-warning-subtle text-warning-emphasis">Delavstämd</span>
                                 <span th:if="${parsed.reconciliationStatus() == 'FAIL'}" class="badge bg-danger-subtle text-danger">Fel</span>
                                 <span th:if="${parsed.reconciliationStatus() == 'NONE' or parsed.reconciliationStatus() == null}" class="text-muted small">—</span>
                             </td>
-                            <td th:text="${parsed.formattedTotalAmount() != null ? parsed.formattedTotalAmount() : (parsed.totalAmount() != null ? parsed.totalAmount() : '—')}">—</td>
-                            <td class="text-end"
+                            <td class="d-none d-md-table-cell" th:text="${parsed.formattedTotalAmount() != null ? parsed.formattedTotalAmount() : (parsed.totalAmount() != null ? parsed.totalAmount() : '—')}">—</td>
+                            <td class="text-end d-none d-xl-table-cell"
                                 th:text="${parsed.updatedAtZoned() != null ? #temporals.format(parsed.updatedAtZoned(), 'yyyy-MM-dd HH:mm:ss') : '—'}">
                                 2024-01-01 10:30:00
                             </td>

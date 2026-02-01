@@ -55,7 +55,7 @@
             <h2 class="h5 fw-semibold mb-3">Purchases</h2>
             <div th:if="${#lists.isEmpty(purchases)}" class="text-muted">No purchases were found for this item.</div>
             <div th:if="${!#lists.isEmpty(purchases)}" class="table-responsive">
-                <table class="table align-middle">
+                <table class="table table-modern table-compact align-middle">
                     <thead class="table-light">
                     <tr>
                         <th scope="col">Date</th>

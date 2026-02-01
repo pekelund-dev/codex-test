@@ -78,15 +78,15 @@
             <h2 class="h5 fw-semibold mb-3">Items</h2>
             <div th:if="${#lists.isEmpty(receiptItems)}" class="text-muted">No items were detected.</div>
             <div th:if="${!#lists.isEmpty(receiptItems)}" class="table-responsive">
-                <table class="table align-middle">
+                <table class="table table-modern table-compact table-mobile align-middle">
                     <thead class="table-light">
                     <tr>
                         <th scope="col">Name</th>
-                        <th scope="col">Quantity</th>
-                        <th scope="col">Unit price</th>
-                        <th scope="col">Total price</th>
-                        <th scope="col">Discounts</th>
-                        <th scope="col" th:if="${categorizationEnabled}">Taggar</th>
+                        <th scope="col" class="d-none d-md-table-cell">Quantity</th>
+                        <th scope="col" class="d-none d-md-table-cell">Unit price</th>
+                        <th scope="col" class="d-none d-md-table-cell">Total price</th>
+                        <th scope="col" class="d-none d-md-table-cell">Discounts</th>
+                        <th scope="col" class="d-none d-md-table-cell" th:if="${categorizationEnabled}">Taggar</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -102,11 +102,17 @@
                                   class="fw-semibold"
                                   th:text="${itemName != null ? itemName : '—'}">Item name</span>
                             <div class="text-muted small" th:if="${itemEan != null}" th:text="${'EAN: ' + itemEan}">EAN</div>
+                            <div class="table-meta d-md-none">
+                                <span th:text="${item['displayQuantity'] != null ? 'Antal: ' + item['displayQuantity'] : (item['quantity'] != null ? 'Antal: ' + item['quantity'] : 'Antal: —')}">Antal: —</span>
+                                <span th:text="${item['displayUnitPrice'] != null ? 'Enhetspris: ' + item['displayUnitPrice'] : (item['unitPrice'] != null ? 'Enhetspris: ' + item['unitPrice'] : 'Enhetspris: —')}">Enhetspris: —</span>
+                                <span th:text="${item['displayTotalPrice'] != null ? 'Totalt: ' + item['displayTotalPrice'] : (item['totalPrice'] != null ? 'Totalt: ' + item['totalPrice'] : 'Totalt: —')}">Totalt: —</span>
+                                <span th:text="${item['discounts'] != null and !#lists.isEmpty(item['discounts']) ? 'Rabatter: ' + #lists.size(item['discounts']) : 'Rabatter: —'}">Rabatter: —</span>
+                            </div>
                         </td>
-                        <td th:text="${item['displayQuantity'] != null ? item['displayQuantity'] : (item['quantity'] != null ? item['quantity'] : '—')}">—</td>
-                        <td th:text="${item['displayUnitPrice'] != null ? item['displayUnitPrice'] : (item['unitPrice'] != null ? item['unitPrice'] : '—')}">—</td>
-                        <td th:text="${item['displayTotalPrice'] != null ? item['displayTotalPrice'] : (item['totalPrice'] != null ? item['totalPrice'] : '—')}">—</td>
-                        <td>
+                        <td class="d-none d-md-table-cell" th:text="${item['displayQuantity'] != null ? item['displayQuantity'] : (item['quantity'] != null ? item['quantity'] : '—')}">—</td>
+                        <td class="d-none d-md-table-cell" th:text="${item['displayUnitPrice'] != null ? item['displayUnitPrice'] : (item['unitPrice'] != null ? item['unitPrice'] : '—')}">—</td>
+                        <td class="d-none d-md-table-cell" th:text="${item['displayTotalPrice'] != null ? item['displayTotalPrice'] : (item['totalPrice'] != null ? item['totalPrice'] : '—')}">—</td>
+                        <td class="d-none d-md-table-cell">
                             <ul class="list-unstyled mb-0"
                                 th:if="${item['discounts'] != null and !#lists.isEmpty(item['discounts'])}">
                                 <li th:each="discount : ${item['discounts']}"
@@ -114,7 +120,7 @@
                             </ul>
                             <span th:if="${item['discounts'] == null or #lists.isEmpty(item['discounts'])}" class="text-muted">—</span>
                         </td>
-                        <td th:if="${categorizationEnabled}" 
+                        <td class="d-none d-md-table-cell" th:if="${categorizationEnabled}" 
                             th:with="itemIdentifier=${item['normalizedEan'] != null ? item['normalizedEan'] : iterStat.index},
                                      assignedCategory=${itemCategoryMap.get(itemIdentifier.toString())},
                                      assignedTags=${itemTagsMap.get(itemIdentifier.toString())},
@@ -167,7 +173,7 @@
             <h2 class="h5 fw-semibold mb-3">VAT summary</h2>
             <div th:if="${#lists.isEmpty(receipt.vats())}" class="text-muted">No VAT information available.</div>
             <div th:if="${!#lists.isEmpty(receipt.vats())}" class="table-responsive">
-                <table class="table align-middle">
+                <table class="table table-modern table-compact align-middle">
                     <thead class="table-light">
                     <tr>
                         <th scope="col">Rate</th>
@@ -247,7 +253,7 @@
             <h2 class="h5 fw-semibold mb-3">Parsing errors</h2>
             <div th:if="${#lists.isEmpty(receipt.errors())}" class="text-muted">No parsing errors were reported.</div>
             <div th:if="${!#lists.isEmpty(receipt.errors())}" class="table-responsive">
-                <table class="table align-middle">
+                <table class="table table-modern table-compact align-middle">
                     <thead class="table-light">
                     <tr>
                         <th scope="col">Line</th>
