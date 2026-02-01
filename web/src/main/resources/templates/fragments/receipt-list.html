@@ -12,30 +12,40 @@
         </div>
 
         <div th:if="${!receipts.isEmpty()}" class="table-responsive">
-            <table class="table table-hover sortable-table" data-sort-column="0" data-sort-direction="desc">
-                <thead>
+            <table class="table table-hover table-modern table-compact table-mobile sortable-table" data-sort-column="0" data-sort-direction="desc">
+                <thead class="table-light">
                     <tr>
                         <th class="sortable" data-sort-type="date" th:text="#{receipt.list.table.date}">Datum</th>
-                        <th th:if="${showStore}" class="sortable" data-sort-type="text" th:text="#{receipt.list.table.store}">Butik</th>
-                        <th class="sortable" data-sort-type="text">Avstämning</th>
-                        <th class="text-end sortable" data-sort-type="number" th:text="#{receipt.list.table.amount}">Belopp</th>
+                        <th th:if="${showStore}" class="sortable d-none d-md-table-cell" data-sort-type="text" th:text="#{receipt.list.table.store}">Butik</th>
+                        <th class="sortable d-none d-md-table-cell" data-sort-type="text">Avstämning</th>
+                        <th class="text-end sortable d-none d-md-table-cell" data-sort-type="number" th:text="#{receipt.list.table.amount}">Belopp</th>
                         <th class="text-center" th:text="#{receipt.list.table.actions}">Åtgärder</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr th:each="receipt : ${receipts}">
                         <td th:attr="data-sort-value=${receipt.receiptDate() != null ? receipt.receiptDate() : '0000-00-00'}" 
-                            th:text="${receipt.receiptDate() != null ? receipt.receiptDate() : '-'}">2024-01-15</td>
-                        <td th:if="${showStore}" 
+                            th:text="${receipt.receiptDate() != null ? receipt.receiptDate() : '-'}">
+                            2024-01-15
+                            <div class="table-meta d-md-none">
+                                <span th:text="${receipt.storeName() != null ? receipt.storeName() : '-'}">ICA Supermarket</span>
+                                <span th:if="${receipt.reconciliationStatus() == 'COMPLETE'}" class="badge bg-success-subtle text-success">Avstämd</span>
+                                <span th:if="${receipt.reconciliationStatus() == 'PARTIAL'}" class="badge bg-warning-subtle text-warning-emphasis">Delavstämd</span>
+                                <span th:if="${receipt.reconciliationStatus() == 'FAIL'}" class="badge bg-danger-subtle text-danger">Fel</span>
+                                <span th:if="${receipt.reconciliationStatus() == 'NONE' or receipt.reconciliationStatus() == null}" class="text-muted small">—</span>
+                                <span th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() + ' kr' : '-'}">123.45 kr</span>
+                            </div>
+                        </td>
+                        <td th:if="${showStore}" class="d-none d-md-table-cell"
                             th:attr="data-sort-value=${receipt.storeName() != null ? receipt.storeName() : ''}"
                             th:text="${receipt.storeName() != null ? receipt.storeName() : '-'}">ICA Supermarket</td>
-                        <td>
+                        <td class="d-none d-md-table-cell">
                             <span th:if="${receipt.reconciliationStatus() == 'COMPLETE'}" class="badge bg-success-subtle text-success">Avstämd</span>
                             <span th:if="${receipt.reconciliationStatus() == 'PARTIAL'}" class="badge bg-warning-subtle text-warning-emphasis">Delavstämd</span>
                             <span th:if="${receipt.reconciliationStatus() == 'FAIL'}" class="badge bg-danger-subtle text-danger">Fel</span>
                             <span th:if="${receipt.reconciliationStatus() == 'NONE' or receipt.reconciliationStatus() == null}" class="text-muted small">—</span>
                         </td>
-                        <td class="text-end fw-semibold" 
+                        <td class="text-end fw-semibold d-none d-md-table-cell" 
                             th:attr="data-sort-value=${receipt.totalAmountValue() != null ? receipt.totalAmountValue() : 0}"
                             th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() + ' kr' : '-'}">123.45 kr</td>
                         <td class="text-center">
@@ -97,30 +107,40 @@
         </div>
 
         <div th:if="${!receipts.isEmpty()}" class="table-responsive">
-            <table class="table table-hover sortable-table" data-sort-column="0" data-sort-direction="desc">
-                <thead>
+            <table class="table table-hover table-modern table-compact table-mobile sortable-table" data-sort-column="0" data-sort-direction="desc">
+                <thead class="table-light">
                     <tr>
                         <th class="sortable" data-sort-type="date" th:text="#{receipt.list.table.date}">Datum</th>
-                        <th th:if="${showStore}" class="sortable" data-sort-type="text" th:text="#{receipt.list.table.store}">Butik</th>
-                        <th class="sortable" data-sort-type="text">Avstämning</th>
-                        <th class="text-end sortable" data-sort-type="number" th:text="#{receipt.list.table.amount}">Belopp</th>
+                        <th th:if="${showStore}" class="sortable d-none d-md-table-cell" data-sort-type="text" th:text="#{receipt.list.table.store}">Butik</th>
+                        <th class="sortable d-none d-md-table-cell" data-sort-type="text">Avstämning</th>
+                        <th class="text-end sortable d-none d-md-table-cell" data-sort-type="number" th:text="#{receipt.list.table.amount}">Belopp</th>
                         <th class="text-center" th:text="#{receipt.list.table.actions}">Åtgärder</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr th:each="receipt : ${receipts}">
                         <td th:attr="data-sort-value=${receipt.receiptDate() != null ? receipt.receiptDate() : '0000-00-00'}" 
-                            th:text="${receipt.receiptDate() != null ? receipt.receiptDate() : '-'}">2024-01-15</td>
-                        <td th:if="${showStore}" 
+                            th:text="${receipt.receiptDate() != null ? receipt.receiptDate() : '-'}">
+                            2024-01-15
+                            <div class="table-meta d-md-none">
+                                <span th:text="${receipt.storeName() != null ? receipt.storeName() : '-'}">ICA Supermarket</span>
+                                <span th:if="${receipt.reconciliationStatus() == 'COMPLETE'}" class="badge bg-success-subtle text-success">Avstämd</span>
+                                <span th:if="${receipt.reconciliationStatus() == 'PARTIAL'}" class="badge bg-warning-subtle text-warning-emphasis">Delavstämd</span>
+                                <span th:if="${receipt.reconciliationStatus() == 'FAIL'}" class="badge bg-danger-subtle text-danger">Fel</span>
+                                <span th:if="${receipt.reconciliationStatus() == 'NONE' or receipt.reconciliationStatus() == null}" class="text-muted small">—</span>
+                                <span th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() + ' kr' : '-'}">123.45 kr</span>
+                            </div>
+                        </td>
+                        <td th:if="${showStore}" class="d-none d-md-table-cell"
                             th:attr="data-sort-value=${receipt.storeName() != null ? receipt.storeName() : ''}"
                             th:text="${receipt.storeName() != null ? receipt.storeName() : '-'}">ICA Supermarket</td>
-                        <td>
+                        <td class="d-none d-md-table-cell">
                             <span th:if="${receipt.reconciliationStatus() == 'COMPLETE'}" class="badge bg-success-subtle text-success">Avstämd</span>
                             <span th:if="${receipt.reconciliationStatus() == 'PARTIAL'}" class="badge bg-warning-subtle text-warning-emphasis">Delavstämd</span>
                             <span th:if="${receipt.reconciliationStatus() == 'FAIL'}" class="badge bg-danger-subtle text-danger">Fel</span>
                             <span th:if="${receipt.reconciliationStatus() == 'NONE' or receipt.reconciliationStatus() == null}" class="text-muted small">—</span>
                         </td>
-                        <td class="text-end fw-semibold" 
+                        <td class="text-end fw-semibold d-none d-md-table-cell" 
                             th:attr="data-sort-value=${receipt.totalAmountValue() != null ? receipt.totalAmountValue() : 0}"
                             th:text="${receipt.formattedTotalAmount() != null ? receipt.formattedTotalAmount() + ' kr' : '-'}">123.45 kr</td>
                         <td class="text-center">

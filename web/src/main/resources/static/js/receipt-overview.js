@@ -987,28 +987,39 @@ function buildItemRow(item, isGroupedChild = false) {
         nameCell.appendChild(receiptLink);
     }
 
+    const meta = document.createElement('div');
+    meta.className = 'table-meta d-md-none';
+    addMetaItem(meta, 'Enhetspris', formatCurrency(item ? item.unitPriceValue : null));
+    addMetaItem(meta, 'Totalt', formatCurrency(item ? item.totalPriceValue : null));
+    addMetaItem(meta, 'Antal', item && item.quantityLabel ? item.quantityLabel : '—');
+    addMetaItem(meta, 'Butik', item && item.store ? item.store : '—');
+    addMetaItem(meta, 'Datum', formatDateLabel(item ? item.dateIso : null, item ? item.dateLabel : null));
+    nameCell.appendChild(meta);
+
     row.appendChild(nameCell);
 
     const unitPriceCell = document.createElement('td');
-    unitPriceCell.className = 'text-end';
+    unitPriceCell.className = 'text-end d-none d-md-table-cell';
     unitPriceCell.textContent = formatCurrency(item ? item.unitPriceValue : null);
     row.appendChild(unitPriceCell);
 
     const totalPriceCell = document.createElement('td');
-    totalPriceCell.className = 'text-end';
+    totalPriceCell.className = 'text-end d-none d-md-table-cell';
     totalPriceCell.textContent = formatCurrency(item ? item.totalPriceValue : null);
     row.appendChild(totalPriceCell);
 
     const quantityCell = document.createElement('td');
-    quantityCell.className = 'text-end';
+    quantityCell.className = 'text-end d-none d-md-table-cell';
     quantityCell.textContent = item && item.quantityLabel ? item.quantityLabel : '—';
     row.appendChild(quantityCell);
 
     const storeCell = document.createElement('td');
+    storeCell.className = 'd-none d-md-table-cell';
     storeCell.textContent = item && item.store ? item.store : '—';
     row.appendChild(storeCell);
 
     const dateCell = document.createElement('td');
+    dateCell.className = 'd-none d-md-table-cell';
     dateCell.textContent = formatDateLabel(item ? item.dateIso : null, item ? item.dateLabel : null);
     row.appendChild(dateCell);
 
@@ -1039,29 +1050,39 @@ function buildGroupSummaryRow(summary, ean, itemCount, expanded) {
         nameCell.appendChild(eanText);
     }
 
+    const meta = document.createElement('div');
+    meta.className = 'table-meta d-md-none';
+    addMetaItem(meta, 'Enhetspris', formatGroupUnitPriceRange(summary));
+    addMetaItem(meta, 'Totalt', formatGroupTotalPriceRange(summary));
+    addMetaItem(meta, 'Antal', formatGroupQuantity(summary, itemCount));
+    addMetaItem(meta, 'Butiker', formatGroupStoreCount(summary));
+    addMetaItem(meta, 'Datum', formatDateRange(summary ? summary.earliestDateIso : null, summary ? summary.latestDateIso : null));
+    nameCell.appendChild(meta);
+
     row.appendChild(nameCell);
 
     const unitPriceCell = document.createElement('td');
-    unitPriceCell.className = 'text-end';
+    unitPriceCell.className = 'text-end d-none d-md-table-cell';
     unitPriceCell.textContent = formatGroupUnitPriceRange(summary);
     row.appendChild(unitPriceCell);
 
     const totalPriceCell = document.createElement('td');
-    totalPriceCell.className = 'text-end';
+    totalPriceCell.className = 'text-end d-none d-md-table-cell';
     totalPriceCell.textContent = formatGroupTotalPriceRange(summary);
     row.appendChild(totalPriceCell);
 
     const quantityCell = document.createElement('td');
-    quantityCell.className = 'text-end';
+    quantityCell.className = 'text-end d-none d-md-table-cell';
     quantityCell.textContent = formatGroupQuantity(summary, itemCount);
     row.appendChild(quantityCell);
 
     const storeCell = document.createElement('td');
-    const storeCount = summary && Number.isFinite(summary.storeCount) ? summary.storeCount : 0;
-    storeCell.textContent = storeCount > 0 ? `${storeCount} ${storeCount === 1 ? 'butik' : 'butiker'}` : '—';
+    storeCell.className = 'd-none d-md-table-cell';
+    storeCell.textContent = formatGroupStoreCount(summary);
     row.appendChild(storeCell);
 
     const dateCell = document.createElement('td');
+    dateCell.className = 'd-none d-md-table-cell';
     dateCell.textContent = formatDateRange(summary ? summary.earliestDateIso : null, summary ? summary.latestDateIso : null);
     row.appendChild(dateCell);
 
@@ -1118,6 +1139,20 @@ function formatCurrency(value) {
         return '—';
     }
     return currencyFormatter.format(value);
+}
+
+function addMetaItem(container, label, value) {
+    if (!container) {
+        return;
+    }
+    const span = document.createElement('span');
+    span.textContent = `${label}: ${value}`;
+    container.appendChild(span);
+}
+
+function formatGroupStoreCount(summary) {
+    const storeCount = summary && Number.isFinite(summary.storeCount) ? summary.storeCount : 0;
+    return storeCount > 0 ? `${storeCount} ${storeCount === 1 ? 'butik' : 'butiker'}` : '—';
 }
 
 function formatGroupUnitPriceRange(summary) {

@@ -426,13 +426,20 @@ function buildParsedRow(receipt) {
     link.textContent = displayName;
     receiptCell.appendChild(link);
 
+    const meta = document.createElement('div');
+    meta.className = 'table-meta d-md-none';
+    addParsedMeta(meta, receipt);
+    receiptCell.appendChild(meta);
+
     row.appendChild(receiptCell);
 
     const dateCell = document.createElement('td');
+    dateCell.className = 'd-none d-md-table-cell';
     dateCell.textContent = receipt && receipt.receiptDate ? receipt.receiptDate : '—';
     row.appendChild(dateCell);
 
     const statusCell = document.createElement('td');
+    statusCell.className = 'd-none d-md-table-cell';
     const reconciliationStatus = receipt && receipt.reconciliationStatus ? receipt.reconciliationStatus : null;
     if (reconciliationStatus === 'COMPLETE') {
         statusCell.appendChild(createStatusBadge('Avstämd', 'bg-success-subtle text-success'));
@@ -449,6 +456,7 @@ function buildParsedRow(receipt) {
     row.appendChild(statusCell);
 
     const totalCell = document.createElement('td');
+    totalCell.className = 'd-none d-md-table-cell';
     const totalText = receipt && receipt.formattedTotalAmount
         ? receipt.formattedTotalAmount
         : (receipt && receipt.totalAmount ? receipt.totalAmount : '—');
@@ -456,11 +464,56 @@ function buildParsedRow(receipt) {
     row.appendChild(totalCell);
 
     const updatedCell = document.createElement('td');
-    updatedCell.className = 'text-end';
+    updatedCell.className = 'text-end d-none d-xl-table-cell';
     updatedCell.textContent = receipt && receipt.updatedAt ? receipt.updatedAt : '—';
     row.appendChild(updatedCell);
 
     return row;
+}
+
+function addParsedMeta(container, receipt) {
+    if (!container) {
+        return;
+    }
+    addMetaItem(container, receipt && receipt.receiptDate ? receipt.receiptDate : '—');
+    container.appendChild(buildStatusBadge(receipt));
+    addMetaItem(container, getReceiptTotal(receipt));
+    if (receipt && receipt.updatedAt) {
+        addMetaItem(container, `Uppdaterad ${receipt.updatedAt}`);
+    }
+}
+
+function buildStatusBadge(receipt) {
+    const status = receipt && receipt.reconciliationStatus ? receipt.reconciliationStatus : null;
+    if (status === 'COMPLETE') {
+        return createStatusBadge('Avstämd', 'bg-success-subtle text-success');
+    }
+    if (status === 'PARTIAL') {
+        return createStatusBadge('Delavstämd', 'bg-warning-subtle text-warning-emphasis');
+    }
+    if (status === 'FAIL') {
+        return createStatusBadge('Fel', 'bg-danger-subtle text-danger');
+    }
+    const emptyLabel = document.createElement('span');
+    emptyLabel.className = 'text-muted small';
+    emptyLabel.textContent = '—';
+    return emptyLabel;
+}
+
+function getReceiptTotal(receipt) {
+    if (receipt && receipt.formattedTotalAmount) {
+        return receipt.formattedTotalAmount;
+    }
+    if (receipt && receipt.totalAmount) {
+        return receipt.totalAmount;
+    }
+    return '—';
+}
+
+function addMetaItem(container, value) {
+    const span = document.createElement('span');
+    span.textContent = value;
+    container.appendChild(span);
 }
 
 function createStatusBadge(label, className) {

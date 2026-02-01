@@ -115,28 +115,28 @@
                     Visar <span id="visibleCount">0</span> av <span th:text="${#lists.size(searchItemResults)}">0</span> artiklar som matchar din sökning.
                 </p>
                 <div class="table-responsive">
-                    <table class="table align-middle" id="itemsTable">
+                    <table class="table table-modern table-compact table-mobile align-middle" id="itemsTable">
                         <thead class="table-light">
                         <tr>
                             <th scope="col" class="sortable" data-column="itemName">
                                 Artikelnamn<span class="sort-indicator"></span>
                             </th>
-                            <th scope="col" class="sortable" data-column="receiptStoreName">
+                            <th scope="col" class="sortable d-none d-md-table-cell" data-column="receiptStoreName">
                                 Butik<span class="sort-indicator"></span>
                             </th>
-                            <th scope="col" class="sortable" data-column="receiptDate">
+                            <th scope="col" class="sortable d-none d-md-table-cell" data-column="receiptDate">
                                 Datum<span class="sort-indicator"></span>
                             </th>
-                            <th scope="col" class="text-end sortable" data-column="itemPrice">
+                            <th scope="col" class="text-end sortable d-none d-md-table-cell" data-column="itemPrice">
                                 Pris<span class="sort-indicator"></span>
                             </th>
-                            <th scope="col" class="text-end sortable" data-column="itemQuantity">
+                            <th scope="col" class="text-end sortable d-none d-md-table-cell" data-column="itemQuantity">
                                 Antal<span class="sort-indicator"></span>
                             </th>
-                            <th scope="col" class="text-end sortable" data-column="itemDiscount">
+                            <th scope="col" class="text-end sortable d-none d-md-table-cell" data-column="itemDiscount">
                                 Rabatt<span class="sort-indicator"></span>
                             </th>
-                            <th scope="col" class="text-end sortable" data-column="itemTotal">
+                            <th scope="col" class="text-end sortable d-none d-md-table-cell" data-column="itemTotal">
                                 Totalt<span class="sort-indicator"></span>
                             </th>
                         </tr>
@@ -155,18 +155,25 @@
                             th:data-discount-value="${item.itemDiscountValue() != null ? item.itemDiscountValue() : '0'}">
                             <td>
                                 <span class="fw-semibold" th:text="${item.itemName()}">Artikelnamn</span>
+                                <div class="table-meta d-md-none">
+                                    <span th:text="${item.receiptStoreName()}">Butik</span>
+                                    <span th:text="${item.receiptDate() != null ? item.receiptDate() : '—'}">—</span>
+                                    <span th:text="${item.itemPrice() != null ? item.itemPrice() : '—'}">—</span>
+                                    <span th:text="${item.itemQuantity() != null ? item.itemQuantity() : '—'}">—</span>
+                                    <span th:text="${item.itemTotal() != null ? item.itemTotal() : '—'}">—</span>
+                                </div>
                             </td>
-                            <td>
+                            <td class="d-none d-md-table-cell">
                                 <a th:href="@{/receipts/{id}(id=${item.receiptId()}, scope=${scopeParam})}" 
                                    class="text-decoration-none">
                                     <span th:text="${item.receiptStoreName()}">Butik</span>
                                 </a>
                             </td>
-                            <td th:text="${item.receiptDate() != null ? item.receiptDate() : '—'}">—</td>
-                            <td class="text-end" th:text="${item.itemPrice() != null ? item.itemPrice() : '—'}">—</td>
-                            <td class="text-end" th:text="${item.itemQuantity() != null ? item.itemQuantity() : '—'}">—</td>
-                            <td class="text-end" th:text="${item.itemDiscount() != null ? item.itemDiscount() : '—'}">—</td>
-                            <td class="text-end" th:text="${item.itemTotal() != null ? item.itemTotal() : '—'}">—</td>
+                            <td class="d-none d-md-table-cell" th:text="${item.receiptDate() != null ? item.receiptDate() : '—'}">—</td>
+                            <td class="text-end d-none d-md-table-cell" th:text="${item.itemPrice() != null ? item.itemPrice() : '—'}">—</td>
+                            <td class="text-end d-none d-md-table-cell" th:text="${item.itemQuantity() != null ? item.itemQuantity() : '—'}">—</td>
+                            <td class="text-end d-none d-md-table-cell" th:text="${item.itemDiscount() != null ? item.itemDiscount() : '—'}">—</td>
+                            <td class="text-end d-none d-md-table-cell" th:text="${item.itemTotal() != null ? item.itemTotal() : '—'}">—</td>
                         </tr>
                         </tbody>
                         <tfoot class="table-light">
@@ -191,13 +198,13 @@
                     Hittade <span th:text="${#lists.size(searchResults)}">0</span> kvitton som innehåller matchande artiklar.
                 </p>
                 <div class="table-responsive">
-                    <table class="table align-middle">
+                    <table class="table table-modern table-compact table-mobile align-middle">
                         <thead class="table-light">
                         <tr>
                             <th scope="col">Kvitto</th>
-                            <th scope="col">Datum</th>
-                            <th scope="col">Totalsumma</th>
-                            <th scope="col" class="text-end">Uppdaterad</th>
+                            <th scope="col" class="d-none d-md-table-cell">Datum</th>
+                            <th scope="col" class="d-none d-md-table-cell">Totalsumma</th>
+                            <th scope="col" class="text-end d-none d-xl-table-cell">Uppdaterad</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -207,10 +214,15 @@
                                    class="fw-semibold text-decoration-none">
                                     <span th:text="${!#strings.isEmpty(result.storeName()) ? result.storeName() : (!#strings.isEmpty(result.displayName()) ? result.displayName() : result.objectPath())}">Kvitto</span>
                                 </a>
+                                <div class="table-meta d-md-none">
+                                    <span th:text="${result.receiptDate() != null ? result.receiptDate() : '—'}">—</span>
+                                    <span th:text="${result.formattedTotalAmount() != null ? result.formattedTotalAmount() : (result.totalAmount() != null ? result.totalAmount() : '—')}">—</span>
+                                    <span class="text-muted" th:text="${result.updatedAt() != null ? 'Uppdaterad ' + result.updatedAt() : ''}"></span>
+                                </div>
                             </td>
-                            <td th:text="${result.receiptDate() != null ? result.receiptDate() : '—'}">—</td>
-                            <td th:text="${result.formattedTotalAmount() != null ? result.formattedTotalAmount() : (result.totalAmount() != null ? result.totalAmount() : '—')}">—</td>
-                            <td class="text-end" th:text="${result.updatedAt() != null ? result.updatedAt() : '—'}">—</td>
+                            <td class="d-none d-md-table-cell" th:text="${result.receiptDate() != null ? result.receiptDate() : '—'}">—</td>
+                            <td class="d-none d-md-table-cell" th:text="${result.formattedTotalAmount() != null ? result.formattedTotalAmount() : (result.totalAmount() != null ? result.totalAmount() : '—')}">—</td>
+                            <td class="text-end d-none d-xl-table-cell" th:text="${result.updatedAt() != null ? result.updatedAt() : '—'}">—</td>
                         </tr>
                         </tbody>
                     </table>
