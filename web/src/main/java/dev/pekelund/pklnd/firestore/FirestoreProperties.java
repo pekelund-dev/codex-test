@@ -59,6 +59,16 @@ public class FirestoreProperties {
     private String defaultRole = "ROLE_USER";
 
     /**
+     * Cloud Storage bucket used for Firestore exports and imports.
+     */
+    private String backupBucket;
+
+    /**
+     * Prefix inside the backup bucket for Firestore export folders.
+     */
+    private String backupPrefix = "exports";
+
+    /**
      * Optional list of in-memory fallback users created when Firestore is disabled.
      */
     private List<FallbackUser> fallbackUsers = new ArrayList<>();
@@ -141,6 +151,24 @@ public class FirestoreProperties {
 
     public void setDefaultRole(String defaultRole) {
         this.defaultRole = defaultRole;
+    }
+
+    public String getBackupBucket() {
+        return backupBucket;
+    }
+
+    public void setBackupBucket(String backupBucket) {
+        this.backupBucket = backupBucket;
+    }
+
+    public String getBackupPrefix() {
+        return backupPrefix;
+    }
+
+    public void setBackupPrefix(String backupPrefix) {
+        if (backupPrefix != null && !backupPrefix.isBlank()) {
+            this.backupPrefix = backupPrefix;
+        }
     }
 
     public List<FallbackUser> getFallbackUsers() {

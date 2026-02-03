@@ -34,6 +34,8 @@ firestore:
   receipt-items-collection: ${RECEIPT_FIRESTORE_ITEM_COLLECTION:receiptItems}
   item-stats-collection: ${RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION:receiptItemStats}
   default-role: ${FIRESTORE_DEFAULT_ROLE:ROLE_USER}
+  backup-bucket: ${FIRESTORE_BACKUP_BUCKET:}
+  backup-prefix: ${FIRESTORE_BACKUP_PREFIX:exports}
 
 gcs:
   enabled: ${GCS_ENABLED:false}

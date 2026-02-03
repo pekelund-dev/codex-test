@@ -7,6 +7,8 @@ import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.firestore.TagService;
 import dev.pekelund.pklnd.web.DashboardStatisticsService;
 import dev.pekelund.pklnd.web.DashboardStatisticsService.DashboardStatistics;
+import dev.pekelund.pklnd.web.TagStatisticsService;
+import dev.pekelund.pklnd.web.TagStatisticsService.TagSummary;
 import java.math.BigDecimal;
 import java.security.Principal;
 import java.time.Month;
@@ -28,15 +30,18 @@ public class StatisticsController {
     private final TagService tagService;
     private final ItemCategorizationService itemCategorizationService;
     private final ReceiptExtractionService receiptExtractionService;
+    private final TagStatisticsService tagStatisticsService;
 
     public StatisticsController(DashboardStatisticsService dashboardStatisticsService,
                                 TagService tagService,
                                 ItemCategorizationService itemCategorizationService,
-                                ReceiptExtractionService receiptExtractionService) {
+                                ReceiptExtractionService receiptExtractionService,
+                                TagStatisticsService tagStatisticsService) {
         this.dashboardStatisticsService = dashboardStatisticsService;
         this.tagService = tagService;
         this.itemCategorizationService = itemCategorizationService;
         this.receiptExtractionService = receiptExtractionService;
+        this.tagStatisticsService = tagStatisticsService;
     }
 
     @GetMapping("/dashboard/statistics")
@@ -152,6 +157,13 @@ public class StatisticsController {
         List<ItemTag> tags = tagService.listTags();
         model.addAttribute("tags", tags);
         model.addAttribute("tagsAvailable", !tags.isEmpty());
+        Map<String, TagSummary> summaries = tagStatisticsService.summarizeTags(tags);
+        if (summaries.isEmpty()) {
+            summaries = tags.stream()
+                .filter(tag -> tag != null && tag.id() != null)
+                .collect(Collectors.toMap(ItemTag::id, tag -> TagSummary.empty()));
+        }
+        model.addAttribute("tagSummaries", summaries);
 
         return "statistics-tags";
     }

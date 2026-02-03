@@ -6,14 +6,25 @@ backups and ensure retention policies align with your compliance requirements.
 ## Firestore exports
 
 1. Create a Cloud Storage bucket dedicated to Firestore exports (e.g. `gs://<project>-firestore-backups`).
-2. Run manual exports as needed:
+2. Configure the web app with the bucket by setting `FIRESTORE_BACKUP_BUCKET` (and optionally
+   `FIRESTORE_BACKUP_PREFIX`). This enables the admin dashboard backup/restore controls.
+3. Run manual exports as needed:
 
    ```bash
    gcloud firestore export gs://<project>-firestore-backups/exports/$(date +%Y-%m-%d)
    ```
 
-3. For automated exports, schedule a Cloud Scheduler job that invokes a Cloud Run job or Cloud Function which runs the
+4. For automated exports, schedule a Cloud Scheduler job that invokes a Cloud Run job or Cloud Function which runs the
    same `gcloud firestore export` command.
+
+## Admin dashboard backups and restores
+
+Administrators can trigger Firestore exports and imports directly from the dashboard when Firestore is enabled and
+`FIRESTORE_BACKUP_BUCKET` is configured. The restore flow expects a `gs://` path pointing at an export folder created by
+the Firestore export operation.
+
+> The runtime service account must have access to the backup bucket and the Firestore Admin API must be enabled for
+> exports/imports to succeed.
 
 ## Cloud Storage lifecycle policies
 
