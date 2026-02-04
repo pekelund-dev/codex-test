@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -140,7 +141,7 @@ public class DashboardController {
             return "redirect:/dashboard#admin-management";
         }
 
-        if (restoreUri == null || restoreUri.trim().isEmpty()) {
+        if (!StringUtils.hasText(restoreUri)) {
             redirectAttributes.addFlashAttribute(
                 "restoreErrorMessage",
                 messageSource.getMessage("dashboard.restore.error.missing", null, LocaleContextHolder.getLocale())
@@ -149,12 +150,13 @@ public class DashboardController {
         }
 
         try {
-            FirestoreBackupService.BackupOperation operation = firestoreBackupService.startImport(restoreUri.trim());
+            String trimmedUri = restoreUri.trim();
+            FirestoreBackupService.BackupOperation operation = firestoreBackupService.startImport(trimmedUri);
             redirectAttributes.addFlashAttribute(
                 "restoreSuccessMessage",
                 messageSource.getMessage(
                     "dashboard.restore.success",
-                    new Object[]{operation.uri()},
+                    new Object[]{trimmedUri},
                     LocaleContextHolder.getLocale()
                 )
             );

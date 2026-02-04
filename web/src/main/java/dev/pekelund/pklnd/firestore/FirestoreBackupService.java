@@ -65,7 +65,8 @@ public class FirestoreBackupService {
 
     public BackupOperation startImport(String inputUri) {
         ensureEnabled();
-        if (!StringUtils.hasText(inputUri) || !inputUri.startsWith("gs://")) {
+        String trimmedInputUri = StringUtils.hasText(inputUri) ? inputUri.trim() : null;
+        if (!StringUtils.hasText(trimmedInputUri) || !trimmedInputUri.startsWith("gs://")) {
             throw new IllegalArgumentException("Import path must be a gs:// URI");
         }
         String bucketName = properties.getBackupBucket().trim();
@@ -73,7 +74,7 @@ public class FirestoreBackupService {
             bucketName = bucketName.substring(0, bucketName.length() - 1);
         }
         String expectedPrefix = "gs://" + bucketName + "/";
-        if (!inputUri.startsWith(expectedPrefix)) {
+        if (!trimmedInputUri.startsWith(expectedPrefix)) {
             throw new IllegalArgumentException("Import path must be within the authorized backup bucket");
         }
 
@@ -82,12 +83,12 @@ public class FirestoreBackupService {
         try {
             ImportDocumentsRequest request = ImportDocumentsRequest.newBuilder()
                 .setName(databaseName)
-                .setInputUriPrefix(inputUri.trim())
+                .setInputUriPrefix(trimmedInputUri)
                 .build();
             OperationFuture<Empty, ImportDocumentsMetadata> operation = firestoreAdminClient.orElseThrow()
                 .importDocumentsAsync(request);
-            log.info("Started Firestore import {} from {}", operation.getName(), inputUri);
-            return new BackupOperation(operation.getName(), inputUri.trim());
+            log.info("Started Firestore import {} from {}", operation.getName(), trimmedInputUri);
+            return new BackupOperation(operation.getName(), trimmedInputUri);
         } catch (Exception ex) {
             throw new IllegalStateException("Failed to start Firestore import", ex);
         }
