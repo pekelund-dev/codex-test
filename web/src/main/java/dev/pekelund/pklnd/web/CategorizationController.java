@@ -11,7 +11,6 @@ import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -398,13 +397,4 @@ public class CategorizationController {
     public record AssignCategoryRequest(String itemIndex, String itemEan, String categoryId) {}
     public record AssignTagRequest(String itemIndex, String itemEan, String tagId) {}
 
-    private String resolveOwnerId(Authentication authentication) {
-        if (authentication == null) {
-            return null;
-        }
-        return Optional.ofNullable(receiptOwnerResolver.resolve(authentication))
-            .map(owner -> owner.id())
-            .filter(StringUtils::hasText)
-            .orElse(null);
-    }
 }
