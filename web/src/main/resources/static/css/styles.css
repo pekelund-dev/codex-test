@@ -444,6 +444,16 @@ th.sortable:hover {
 
 }
 
+.adsterra-banner-wrapper {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.adsterra-banner {
+    width: 320px;
+    height: 50px;
+}
+
 @media (max-width: 575.98px) {
     .table-responsive {
         border-radius: 0.85rem;
