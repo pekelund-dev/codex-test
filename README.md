@@ -104,6 +104,10 @@ Review the Firestore index requirements and backup guidance before deploying to 
 - [Backup and retention strategy](docs/backup-retention.md)
 - [Firestore migrations](docs/firestore-migrations.md)
 
+### Observability dashboards
+
+- [Request tracing dashboards](docs/observability-dashboards.md)
+
 ### Firestore configuration
 
 Firestore stores user profiles and receipt parsing output. Choose the setup style that suits your workflow:
