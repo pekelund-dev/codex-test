@@ -161,8 +161,7 @@ public class TagStatisticsService {
             if (references.isEmpty()) {
                 return Map.of();
             }
-            var future = firestore.get().getAll(references.toArray(DocumentReference[]::new));
-            List<DocumentSnapshot> snapshots = future.get();
+            List<DocumentSnapshot> snapshots = getAllInBatches(references);
             Map<String, Optional<CachedTagSummary>> result = new HashMap<>();
             for (DocumentSnapshot snapshot : snapshots) {
                 if (snapshot == null) {
@@ -207,8 +206,7 @@ public class TagStatisticsService {
             if (references.isEmpty()) {
                 return Map.of();
             }
-            var future = firestore.get().getAll(references.toArray(DocumentReference[]::new));
-            List<DocumentSnapshot> snapshots = future.get();
+            List<DocumentSnapshot> snapshots = getAllInBatches(references);
             Map<String, Optional<Instant>> result = new HashMap<>();
             for (DocumentSnapshot snapshot : snapshots) {
                 if (snapshot == null) {
@@ -231,13 +229,28 @@ public class TagStatisticsService {
         if (firestore.isEmpty() || !StringUtils.hasText(collection) || cacheKeys == null || cacheKeys.isEmpty()) {
             return List.of();
         }
-        List<DocumentReference> references = new ArrayList<>();
-        for (String cacheKey : cacheKeys) {
-            if (StringUtils.hasText(cacheKey)) {
-                references.add(firestore.get().collection(collection).document(cacheKey));
+        return cacheKeys.stream()
+            .filter(StringUtils::hasText)
+            .map(cacheKey -> firestore.get().collection(collection).document(cacheKey))
+            .toList();
+    }
+
+    private List<DocumentSnapshot> getAllInBatches(List<DocumentReference> references)
+        throws InterruptedException, java.util.concurrent.ExecutionException {
+        if (references == null || references.isEmpty()) {
+            return List.of();
+        }
+        List<DocumentSnapshot> snapshots = new ArrayList<>();
+        int batchSize = 300;
+        for (int i = 0; i < references.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, references.size());
+            List<DocumentReference> batch = references.subList(i, end);
+            if (!batch.isEmpty()) {
+                var future = firestore.get().getAll(batch.toArray(DocumentReference[]::new));
+                snapshots.addAll(future.get());
             }
         }
-        return references;
+        return snapshots;
     }
 
     private void storeTagSummary(String cacheKey,

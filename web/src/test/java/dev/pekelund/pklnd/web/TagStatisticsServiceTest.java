@@ -14,6 +14,7 @@ import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,9 +24,11 @@ import org.springframework.security.core.Authentication;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 class TagStatisticsServiceTest {
@@ -165,5 +168,54 @@ class TagStatisticsServiceTest {
         assertThat(summary.storeCount()).isEqualTo(2);
         assertThat(summary.totalAmount()).isEqualByComparingTo(new BigDecimal("25.00"));
         verify(categorizationService, never()).getItemsByTag(any());
+    }
+
+    @Test
+    void summarizeTags_ShouldBatchFirestoreReads() throws Exception {
+        ItemCategorizationService categorizationService = mock(ItemCategorizationService.class);
+        when(categorizationService.isEnabled()).thenReturn(true);
+        when(categorizationService.getItemsByTag(any())).thenReturn(List.of());
+
+        ReceiptExtractionService receiptExtractionService = mock(ReceiptExtractionService.class);
+        when(receiptExtractionService.isEnabled()).thenReturn(true);
+
+        FirestoreProperties properties = new FirestoreProperties();
+        properties.setEnabled(true);
+
+        Authentication authentication = mock(Authentication.class);
+        ReceiptOwnerResolver receiptOwnerResolver = mock(ReceiptOwnerResolver.class);
+        when(receiptOwnerResolver.resolve(authentication)).thenReturn(new ReceiptOwner("user-1", null, null));
+
+        Firestore firestore = mock(Firestore.class);
+        CollectionReference collection = mock(CollectionReference.class);
+        DocumentReference document = mock(DocumentReference.class);
+        when(firestore.collection(anyString())).thenReturn(collection);
+        when(collection.document(anyString())).thenReturn(document);
+
+        @SuppressWarnings("unchecked")
+        ApiFuture<List<DocumentSnapshot>> batchFuture = mock(ApiFuture.class);
+        when(batchFuture.get()).thenReturn(List.of());
+        when(firestore.getAll(any(DocumentReference[].class))).thenReturn(batchFuture);
+
+        @SuppressWarnings("unchecked")
+        ObjectProvider<Firestore> firestoreProvider = mock(ObjectProvider.class);
+        when(firestoreProvider.getIfAvailable()).thenReturn(firestore);
+
+        TagStatisticsService service = new TagStatisticsService(
+            properties,
+            firestoreProvider,
+            receiptOwnerResolver,
+            Optional.of(categorizationService),
+            Optional.of(receiptExtractionService)
+        );
+
+        List<ItemTag> tags = new ArrayList<>();
+        for (int i = 0; i < 301; i++) {
+            tags.add(ItemTag.builder().id("tag-" + i).name("Tagg " + i).build());
+        }
+
+        service.summarizeTags(tags, authentication);
+
+        verify(firestore, times(4)).getAll(any(DocumentReference[].class));
     }
 }

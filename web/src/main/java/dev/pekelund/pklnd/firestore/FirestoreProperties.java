@@ -192,9 +192,7 @@ public class FirestoreProperties {
     }
 
     public void setBackupPrefix(String backupPrefix) {
-        if (backupPrefix != null) {
-            this.backupPrefix = backupPrefix;
-        }
+        this.backupPrefix = backupPrefix;
     }
 
     public List<FallbackUser> getFallbackUsers() {

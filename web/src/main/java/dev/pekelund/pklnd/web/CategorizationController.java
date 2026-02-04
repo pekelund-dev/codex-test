@@ -301,9 +301,24 @@ public class CategorizationController {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
+        if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+
+        ParsedReceipt receipt = receiptExtractionService.get().findById(receiptId).orElse(null);
+        if (receipt == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || !StringUtils.hasText(owner.id())
+            || !ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), owner)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         try {
             String assignedBy = authentication != null ? authentication.getName() : "anonymous";
-            String ownerId = resolveOwnerId(authentication);
+            String ownerId = owner.id();
             
             // Log the incoming request for debugging
             log.info("Assigning tag: receiptId={}, itemIndex={}, itemEan='{}', tagId={}", 

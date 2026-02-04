@@ -25,7 +25,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -91,6 +93,48 @@ class CategorizationControllerSecurityTests {
 
         verify(itemCategorizationService)
             .removeTagFromItem(eq("receipt-123"), eq("item-1"), eq("tag-1"), eq("owner-1"));
+    }
+
+    @Test
+    @WithMockUser(username = "user", roles = "USER")
+    void assignTagToItem_RejectsWhenReceiptIsOwnedBySomeoneElse() throws Exception {
+        when(itemCategorizationService.isEnabled()).thenReturn(true);
+        when(receiptExtractionService.isEnabled()).thenReturn(true);
+        when(receiptOwnerResolver.resolve(any()))
+            .thenReturn(new ReceiptOwner("owner-1", "Owner One", "owner1@example.com"));
+        when(receiptExtractionService.findById("receipt-123"))
+            .thenReturn(Optional.of(receiptForOwner(new ReceiptOwner("owner-2", "Owner Two", "owner2@example.com"))));
+
+        mockMvc.perform(post("/api/categorization/receipts/{receiptId}/items/tags", "receipt-123")
+                .with(csrf())
+                .contentType(APPLICATION_JSON)
+                .content("{\"itemIndex\":\"0\",\"tagId\":\"tag-1\"}"))
+            .andExpect(status().isForbidden());
+
+        verify(itemCategorizationService, never())
+            .assignTag(any(), any(), any(), any(), any(), any());
+        verify(itemCategorizationService, never())
+            .assignTagByEan(any(), any(), any(), any());
+    }
+
+    @Test
+    @WithMockUser(username = "user", roles = "USER")
+    void assignTagToItem_AllowsWhenReceiptOwnedByCurrentUser() throws Exception {
+        when(itemCategorizationService.isEnabled()).thenReturn(true);
+        when(receiptExtractionService.isEnabled()).thenReturn(true);
+        when(receiptOwnerResolver.resolve(any()))
+            .thenReturn(new ReceiptOwner("owner-1", "Owner One", "owner1@example.com"));
+        when(receiptExtractionService.findById("receipt-123"))
+            .thenReturn(Optional.of(receiptForOwner(new ReceiptOwner("owner-1", "Owner One", "owner1@example.com"))));
+
+        mockMvc.perform(post("/api/categorization/receipts/{receiptId}/items/tags", "receipt-123")
+                .with(csrf())
+                .contentType(APPLICATION_JSON)
+                .content("{\"itemIndex\":\"0\",\"tagId\":\"tag-1\"}"))
+            .andExpect(status().isOk());
+
+        verify(itemCategorizationService)
+            .assignTag(eq("receipt-123"), eq("0"), eq(null), eq("tag-1"), eq("user"), eq("owner-1"));
     }
 
     private ParsedReceipt receiptForOwner(ReceiptOwner owner) {

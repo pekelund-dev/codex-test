@@ -73,8 +73,10 @@ public class FirestoreBackupService {
         if (bucketName.endsWith("/")) {
             bucketName = bucketName.substring(0, bucketName.length() - 1);
         }
-        String expectedPrefix = "gs://" + bucketName + "/";
-        if (!trimmedInputUri.startsWith(expectedPrefix)) {
+        String pathWithoutScheme = trimmedInputUri.substring("gs://".length());
+        int firstSlash = pathWithoutScheme.indexOf('/');
+        String inputBucket = firstSlash == -1 ? pathWithoutScheme : pathWithoutScheme.substring(0, firstSlash);
+        if (!bucketName.equals(inputBucket)) {
             throw new IllegalArgumentException("Import path must be within the authorized backup bucket");
         }
 

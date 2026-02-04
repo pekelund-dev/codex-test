@@ -5,6 +5,7 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QuerySnapshot;
+import dev.pekelund.pklnd.storage.ReceiptOwner;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -374,6 +375,10 @@ public class ItemCategorizationService {
             throw new IllegalStateException("Firestore is not enabled");
         }
 
+        if (!StringUtils.hasText(ownerId)) {
+            throw new IllegalArgumentException("Owner ID cannot be empty");
+        }
+
         if (!StringUtils.hasText(itemEan)) {
             throw new IllegalArgumentException("Item EAN cannot be empty");
         }
@@ -394,8 +399,8 @@ public class ItemCategorizationService {
         }
 
         try {
-            // Get all receipts
-            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listAllReceipts();
+            ReceiptOwner owner = new ReceiptOwner(ownerId, null, null);
+            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
             int assignedCount = 0;
             Firestore db = firestore.get();
             Instant now = Instant.now();
