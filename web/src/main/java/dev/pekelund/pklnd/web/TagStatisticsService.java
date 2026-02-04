@@ -161,7 +161,11 @@ public class TagStatisticsService {
             if (references.isEmpty()) {
                 return Map.of();
             }
-            List<DocumentSnapshot> snapshots = firestore.get().getAll(references.toArray(DocumentReference[]::new)).get();
+            var future = firestore.get().getAll(references.toArray(DocumentReference[]::new));
+            if (!future.isDone()) {
+                return Map.of();
+            }
+            List<DocumentSnapshot> snapshots = future.get();
             Map<String, Optional<CachedTagSummary>> result = new HashMap<>();
             for (DocumentSnapshot snapshot : snapshots) {
                 if (snapshot == null) {
@@ -206,7 +210,11 @@ public class TagStatisticsService {
             if (references.isEmpty()) {
                 return Map.of();
             }
-            List<DocumentSnapshot> snapshots = firestore.get().getAll(references.toArray(DocumentReference[]::new)).get();
+            var future = firestore.get().getAll(references.toArray(DocumentReference[]::new));
+            if (!future.isDone()) {
+                return Map.of();
+            }
+            List<DocumentSnapshot> snapshots = future.get();
             Map<String, Optional<Instant>> result = new HashMap<>();
             for (DocumentSnapshot snapshot : snapshots) {
                 if (snapshot == null) {
@@ -263,8 +271,7 @@ public class TagStatisticsService {
             firestore.get()
                 .collection(firestoreProperties.getTagSummariesCollection())
                 .document(cacheKey)
-                .set(payload)
-                .get();
+                .set(payload);
         } catch (Exception ex) {
             log.warn("Failed to store tag summary for key {}", cacheKey, ex);
         }

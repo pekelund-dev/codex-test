@@ -141,7 +141,9 @@ class TagStatisticsServiceTest {
         @SuppressWarnings("unchecked")
         ApiFuture<List<DocumentSnapshot>> summaryBatchFuture = mock(ApiFuture.class);
         when(metaBatchFuture.get()).thenReturn(List.of(metaSnapshot));
+        when(metaBatchFuture.isDone()).thenReturn(true);
         when(summaryBatchFuture.get()).thenReturn(List.of(summarySnapshot));
+        when(summaryBatchFuture.isDone()).thenReturn(true);
         when(firestore.getAll(any(DocumentReference[].class))).thenReturn(metaBatchFuture, summaryBatchFuture);
 
         @SuppressWarnings("unchecked")
