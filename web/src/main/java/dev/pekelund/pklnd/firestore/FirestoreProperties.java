@@ -59,6 +59,16 @@ public class FirestoreProperties {
     private String defaultRole = "ROLE_USER";
 
     /**
+     * Firestore collection used to store cached tag summaries.
+     */
+    private String tagSummariesCollection = "tagSummaries";
+
+    /**
+     * Firestore collection used to track tag summary change timestamps.
+     */
+    private String tagSummaryMetaCollection = "tagSummaryMeta";
+
+    /**
      * Cloud Storage bucket used for Firestore exports and imports.
      */
     private String backupBucket;
@@ -151,6 +161,22 @@ public class FirestoreProperties {
 
     public void setDefaultRole(String defaultRole) {
         this.defaultRole = defaultRole;
+    }
+
+    public String getTagSummariesCollection() {
+        return tagSummariesCollection;
+    }
+
+    public void setTagSummariesCollection(String tagSummariesCollection) {
+        this.tagSummariesCollection = tagSummariesCollection;
+    }
+
+    public String getTagSummaryMetaCollection() {
+        return tagSummaryMetaCollection;
+    }
+
+    public void setTagSummaryMetaCollection(String tagSummaryMetaCollection) {
+        this.tagSummaryMetaCollection = tagSummaryMetaCollection;
     }
 
     public String getBackupBucket() {

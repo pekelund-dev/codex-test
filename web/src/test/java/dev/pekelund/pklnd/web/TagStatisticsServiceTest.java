@@ -1,6 +1,13 @@
 package dev.pekelund.pklnd.web;
 
+import com.google.api.core.ApiFuture;
+import com.google.cloud.Timestamp;
+import com.google.cloud.firestore.CollectionReference;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.Firestore;
 import dev.pekelund.pklnd.firestore.ItemCategorizationService;
+import dev.pekelund.pklnd.firestore.FirestoreProperties;
 import dev.pekelund.pklnd.firestore.ItemTag;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
@@ -10,9 +17,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TagStatisticsServiceTest {
@@ -51,7 +62,14 @@ class TagStatisticsServiceTest {
             new ItemCategorizationService.TaggedItemInfo("receipt-1", "0", null, Instant.now())
         ));
 
+        FirestoreProperties properties = new FirestoreProperties();
+        @SuppressWarnings("unchecked")
+        ObjectProvider<com.google.cloud.firestore.Firestore> firestoreProvider = mock(ObjectProvider.class);
+        when(firestoreProvider.getIfAvailable()).thenReturn(null);
+
         TagStatisticsService service = new TagStatisticsService(
+            properties,
+            firestoreProvider,
             java.util.Optional.of(categorizationService),
             java.util.Optional.of(receiptExtractionService)
         );
@@ -64,5 +82,66 @@ class TagStatisticsServiceTest {
         assertThat(summary.itemCount()).isEqualTo(1);
         assertThat(summary.storeCount()).isEqualTo(1);
         assertThat(summary.totalAmount()).isEqualByComparingTo(new BigDecimal("10.50"));
+    }
+
+    @Test
+    void summarizeTags_ShouldUseCachedSummaryWhenFresh() throws Exception {
+        ItemCategorizationService categorizationService = mock(ItemCategorizationService.class);
+        when(categorizationService.isEnabled()).thenReturn(true);
+        ReceiptExtractionService receiptExtractionService = mock(ReceiptExtractionService.class);
+        when(receiptExtractionService.isEnabled()).thenReturn(true);
+
+        FirestoreProperties properties = new FirestoreProperties();
+        properties.setEnabled(true);
+
+        Firestore firestore = mock(Firestore.class);
+        CollectionReference summariesCollection = mock(CollectionReference.class);
+        DocumentReference summaryDocument = mock(DocumentReference.class);
+        DocumentSnapshot summarySnapshot = mock(DocumentSnapshot.class);
+        @SuppressWarnings("unchecked")
+        ApiFuture<DocumentSnapshot> summaryFuture = mock(ApiFuture.class);
+
+        when(summarySnapshot.exists()).thenReturn(true);
+        when(summarySnapshot.get("computedAt")).thenReturn(Timestamp.now());
+        when(summarySnapshot.get("itemCount")).thenReturn(3);
+        when(summarySnapshot.get("storeCount")).thenReturn(2);
+        when(summarySnapshot.get("totalAmount")).thenReturn("25.00");
+        when(summaryFuture.get()).thenReturn(summarySnapshot);
+
+        when(firestore.collection(properties.getTagSummariesCollection())).thenReturn(summariesCollection);
+        when(summariesCollection.document("tag-1")).thenReturn(summaryDocument);
+        when(summaryDocument.get()).thenReturn(summaryFuture);
+
+        CollectionReference metaCollection = mock(CollectionReference.class);
+        DocumentReference metaDocument = mock(DocumentReference.class);
+        DocumentSnapshot metaSnapshot = mock(DocumentSnapshot.class);
+        @SuppressWarnings("unchecked")
+        ApiFuture<DocumentSnapshot> metaFuture = mock(ApiFuture.class);
+        when(metaSnapshot.exists()).thenReturn(false);
+        when(metaFuture.get()).thenReturn(metaSnapshot);
+        when(firestore.collection(properties.getTagSummaryMetaCollection())).thenReturn(metaCollection);
+        when(metaCollection.document("tag-1")).thenReturn(metaDocument);
+        when(metaDocument.get()).thenReturn(metaFuture);
+
+        @SuppressWarnings("unchecked")
+        ObjectProvider<Firestore> firestoreProvider = mock(ObjectProvider.class);
+        when(firestoreProvider.getIfAvailable()).thenReturn(firestore);
+
+        TagStatisticsService service = new TagStatisticsService(
+            properties,
+            firestoreProvider,
+            Optional.of(categorizationService),
+            Optional.of(receiptExtractionService)
+        );
+
+        ItemTag tag = ItemTag.builder().id("tag-1").name("Frys").build();
+        Map<String, TagStatisticsService.TagSummary> summaries = service.summarizeTags(List.of(tag));
+
+        TagStatisticsService.TagSummary summary = summaries.get("tag-1");
+        assertThat(summary).isNotNull();
+        assertThat(summary.itemCount()).isEqualTo(3);
+        assertThat(summary.storeCount()).isEqualTo(2);
+        assertThat(summary.totalAmount()).isEqualByComparingTo(new BigDecimal("25.00"));
+        verify(categorizationService, never()).getItemsByTag(any());
     }
 }

@@ -34,6 +34,8 @@ firestore:
   receipt-items-collection: ${RECEIPT_FIRESTORE_ITEM_COLLECTION:receiptItems}
   item-stats-collection: ${RECEIPT_FIRESTORE_ITEM_STATS_COLLECTION:receiptItemStats}
   default-role: ${FIRESTORE_DEFAULT_ROLE:ROLE_USER}
+  tag-summaries-collection: ${FIRESTORE_TAG_SUMMARIES_COLLECTION:tagSummaries}
+  tag-summary-meta-collection: ${FIRESTORE_TAG_SUMMARY_META_COLLECTION:tagSummaryMeta}
   backup-bucket: ${FIRESTORE_BACKUP_BUCKET:}
   backup-prefix: ${FIRESTORE_BACKUP_PREFIX:exports}
 
