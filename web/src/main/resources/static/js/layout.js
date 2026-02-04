@@ -58,35 +58,11 @@ const setupNavbarFallbackToggle = () => {
     });
 };
 
-const setupAdsterraBanner = () => {
-    const bannerSlot = document.getElementById('adsterra-banner');
-    if (!bannerSlot) {
-        return;
-    }
-
-    bannerSlot.innerHTML = '';
-    window.atOptions = {
-        key: '14b3644e8610f254f6e9da8f8f38500b',
-        format: 'iframe',
-        height: 50,
-        width: 320,
-        params: {},
-    };
-
-    const invokeScript = document.createElement('script');
-    invokeScript.src = 'https://www.highperformanceformat.com/14b3644e8610f254f6e9da8f8f38500b/invoke.js';
-    invokeScript.async = true;
-    bannerSlot.appendChild(invokeScript);
-};
-
 const setupPageLayout = () => {
     setupSplashScreen();
     setupNavbarFallbackToggle();
-    setupAdsterraBanner();
 };
 
 window.addEventListener('load', () => {
     setupPageLayout();
 });
-
-window.addEventListener('pageshow', setupAdsterraBanner);
