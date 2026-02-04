@@ -38,12 +38,13 @@ class TagStatisticsServiceTest {
         when(categorizationService.isEnabled()).thenReturn(true);
         when(receiptExtractionService.isEnabled()).thenReturn(true);
 
+        ReceiptOwner owner = new ReceiptOwner("user-1", "User", "user@example.com");
         ParsedReceipt receipt = new ParsedReceipt(
             "receipt-1",
             null,
             null,
             null,
-            null,
+            owner,
             null,
             null,
             Instant.now(),
@@ -69,6 +70,8 @@ class TagStatisticsServiceTest {
         ObjectProvider<com.google.cloud.firestore.Firestore> firestoreProvider = mock(ObjectProvider.class);
         when(firestoreProvider.getIfAvailable()).thenReturn(null);
         ReceiptOwnerResolver receiptOwnerResolver = mock(ReceiptOwnerResolver.class);
+        Authentication authentication = mock(Authentication.class);
+        when(receiptOwnerResolver.resolve(authentication)).thenReturn(owner);
 
         TagStatisticsService service = new TagStatisticsService(
             properties,
@@ -79,7 +82,7 @@ class TagStatisticsServiceTest {
         );
 
         ItemTag tag = ItemTag.builder().id("tag-1").name("Frys").build();
-        Map<String, TagStatisticsService.TagSummary> summaries = service.summarizeTags(List.of(tag), null);
+        Map<String, TagStatisticsService.TagSummary> summaries = service.summarizeTags(List.of(tag), authentication);
 
         TagStatisticsService.TagSummary summary = summaries.get("tag-1");
         assertThat(summary).isNotNull();
@@ -110,6 +113,7 @@ class TagStatisticsServiceTest {
         ApiFuture<DocumentSnapshot> summaryFuture = mock(ApiFuture.class);
 
         when(summarySnapshot.exists()).thenReturn(true);
+        when(summarySnapshot.getId()).thenReturn("user-1:tag-1");
         when(summarySnapshot.get("computedAt")).thenReturn(Timestamp.now());
         when(summarySnapshot.get("itemCount")).thenReturn(3);
         when(summarySnapshot.get("storeCount")).thenReturn(2);
@@ -126,10 +130,19 @@ class TagStatisticsServiceTest {
         @SuppressWarnings("unchecked")
         ApiFuture<DocumentSnapshot> metaFuture = mock(ApiFuture.class);
         when(metaSnapshot.exists()).thenReturn(false);
+        when(metaSnapshot.getId()).thenReturn("user-1:tag-1");
         when(metaFuture.get()).thenReturn(metaSnapshot);
         when(firestore.collection(properties.getTagSummaryMetaCollection())).thenReturn(metaCollection);
         when(metaCollection.document("user-1:tag-1")).thenReturn(metaDocument);
         when(metaDocument.get()).thenReturn(metaFuture);
+
+        @SuppressWarnings("unchecked")
+        ApiFuture<List<DocumentSnapshot>> metaBatchFuture = mock(ApiFuture.class);
+        @SuppressWarnings("unchecked")
+        ApiFuture<List<DocumentSnapshot>> summaryBatchFuture = mock(ApiFuture.class);
+        when(metaBatchFuture.get()).thenReturn(List.of(metaSnapshot));
+        when(summaryBatchFuture.get()).thenReturn(List.of(summarySnapshot));
+        when(firestore.getAll(any(DocumentReference[].class))).thenReturn(metaBatchFuture, summaryBatchFuture);
 
         @SuppressWarnings("unchecked")
         ObjectProvider<Firestore> firestoreProvider = mock(ObjectProvider.class);

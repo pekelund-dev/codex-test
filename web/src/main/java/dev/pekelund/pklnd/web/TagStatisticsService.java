@@ -1,6 +1,7 @@
 package dev.pekelund.pklnd.web;
 
 import com.google.cloud.Timestamp;
+import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import dev.pekelund.pklnd.firestore.FirestoreProperties;
@@ -10,9 +11,11 @@ import dev.pekelund.pklnd.firestore.ItemTag;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
+import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -67,17 +70,32 @@ public class TagStatisticsService {
             return Map.of();
         }
 
-        String ownerId = resolveOwnerId(authentication);
-        String cacheKeySuffix = ownerId;
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || !StringUtils.hasText(owner.id())) {
+            return Map.of();
+        }
+        String ownerId = owner.id();
         Map<String, TagSummary> summaries = new HashMap<>();
+        Set<String> cacheKeys = new HashSet<>();
+        for (ItemTag tag : tags) {
+            if (tag == null || !StringUtils.hasText(tag.id())) {
+                continue;
+            }
+            String cacheKey = buildCacheKey(ownerId, tag.id());
+            if (StringUtils.hasText(cacheKey)) {
+                cacheKeys.add(cacheKey);
+            }
+        }
+        Map<String, Optional<Instant>> lastChangeAts = loadTagSummaryChangeAts(cacheKeys);
+        Map<String, Optional<CachedTagSummary>> cachedSummaries = loadCachedSummaries(cacheKeys);
         Map<String, Optional<ParsedReceipt>> receiptCache = new HashMap<>();
         for (ItemTag tag : tags) {
             if (tag == null || !StringUtils.hasText(tag.id())) {
                 continue;
             }
-            String cacheKey = buildCacheKey(cacheKeySuffix, tag.id());
-            Optional<Instant> lastChangeAt = loadTagSummaryChangeAt(cacheKey);
-            Optional<CachedTagSummary> cachedSummary = loadCachedSummary(cacheKey);
+            String cacheKey = buildCacheKey(ownerId, tag.id());
+            Optional<Instant> lastChangeAt = lastChangeAts.getOrDefault(cacheKey, Optional.empty());
+            Optional<CachedTagSummary> cachedSummary = cachedSummaries.getOrDefault(cacheKey, Optional.empty());
             if (cachedSummary.isPresent()
                 && (lastChangeAt.isEmpty() || !cachedSummary.get().computedAt().isBefore(lastChangeAt.get()))) {
                 summaries.put(tag.id(), cachedSummary.get().summary());
@@ -85,7 +103,7 @@ public class TagStatisticsService {
             }
 
             List<TaggedItemInfo> taggedItems = itemCategorizationService.get().getItemsByTag(tag.id());
-            TagSummary summary = buildSummary(taggedItems, receiptCache);
+            TagSummary summary = buildSummary(taggedItems, receiptCache, owner);
             summaries.put(tag.id(), summary);
             storeTagSummary(cacheKey, tag.id(), ownerId, summary, lastChangeAt);
         }
@@ -93,7 +111,8 @@ public class TagStatisticsService {
     }
 
     private TagSummary buildSummary(List<TaggedItemInfo> taggedItems,
-                                    Map<String, Optional<ParsedReceipt>> receiptCache) {
+                                    Map<String, Optional<ParsedReceipt>> receiptCache,
+                                    ReceiptOwner owner) {
         if (taggedItems.isEmpty()) {
             return TagSummary.empty();
         }
@@ -107,7 +126,7 @@ public class TagStatisticsService {
                 continue;
             }
             ParsedReceipt receipt = resolveReceipt(taggedItem.receiptId(), receiptCache);
-            if (receipt == null) {
+            if (receipt == null || !isReceiptOwnedBy(receipt, owner)) {
                 continue;
             }
 
@@ -126,57 +145,97 @@ public class TagStatisticsService {
         return new TagSummary(itemCount, totalAmount, stores.size());
     }
 
-    private Optional<CachedTagSummary> loadCachedSummary(String cacheKey) {
-        if (!isCacheEnabled(cacheKey)) {
-            return Optional.empty();
+    private Map<String, Optional<CachedTagSummary>> loadCachedSummaries(Set<String> cacheKeys) {
+        if (cacheKeys == null || cacheKeys.isEmpty()) {
+            return Map.of();
+        }
+        if (!isCacheEnabled()) {
+            return Map.of();
         }
 
         try {
-            DocumentSnapshot snapshot = firestore.get()
-                .collection(firestoreProperties.getTagSummariesCollection())
-                .document(cacheKey)
-                .get()
-                .get();
-            if (!snapshot.exists() || snapshot.getData() == null) {
-                return Optional.empty();
+            List<DocumentReference> references = toDocumentReferences(
+                firestoreProperties.getTagSummariesCollection(),
+                cacheKeys
+            );
+            if (references.isEmpty()) {
+                return Map.of();
             }
-
-            Instant computedAt = toInstant(snapshot.get("computedAt"));
-            if (computedAt == null) {
-                return Optional.empty();
+            List<DocumentSnapshot> snapshots = firestore.get().getAll(references.toArray(DocumentReference[]::new)).get();
+            Map<String, Optional<CachedTagSummary>> result = new HashMap<>();
+            for (DocumentSnapshot snapshot : snapshots) {
+                if (snapshot == null) {
+                    continue;
+                }
+                String key = snapshot.getId();
+                if (!snapshot.exists() || snapshot.getData() == null) {
+                    result.put(key, Optional.empty());
+                    continue;
+                }
+                Instant computedAt = toInstant(snapshot.get("computedAt"));
+                if (computedAt == null) {
+                    result.put(key, Optional.empty());
+                    continue;
+                }
+                int itemCount = parseInt(snapshot.get("itemCount"));
+                int storeCount = parseInt(snapshot.get("storeCount"));
+                BigDecimal totalAmount = parseAmount(snapshot.get("totalAmount"));
+                TagSummary summary = new TagSummary(itemCount, totalAmount, storeCount);
+                result.put(key, Optional.of(new CachedTagSummary(summary, computedAt)));
             }
-
-            int itemCount = parseInt(snapshot.get("itemCount"));
-            int storeCount = parseInt(snapshot.get("storeCount"));
-            BigDecimal totalAmount = parseAmount(snapshot.get("totalAmount"));
-            TagSummary summary = new TagSummary(itemCount, totalAmount, storeCount);
-
-            return Optional.of(new CachedTagSummary(summary, computedAt));
+            return result;
         } catch (Exception ex) {
-            log.warn("Failed to load cached summary for key {}", cacheKey, ex);
-            return Optional.empty();
+            log.warn("Failed to load cached summaries", ex);
+            return Map.of();
         }
     }
 
-    private Optional<Instant> loadTagSummaryChangeAt(String cacheKey) {
-        if (!isCacheEnabled(cacheKey)) {
-            return Optional.empty();
+    private Map<String, Optional<Instant>> loadTagSummaryChangeAts(Set<String> cacheKeys) {
+        if (cacheKeys == null || cacheKeys.isEmpty()) {
+            return Map.of();
+        }
+        if (!isCacheEnabled()) {
+            return Map.of();
         }
 
         try {
-            DocumentSnapshot snapshot = firestore.get()
-                .collection(firestoreProperties.getTagSummaryMetaCollection())
-                .document(cacheKey)
-                .get()
-                .get();
-            if (!snapshot.exists()) {
-                return Optional.empty();
+            List<DocumentReference> references = toDocumentReferences(
+                firestoreProperties.getTagSummaryMetaCollection(),
+                cacheKeys
+            );
+            if (references.isEmpty()) {
+                return Map.of();
             }
-            return Optional.ofNullable(toInstant(snapshot.get("updatedAt")));
+            List<DocumentSnapshot> snapshots = firestore.get().getAll(references.toArray(DocumentReference[]::new)).get();
+            Map<String, Optional<Instant>> result = new HashMap<>();
+            for (DocumentSnapshot snapshot : snapshots) {
+                if (snapshot == null) {
+                    continue;
+                }
+                if (!snapshot.exists()) {
+                    result.put(snapshot.getId(), Optional.empty());
+                    continue;
+                }
+                result.put(snapshot.getId(), Optional.ofNullable(toInstant(snapshot.get("updatedAt"))));
+            }
+            return result;
         } catch (Exception ex) {
-            log.warn("Failed to load tag summary change timestamp for key {}", cacheKey, ex);
-            return Optional.empty();
+            log.warn("Failed to load tag summary change timestamps", ex);
+            return Map.of();
         }
+    }
+
+    private List<DocumentReference> toDocumentReferences(String collection, Set<String> cacheKeys) {
+        if (firestore.isEmpty() || !StringUtils.hasText(collection) || cacheKeys == null || cacheKeys.isEmpty()) {
+            return List.of();
+        }
+        List<DocumentReference> references = new ArrayList<>();
+        for (String cacheKey : cacheKeys) {
+            if (StringUtils.hasText(cacheKey)) {
+                references.add(firestore.get().collection(collection).document(cacheKey));
+            }
+        }
+        return references;
     }
 
     private void storeTagSummary(String cacheKey,
@@ -211,23 +270,15 @@ public class TagStatisticsService {
         }
     }
 
-    private boolean isCacheEnabled(String cacheKey) {
+    private boolean isCacheEnabled() {
         return firestore.isPresent()
             && firestoreProperties.isEnabled()
             && StringUtils.hasText(firestoreProperties.getTagSummariesCollection())
-            && StringUtils.hasText(firestoreProperties.getTagSummaryMetaCollection())
-            && StringUtils.hasText(cacheKey);
+            && StringUtils.hasText(firestoreProperties.getTagSummaryMetaCollection());
     }
 
-    private String resolveOwnerId(Authentication authentication) {
-        if (authentication == null) {
-            return null;
-        }
-        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
-        if (owner == null || !StringUtils.hasText(owner.id())) {
-            return null;
-        }
-        return owner.id();
+    private boolean isCacheEnabled(String cacheKey) {
+        return isCacheEnabled() && StringUtils.hasText(cacheKey);
     }
 
     private String buildCacheKey(String ownerId, String tagId) {
@@ -248,6 +299,13 @@ public class TagStatisticsService {
         Optional<ParsedReceipt> receipt = receiptExtractionService.get().findById(receiptId);
         receiptCache.put(receiptId, receipt);
         return receipt.orElse(null);
+    }
+
+    private boolean isReceiptOwnedBy(ParsedReceipt receipt, ReceiptOwner owner) {
+        if (receipt == null) {
+            return false;
+        }
+        return ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), owner);
     }
 
     private BigDecimal resolveItemTotal(ParsedReceipt receipt, TaggedItemInfo taggedItem) {
