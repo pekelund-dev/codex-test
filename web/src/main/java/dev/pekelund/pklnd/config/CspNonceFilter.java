@@ -26,12 +26,12 @@ public class CspNonceFilter extends OncePerRequestFilter {
         request.setAttribute("cspNonce", nonce);
 
         String policy = "default-src 'self'; "
-            + "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.highperformanceformat.com; "
+            + "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https:; "
             + "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
             + "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; "
             + "img-src 'self' https: data:; "
-            + "connect-src 'self' https://cdn.jsdelivr.net; "
-            + "frame-src https://www.highperformanceformat.com; "
+            + "connect-src 'self' https://cdn.jsdelivr.net https:; "
+            + "frame-src https:; "
             + "object-src 'none'; "
             + "base-uri 'self'; "
             + "form-action 'self'; "
