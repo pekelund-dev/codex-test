@@ -445,7 +445,7 @@ Provide a basic Cloud Monitoring dashboard plan for latency, error rate, and thr
 ---
 
 ### Ticket O2 — Add contract tests for web → receipt‑parser
-**Status:** `done`
+**Status:** `todo`
 
 **Goal**
 Prevent API drift between services.
@@ -455,10 +455,3 @@ Prevent API drift between services.
 
 **Acceptance criteria**
 - Tests validate request/response shape for key endpoints.
-
-**Completion note**
-- Summary:
-  - Added Pact consumer and provider contract tests to validate the storage event API between the web app and receipt parser.
-  - Committed the shared Pact contract describing the Cloud Storage finalize event payload and headers.
-- Tests run: Not run (not requested).
-- Follow-up tasks: None.

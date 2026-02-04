@@ -11,7 +11,6 @@ import dev.pekelund.pklnd.firestore.ItemTag;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
-import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -329,7 +328,20 @@ public class TagStatisticsService {
         if (receipt == null) {
             return false;
         }
-        return ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), owner);
+        return isOwnerMatch(receipt.owner(), owner);
+    }
+
+    private boolean isOwnerMatch(ReceiptOwner receiptOwner, ReceiptOwner currentOwner) {
+        if (receiptOwner == null || currentOwner == null) {
+            return false;
+        }
+        if (StringUtils.hasText(receiptOwner.id()) && StringUtils.hasText(currentOwner.id())) {
+            return receiptOwner.id().equals(currentOwner.id());
+        }
+        if (StringUtils.hasText(receiptOwner.email()) && StringUtils.hasText(currentOwner.email())) {
+            return receiptOwner.email().equalsIgnoreCase(currentOwner.email());
+        }
+        return false;
     }
 
     private BigDecimal resolveItemTotal(ParsedReceipt receipt, TaggedItemInfo taggedItem) {

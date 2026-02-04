@@ -8,7 +8,6 @@ import dev.pekelund.pklnd.firestore.TagService;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
-import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -311,8 +310,7 @@ public class CategorizationController {
         }
 
         ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
-        if (owner == null || !StringUtils.hasText(owner.id())
-            || !ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), owner)) {
+        if (!isOwnerMatch(receipt.owner(), owner)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -381,8 +379,7 @@ public class CategorizationController {
         }
 
         ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
-        if (owner == null || !StringUtils.hasText(owner.id())
-            || !ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), owner)) {
+        if (!isOwnerMatch(receipt.owner(), owner)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -398,4 +395,16 @@ public class CategorizationController {
     public record AssignCategoryRequest(String itemIndex, String itemEan, String categoryId) {}
     public record AssignTagRequest(String itemIndex, String itemEan, String tagId) {}
 
+    private boolean isOwnerMatch(ReceiptOwner receiptOwner, ReceiptOwner currentOwner) {
+        if (receiptOwner == null || currentOwner == null) {
+            return false;
+        }
+        if (StringUtils.hasText(receiptOwner.id()) && StringUtils.hasText(currentOwner.id())) {
+            return receiptOwner.id().equals(currentOwner.id());
+        }
+        if (StringUtils.hasText(receiptOwner.email()) && StringUtils.hasText(currentOwner.email())) {
+            return receiptOwner.email().equalsIgnoreCase(currentOwner.email());
+        }
+        return false;
+    }
 }

@@ -37,7 +37,6 @@
         <google-cloud-firestore.version>3.33.0</google-cloud-firestore.version>
         <google-cloud-storage.version>2.40.1</google-cloud-storage.version>
         <google-cloud-vertexai.version>1.35.0</google-cloud-vertexai.version>
-        <pact.version>4.6.10</pact.version>
         <spring-ai.version>1.0.3</spring-ai.version>
         <spring-modulith.version>1.4.1</spring-modulith.version>
         <git-commit-id-plugin.skip>false</git-commit-id-plugin.skip>

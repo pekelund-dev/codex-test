@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -67,46 +69,41 @@ public class FirestoreMigrationRunner {
     }
 
     private boolean isApplied(Firestore db, FirestoreMigration migration) {
-        try {
-            DocumentSnapshot snapshot = db.collection(MIGRATIONS_COLLECTION)
+        DocumentSnapshot snapshot = getFuture(
+            db.collection(MIGRATIONS_COLLECTION)
                 .document(String.valueOf(migration.version()))
-                .get()
-                .get();
-            return snapshot.exists();
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(
-                "Migration check interrupted for version " + migration.version(),
-                ex
-            );
-        } catch (java.util.concurrent.ExecutionException ex) {
-            throw new IllegalStateException(
-                "Failed to check migration status for version " + migration.version(),
-                ex
-            );
-        }
+                .get(),
+            migration.version(),
+            "Migration check"
+        );
+        return snapshot.exists();
     }
 
     private void markApplied(Firestore db, FirestoreMigration migration) {
-        try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("version", migration.version());
-            payload.put("description", migration.description());
-            payload.put("appliedAt", Timestamp.now());
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("version", migration.version());
+        payload.put("description", migration.description());
+        payload.put("appliedAt", Timestamp.now());
+        getFuture(
             db.collection(MIGRATIONS_COLLECTION)
                 .document(String.valueOf(migration.version()))
-                .set(payload)
-                .get();
+                .set(payload),
+            migration.version(),
+            "Mark migration applied"
+        );
+    }
+
+    private <T> T getFuture(Future<T> future, int version, String action) {
+        try {
+            return future.get();
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
+            throw new IllegalStateException(action + " interrupted for version " + version, ex);
+        } catch (ExecutionException ex) {
+            Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
             throw new IllegalStateException(
-                "Marking migration as applied was interrupted for version " + migration.version(),
-                ex
-            );
-        } catch (java.util.concurrent.ExecutionException ex) {
-            throw new IllegalStateException(
-                "Failed to mark migration as applied for version " + migration.version(),
-                ex
+                "Failed to " + action.toLowerCase() + " for version " + version,
+                cause
             );
         }
     }

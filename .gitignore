@@ -42,7 +42,6 @@ build/
 ### Google Cloud Service Account Keys ###
 *.json
 !docs/sample-storage-event.json
-!**/pacts/*.json
 !package*.json
 !tsconfig*.json
 !.vscode/*.json
