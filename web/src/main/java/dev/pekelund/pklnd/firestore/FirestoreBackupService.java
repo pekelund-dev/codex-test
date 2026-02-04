@@ -10,8 +10,10 @@ import com.google.protobuf.Empty;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -23,13 +25,19 @@ public class FirestoreBackupService {
         .withZone(ZoneOffset.UTC);
 
     private final FirestoreProperties properties;
+    private final Optional<FirestoreAdminClient> firestoreAdminClient;
 
-    public FirestoreBackupService(FirestoreProperties properties) {
+    public FirestoreBackupService(
+        FirestoreProperties properties,
+        ObjectProvider<FirestoreAdminClient> firestoreAdminClientProvider
+    ) {
         this.properties = properties;
+        this.firestoreAdminClient = Optional.ofNullable(firestoreAdminClientProvider.getIfAvailable());
     }
 
     public boolean isEnabled() {
         return properties.isEnabled()
+            && firestoreAdminClient.isPresent()
             && StringUtils.hasText(properties.getProjectId())
             && StringUtils.hasText(properties.getDatabaseId())
             && StringUtils.hasText(properties.getBackupBucket())
@@ -41,12 +49,13 @@ public class FirestoreBackupService {
         String outputUri = buildBackupUri(label);
         String databaseName = databaseName();
 
-        try (FirestoreAdminClient client = FirestoreAdminClient.create()) {
+        try {
             ExportDocumentsRequest request = ExportDocumentsRequest.newBuilder()
                 .setName(databaseName)
                 .setOutputUriPrefix(outputUri)
                 .build();
-            OperationFuture<ExportDocumentsResponse, ?> operation = client.exportDocumentsAsync(request);
+            OperationFuture<ExportDocumentsResponse, ?> operation = firestoreAdminClient.orElseThrow()
+                .exportDocumentsAsync(request);
             log.info("Started Firestore export {} for {}", operation.getName(), outputUri);
             return new BackupOperation(operation.getName(), outputUri);
         } catch (Exception ex) {
@@ -62,12 +71,13 @@ public class FirestoreBackupService {
 
         String databaseName = databaseName();
 
-        try (FirestoreAdminClient client = FirestoreAdminClient.create()) {
+        try {
             ImportDocumentsRequest request = ImportDocumentsRequest.newBuilder()
                 .setName(databaseName)
                 .setInputUriPrefix(inputUri.trim())
                 .build();
-            OperationFuture<Empty, ImportDocumentsMetadata> operation = client.importDocumentsAsync(request);
+            OperationFuture<Empty, ImportDocumentsMetadata> operation = firestoreAdminClient.orElseThrow()
+                .importDocumentsAsync(request);
             log.info("Started Firestore import {} from {}", operation.getName(), inputUri);
             return new BackupOperation(operation.getName(), inputUri.trim());
         } catch (Exception ex) {
