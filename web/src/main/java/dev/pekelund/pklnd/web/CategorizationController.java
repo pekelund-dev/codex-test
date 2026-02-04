@@ -5,6 +5,10 @@ import dev.pekelund.pklnd.firestore.CategoryService;
 import dev.pekelund.pklnd.firestore.ItemCategorizationService;
 import dev.pekelund.pklnd.firestore.ItemTag;
 import dev.pekelund.pklnd.firestore.TagService;
+import dev.pekelund.pklnd.firestore.ParsedReceipt;
+import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
+import dev.pekelund.pklnd.storage.ReceiptOwner;
+import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,17 +42,20 @@ public class CategorizationController {
     private final Optional<CategoryService> categoryService;
     private final Optional<TagService> tagService;
     private final Optional<ItemCategorizationService> itemCategorizationService;
+    private final Optional<ReceiptExtractionService> receiptExtractionService;
     private final ReceiptOwnerResolver receiptOwnerResolver;
 
     public CategorizationController(
         @Autowired(required = false) CategoryService categoryService,
         @Autowired(required = false) TagService tagService,
         @Autowired(required = false) ItemCategorizationService itemCategorizationService,
+        @Autowired(required = false) ReceiptExtractionService receiptExtractionService,
         ReceiptOwnerResolver receiptOwnerResolver
     ) {
         this.categoryService = Optional.ofNullable(categoryService);
         this.tagService = Optional.ofNullable(tagService);
         this.itemCategorizationService = Optional.ofNullable(itemCategorizationService);
+        this.receiptExtractionService = Optional.ofNullable(receiptExtractionService);
         this.receiptOwnerResolver = receiptOwnerResolver;
     }
 
@@ -349,7 +356,22 @@ public class CategorizationController {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
-        String ownerId = resolveOwnerId(authentication);
+        if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+
+        ParsedReceipt receipt = receiptExtractionService.get().findById(receiptId).orElse(null);
+        if (receipt == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || !StringUtils.hasText(owner.id())
+            || !ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), owner)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        String ownerId = owner.id();
         itemCategorizationService.get().removeTagFromItem(receiptId, itemIdentifier, tagId, ownerId);
         return ResponseEntity.noContent().build();
     }
