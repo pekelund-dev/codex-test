@@ -92,18 +92,12 @@ public class FirestoreBackupService {
     }
 
     private String buildBackupUri(String label) {
-        String prefix = StringUtils.hasText(properties.getBackupPrefix())
-            ? properties.getBackupPrefix().trim()
-            : "exports";
-        if (prefix.startsWith("/")) {
-            prefix = prefix.substring(1);
-        }
-        if (prefix.endsWith("/")) {
-            prefix = prefix.substring(0, prefix.length() - 1);
-        }
-
         String timestamp = BACKUP_TIMESTAMP.format(Instant.now());
         String suffix = StringUtils.hasText(label) ? "-" + sanitizeLabel(label) : "";
+        String prefix = resolvePrefix();
+        if (!StringUtils.hasText(prefix)) {
+            return String.format("gs://%s/%s%s", properties.getBackupBucket().trim(), timestamp, suffix);
+        }
         return String.format("gs://%s/%s/%s%s", properties.getBackupBucket().trim(), prefix, timestamp, suffix);
     }
 
@@ -111,6 +105,22 @@ public class FirestoreBackupService {
         String trimmed = label.trim().toLowerCase();
         String sanitized = trimmed.replaceAll("[^a-z0-9_-]", "-");
         return sanitized.replaceAll("-{2,}", "-");
+    }
+
+    private String resolvePrefix() {
+        String prefix = properties.getBackupPrefix();
+        if (prefix == null) {
+            prefix = "exports";
+        } else {
+            prefix = prefix.trim();
+        }
+        if (prefix.startsWith("/")) {
+            prefix = prefix.substring(1);
+        }
+        if (prefix.endsWith("/")) {
+            prefix = prefix.substring(0, prefix.length() - 1);
+        }
+        return prefix;
     }
 
     private String databaseName() {

@@ -192,7 +192,7 @@ public class FirestoreProperties {
     }
 
     public void setBackupPrefix(String backupPrefix) {
-        if (backupPrefix != null && !backupPrefix.isBlank()) {
+        if (backupPrefix != null) {
             this.backupPrefix = backupPrefix;
         }
     }

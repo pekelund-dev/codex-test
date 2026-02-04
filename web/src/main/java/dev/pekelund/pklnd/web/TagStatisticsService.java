@@ -22,6 +22,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ import org.springframework.util.StringUtils;
 @Service
 public class TagStatisticsService {
 
+    private static final Logger log = LoggerFactory.getLogger(TagStatisticsService.class);
     private static final Pattern EAN_PATTERN = Pattern.compile("(\\d{8,14})");
 
     private final FirestoreProperties firestoreProperties;
@@ -150,6 +153,7 @@ public class TagStatisticsService {
 
             return Optional.of(new CachedTagSummary(summary, computedAt));
         } catch (Exception ex) {
+            log.warn("Failed to load cached summary for key {}", cacheKey, ex);
             return Optional.empty();
         }
     }
@@ -170,6 +174,7 @@ public class TagStatisticsService {
             }
             return Optional.ofNullable(toInstant(snapshot.get("updatedAt")));
         } catch (Exception ex) {
+            log.warn("Failed to load tag summary change timestamp for key {}", cacheKey, ex);
             return Optional.empty();
         }
     }
@@ -202,7 +207,7 @@ public class TagStatisticsService {
                 .set(payload)
                 .get();
         } catch (Exception ex) {
-            // Cache writes are best-effort.
+            log.warn("Failed to store tag summary for key {}", cacheKey, ex);
         }
     }
 
