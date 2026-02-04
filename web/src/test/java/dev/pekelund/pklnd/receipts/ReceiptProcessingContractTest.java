@@ -5,7 +5,9 @@ import au.com.dius.pact.consumer.dsl.PactDslJsonBody;
 import au.com.dius.pact.consumer.dsl.PactDslWithProvider;
 import au.com.dius.pact.consumer.junit5.PactConsumerTestExt;
 import au.com.dius.pact.consumer.junit5.PactTestFor;
+import au.com.dius.pact.core.model.PactSpecVersion;
 import au.com.dius.pact.core.model.RequestResponsePact;
+import au.com.dius.pact.core.model.annotations.Pact;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.StoredReceiptReference;
 import java.nio.file.Path;
@@ -27,17 +29,18 @@ class ReceiptProcessingContractTest {
             Path.of("..", "receipt-parser", "src", "test", "resources", "pacts").toString());
     }
 
-    @au.com.dius.pact.consumer.junit5.Pact(consumer = "pklnd-web", provider = "receipt-processor")
+    @Pact(consumer = "pklnd-web", provider = "receipt-processor")
     RequestResponsePact storageEventContract(PactDslWithProvider builder) {
-        PactDslJsonBody payload = new PactDslJsonBody()
+        PactDslJsonBody payload = new PactDslJsonBody();
+        payload
             .stringValue("bucket", "receipts-bucket")
-            .stringValue("name", "uploads/receipt-1.pdf")
-            .object("metadata")
+            .stringValue("name", "uploads/receipt-1.pdf");
+        payload.object("metadata")
             .stringValue(ReceiptOwner.METADATA_OWNER_ID, "user-123")
             .stringValue(ReceiptOwner.METADATA_OWNER_DISPLAY_NAME, "Anna Andersson")
             .stringValue(ReceiptOwner.METADATA_OWNER_EMAIL, "anna@example.com")
-            .closeObject()
-            .object("owner")
+            .closeObject();
+        payload.object("owner")
             .stringValue("id", "user-123")
             .stringValue("displayName", "Anna Andersson")
             .stringValue("email", "anna@example.com")
@@ -64,7 +67,7 @@ class ReceiptProcessingContractTest {
     }
 
     @Test
-    @PactTestFor(pactMethod = "storageEventContract")
+    @PactTestFor(pactMethod = "storageEventContract", pactVersion = PactSpecVersion.V3)
     void notifyUploadsSendsCloudEvent(MockServer mockServer) {
         ReceiptProcessingProperties properties = new ReceiptProcessingProperties();
         properties.setBaseUrl(mockServer.getUrl());

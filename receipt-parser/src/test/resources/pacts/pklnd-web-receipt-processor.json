@@ -2,9 +2,6 @@
   "consumer": {
     "name": "pklnd-web"
   },
-  "provider": {
-    "name": "receipt-processor"
-  },
   "interactions": [
     {
       "description": "a Cloud Storage finalize event",
@@ -14,34 +11,33 @@
         }
       ],
       "request": {
-        "method": "POST",
-        "path": "/events/storage",
-        "headers": {
-          "Content-Type": "application/json",
-          "ce-specversion": "1.0",
-          "ce-type": "google.cloud.storage.object.v1.finalized",
-          "ce-source": "projects/_/buckets/receipts-bucket/objects/uploads/receipt-1.pdf",
-          "ce-subject": "objects/uploads/receipt-1.pdf",
-          "ce-id": "123e4567-e89b-12d3-a456-426614174000",
-          "ce-time": "2024-01-01T00:00:00Z"
-        },
         "body": {
           "bucket": "receipts-bucket",
-          "name": "uploads/receipt-1.pdf",
           "metadata": {
-            "receipt.owner.id": "user-123",
             "receipt.owner.displayName": "Anna Andersson",
-            "receipt.owner.email": "anna@example.com"
+            "receipt.owner.email": "anna@example.com",
+            "receipt.owner.id": "user-123"
           },
+          "name": "uploads/receipt-1.pdf",
           "owner": {
-            "id": "user-123",
             "displayName": "Anna Andersson",
-            "email": "anna@example.com"
+            "email": "anna@example.com",
+            "id": "user-123"
           }
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "ce-id": "123e4567-e89b-12d3-a456-426614174000",
+          "ce-source": "projects/_/buckets/receipts-bucket/objects/uploads/receipt-1.pdf",
+          "ce-specversion": "1.0",
+          "ce-subject": "objects/uploads/receipt-1.pdf",
+          "ce-time": "2024-01-01T00:00:00Z",
+          "ce-type": "google.cloud.storage.object.v1.finalized"
         },
         "matchingRules": {
           "header": {
             "Content-Type": {
+              "combine": "AND",
               "matchers": [
                 {
                   "match": "regex",
@@ -50,6 +46,7 @@
               ]
             },
             "ce-id": {
+              "combine": "AND",
               "matchers": [
                 {
                   "match": "regex",
@@ -58,73 +55,18 @@
               ]
             },
             "ce-time": {
+              "combine": "AND",
               "matchers": [
                 {
                   "match": "regex",
-                  "regex": "\\\\d{4}-\\\\d{2}-\\\\d{2}T.*Z"
-                }
-              ]
-            }
-          },
-          "body": {
-            "$.bucket": {
-              "matchers": [
-                {
-                  "match": "type"
-                }
-              ]
-            },
-            "$.name": {
-              "matchers": [
-                {
-                  "match": "type"
-                }
-              ]
-            },
-            "$.metadata.receipt.owner.id": {
-              "matchers": [
-                {
-                  "match": "type"
-                }
-              ]
-            },
-            "$.metadata.receipt.owner.displayName": {
-              "matchers": [
-                {
-                  "match": "type"
-                }
-              ]
-            },
-            "$.metadata.receipt.owner.email": {
-              "matchers": [
-                {
-                  "match": "type"
-                }
-              ]
-            },
-            "$.owner.id": {
-              "matchers": [
-                {
-                  "match": "type"
-                }
-              ]
-            },
-            "$.owner.displayName": {
-              "matchers": [
-                {
-                  "match": "type"
-                }
-              ]
-            },
-            "$.owner.email": {
-              "matchers": [
-                {
-                  "match": "type"
+                  "regex": "\\d{4}-\\d{2}-\\d{2}T.*Z"
                 }
               ]
             }
           }
-        }
+        },
+        "method": "POST",
+        "path": "/events/storage"
       },
       "response": {
         "status": 202
@@ -132,8 +74,14 @@
     }
   ],
   "metadata": {
+    "pact-jvm": {
+      "version": "4.6.10"
+    },
     "pactSpecification": {
       "version": "3.0.0"
     }
+  },
+  "provider": {
+    "name": "receipt-processor"
   }
 }
