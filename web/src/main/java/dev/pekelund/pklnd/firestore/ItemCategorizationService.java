@@ -338,6 +338,7 @@ public class ItemCategorizationService {
             data.put("tagId", tagId);
             data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
             data.put("assignedBy", assignedBy);
+            data.put("ownerId", ownerId);
 
             docRef.set(data).get();
             updateTagSummaryMeta(tagId, ownerId);
@@ -437,6 +438,7 @@ public class ItemCategorizationService {
                         data.put("tagId", tagId);
                         data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
                         data.put("assignedBy", assignedBy);
+                        data.put("ownerId", ownerId);
 
                         docRef.set(data).get();
                         assignedCount++;
@@ -612,8 +614,8 @@ public class ItemCategorizationService {
      * Get all items that have a specific tag assigned across all receipts.
      * Returns a list of tuples containing the receipt and item index.
      */
-    public List<TaggedItemInfo> getItemsByTag(String tagId) {
-        if (firestore.isEmpty() || !StringUtils.hasText(tagId)) {
+    public List<TaggedItemInfo> getItemsByTag(String tagId, String ownerId) {
+        if (firestore.isEmpty() || !StringUtils.hasText(tagId) || !StringUtils.hasText(ownerId)) {
             return List.of();
         }
 
@@ -621,6 +623,7 @@ public class ItemCategorizationService {
             Firestore db = firestore.get();
             QuerySnapshot snapshot = db.collection(ITEM_TAGS_COLLECTION)
                 .whereEqualTo("tagId", tagId)
+                .whereEqualTo("ownerId", ownerId)
                 .get()
                 .get();
             recordRead("Load items by tag", snapshot.size());

@@ -50,6 +50,9 @@ class StatisticsControllerTests {
     private TagStatisticsService tagStatisticsService;
 
     @MockitoBean
+    private ReceiptOwnerResolver receiptOwnerResolver;
+
+    @MockitoBean
     private FirestoreReadTotals firestoreReadTotals;
 
     @Test

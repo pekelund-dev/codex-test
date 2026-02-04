@@ -5,8 +5,10 @@ import dev.pekelund.pklnd.firestore.ItemTag;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.firestore.TagService;
+import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.web.DashboardStatisticsService;
 import dev.pekelund.pklnd.web.DashboardStatisticsService.DashboardStatistics;
+import dev.pekelund.pklnd.web.ReceiptOwnerResolver;
 import dev.pekelund.pklnd.web.TagStatisticsService;
 import dev.pekelund.pklnd.web.TagStatisticsService.TagSummary;
 import java.math.BigDecimal;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,17 +34,20 @@ public class StatisticsController {
     private final ItemCategorizationService itemCategorizationService;
     private final ReceiptExtractionService receiptExtractionService;
     private final TagStatisticsService tagStatisticsService;
+    private final ReceiptOwnerResolver receiptOwnerResolver;
 
     public StatisticsController(DashboardStatisticsService dashboardStatisticsService,
                                 TagService tagService,
                                 ItemCategorizationService itemCategorizationService,
                                 ReceiptExtractionService receiptExtractionService,
-                                TagStatisticsService tagStatisticsService) {
+                                TagStatisticsService tagStatisticsService,
+                                ReceiptOwnerResolver receiptOwnerResolver) {
         this.dashboardStatisticsService = dashboardStatisticsService;
         this.tagService = tagService;
         this.itemCategorizationService = itemCategorizationService;
         this.receiptExtractionService = receiptExtractionService;
         this.tagStatisticsService = tagStatisticsService;
+        this.receiptOwnerResolver = receiptOwnerResolver;
     }
 
     @GetMapping("/dashboard/statistics")
@@ -181,8 +187,11 @@ public class StatisticsController {
 
         model.addAttribute("tag", tag);
 
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
         List<ItemCategorizationService.TaggedItemInfo> taggedItems =
-            itemCategorizationService.getItemsByTag(tagId);
+            owner == null || !StringUtils.hasText(owner.id())
+                ? List.of()
+                : itemCategorizationService.getItemsByTag(tagId, owner.id());
 
         Map<String, List<ItemCategorizationService.TaggedItemInfo>> itemsByReceipt =
             taggedItems.stream()

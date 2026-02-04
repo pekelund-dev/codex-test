@@ -103,7 +103,7 @@ public class TagStatisticsService {
                 continue;
             }
 
-            List<TaggedItemInfo> taggedItems = itemCategorizationService.get().getItemsByTag(tag.id());
+            List<TaggedItemInfo> taggedItems = itemCategorizationService.get().getItemsByTag(tag.id(), ownerId);
             TagSummary summary = buildSummary(taggedItems, receiptCache, owner);
             summaries.put(tag.id(), summary);
             storeTagSummary(cacheKey, tag.id(), ownerId, summary, lastChangeAt);
@@ -241,15 +241,18 @@ public class TagStatisticsService {
         if (references == null || references.isEmpty()) {
             return List.of();
         }
-        List<DocumentSnapshot> snapshots = new ArrayList<>();
+        List<com.google.api.core.ApiFuture<List<DocumentSnapshot>>> futures = new ArrayList<>();
         int batchSize = FIRESTORE_GET_ALL_BATCH_SIZE;
         for (int i = 0; i < references.size(); i += batchSize) {
             int end = Math.min(i + batchSize, references.size());
             List<DocumentReference> batch = references.subList(i, end);
             if (!batch.isEmpty()) {
-                var future = firestore.get().getAll(batch.toArray(DocumentReference[]::new));
-                snapshots.addAll(future.get());
+                futures.add(firestore.get().getAll(batch.toArray(DocumentReference[]::new)));
             }
+        }
+        List<DocumentSnapshot> snapshots = new ArrayList<>();
+        for (var future : futures) {
+            snapshots.addAll(future.get());
         }
         return snapshots;
     }

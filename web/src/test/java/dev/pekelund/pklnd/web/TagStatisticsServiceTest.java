@@ -64,7 +64,7 @@ class TagStatisticsServiceTest {
         );
 
         when(receiptExtractionService.findById("receipt-1")).thenReturn(Optional.of(receipt));
-        when(categorizationService.getItemsByTag("tag-1")).thenReturn(List.of(
+        when(categorizationService.getItemsByTag("tag-1", "user-1")).thenReturn(List.of(
             new ItemCategorizationService.TaggedItemInfo("receipt-1", "0", null, Instant.now())
         ));
 
@@ -167,14 +167,14 @@ class TagStatisticsServiceTest {
         assertThat(summary.itemCount()).isEqualTo(3);
         assertThat(summary.storeCount()).isEqualTo(2);
         assertThat(summary.totalAmount()).isEqualByComparingTo(new BigDecimal("25.00"));
-        verify(categorizationService, never()).getItemsByTag(any());
+        verify(categorizationService, never()).getItemsByTag(any(), any());
     }
 
     @Test
     void summarizeTags_ShouldBatchFirestoreReads() throws Exception {
         ItemCategorizationService categorizationService = mock(ItemCategorizationService.class);
         when(categorizationService.isEnabled()).thenReturn(true);
-        when(categorizationService.getItemsByTag(any())).thenReturn(List.of());
+        when(categorizationService.getItemsByTag(any(), any())).thenReturn(List.of());
 
         ReceiptExtractionService receiptExtractionService = mock(ReceiptExtractionService.class);
         when(receiptExtractionService.isEnabled()).thenReturn(true);
