@@ -126,23 +126,23 @@ public class DashboardController {
                                    RedirectAttributes redirectAttributes) {
         if (!isAdmin(authentication)) {
             redirectAttributes.addFlashAttribute(
-                "backupErrorMessage",
-                messageSource.getMessage("dashboard.backup.error.no-permission", null, LocaleContextHolder.getLocale())
+                "restoreErrorMessage",
+                messageSource.getMessage("dashboard.restore.error.no-permission", null, LocaleContextHolder.getLocale())
             );
             return "redirect:/dashboard";
         }
 
         if (!firestoreBackupService.isEnabled()) {
             redirectAttributes.addFlashAttribute(
-                "backupErrorMessage",
-                messageSource.getMessage("dashboard.backup.error.disabled", null, LocaleContextHolder.getLocale())
+                "restoreErrorMessage",
+                messageSource.getMessage("dashboard.restore.error.disabled", null, LocaleContextHolder.getLocale())
             );
             return "redirect:/dashboard#admin-management";
         }
 
         if (restoreUri == null || restoreUri.trim().isEmpty()) {
             redirectAttributes.addFlashAttribute(
-                "backupErrorMessage",
+                "restoreErrorMessage",
                 messageSource.getMessage("dashboard.restore.error.missing", null, LocaleContextHolder.getLocale())
             );
             return "redirect:/dashboard#admin-management";
@@ -151,7 +151,7 @@ public class DashboardController {
         try {
             FirestoreBackupService.BackupOperation operation = firestoreBackupService.startImport(restoreUri.trim());
             redirectAttributes.addFlashAttribute(
-                "backupSuccessMessage",
+                "restoreSuccessMessage",
                 messageSource.getMessage(
                     "dashboard.restore.success",
                     new Object[]{operation.uri()},
@@ -160,7 +160,7 @@ public class DashboardController {
             );
         } catch (Exception ex) {
             redirectAttributes.addFlashAttribute(
-                "backupErrorMessage",
+                "restoreErrorMessage",
                 messageSource.getMessage("dashboard.restore.error.generic", null, LocaleContextHolder.getLocale())
             );
         }

@@ -65,7 +65,8 @@ public class FirestoreMigrationRunner {
         }
     }
 
-    private boolean isApplied(Firestore db, FirestoreMigration migration) throws Exception {
+    private boolean isApplied(Firestore db, FirestoreMigration migration)
+        throws InterruptedException, java.util.concurrent.ExecutionException {
         DocumentSnapshot snapshot = db.collection(MIGRATIONS_COLLECTION)
             .document(String.valueOf(migration.version()))
             .get()
@@ -73,7 +74,8 @@ public class FirestoreMigrationRunner {
         return snapshot.exists();
     }
 
-    private void markApplied(Firestore db, FirestoreMigration migration) throws Exception {
+    private void markApplied(Firestore db, FirestoreMigration migration)
+        throws InterruptedException, java.util.concurrent.ExecutionException {
         Map<String, Object> payload = new HashMap<>();
         payload.put("version", migration.version());
         payload.put("description", migration.description());

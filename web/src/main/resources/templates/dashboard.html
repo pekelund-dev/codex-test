@@ -87,6 +87,16 @@
                             <span th:text="${backupErrorMessage}">Backup failed.</span>
                         </div>
                     </div>
+                    <div class="mt-4" th:if="${restoreSuccessMessage}">
+                        <div class="alert alert-success mb-0" role="alert">
+                            <span th:text="${restoreSuccessMessage}">Restore started.</span>
+                        </div>
+                    </div>
+                    <div class="mt-4" th:if="${restoreErrorMessage}">
+                        <div class="alert alert-danger mb-0" role="alert">
+                            <span th:text="${restoreErrorMessage}">Restore failed.</span>
+                        </div>
+                    </div>
                     <div class="mt-4" th:if="${adminLoadError}">
                         <div class="alert alert-danger mb-0" role="alert">
                             <span th:text="${adminLoadError != null ? adminLoadError : #messages.msg('dashboard.admin.error.load')}">Fel</span>
