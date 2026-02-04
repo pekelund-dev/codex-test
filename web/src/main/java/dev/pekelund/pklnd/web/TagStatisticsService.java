@@ -47,25 +47,21 @@ public class TagStatisticsService {
             return Map.of();
         }
 
-        Map<String, ParsedReceipt> receiptsById = receiptExtractionService.get()
-            .listAllReceipts()
-            .stream()
-            .filter(receipt -> receipt.id() != null)
-            .collect(HashMap::new, (map, receipt) -> map.put(receipt.id(), receipt), HashMap::putAll);
-
         Map<String, TagSummary> summaries = new HashMap<>();
+        Map<String, Optional<ParsedReceipt>> receiptCache = new HashMap<>();
         for (ItemTag tag : tags) {
             if (tag == null || !StringUtils.hasText(tag.id())) {
                 continue;
             }
-            TagSummary summary = buildSummary(tag.id(), receiptsById);
+            List<TaggedItemInfo> taggedItems = itemCategorizationService.get().getItemsByTag(tag.id());
+            TagSummary summary = buildSummary(taggedItems, receiptCache);
             summaries.put(tag.id(), summary);
         }
         return Collections.unmodifiableMap(summaries);
     }
 
-    private TagSummary buildSummary(String tagId, Map<String, ParsedReceipt> receiptsById) {
-        List<TaggedItemInfo> taggedItems = itemCategorizationService.get().getItemsByTag(tagId);
+    private TagSummary buildSummary(List<TaggedItemInfo> taggedItems,
+                                    Map<String, Optional<ParsedReceipt>> receiptCache) {
         if (taggedItems.isEmpty()) {
             return TagSummary.empty();
         }
@@ -78,7 +74,7 @@ public class TagStatisticsService {
             if (taggedItem == null) {
                 continue;
             }
-            ParsedReceipt receipt = receiptsById.get(taggedItem.receiptId());
+            ParsedReceipt receipt = resolveReceipt(taggedItem.receiptId(), receiptCache);
             if (receipt == null) {
                 continue;
             }
@@ -96,6 +92,19 @@ public class TagStatisticsService {
         }
 
         return new TagSummary(itemCount, totalAmount, stores.size());
+    }
+
+    private ParsedReceipt resolveReceipt(String receiptId, Map<String, Optional<ParsedReceipt>> receiptCache) {
+        if (!StringUtils.hasText(receiptId)) {
+            return null;
+        }
+        if (receiptCache.containsKey(receiptId)) {
+            return receiptCache.get(receiptId).orElse(null);
+        }
+
+        Optional<ParsedReceipt> receipt = receiptExtractionService.get().findById(receiptId);
+        receiptCache.put(receiptId, receipt);
+        return receipt.orElse(null);
     }
 
     private BigDecimal resolveItemTotal(ParsedReceipt receipt, TaggedItemInfo taggedItem) {

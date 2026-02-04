@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,7 +46,7 @@ class TagStatisticsServiceTest {
             null
         );
 
-        when(receiptExtractionService.listAllReceipts()).thenReturn(List.of(receipt));
+        when(receiptExtractionService.findById("receipt-1")).thenReturn(Optional.of(receipt));
         when(categorizationService.getItemsByTag("tag-1")).thenReturn(List.of(
             new ItemCategorizationService.TaggedItemInfo("receipt-1", "0", null, Instant.now())
         ));
