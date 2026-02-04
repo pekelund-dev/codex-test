@@ -1,6 +1,7 @@
 package dev.pekelund.pklnd.web;
 
 import com.google.api.core.ApiFuture;
+import com.google.api.core.ApiFutures;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;
@@ -112,8 +113,7 @@ class TagStatisticsServiceTest {
         CollectionReference summariesCollection = mock(CollectionReference.class);
         DocumentReference summaryDocument = mock(DocumentReference.class);
         DocumentSnapshot summarySnapshot = mock(DocumentSnapshot.class);
-        @SuppressWarnings("unchecked")
-        ApiFuture<DocumentSnapshot> summaryFuture = mock(ApiFuture.class);
+        ApiFuture<DocumentSnapshot> summaryFuture = ApiFutures.immediateFuture(summarySnapshot);
 
         when(summarySnapshot.exists()).thenReturn(true);
         when(summarySnapshot.getId()).thenReturn("user-1:tag-1");
@@ -121,8 +121,6 @@ class TagStatisticsServiceTest {
         when(summarySnapshot.get("itemCount")).thenReturn(3);
         when(summarySnapshot.get("storeCount")).thenReturn(2);
         when(summarySnapshot.get("totalAmount")).thenReturn("25.00");
-        when(summaryFuture.get()).thenReturn(summarySnapshot);
-
         when(firestore.collection(properties.getTagSummariesCollection())).thenReturn(summariesCollection);
         when(summariesCollection.document("user-1:tag-1")).thenReturn(summaryDocument);
         when(summaryDocument.get()).thenReturn(summaryFuture);
@@ -130,21 +128,15 @@ class TagStatisticsServiceTest {
         CollectionReference metaCollection = mock(CollectionReference.class);
         DocumentReference metaDocument = mock(DocumentReference.class);
         DocumentSnapshot metaSnapshot = mock(DocumentSnapshot.class);
-        @SuppressWarnings("unchecked")
-        ApiFuture<DocumentSnapshot> metaFuture = mock(ApiFuture.class);
+        ApiFuture<DocumentSnapshot> metaFuture = ApiFutures.immediateFuture(metaSnapshot);
         when(metaSnapshot.exists()).thenReturn(false);
         when(metaSnapshot.getId()).thenReturn("user-1:tag-1");
-        when(metaFuture.get()).thenReturn(metaSnapshot);
         when(firestore.collection(properties.getTagSummaryMetaCollection())).thenReturn(metaCollection);
         when(metaCollection.document("user-1:tag-1")).thenReturn(metaDocument);
         when(metaDocument.get()).thenReturn(metaFuture);
 
-        @SuppressWarnings("unchecked")
-        ApiFuture<List<DocumentSnapshot>> metaBatchFuture = mock(ApiFuture.class);
-        @SuppressWarnings("unchecked")
-        ApiFuture<List<DocumentSnapshot>> summaryBatchFuture = mock(ApiFuture.class);
-        when(metaBatchFuture.get()).thenReturn(List.of(metaSnapshot));
-        when(summaryBatchFuture.get()).thenReturn(List.of(summarySnapshot));
+        ApiFuture<List<DocumentSnapshot>> metaBatchFuture = ApiFutures.immediateFuture(List.of(metaSnapshot));
+        ApiFuture<List<DocumentSnapshot>> summaryBatchFuture = ApiFutures.immediateFuture(List.of(summarySnapshot));
         when(firestore.getAll(any(DocumentReference[].class))).thenReturn(metaBatchFuture, summaryBatchFuture);
 
         @SuppressWarnings("unchecked")
@@ -192,9 +184,7 @@ class TagStatisticsServiceTest {
         when(firestore.collection(anyString())).thenReturn(collection);
         when(collection.document(anyString())).thenReturn(document);
 
-        @SuppressWarnings("unchecked")
-        ApiFuture<List<DocumentSnapshot>> batchFuture = mock(ApiFuture.class);
-        when(batchFuture.get()).thenReturn(List.of());
+        ApiFuture<List<DocumentSnapshot>> batchFuture = ApiFutures.immediateFuture(List.of());
         when(firestore.getAll(any(DocumentReference[].class))).thenReturn(batchFuture);
 
         @SuppressWarnings("unchecked")
