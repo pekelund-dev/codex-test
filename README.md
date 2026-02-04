@@ -119,7 +119,8 @@ Use the `FIRESTORE_DATABASE_ID` environment variable to point the app at the Fir
 For admin-triggered backups and restores, configure `FIRESTORE_BACKUP_BUCKET` (and optionally `FIRESTORE_BACKUP_PREFIX`) to
 point at a Cloud Storage bucket dedicated to Firestore exports. Tag summary caching defaults to the
 `tagSummaries`/`tagSummaryMeta` collections; override with `FIRESTORE_TAG_SUMMARIES_COLLECTION` and
-`FIRESTORE_TAG_SUMMARY_META_COLLECTION` if you need custom names.
+`FIRESTORE_TAG_SUMMARY_META_COLLECTION` if you need custom names. Cached summaries are stored per user,
+so each account has isolated tag statistics.
 
 > 💡 When deploying to Cloud Run or any other Google-managed runtime, leave `FIRESTORE_CREDENTIALS` unset—the service account attached to the workload authenticates automatically via Application Default Credentials. Only download JSON keys for local development or third-party hosting.
 

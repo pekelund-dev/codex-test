@@ -9,6 +9,7 @@ import dev.pekelund.pklnd.firestore.ItemCategorizationService.TaggedItemInfo;
 import dev.pekelund.pklnd.firestore.ItemTag;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
+import dev.pekelund.pklnd.storage.ReceiptOwner;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -22,6 +23,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -32,17 +34,20 @@ public class TagStatisticsService {
 
     private final FirestoreProperties firestoreProperties;
     private final Optional<Firestore> firestore;
+    private final ReceiptOwnerResolver receiptOwnerResolver;
     private final Optional<ItemCategorizationService> itemCategorizationService;
     private final Optional<ReceiptExtractionService> receiptExtractionService;
 
     public TagStatisticsService(
         FirestoreProperties firestoreProperties,
         ObjectProvider<Firestore> firestoreProvider,
+        ReceiptOwnerResolver receiptOwnerResolver,
         Optional<ItemCategorizationService> itemCategorizationService,
         Optional<ReceiptExtractionService> receiptExtractionService
     ) {
         this.firestoreProperties = firestoreProperties;
         this.firestore = Optional.ofNullable(firestoreProvider.getIfAvailable());
+        this.receiptOwnerResolver = receiptOwnerResolver;
         this.itemCategorizationService = itemCategorizationService;
         this.receiptExtractionService = receiptExtractionService;
     }
@@ -54,19 +59,22 @@ public class TagStatisticsService {
             && receiptExtractionService.get().isEnabled();
     }
 
-    public Map<String, TagSummary> summarizeTags(List<ItemTag> tags) {
+    public Map<String, TagSummary> summarizeTags(List<ItemTag> tags, Authentication authentication) {
         if (!isEnabled() || tags == null || tags.isEmpty()) {
             return Map.of();
         }
 
+        String ownerId = resolveOwnerId(authentication);
+        String cacheKeySuffix = ownerId;
         Map<String, TagSummary> summaries = new HashMap<>();
         Map<String, Optional<ParsedReceipt>> receiptCache = new HashMap<>();
         for (ItemTag tag : tags) {
             if (tag == null || !StringUtils.hasText(tag.id())) {
                 continue;
             }
-            Optional<Instant> lastChangeAt = loadTagSummaryChangeAt(tag.id());
-            Optional<CachedTagSummary> cachedSummary = loadCachedSummary(tag.id());
+            String cacheKey = buildCacheKey(cacheKeySuffix, tag.id());
+            Optional<Instant> lastChangeAt = loadTagSummaryChangeAt(cacheKey);
+            Optional<CachedTagSummary> cachedSummary = loadCachedSummary(cacheKey);
             if (cachedSummary.isPresent()
                 && (lastChangeAt.isEmpty() || !cachedSummary.get().computedAt().isBefore(lastChangeAt.get()))) {
                 summaries.put(tag.id(), cachedSummary.get().summary());
@@ -76,7 +84,7 @@ public class TagStatisticsService {
             List<TaggedItemInfo> taggedItems = itemCategorizationService.get().getItemsByTag(tag.id());
             TagSummary summary = buildSummary(taggedItems, receiptCache);
             summaries.put(tag.id(), summary);
-            storeTagSummary(tag.id(), summary, lastChangeAt);
+            storeTagSummary(cacheKey, tag.id(), ownerId, summary, lastChangeAt);
         }
         return Collections.unmodifiableMap(summaries);
     }
@@ -115,15 +123,15 @@ public class TagStatisticsService {
         return new TagSummary(itemCount, totalAmount, stores.size());
     }
 
-    private Optional<CachedTagSummary> loadCachedSummary(String tagId) {
-        if (!isCacheEnabled()) {
+    private Optional<CachedTagSummary> loadCachedSummary(String cacheKey) {
+        if (!isCacheEnabled(cacheKey)) {
             return Optional.empty();
         }
 
         try {
             DocumentSnapshot snapshot = firestore.get()
                 .collection(firestoreProperties.getTagSummariesCollection())
-                .document(tagId)
+                .document(cacheKey)
                 .get()
                 .get();
             if (!snapshot.exists() || snapshot.getData() == null) {
@@ -146,15 +154,15 @@ public class TagStatisticsService {
         }
     }
 
-    private Optional<Instant> loadTagSummaryChangeAt(String tagId) {
-        if (!isCacheEnabled()) {
+    private Optional<Instant> loadTagSummaryChangeAt(String cacheKey) {
+        if (!isCacheEnabled(cacheKey)) {
             return Optional.empty();
         }
 
         try {
             DocumentSnapshot snapshot = firestore.get()
                 .collection(firestoreProperties.getTagSummaryMetaCollection())
-                .document(tagId)
+                .document(cacheKey)
                 .get()
                 .get();
             if (!snapshot.exists()) {
@@ -166,13 +174,20 @@ public class TagStatisticsService {
         }
     }
 
-    private void storeTagSummary(String tagId, TagSummary summary, Optional<Instant> lastChangeAt) {
-        if (!isCacheEnabled()) {
+    private void storeTagSummary(String cacheKey,
+                                 String tagId,
+                                 String ownerId,
+                                 TagSummary summary,
+                                 Optional<Instant> lastChangeAt) {
+        if (!isCacheEnabled(cacheKey)) {
             return;
         }
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("tagId", tagId);
+        if (StringUtils.hasText(ownerId)) {
+            payload.put("ownerId", ownerId);
+        }
         payload.put("itemCount", summary.itemCount());
         payload.put("storeCount", summary.storeCount());
         payload.put("totalAmount", summary.totalAmount().toPlainString());
@@ -183,7 +198,7 @@ public class TagStatisticsService {
         try {
             firestore.get()
                 .collection(firestoreProperties.getTagSummariesCollection())
-                .document(tagId)
+                .document(cacheKey)
                 .set(payload)
                 .get();
         } catch (Exception ex) {
@@ -191,11 +206,30 @@ public class TagStatisticsService {
         }
     }
 
-    private boolean isCacheEnabled() {
+    private boolean isCacheEnabled(String cacheKey) {
         return firestore.isPresent()
             && firestoreProperties.isEnabled()
             && StringUtils.hasText(firestoreProperties.getTagSummariesCollection())
-            && StringUtils.hasText(firestoreProperties.getTagSummaryMetaCollection());
+            && StringUtils.hasText(firestoreProperties.getTagSummaryMetaCollection())
+            && StringUtils.hasText(cacheKey);
+    }
+
+    private String resolveOwnerId(Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || !StringUtils.hasText(owner.id())) {
+            return null;
+        }
+        return owner.id();
+    }
+
+    private String buildCacheKey(String ownerId, String tagId) {
+        if (!StringUtils.hasText(ownerId) || !StringUtils.hasText(tagId)) {
+            return null;
+        }
+        return ownerId + ":" + tagId;
     }
 
     private ParsedReceipt resolveReceipt(String receiptId, Map<String, Optional<ParsedReceipt>> receiptCache) {

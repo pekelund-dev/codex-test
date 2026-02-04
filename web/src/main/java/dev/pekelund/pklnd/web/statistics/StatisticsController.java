@@ -157,7 +157,7 @@ public class StatisticsController {
         List<ItemTag> tags = tagService.listTags();
         model.addAttribute("tags", tags);
         model.addAttribute("tagsAvailable", !tags.isEmpty());
-        Map<String, TagSummary> summaries = tagStatisticsService.summarizeTags(tags);
+        Map<String, TagSummary> summaries = tagStatisticsService.summarizeTags(tags, authentication);
         if (summaries.isEmpty()) {
             summaries = tags.stream()
                 .filter(tag -> tag != null && tag.id() != null)

@@ -11,6 +11,7 @@ import dev.pekelund.pklnd.firestore.FirestoreProperties;
 import dev.pekelund.pklnd.firestore.ItemTag;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
+import dev.pekelund.pklnd.storage.ReceiptOwner;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.security.core.Authentication;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -66,16 +68,18 @@ class TagStatisticsServiceTest {
         @SuppressWarnings("unchecked")
         ObjectProvider<com.google.cloud.firestore.Firestore> firestoreProvider = mock(ObjectProvider.class);
         when(firestoreProvider.getIfAvailable()).thenReturn(null);
+        ReceiptOwnerResolver receiptOwnerResolver = mock(ReceiptOwnerResolver.class);
 
         TagStatisticsService service = new TagStatisticsService(
             properties,
             firestoreProvider,
+            receiptOwnerResolver,
             java.util.Optional.of(categorizationService),
             java.util.Optional.of(receiptExtractionService)
         );
 
         ItemTag tag = ItemTag.builder().id("tag-1").name("Frys").build();
-        Map<String, TagStatisticsService.TagSummary> summaries = service.summarizeTags(List.of(tag));
+        Map<String, TagStatisticsService.TagSummary> summaries = service.summarizeTags(List.of(tag), null);
 
         TagStatisticsService.TagSummary summary = summaries.get("tag-1");
         assertThat(summary).isNotNull();
@@ -94,6 +98,10 @@ class TagStatisticsServiceTest {
         FirestoreProperties properties = new FirestoreProperties();
         properties.setEnabled(true);
 
+        Authentication authentication = mock(Authentication.class);
+        ReceiptOwnerResolver receiptOwnerResolver = mock(ReceiptOwnerResolver.class);
+        when(receiptOwnerResolver.resolve(authentication)).thenReturn(new ReceiptOwner("user-1", null, null));
+
         Firestore firestore = mock(Firestore.class);
         CollectionReference summariesCollection = mock(CollectionReference.class);
         DocumentReference summaryDocument = mock(DocumentReference.class);
@@ -109,7 +117,7 @@ class TagStatisticsServiceTest {
         when(summaryFuture.get()).thenReturn(summarySnapshot);
 
         when(firestore.collection(properties.getTagSummariesCollection())).thenReturn(summariesCollection);
-        when(summariesCollection.document("tag-1")).thenReturn(summaryDocument);
+        when(summariesCollection.document("user-1:tag-1")).thenReturn(summaryDocument);
         when(summaryDocument.get()).thenReturn(summaryFuture);
 
         CollectionReference metaCollection = mock(CollectionReference.class);
@@ -120,7 +128,7 @@ class TagStatisticsServiceTest {
         when(metaSnapshot.exists()).thenReturn(false);
         when(metaFuture.get()).thenReturn(metaSnapshot);
         when(firestore.collection(properties.getTagSummaryMetaCollection())).thenReturn(metaCollection);
-        when(metaCollection.document("tag-1")).thenReturn(metaDocument);
+        when(metaCollection.document("user-1:tag-1")).thenReturn(metaDocument);
         when(metaDocument.get()).thenReturn(metaFuture);
 
         @SuppressWarnings("unchecked")
@@ -130,12 +138,13 @@ class TagStatisticsServiceTest {
         TagStatisticsService service = new TagStatisticsService(
             properties,
             firestoreProvider,
+            receiptOwnerResolver,
             Optional.of(categorizationService),
             Optional.of(receiptExtractionService)
         );
 
         ItemTag tag = ItemTag.builder().id("tag-1").name("Frys").build();
-        Map<String, TagStatisticsService.TagSummary> summaries = service.summarizeTags(List.of(tag));
+        Map<String, TagStatisticsService.TagSummary> summaries = service.summarizeTags(List.of(tag), authentication);
 
         TagStatisticsService.TagSummary summary = summaries.get("tag-1");
         assertThat(summary).isNotNull();

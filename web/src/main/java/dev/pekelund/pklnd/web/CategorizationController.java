@@ -38,15 +38,18 @@ public class CategorizationController {
     private final Optional<CategoryService> categoryService;
     private final Optional<TagService> tagService;
     private final Optional<ItemCategorizationService> itemCategorizationService;
+    private final ReceiptOwnerResolver receiptOwnerResolver;
 
     public CategorizationController(
         @Autowired(required = false) CategoryService categoryService,
         @Autowired(required = false) TagService tagService,
-        @Autowired(required = false) ItemCategorizationService itemCategorizationService
+        @Autowired(required = false) ItemCategorizationService itemCategorizationService,
+        ReceiptOwnerResolver receiptOwnerResolver
     ) {
         this.categoryService = Optional.ofNullable(categoryService);
         this.tagService = Optional.ofNullable(tagService);
         this.itemCategorizationService = Optional.ofNullable(itemCategorizationService);
+        this.receiptOwnerResolver = receiptOwnerResolver;
     }
 
     /**
@@ -293,6 +296,7 @@ public class CategorizationController {
 
         try {
             String assignedBy = authentication != null ? authentication.getName() : "anonymous";
+            String ownerId = resolveOwnerId(authentication);
             
             // Log the incoming request for debugging
             log.info("Assigning tag: receiptId={}, itemIndex={}, itemEan='{}', tagId={}", 
@@ -305,7 +309,8 @@ public class CategorizationController {
                 int assignedCount = itemCategorizationService.get().assignTagByEan(
                     request.itemEan(),
                     request.tagId(),
-                    assignedBy
+                    assignedBy,
+                    ownerId
                 );
                 String message = "Tag assigned to " + assignedCount + " items with EAN " + request.itemEan();
                 log.info(message);
@@ -318,7 +323,8 @@ public class CategorizationController {
                     request.itemIndex(),
                     request.itemEan(),
                     request.tagId(),
-                    assignedBy
+                    assignedBy,
+                    ownerId
                 );
                 return ResponseEntity.ok("Tag assigned successfully");
             }
@@ -336,13 +342,15 @@ public class CategorizationController {
     public ResponseEntity<Void> removeTagFromItem(
         @PathVariable String receiptId,
         @RequestParam String itemIdentifier,
-        @PathVariable String tagId
+        @PathVariable String tagId,
+        Authentication authentication
     ) {
         if (itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
-        itemCategorizationService.get().removeTagFromItem(receiptId, itemIdentifier, tagId);
+        String ownerId = resolveOwnerId(authentication);
+        itemCategorizationService.get().removeTagFromItem(receiptId, itemIdentifier, tagId, ownerId);
         return ResponseEntity.noContent().build();
     }
 
@@ -352,4 +360,14 @@ public class CategorizationController {
     public record CreateTagRequest(String name) {}
     public record AssignCategoryRequest(String itemIndex, String itemEan, String categoryId) {}
     public record AssignTagRequest(String itemIndex, String itemEan, String tagId) {}
+
+    private String resolveOwnerId(Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+        return Optional.ofNullable(receiptOwnerResolver.resolve(authentication))
+            .map(owner -> owner.id())
+            .filter(StringUtils::hasText)
+            .orElse(null);
+    }
 }

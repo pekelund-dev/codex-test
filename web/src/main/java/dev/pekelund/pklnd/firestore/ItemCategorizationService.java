@@ -298,7 +298,8 @@ public class ItemCategorizationService {
         String itemIndex,
         String itemEan,
         String tagId,
-        String assignedBy
+        String assignedBy,
+        String ownerId
     ) {
         if (firestore.isEmpty()) {
             throw new IllegalStateException("Firestore is not enabled");
@@ -338,7 +339,7 @@ public class ItemCategorizationService {
             data.put("assignedBy", assignedBy);
 
             docRef.set(data).get();
-            updateTagSummaryMeta(tagId);
+            updateTagSummaryMeta(tagId, ownerId);
 
             return ItemTagMapping.builder()
                 .id(docId)
@@ -368,7 +369,7 @@ public class ItemCategorizationService {
      * @param assignedBy The user assigning the tag
      * @return The number of items that were assigned the tag
      */
-    public int assignTagByEan(String itemEan, String tagId, String assignedBy) {
+    public int assignTagByEan(String itemEan, String tagId, String assignedBy, String ownerId) {
         if (firestore.isEmpty()) {
             throw new IllegalStateException("Firestore is not enabled");
         }
@@ -443,7 +444,7 @@ public class ItemCategorizationService {
             log.info("Scanned {} items total, {} had EAN codes. Assigned tag {} to {} items with EAN {}", 
                 itemsChecked, itemsWithEan, tagId, assignedCount, itemEan);
             if (assignedCount > 0) {
-                updateTagSummaryMeta(tagId);
+                updateTagSummaryMeta(tagId, ownerId);
             }
             return assignedCount;
         } catch (InterruptedException ex) {
@@ -532,7 +533,7 @@ public class ItemCategorizationService {
     /**
      * Remove a tag from a receipt item.
      */
-    public void removeTagFromItem(String receiptId, String itemIdentifier, String tagId) {
+    public void removeTagFromItem(String receiptId, String itemIdentifier, String tagId, String ownerId) {
         if (firestore.isEmpty() || !StringUtils.hasText(receiptId) 
             || !StringUtils.hasText(itemIdentifier) || !StringUtils.hasText(tagId)) {
             return;
@@ -542,7 +543,7 @@ public class ItemCategorizationService {
             Firestore db = firestore.get();
             String docId = ItemTagMapping.createKey(receiptId, itemIdentifier, tagId);
             db.collection(ITEM_TAGS_COLLECTION).document(docId).delete().get();
-            updateTagSummaryMeta(tagId);
+            updateTagSummaryMeta(tagId, ownerId);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             log.error("Interrupted while removing tag from item", ex);
@@ -652,8 +653,8 @@ public class ItemCategorizationService {
         Instant assignedAt
     ) {}
 
-    private void updateTagSummaryMeta(String tagId) {
-        if (firestore.isEmpty() || !StringUtils.hasText(tagId)) {
+    private void updateTagSummaryMeta(String tagId, String ownerId) {
+        if (firestore.isEmpty() || !StringUtils.hasText(tagId) || !StringUtils.hasText(ownerId)) {
             return;
         }
 
@@ -667,7 +668,8 @@ public class ItemCategorizationService {
             Map<String, Object> payload = new HashMap<>();
             payload.put("tagId", tagId);
             payload.put("updatedAt", Timestamp.now());
-            db.collection(collection).document(tagId).set(payload).get();
+            payload.put("ownerId", ownerId);
+            db.collection(collection).document(ownerId + ":" + tagId).set(payload).get();
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             log.warn("Interrupted while updating tag summary metadata", ex);
