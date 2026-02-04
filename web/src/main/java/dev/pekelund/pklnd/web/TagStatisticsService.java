@@ -162,9 +162,6 @@ public class TagStatisticsService {
                 return Map.of();
             }
             var future = firestore.get().getAll(references.toArray(DocumentReference[]::new));
-            if (!future.isDone()) {
-                return Map.of();
-            }
             List<DocumentSnapshot> snapshots = future.get();
             Map<String, Optional<CachedTagSummary>> result = new HashMap<>();
             for (DocumentSnapshot snapshot : snapshots) {
@@ -211,9 +208,6 @@ public class TagStatisticsService {
                 return Map.of();
             }
             var future = firestore.get().getAll(references.toArray(DocumentReference[]::new));
-            if (!future.isDone()) {
-                return Map.of();
-            }
             List<DocumentSnapshot> snapshots = future.get();
             Map<String, Optional<Instant>> result = new HashMap<>();
             for (DocumentSnapshot snapshot : snapshots) {

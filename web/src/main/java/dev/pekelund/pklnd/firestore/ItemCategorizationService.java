@@ -669,11 +669,8 @@ public class ItemCategorizationService {
             payload.put("tagId", tagId);
             payload.put("updatedAt", Timestamp.now());
             payload.put("ownerId", ownerId);
-            db.collection(collection).document(ownerId + ":" + tagId).set(payload).get();
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            log.warn("Interrupted while updating tag summary metadata", ex);
-        } catch (ExecutionException ex) {
+            db.collection(collection).document(ownerId + ":" + tagId).set(payload);
+        } catch (Exception ex) {
             log.warn("Failed to update tag summary metadata", ex);
         }
     }
