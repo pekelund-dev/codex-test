@@ -68,6 +68,10 @@ public class FirestoreBackupService {
         if (!StringUtils.hasText(inputUri) || !inputUri.startsWith("gs://")) {
             throw new IllegalArgumentException("Import path must be a gs:// URI");
         }
+        String expectedPrefix = "gs://" + properties.getBackupBucket().trim() + "/";
+        if (!inputUri.startsWith(expectedPrefix)) {
+            throw new IllegalArgumentException("Import path must be within the authorized backup bucket");
+        }
 
         String databaseName = databaseName();
 
