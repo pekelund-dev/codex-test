@@ -11,6 +11,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -36,7 +37,7 @@ public class FirestoreMigrationRunner {
     }
 
     @EventListener
-    public void runMigrations(org.springframework.boot.context.event.ApplicationReadyEvent event) {
+    public void runMigrations(ApplicationReadyEvent event) {
         if (!properties.isEnabled() || firestore.isEmpty()) {
             return;
         }

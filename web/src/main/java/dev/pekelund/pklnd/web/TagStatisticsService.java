@@ -37,6 +37,7 @@ public class TagStatisticsService {
 
     private static final Logger log = LoggerFactory.getLogger(TagStatisticsService.class);
     private static final Pattern EAN_PATTERN = Pattern.compile("(\\d{8,14})");
+    private static final int FIRESTORE_GET_ALL_BATCH_SIZE = 300;
 
     private final FirestoreProperties firestoreProperties;
     private final Optional<Firestore> firestore;
@@ -241,7 +242,7 @@ public class TagStatisticsService {
             return List.of();
         }
         List<DocumentSnapshot> snapshots = new ArrayList<>();
-        int batchSize = 300;
+        int batchSize = FIRESTORE_GET_ALL_BATCH_SIZE;
         for (int i = 0; i < references.size(); i += batchSize) {
             int end = Math.min(i + batchSize, references.size());
             List<DocumentReference> batch = references.subList(i, end);
