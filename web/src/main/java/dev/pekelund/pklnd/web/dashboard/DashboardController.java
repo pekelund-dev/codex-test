@@ -1,5 +1,6 @@
 package dev.pekelund.pklnd.web.dashboard;
 
+import dev.pekelund.pklnd.firestore.FirestoreBackupService;
 import dev.pekelund.pklnd.firestore.FirestoreUserService;
 import dev.pekelund.pklnd.firestore.UserRoleUpdateException;
 import dev.pekelund.pklnd.web.AdminPromotionForm;
@@ -13,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -26,10 +28,14 @@ public class DashboardController {
 
     private final FirestoreUserService firestoreUserService;
     private final MessageSource messageSource;
+    private final FirestoreBackupService firestoreBackupService;
 
-    public DashboardController(FirestoreUserService firestoreUserService, MessageSource messageSource) {
+    public DashboardController(FirestoreUserService firestoreUserService,
+                               MessageSource messageSource,
+                               FirestoreBackupService firestoreBackupService) {
         this.firestoreUserService = firestoreUserService;
         this.messageSource = messageSource;
+        this.firestoreBackupService = firestoreBackupService;
     }
 
     @GetMapping("/dashboard")
@@ -40,13 +46,20 @@ public class DashboardController {
 
         boolean admin = isAdmin(authentication);
         boolean firestoreEnabled = firestoreUserService.isEnabled();
+        boolean backupEnabled = firestoreBackupService.isEnabled();
 
         model.addAttribute("showAdminManagement", admin);
         model.addAttribute("adminManagementActive", admin && firestoreEnabled);
+        model.addAttribute("backupManagementActive", admin && backupEnabled);
 
         if (admin && !firestoreEnabled) {
             model.addAttribute("adminManagementDisabledMessage",
                 messageSource.getMessage("dashboard.admin.disabled", null, locale));
+        }
+
+        if (admin && !backupEnabled) {
+            model.addAttribute("backupManagementDisabledMessage",
+                messageSource.getMessage("dashboard.backup.disabled", null, locale));
         }
 
         if (admin && firestoreEnabled) {
@@ -66,6 +79,95 @@ public class DashboardController {
         }
 
         return "dashboard";
+    }
+
+    @PostMapping("/dashboard/admin/backup")
+    public String backupFirestore(@RequestParam(name = "backupLabel", required = false) String backupLabel,
+                                  Authentication authentication,
+                                  RedirectAttributes redirectAttributes) {
+        if (!isAdmin(authentication)) {
+            redirectAttributes.addFlashAttribute(
+                "backupErrorMessage",
+                messageSource.getMessage("dashboard.backup.error.no-permission", null, LocaleContextHolder.getLocale())
+            );
+            return "redirect:/dashboard";
+        }
+
+        if (!firestoreBackupService.isEnabled()) {
+            redirectAttributes.addFlashAttribute(
+                "backupErrorMessage",
+                messageSource.getMessage("dashboard.backup.error.disabled", null, LocaleContextHolder.getLocale())
+            );
+            return "redirect:/dashboard#admin-management";
+        }
+
+        try {
+            FirestoreBackupService.BackupOperation operation = firestoreBackupService.startExport(backupLabel);
+            redirectAttributes.addFlashAttribute(
+                "backupSuccessMessage",
+                messageSource.getMessage(
+                    "dashboard.backup.success",
+                    new Object[]{operation.uri()},
+                    LocaleContextHolder.getLocale()
+                )
+            );
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute(
+                "backupErrorMessage",
+                messageSource.getMessage("dashboard.backup.error.generic", null, LocaleContextHolder.getLocale())
+            );
+        }
+
+        return "redirect:/dashboard#admin-management";
+    }
+
+    @PostMapping("/dashboard/admin/restore")
+    public String restoreFirestore(@RequestParam("restoreUri") String restoreUri,
+                                   Authentication authentication,
+                                   RedirectAttributes redirectAttributes) {
+        if (!isAdmin(authentication)) {
+            redirectAttributes.addFlashAttribute(
+                "restoreErrorMessage",
+                messageSource.getMessage("dashboard.restore.error.no-permission", null, LocaleContextHolder.getLocale())
+            );
+            return "redirect:/dashboard";
+        }
+
+        if (!firestoreBackupService.isEnabled()) {
+            redirectAttributes.addFlashAttribute(
+                "restoreErrorMessage",
+                messageSource.getMessage("dashboard.restore.error.disabled", null, LocaleContextHolder.getLocale())
+            );
+            return "redirect:/dashboard#admin-management";
+        }
+
+        if (!StringUtils.hasText(restoreUri)) {
+            redirectAttributes.addFlashAttribute(
+                "restoreErrorMessage",
+                messageSource.getMessage("dashboard.restore.error.missing", null, LocaleContextHolder.getLocale())
+            );
+            return "redirect:/dashboard#admin-management";
+        }
+
+        try {
+            String trimmedUri = restoreUri.trim();
+            FirestoreBackupService.BackupOperation operation = firestoreBackupService.startImport(trimmedUri);
+            redirectAttributes.addFlashAttribute(
+                "restoreSuccessMessage",
+                messageSource.getMessage(
+                    "dashboard.restore.success",
+                    new Object[]{trimmedUri},
+                    LocaleContextHolder.getLocale()
+                )
+            );
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute(
+                "restoreErrorMessage",
+                messageSource.getMessage("dashboard.restore.error.generic", null, LocaleContextHolder.getLocale())
+            );
+        }
+
+        return "redirect:/dashboard#admin-management";
     }
 
     @PostMapping("/dashboard/admins")

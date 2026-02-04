@@ -4,6 +4,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.NoCredentials;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FirestoreOptions;
+import com.google.cloud.firestore.v1.FirestoreAdminClient;
 import java.io.IOException;
 import java.io.InputStream;
 import org.slf4j.Logger;
@@ -76,5 +77,12 @@ public class FirestoreConfig {
 
         builder.setCredentials(credentials);
         return builder.build().getService();
+    }
+
+    @Bean(destroyMethod = "close")
+    @ConditionalOnProperty(value = "firestore.enabled", havingValue = "true")
+    @ConditionalOnMissingBean
+    public FirestoreAdminClient firestoreAdminClient() throws IOException {
+        return FirestoreAdminClient.create();
     }
 }

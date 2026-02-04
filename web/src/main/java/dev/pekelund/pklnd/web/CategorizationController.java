@@ -5,6 +5,9 @@ import dev.pekelund.pklnd.firestore.CategoryService;
 import dev.pekelund.pklnd.firestore.ItemCategorizationService;
 import dev.pekelund.pklnd.firestore.ItemTag;
 import dev.pekelund.pklnd.firestore.TagService;
+import dev.pekelund.pklnd.firestore.ParsedReceipt;
+import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
+import dev.pekelund.pklnd.storage.ReceiptOwner;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,15 +41,21 @@ public class CategorizationController {
     private final Optional<CategoryService> categoryService;
     private final Optional<TagService> tagService;
     private final Optional<ItemCategorizationService> itemCategorizationService;
+    private final Optional<ReceiptExtractionService> receiptExtractionService;
+    private final ReceiptOwnerResolver receiptOwnerResolver;
 
     public CategorizationController(
         @Autowired(required = false) CategoryService categoryService,
         @Autowired(required = false) TagService tagService,
-        @Autowired(required = false) ItemCategorizationService itemCategorizationService
+        @Autowired(required = false) ItemCategorizationService itemCategorizationService,
+        @Autowired(required = false) ReceiptExtractionService receiptExtractionService,
+        ReceiptOwnerResolver receiptOwnerResolver
     ) {
         this.categoryService = Optional.ofNullable(categoryService);
         this.tagService = Optional.ofNullable(tagService);
         this.itemCategorizationService = Optional.ofNullable(itemCategorizationService);
+        this.receiptExtractionService = Optional.ofNullable(receiptExtractionService);
+        this.receiptOwnerResolver = receiptOwnerResolver;
     }
 
     /**
@@ -291,8 +300,23 @@ public class CategorizationController {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
+        if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+
+        ParsedReceipt receipt = receiptExtractionService.get().findById(receiptId).orElse(null);
+        if (receipt == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (!isOwnerMatch(receipt.owner(), owner)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         try {
             String assignedBy = authentication != null ? authentication.getName() : "anonymous";
+            String ownerId = owner.id();
             
             // Log the incoming request for debugging
             log.info("Assigning tag: receiptId={}, itemIndex={}, itemEan='{}', tagId={}", 
@@ -305,7 +329,8 @@ public class CategorizationController {
                 int assignedCount = itemCategorizationService.get().assignTagByEan(
                     request.itemEan(),
                     request.tagId(),
-                    assignedBy
+                    assignedBy,
+                    ownerId
                 );
                 String message = "Tag assigned to " + assignedCount + " items with EAN " + request.itemEan();
                 log.info(message);
@@ -318,7 +343,8 @@ public class CategorizationController {
                     request.itemIndex(),
                     request.itemEan(),
                     request.tagId(),
-                    assignedBy
+                    assignedBy,
+                    ownerId
                 );
                 return ResponseEntity.ok("Tag assigned successfully");
             }
@@ -336,13 +362,29 @@ public class CategorizationController {
     public ResponseEntity<Void> removeTagFromItem(
         @PathVariable String receiptId,
         @RequestParam String itemIdentifier,
-        @PathVariable String tagId
+        @PathVariable String tagId,
+        Authentication authentication
     ) {
         if (itemCategorizationService.isEmpty() || !itemCategorizationService.get().isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
 
-        itemCategorizationService.get().removeTagFromItem(receiptId, itemIdentifier, tagId);
+        if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+
+        ParsedReceipt receipt = receiptExtractionService.get().findById(receiptId).orElse(null);
+        if (receipt == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (!isOwnerMatch(receipt.owner(), owner)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        String ownerId = owner.id();
+        itemCategorizationService.get().removeTagFromItem(receiptId, itemIdentifier, tagId, ownerId);
         return ResponseEntity.noContent().build();
     }
 
@@ -352,4 +394,17 @@ public class CategorizationController {
     public record CreateTagRequest(String name) {}
     public record AssignCategoryRequest(String itemIndex, String itemEan, String categoryId) {}
     public record AssignTagRequest(String itemIndex, String itemEan, String tagId) {}
+
+    private boolean isOwnerMatch(ReceiptOwner receiptOwner, ReceiptOwner currentOwner) {
+        if (receiptOwner == null || currentOwner == null) {
+            return false;
+        }
+        if (StringUtils.hasText(receiptOwner.id()) && StringUtils.hasText(currentOwner.id())) {
+            return receiptOwner.id().equals(currentOwner.id());
+        }
+        if (StringUtils.hasText(receiptOwner.email()) && StringUtils.hasText(currentOwner.email())) {
+            return receiptOwner.email().equalsIgnoreCase(currentOwner.email());
+        }
+        return false;
+    }
 }

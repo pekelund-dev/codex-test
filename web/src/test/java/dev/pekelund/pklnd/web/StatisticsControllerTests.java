@@ -6,6 +6,7 @@ import dev.pekelund.pklnd.firestore.ItemCategorizationService;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.firestore.TagService;
 import dev.pekelund.pklnd.web.DashboardStatisticsService.DashboardStatistics;
+import dev.pekelund.pklnd.web.TagStatisticsService;
 import dev.pekelund.pklnd.web.assets.ViteManifest;
 import dev.pekelund.pklnd.web.statistics.StatisticsController;
 import java.math.BigDecimal;
@@ -44,6 +45,12 @@ class StatisticsControllerTests {
 
     @MockitoBean
     private ReceiptExtractionService receiptExtractionService;
+
+    @MockitoBean
+    private TagStatisticsService tagStatisticsService;
+
+    @MockitoBean
+    private ReceiptOwnerResolver receiptOwnerResolver;
 
     @MockitoBean
     private FirestoreReadTotals firestoreReadTotals;

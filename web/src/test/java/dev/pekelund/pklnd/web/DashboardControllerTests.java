@@ -1,6 +1,7 @@
 package dev.pekelund.pklnd.web;
 
 import dev.pekelund.pklnd.PknldApplication;
+import dev.pekelund.pklnd.firestore.FirestoreBackupService;
 import dev.pekelund.pklnd.firestore.FirestoreReadTotals;
 import dev.pekelund.pklnd.firestore.FirestoreUserService;
 import dev.pekelund.pklnd.web.assets.ViteManifest;
@@ -32,6 +33,9 @@ class DashboardControllerTests {
 
     @MockitoBean
     private MessageSource messageSource;
+
+    @MockitoBean
+    private FirestoreBackupService firestoreBackupService;
 
     @MockitoBean
     private FirestoreReadTotals firestoreReadTotals;

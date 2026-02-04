@@ -102,6 +102,11 @@ Review the Firestore index requirements and backup guidance before deploying to 
 
 - [Firestore indexes](docs/firestore-indexes.md)
 - [Backup and retention strategy](docs/backup-retention.md)
+- [Firestore migrations](docs/firestore-migrations.md)
+
+### Observability dashboards
+
+- [Request tracing dashboards](docs/observability-dashboards.md)
 
 ### Firestore configuration
 
@@ -114,6 +119,12 @@ Firestore stores user profiles and receipt parsing output. Choose the setup styl
 Both guides walk through project creation, database provisioning, service accounts, and environment variables required by the Spring Boot application.
 
 Use the `FIRESTORE_DATABASE_ID` environment variable to point the app at the Firestore database you provisioned (falls back to `FIRESTORE_DATABASE_NAME` when unset). Terraform defaults to a named database `receipts-db`; set the variable to `(default)` if you kept the primary database id instead.
+
+For admin-triggered backups and restores, configure `FIRESTORE_BACKUP_BUCKET` (and optionally `FIRESTORE_BACKUP_PREFIX`) to
+point at a Cloud Storage bucket dedicated to Firestore exports. Tag summary caching defaults to the
+`tagSummaries`/`tagSummaryMeta` collections; override with `FIRESTORE_TAG_SUMMARIES_COLLECTION` and
+`FIRESTORE_TAG_SUMMARY_META_COLLECTION` if you need custom names. Cached summaries are stored per user,
+so each account has isolated tag statistics.
 
 > 💡 When deploying to Cloud Run or any other Google-managed runtime, leave `FIRESTORE_CREDENTIALS` unset—the service account attached to the workload authenticates automatically via Application Default Credentials. Only download JSON keys for local development or third-party hosting.
 

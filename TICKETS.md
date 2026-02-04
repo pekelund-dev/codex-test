@@ -424,7 +424,7 @@ Define data backup and retention guidance.
 ## Optional Enhancements (Add after core milestones)
 
 ### Ticket O1 — Add request tracing dashboards
-**Status:** `todo`
+**Status:** `done`
 
 **Goal**
 Provide a basic Cloud Monitoring dashboard plan for latency, error rate, and throughput.
@@ -434,6 +434,13 @@ Provide a basic Cloud Monitoring dashboard plan for latency, error rate, and thr
 
 **Acceptance criteria**
 - Clear dashboard guidance exists in docs.
+
+**Completion note**
+- Summary:
+  - Added a request tracing dashboard guide covering latency, error rate, throughput, and saturation panels with starter alert thresholds.
+  - Linked the dashboard guide from the README documentation list.
+- Tests run: Not run (documentation-only change).
+- Follow-up tasks: None.
 
 ---
 

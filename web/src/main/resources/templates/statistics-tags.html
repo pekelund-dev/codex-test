@@ -45,7 +45,24 @@
                                                   th:text="${tag.name()}"
                                                   style="display: inline-block;">Tag Name</span>
                                         </h4>
-                                        <p class="text-muted small mb-0">Klicka för att se produkter</p>
+                                        <div class="text-muted small mb-2" th:with="summary=${tagSummaries[tag.id]}">
+                                            <div>
+                                                <span th:text="#{tags.summary.items}">Produkter</span>:
+                                                <span th:text="${summary != null ? summary.itemCount() : 0}">0</span>
+                                            </div>
+                                            <div>
+                                                <span th:text="#{tags.summary.total}">Totalt belopp</span>:
+                                                <span th:text="${summary != null ? summary.formattedTotalAmount() : '0.00'}">0.00</span>
+                                                <span th:text="#{tags.summary.currency}">kr</span>
+                                            </div>
+                                            <div>
+                                                <span th:text="#{tags.summary.stores}">Butiker</span>:
+                                                <span th:text="${summary != null ? summary.storeCount() : 0}">0</span>
+                                            </div>
+                                        </div>
+                                        <p class="text-muted small mb-0" th:text="#{tags.summary.cta}">
+                                            Klicka för att se produkter
+                                        </p>
                                     </div>
                                 </div>
                             </a>

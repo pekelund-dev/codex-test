@@ -5,6 +5,7 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QuerySnapshot;
+import dev.pekelund.pklnd.storage.ReceiptOwner;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,6 +32,7 @@ public class ItemCategorizationService {
     private static final String ITEM_TAGS_COLLECTION = "item_tags";
 
     private final Optional<Firestore> firestore;
+    private final FirestoreProperties firestoreProperties;
     private final FirestoreReadRecorder readRecorder;
     private final CategoryService categoryService;
     private final TagService tagService;
@@ -38,12 +40,14 @@ public class ItemCategorizationService {
 
     public ItemCategorizationService(
         ObjectProvider<Firestore> firestoreProvider,
+        FirestoreProperties firestoreProperties,
         FirestoreReadRecorder readRecorder,
         CategoryService categoryService,
         TagService tagService,
         ObjectProvider<ReceiptExtractionService> receiptExtractionServiceProvider
     ) {
         this.firestore = Optional.ofNullable(firestoreProvider.getIfAvailable());
+        this.firestoreProperties = firestoreProperties;
         this.readRecorder = readRecorder;
         this.categoryService = categoryService;
         this.tagService = tagService;
@@ -295,7 +299,8 @@ public class ItemCategorizationService {
         String itemIndex,
         String itemEan,
         String tagId,
-        String assignedBy
+        String assignedBy,
+        String ownerId
     ) {
         if (firestore.isEmpty()) {
             throw new IllegalStateException("Firestore is not enabled");
@@ -333,8 +338,10 @@ public class ItemCategorizationService {
             data.put("tagId", tagId);
             data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
             data.put("assignedBy", assignedBy);
+            data.put("ownerId", ownerId);
 
             docRef.set(data).get();
+            updateTagSummaryMeta(tagId, ownerId);
 
             return ItemTagMapping.builder()
                 .id(docId)
@@ -364,9 +371,13 @@ public class ItemCategorizationService {
      * @param assignedBy The user assigning the tag
      * @return The number of items that were assigned the tag
      */
-    public int assignTagByEan(String itemEan, String tagId, String assignedBy) {
+    public int assignTagByEan(String itemEan, String tagId, String assignedBy, String ownerId) {
         if (firestore.isEmpty()) {
             throw new IllegalStateException("Firestore is not enabled");
+        }
+
+        if (!StringUtils.hasText(ownerId)) {
+            throw new IllegalArgumentException("Owner ID cannot be empty");
         }
 
         if (!StringUtils.hasText(itemEan)) {
@@ -389,8 +400,8 @@ public class ItemCategorizationService {
         }
 
         try {
-            // Get all receipts
-            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listAllReceipts();
+            ReceiptOwner owner = new ReceiptOwner(ownerId, null, null);
+            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
             int assignedCount = 0;
             Firestore db = firestore.get();
             Instant now = Instant.now();
@@ -427,6 +438,7 @@ public class ItemCategorizationService {
                         data.put("tagId", tagId);
                         data.put("assignedAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
                         data.put("assignedBy", assignedBy);
+                        data.put("ownerId", ownerId);
 
                         docRef.set(data).get();
                         assignedCount++;
@@ -438,6 +450,9 @@ public class ItemCategorizationService {
 
             log.info("Scanned {} items total, {} had EAN codes. Assigned tag {} to {} items with EAN {}", 
                 itemsChecked, itemsWithEan, tagId, assignedCount, itemEan);
+            if (assignedCount > 0) {
+                updateTagSummaryMeta(tagId, ownerId);
+            }
             return assignedCount;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -525,7 +540,7 @@ public class ItemCategorizationService {
     /**
      * Remove a tag from a receipt item.
      */
-    public void removeTagFromItem(String receiptId, String itemIdentifier, String tagId) {
+    public void removeTagFromItem(String receiptId, String itemIdentifier, String tagId, String ownerId) {
         if (firestore.isEmpty() || !StringUtils.hasText(receiptId) 
             || !StringUtils.hasText(itemIdentifier) || !StringUtils.hasText(tagId)) {
             return;
@@ -535,6 +550,7 @@ public class ItemCategorizationService {
             Firestore db = firestore.get();
             String docId = ItemTagMapping.createKey(receiptId, itemIdentifier, tagId);
             db.collection(ITEM_TAGS_COLLECTION).document(docId).delete().get();
+            updateTagSummaryMeta(tagId, ownerId);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             log.error("Interrupted while removing tag from item", ex);
@@ -598,8 +614,8 @@ public class ItemCategorizationService {
      * Get all items that have a specific tag assigned across all receipts.
      * Returns a list of tuples containing the receipt and item index.
      */
-    public List<TaggedItemInfo> getItemsByTag(String tagId) {
-        if (firestore.isEmpty() || !StringUtils.hasText(tagId)) {
+    public List<TaggedItemInfo> getItemsByTag(String tagId, String ownerId) {
+        if (firestore.isEmpty() || !StringUtils.hasText(tagId) || !StringUtils.hasText(ownerId)) {
             return List.of();
         }
 
@@ -607,6 +623,7 @@ public class ItemCategorizationService {
             Firestore db = firestore.get();
             QuerySnapshot snapshot = db.collection(ITEM_TAGS_COLLECTION)
                 .whereEqualTo("tagId", tagId)
+                .whereEqualTo("ownerId", ownerId)
                 .get()
                 .get();
             recordRead("Load items by tag", snapshot.size());
@@ -643,6 +660,28 @@ public class ItemCategorizationService {
         String itemEan,
         Instant assignedAt
     ) {}
+
+    private void updateTagSummaryMeta(String tagId, String ownerId) {
+        if (firestore.isEmpty() || !StringUtils.hasText(tagId) || !StringUtils.hasText(ownerId)) {
+            return;
+        }
+
+        String collection = firestoreProperties.getTagSummaryMetaCollection();
+        if (!StringUtils.hasText(collection)) {
+            return;
+        }
+
+        try {
+            Firestore db = firestore.get();
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("tagId", tagId);
+            payload.put("updatedAt", Timestamp.now());
+            payload.put("ownerId", ownerId);
+            db.collection(collection).document(ownerId + ":" + tagId).set(payload);
+        } catch (Exception ex) {
+            log.warn("Failed to update tag summary metadata", ex);
+        }
+    }
 
     private void recordRead(String description, long count) {
         if (readRecorder != null) {
