@@ -236,8 +236,7 @@ public class TagStatisticsService {
             .toList();
     }
 
-    private List<DocumentSnapshot> getAllInBatches(List<DocumentReference> references)
-        throws InterruptedException, java.util.concurrent.ExecutionException {
+    private List<DocumentSnapshot> getAllInBatches(List<DocumentReference> references) {
         if (references == null || references.isEmpty()) {
             return List.of();
         }
@@ -250,11 +249,18 @@ public class TagStatisticsService {
                 futures.add(firestore.get().getAll(batch.toArray(DocumentReference[]::new)));
             }
         }
-        List<DocumentSnapshot> snapshots = new ArrayList<>();
-        for (var future : futures) {
-            snapshots.addAll(future.get());
+        try {
+            List<DocumentSnapshot> snapshots = new ArrayList<>();
+            for (List<DocumentSnapshot> batchResult : com.google.api.core.ApiFutures.allAsList(futures).get()) {
+                snapshots.addAll(batchResult);
+            }
+            return snapshots;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while fetching documents in batches.", ex);
+        } catch (java.util.concurrent.ExecutionException ex) {
+            throw new IllegalStateException("Failed to fetch documents in batches.", ex);
         }
-        return snapshots;
     }
 
     private void storeTagSummary(String cacheKey,
