@@ -18,6 +18,7 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -50,15 +51,21 @@ public class StatisticsController {
         this.receiptOwnerResolver = receiptOwnerResolver;
     }
 
-    @GetMapping("/dashboard/statistics")
+    @GetMapping("/dashboard")
     public String dashboardStatistics(Model model, Principal principal, Authentication authentication) {
         model.addAttribute("pageTitleKey", "page.statistics.title");
         model.addAttribute("principalName", principal != null ? principal.getName() : "");
+        model.addAttribute("admin", isAdmin(authentication));
 
         DashboardStatistics statistics = dashboardStatisticsService.loadStatistics(authentication);
         model.addAttribute("statistics", statistics);
 
         return "dashboard-statistics";
+    }
+
+    @GetMapping("/dashboard/statistics")
+    public String legacyDashboardStatistics() {
+        return "redirect:/dashboard";
     }
 
     @GetMapping("/dashboard/statistics/users")
@@ -249,5 +256,17 @@ public class StatisticsController {
         } catch (Exception e) {
             // Navigation not added when month/year is invalid.
         }
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        if (authentication == null || authentication.getAuthorities() == null) {
+            return false;
+        }
+        for (GrantedAuthority grantedAuthority : authentication.getAuthorities()) {
+            if ("ROLE_ADMIN".equals(grantedAuthority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

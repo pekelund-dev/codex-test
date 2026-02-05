@@ -6,20 +6,22 @@
 <body>
 <section>
     <div class="row align-items-center g-5 py-5">
-        <div class="col-lg-6">
+        <div class="col-lg-7">
+            <span class="badge rounded-pill text-bg-primary mb-3" th:text="#{home.hero.support}">Stöd just nu: ICA</span>
             <h1 class="display-5 fw-bold text-primary mb-4" th:text="#{home.hero.title}">Hero text</h1>
-            <p class="lead" th:text="#{home.hero.lead}">Lead text</p>
-            <div class="d-flex gap-3 mt-4">
-                <a class="btn btn-primary btn-lg" th:href="@{/dashboard}" th:if="${userProfile.authenticated}" th:text="#{home.hero.authenticated}">Gå till översikten</a>
+            <p class="lead mb-3" th:text="#{home.hero.lead}">Lead text</p>
+            <p class="text-muted" th:text="#{home.hero.sublead}">Sublead text</p>
+            <div class="d-flex flex-wrap gap-3 mt-4">
+                <a class="btn btn-primary btn-lg" th:href="@{/dashboard}" th:if="${userProfile.authenticated}" th:text="#{home.hero.authenticated}">Gå till statistiken</a>
                 <a class="btn btn-outline-primary btn-lg" th:if="${!userProfile.authenticated}" th:href="@{/login}" th:text="#{home.hero.start}">Kom igång</a>
                 <a class="btn btn-outline-secondary btn-lg" th:href="@{/about}" th:text="#{home.hero.learn}">Läs mer</a>
             </div>
         </div>
-        <div class="col-lg-6">
+        <div class="col-lg-5">
             <div class="card shadow border-0">
                 <div class="card-body p-4">
                     <h2 class="h4 fw-semibold" th:text="#{home.highlights.title}">Highlights</h2>
-                    <ul class="list-unstyled mt-3">
+                    <ul class="list-unstyled mt-3 mb-0">
                         <li class="d-flex align-items-start gap-2 mb-3">
                             <span class="badge rounded-pill text-bg-primary">1</span>
                             <div>

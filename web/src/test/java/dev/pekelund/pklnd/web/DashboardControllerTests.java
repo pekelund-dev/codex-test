@@ -43,7 +43,7 @@ class DashboardControllerTests {
     @Test
     @WithMockUser(username = "user", roles = "USER")
     void dashboard_ShouldRenderDashboardView() throws Exception {
-        mockMvc.perform(get("/dashboard"))
+        mockMvc.perform(get("/dashboard/info"))
             .andExpect(status().isOk())
             .andExpect(view().name("dashboard"));
     }

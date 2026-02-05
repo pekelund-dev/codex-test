@@ -54,7 +54,7 @@ public class SecurityConfig {
             .formLogin(form -> form
                 .loginPage("/login")
                 .usernameParameter("email")
-                .defaultSuccessUrl("/receipts", true)
+                .defaultSuccessUrl("/dashboard", true)
                 .permitAll()
             )
             .logout(logout -> logout
@@ -97,7 +97,7 @@ public class SecurityConfig {
                     log.info("OAuth2 login SUCCESS - User: {}, Principal type: {}",
                         authentication.getName(),
                         authentication.getPrincipal().getClass().getSimpleName());
-                    response.sendRedirect("/receipts");
+                    response.sendRedirect("/dashboard");
                 })
                 .failureHandler((request, response, exception) -> {
                     log.error("OAuth2 login FAILED - Error: {}", exception.getMessage(), exception);

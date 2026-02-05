@@ -79,10 +79,14 @@ class StatisticsControllerTests {
                 Map.of(),
                 Map.of(),
                 false,
+                0L,
+                0L,
+                0L,
+                0L,
                 0L
             ));
 
-        mockMvc.perform(get("/dashboard/statistics"))
+        mockMvc.perform(get("/dashboard"))
             .andExpect(status().isOk())
             .andExpect(view().name("dashboard-statistics"));
     }
