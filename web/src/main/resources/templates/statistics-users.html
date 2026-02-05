@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : #{page.statistics.users.title}">Registrerade användare</title>
+</head>
+<body>
+<section>
+    <div class="row py-4">
+        <div class="col-12">
+            <h1 class="fw-bold mb-3" th:text="#{statistics.users.heading}">Registrerade användare</h1>
+            <p class="text-muted mb-0" th:text="#{statistics.users.description}">Översikt över registrerade användare.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th scope="col" th:text="#{statistics.users.table.name}">Namn</th>
+                                <th scope="col" th:text="#{statistics.users.table.email}">E-post</th>
+                                <th scope="col" th:text="#{statistics.users.table.roles}">Roller</th>
+                                <th scope="col" th:text="#{statistics.users.table.source}">Källa</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${#lists.isEmpty(userAccounts)}">
+                                <td colspan="4" class="text-muted" th:text="#{statistics.users.empty}">Inga användare hittades.</td>
+                            </tr>
+                            <tr th:each="userAccount : ${userAccounts}">
+                                <td class="fw-semibold" th:text="${userAccount.displayName}">Användare</td>
+                                <td th:text="${userAccount.email}">user@example.com</td>
+                                <td>
+                                    <span class="badge text-bg-light me-1" th:each="role : ${userAccount.roles}" th:text="${role}">ROLE_USER</span>
+                                </td>
+                                <td>
+                                    <span class="badge text-bg-secondary" th:text="${userAccount.authProvider}">firestore</span>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <a th:href="@{/dashboard}" class="btn btn-outline-secondary" th:text="#{statistics.users.back}">Tillbaka till dashboard</a>
+        </div>
+    </div>
+</section>
+</body>
+</html>
