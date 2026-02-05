@@ -135,6 +135,25 @@ video {
     transform: translateY(-6px) rotate(-45deg);
 }
 
+
+.navbar-action-btn {
+    border: none;
+    background: transparent;
+    color: #ffffff;
+}
+
+.navbar-action-btn:hover,
+.navbar-action-btn:focus,
+.navbar-action-btn:active {
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+
+.navbar-action-btn:focus {
+    box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.3);
+}
+
 .app-navbar .navbar-nav .nav-link {
     font-weight: 500;
     border-radius: 0.75rem;
@@ -419,7 +438,8 @@ th.sortable:hover {
         margin-bottom: 0;
     }
 
-    .app-navbar .navbar-nav .nav-link {
+    
+.app-navbar .navbar-nav .nav-link {
         padding: 0.65rem 0.85rem;
     }
 

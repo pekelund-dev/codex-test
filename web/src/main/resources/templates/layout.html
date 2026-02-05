@@ -74,7 +74,7 @@
                         Firestore-läsningar: 0
                     </span>
                     <div class="dropdown">
-                        <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button"
+                        <button class="btn btn-sm navbar-action-btn dropdown-toggle d-flex align-items-center gap-2" type="button"
                                 id="userActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             <img th:if="${userProfile.imageUrl != null}" th:src="${userProfile.imageUrl}" alt="Profile picture"
                                  class="user-avatar">
@@ -102,7 +102,7 @@
                 </div>
                 <div class="dropdown"
                      th:with="currentLanguage=${#locale.language}">
-                    <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="languageDropdown"
+                    <button class="btn btn-sm navbar-action-btn dropdown-toggle" type="button" id="languageDropdown"
                             data-bs-toggle="dropdown" aria-expanded="false"
                             th:text="${currentLanguage == 'sv' ? '🇸🇪' : '🇬🇧'}"
                             th:aria-label="#{nav.language.toggle}">
@@ -113,8 +113,8 @@
                             <a class="dropdown-item"
                                th:classappend="${#locale.language == language.code} ? ' active'"
                                th:href="${language.href}"
-                               th:text="${language.code == 'sv' ? '🇸🇪 Svenska' : '🇬🇧 English'}">
-                                🇸🇪 Svenska
+                               th:aria-label="${language.code == 'sv' ? #messages.msg('nav.language.swedish') : #messages.msg('nav.language.english')}">
+                                <span aria-hidden="true" th:text="${language.code == 'sv' ? '🇸🇪' : '🇬🇧'}">🇸🇪</span>
                             </a>
                         </li>
                     </ul>
@@ -138,7 +138,7 @@
                     <a th:if="${oauthEnabled}" class="btn btn-light btn-sm" th:href="@{/oauth2/authorization/google}" th:text="#{nav.signin.google}">Sign in with Google</a>
                 </div>
                 <div class="dropdown mt-2" th:with="currentLanguage=${#locale.language}">
-                    <button class="btn btn-outline-light btn-sm dropdown-toggle w-100" type="button" id="languageDropdownMobile"
+                    <button class="btn btn-sm navbar-action-btn dropdown-toggle w-100" type="button" id="languageDropdownMobile"
                             data-bs-toggle="dropdown" aria-expanded="false"
                             th:text="${currentLanguage == 'sv' ? '🇸🇪' : '🇬🇧'}"
                             th:aria-label="#{nav.language.toggle}">
@@ -149,8 +149,8 @@
                             <a class="dropdown-item"
                                th:classappend="${#locale.language == language.code} ? ' active'"
                                th:href="${language.href}"
-                               th:text="${language.code == 'sv' ? '🇸🇪 Svenska' : '🇬🇧 English'}">
-                                🇸🇪 Svenska
+                               th:aria-label="${language.code == 'sv' ? #messages.msg('nav.language.swedish') : #messages.msg('nav.language.english')}">
+                                <span aria-hidden="true" th:text="${language.code == 'sv' ? '🇸🇪' : '🇬🇧'}">🇸🇪</span>
                             </a>
                         </li>
                     </ul>
