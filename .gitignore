@@ -28,6 +28,7 @@ target/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
+node_modules/
 
 ### VS Code ###
 # Ignore workspace-specific settings but keep shared project config

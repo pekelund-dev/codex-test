@@ -58,7 +58,17 @@ const setupNavbarFallbackToggle = () => {
     });
 };
 
-window.addEventListener('load', () => {
+const setupPageLayout = () => {
     setupSplashScreen();
     setupNavbarFallbackToggle();
-});
+};
+
+const initializePageLayout = () => {
+    setupPageLayout();
+};
+
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initializePageLayout);
+} else {
+    initializePageLayout();
+}
