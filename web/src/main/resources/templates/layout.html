@@ -104,9 +104,10 @@
                      th:with="currentLanguage=${#locale.language}">
                     <button class="btn btn-sm navbar-action-btn dropdown-toggle" type="button" id="languageDropdown"
                             data-bs-toggle="dropdown" aria-expanded="false"
-                            th:text="${currentLanguage == 'sv' ? '🇸🇪' : '🇬🇧'}"
                             th:aria-label="#{nav.language.toggle}">
-                        🇸🇪
+                        <img th:src="${currentLanguage == 'sv' ? '/img/flag-se.svg' : '/img/flag-gb.svg'}"
+                             th:alt="${currentLanguage == 'sv' ? #messages.msg('nav.language.swedish') : #messages.msg('nav.language.english')}"
+                             class="language-flag">
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
                         <li th:each="language : ${supportedLanguages}">
@@ -114,7 +115,8 @@
                                th:classappend="${#locale.language == language.code} ? ' active'"
                                th:href="${language.href}"
                                th:aria-label="${language.code == 'sv' ? #messages.msg('nav.language.swedish') : #messages.msg('nav.language.english')}">
-                                <span aria-hidden="true" th:text="${language.code == 'sv' ? '🇸🇪' : '🇬🇧'}">🇸🇪</span>
+                                <img th:src="${language.code == 'sv' ? '/img/flag-se.svg' : '/img/flag-gb.svg'}"
+                                     alt="" aria-hidden="true" class="language-flag">
                             </a>
                         </li>
                     </ul>
@@ -140,9 +142,10 @@
                 <div class="dropdown mt-2" th:with="currentLanguage=${#locale.language}">
                     <button class="btn btn-sm navbar-action-btn dropdown-toggle w-100" type="button" id="languageDropdownMobile"
                             data-bs-toggle="dropdown" aria-expanded="false"
-                            th:text="${currentLanguage == 'sv' ? '🇸🇪' : '🇬🇧'}"
                             th:aria-label="#{nav.language.toggle}">
-                        🇸🇪
+                        <img th:src="${currentLanguage == 'sv' ? '/img/flag-se.svg' : '/img/flag-gb.svg'}"
+                             th:alt="${currentLanguage == 'sv' ? #messages.msg('nav.language.swedish') : #messages.msg('nav.language.english')}"
+                             class="language-flag">
                     </button>
                     <ul class="dropdown-menu w-100" aria-labelledby="languageDropdownMobile">
                         <li th:each="language : ${supportedLanguages}">
@@ -150,7 +153,8 @@
                                th:classappend="${#locale.language == language.code} ? ' active'"
                                th:href="${language.href}"
                                th:aria-label="${language.code == 'sv' ? #messages.msg('nav.language.swedish') : #messages.msg('nav.language.english')}">
-                                <span aria-hidden="true" th:text="${language.code == 'sv' ? '🇸🇪' : '🇬🇧'}">🇸🇪</span>
+                                <img th:src="${language.code == 'sv' ? '/img/flag-se.svg' : '/img/flag-gb.svg'}"
+                                     alt="" aria-hidden="true" class="language-flag">
                             </a>
                         </li>
                     </ul>
