@@ -63,6 +63,6 @@ const setupPageLayout = () => {
     setupNavbarFallbackToggle();
 };
 
-window.addEventListener('load', () => {
+window.addEventListener('DOMContentLoaded', () => {
     setupPageLayout();
 });
