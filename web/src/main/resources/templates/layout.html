@@ -163,6 +163,19 @@
         </div>
     </div>
 </nav>
+<div class="bg-danger text-white">
+    <div class="container small py-1 text-center text-md-start d-flex flex-column flex-md-row align-items-center gap-2">
+        <span class="fw-semibold"
+              th:text="${#messages.msg('nav.git.info', gitMetadata.branchOrPlaceholder(), gitMetadata.commitOrPlaceholder(), gitMetadata.versionOrPlaceholder())}">
+            Version: 0.1.0-SNAPSHOT · Gren: main · commit: abc123
+        </span>
+        <span th:if="${environmentLabel != null}"
+              class="badge text-bg-light text-danger fw-semibold">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            <span th:text="${environmentLabel}">Körs lokalt</span>
+        </span>
+    </div>
+</div>
 <div class="adsterra-banner-wrapper">
     <div class="container py-2 d-flex justify-content-center">
         <div class="adsterra-banner">
@@ -183,19 +196,6 @@
             </script>
             <div id="atContainer-14b3644e8610f254f6e9da8f8f38500b"></div>
         </div>
-    </div>
-</div>
-<div class="bg-danger text-white">
-    <div class="container small py-1 text-center text-md-start d-flex flex-column flex-md-row align-items-center gap-2">
-        <span class="fw-semibold"
-              th:text="${#messages.msg('nav.git.info', gitMetadata.branchOrPlaceholder(), gitMetadata.commitOrPlaceholder(), gitMetadata.versionOrPlaceholder())}">
-            Version: 0.1.0-SNAPSHOT · Gren: main · commit: abc123
-        </span>
-        <span th:if="${environmentLabel != null}"
-              class="badge text-bg-light text-danger fw-semibold">
-            <i class="bi bi-exclamation-triangle-fill me-1"></i>
-            <span th:text="${environmentLabel}">Körs lokalt</span>
-        </span>
     </div>
 </div>
 <main class="flex-fill">
