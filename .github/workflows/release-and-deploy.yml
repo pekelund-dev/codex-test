@@ -1,0 +1,227 @@
+name: Release and Deploy to Cloud Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type to publish'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      region:
+        description: 'GCP region'
+        required: false
+        default: 'us-east1'
+        type: string
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ inputs.region || 'us-east1' }}
+
+jobs:
+  release-deploy:
+    name: Release, tag and deploy
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Configure git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Calculate release and next snapshot versions
+        id: versions
+        run: |
+          set -euo pipefail
+
+          CURRENT_VERSION=$(./mvnw -q -N -DforceStdout help:evaluate -Dexpression=project.version)
+          if [[ "${CURRENT_VERSION}" != *-SNAPSHOT ]]; then
+            echo "Expected SNAPSHOT version, got: ${CURRENT_VERSION}"
+            exit 1
+          fi
+
+          BASE_VERSION=${CURRENT_VERSION%-SNAPSHOT}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${BASE_VERSION}"
+
+          case "${{ inputs.release_type }}" in
+            major)
+              RELEASE_VERSION="$((MAJOR + 1)).0.0"
+              ;;
+            minor)
+              RELEASE_VERSION="${MAJOR}.$((MINOR + 1)).0"
+              ;;
+            patch)
+              RELEASE_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+              ;;
+            *)
+              echo "Unsupported release type: ${{ inputs.release_type }}"
+              exit 1
+              ;;
+          esac
+
+          IFS='.' read -r R_MAJOR R_MINOR R_PATCH <<< "${RELEASE_VERSION}"
+          NEXT_SNAPSHOT_VERSION="${R_MAJOR}.${R_MINOR}.$((R_PATCH + 1))-SNAPSHOT"
+
+          echo "current_version=${CURRENT_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_version=${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "next_snapshot_version=${NEXT_SNAPSHOT_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Update project versions for release
+        run: |
+          ./mvnw -B -q versions:set \
+            -DnewVersion=${{ steps.versions.outputs.release_version }} \
+            -DgenerateBackupPoms=false \
+            -DprocessAllModules=true
+
+      - name: Commit release version and create tag
+        run: |
+          set -euo pipefail
+
+          RELEASE_VERSION=${{ steps.versions.outputs.release_version }}
+          RELEASE_TAG=v${RELEASE_VERSION}
+
+          git add pom.xml */pom.xml
+          git commit -m "chore(release): prepare ${RELEASE_VERSION}"
+
+          if git rev-parse "${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "Tag ${RELEASE_TAG} already exists"
+            exit 1
+          fi
+
+          git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_VERSION}"
+          git push origin HEAD:${GITHUB_REF_NAME}
+          git push origin "${RELEASE_TAG}"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate build metadata
+        id: meta
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          RELEASE_VERSION=${{ steps.versions.outputs.release_version }}
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "web_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "receipt_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "release_version=${RELEASE_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.web_image }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:latest
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:${{ steps.meta.outputs.short_sha }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:${{ steps.meta.outputs.release_version }}
+          cache-from: |
+            type=registry,ref=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:latest
+            type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            GIT_BRANCH=${{ github.ref_name }}
+            GIT_COMMIT=${{ github.sha }}
+
+      - name: Build and push receipt-parser image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./receipt-parser/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.receipt_image }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:latest
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:${{ steps.meta.outputs.short_sha }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:${{ steps.meta.outputs.release_version }}
+          cache-from: |
+            type=registry,ref=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:latest
+            type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            GIT_BRANCH=${{ github.ref_name }}
+            GIT_COMMIT=${{ github.sha }}
+
+      - name: Deploy web service to Cloud Run
+        run: |
+          set -e
+          gcloud run deploy pklnd-web \
+            --image=${{ steps.meta.outputs.web_image }} \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} \
+            --platform=managed
+
+      - name: Deploy receipt-parser service to Cloud Run
+        run: |
+          set -e
+          gcloud run deploy pklnd-receipts \
+            --image=${{ steps.meta.outputs.receipt_image }} \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} \
+            --platform=managed
+
+      - name: Update project versions to next snapshot
+        run: |
+          ./mvnw -B -q versions:set \
+            -DnewVersion=${{ steps.versions.outputs.next_snapshot_version }} \
+            -DgenerateBackupPoms=false \
+            -DprocessAllModules=true
+
+      - name: Commit and push next snapshot version
+        run: |
+          git add pom.xml */pom.xml
+          git commit -m "chore(release): start ${{ steps.versions.outputs.next_snapshot_version }}"
+          git push origin HEAD:${GITHUB_REF_NAME}
+
+      - name: Release Summary
+        run: |
+          echo "## Release and Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Release Type:** ${{ inputs.release_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Released Version:** ${{ steps.versions.outputs.release_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Snapshot:** ${{ steps.versions.outputs.next_snapshot_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** ${{ env.REGION }}" >> $GITHUB_STEP_SUMMARY
