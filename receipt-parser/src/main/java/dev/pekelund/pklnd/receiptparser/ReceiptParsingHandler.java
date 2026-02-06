@@ -24,6 +24,7 @@ public class ReceiptParsingHandler {
     private static final String METADATA_STATUS = "receipt.processing.status";
     private static final String METADATA_MESSAGE = "receipt.processing.message";
     private static final String METADATA_UPDATED = "receipt.processing.updatedAt";
+    private static final String METADATA_REPARSE_REQUESTED = "receipt.reparse.requested";
 
     private final Storage storage;
     private final ReceiptExtractionRepository repository;
@@ -78,6 +79,8 @@ public class ReceiptParsingHandler {
             LOGGER.debug("Combined metadata for gs://{}/{}: {}", bucket, objectName, metadata);
         }
 
+        boolean reparseRequested = isReparseRequested(metadata);
+
         ReceiptOwner owner = ReceiptOwner.fromMetadata(metadata);
         if (owner == null) {
             ReceiptOwner fallbackOwner = storageObjectEvent.resolveOwner();
@@ -127,7 +130,7 @@ public class ReceiptParsingHandler {
             LOGGER.info("ReceiptParsingHandler extracted {} top-level fields and {} items (raw response length {} characters) for gs://{}/{}",
                 topLevelKeys, itemsCount, rawResponseLength, bucket, objectName);
             ReceiptProcessingMdc.setStage("STATUS_COMPLETED");
-            repository.saveExtraction(bucket, objectName, owner, extractionResult, "Receipt parsing completed");
+            repository.saveExtraction(bucket, objectName, owner, extractionResult, "Receipt parsing completed", reparseRequested);
             updateProcessingMetadata(blob, ReceiptProcessingStatus.COMPLETED, "Receipt parsing completed", metadata);
             LOGGER.info("ReceiptParsingHandler successfully completed extraction for gs://{}/{}", bucket, objectName);
             ReceiptProcessingMdc.setStage("DONE");
@@ -157,6 +160,14 @@ public class ReceiptParsingHandler {
         }
         String name = blob.getName();
         return name != null && name.toLowerCase(Locale.US).endsWith(".pdf");
+    }
+
+    private boolean isReparseRequested(Map<String, String> metadata) {
+        if (metadata == null) {
+            return false;
+        }
+        String value = metadata.get(METADATA_REPARSE_REQUESTED);
+        return value != null && Boolean.parseBoolean(value);
     }
 
     private Blob updateProcessingMetadata(Blob blob, ReceiptProcessingStatus status, String message,

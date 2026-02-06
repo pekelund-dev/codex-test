@@ -76,6 +76,31 @@ class ReceiptProcessingClientTest {
     }
 
     @Test
+    void marksReparseRequestInMetadataWhenReparseIsTriggered() {
+        ReceiptOwner owner = new ReceiptOwner("user-123", "Anna Andersson", "anna@example.com");
+
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost/events/storage"))
+            .andExpect(MockRestRequestMatchers.method(HttpMethod.POST))
+            .andExpect(MockRestRequestMatchers.content().json("{" +
+                "\"bucket\":\"bucket\"," +
+                "\"name\":\"reparse.pdf\"," +
+                "\"metadata\":{" +
+                "\"receipt.owner.id\":\"user-123\"," +
+                "\"receipt.owner.displayName\":\"Anna Andersson\"," +
+                "\"receipt.owner.email\":\"anna@example.com\"," +
+                "\"receipt.reparse.requested\":\"true\"}," +
+                "\"owner\":{" +
+                "\"id\":\"user-123\"," +
+                "\"displayName\":\"Anna Andersson\"," +
+                "\"email\":\"anna@example.com\"}}"))
+            .andRespond(MockRestResponseCreators.withSuccess());
+
+        client.reparseReceipt("bucket", "reparse.pdf", owner);
+
+        server.verify();
+    }
+
+    @Test
     void recordsFailuresWhenProcessorReturnsError() {
         StoredReceiptReference reference = new StoredReceiptReference("bucket", "broken.pdf");
 
