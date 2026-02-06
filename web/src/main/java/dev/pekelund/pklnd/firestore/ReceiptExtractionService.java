@@ -486,7 +486,6 @@ public class ReceiptExtractionService {
             payload.put("statusMessage", "Receipt queued for re-parsing.");
             payload.put("updatedAt", updateTimestamp);
             payload.put("reparseRequested", true);
-            payload.put("reparsed", true);
             payload.put("data", FieldValue.delete());
             payload.put("rawResponse", FieldValue.delete());
             payload.put("error", FieldValue.delete());
