@@ -67,6 +67,11 @@ public class DashboardStatisticsService {
         long totalStores = receiptsEnabled ? countDistinctStores(allReceipts) : 0L;
         long totalItems = receiptsEnabled ? countItems(allReceipts) : 0L;
         long failedReceipts = receiptsEnabled ? countFailedReceipts(allReceipts) : 0L;
+        List<ParsedReceipt> personalReceipts = receiptsEnabled ? loadPersonalReceipts(authentication) : List.of();
+        long personalReceiptCount = receiptsEnabled ? personalReceipts.size() : 0L;
+        long personalStoreCount = receiptsEnabled ? countDistinctStores(personalReceipts) : 0L;
+        long personalItemCount = receiptsEnabled ? countItems(personalReceipts) : 0L;
+        long personalFailedReceiptCount = receiptsEnabled ? countFailedReceipts(personalReceipts) : 0L;
 
         PersonalTotals personalTotals = receiptsEnabled
             ? computePersonalTotals(authentication)
@@ -98,7 +103,11 @@ public class DashboardStatisticsService {
             yearlyStats.yearlyReconciled(),
             yearlyStats.monthlyReconciled(),
             yearlyStats.available(),
-            totalTags
+            totalTags,
+            personalReceiptCount,
+            personalStoreCount,
+            personalItemCount,
+            personalFailedReceiptCount
         );
     }
 
@@ -107,6 +116,20 @@ public class DashboardStatisticsService {
             return receiptExtractionService.get().listAllReceipts();
         } catch (ReceiptExtractionAccessException ex) {
             log.warn("Unable to load parsed receipts for dashboard statistics.", ex);
+            return List.of();
+        }
+    }
+
+    private List<ParsedReceipt> loadPersonalReceipts(Authentication authentication) {
+        ReceiptOwner owner = receiptOwnerResolver.resolve(authentication);
+        if (owner == null || receiptExtractionService.isEmpty()) {
+            return List.of();
+        }
+
+        try {
+            return receiptExtractionService.get().listReceiptsForOwner(owner);
+        } catch (ReceiptExtractionAccessException ex) {
+            log.warn("Unable to load personal receipts for dashboard statistics.", ex);
             return List.of();
         }
     }
@@ -654,7 +677,11 @@ public class DashboardStatisticsService {
         Map<Integer, Long> yearlyReconciled,
         Map<Integer, Map<Month, Long>> monthlyReconciled,
         boolean yearlyStatisticsAvailable,
-        long totalTags
+        long totalTags,
+        long personalReceiptCount,
+        long personalStoreCount,
+        long personalItemCount,
+        long personalFailedReceiptCount
     ) {
 
         public String formatAmount(BigDecimal value) {

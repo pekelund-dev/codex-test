@@ -14,7 +14,7 @@
     </div>
 
     <div class="row g-4">
-        <div class="col-lg-3 col-sm-6">
+        <div class="col-lg-3 col-sm-6" th:if="${admin}">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
                     <h2 class="h6 fw-semibold text-uppercase text-primary">
@@ -34,7 +34,7 @@
                         <a th:href="@{/receipts}" class="text-decoration-none text-primary" th:text="#{dashboard.statistics.cards.receipts}">Kvitton</a>
                     </h2>
                     <p class="display-6 fw-bold mb-0"
-                       th:text="${statistics.receiptDataAvailable} ? ${statistics.totalReceipts} : '--'">--</p>
+                       th:text="${statistics.receiptDataAvailable ? (admin ? statistics.personalReceiptCount + ' (' + statistics.totalReceipts + ')' : statistics.personalReceiptCount) : '--'}">--</p>
                     <p class="text-muted small mb-0" th:if="${!statistics.receiptDataAvailable}">
                         <span th:text="#{dashboard.statistics.cards.receipts.fallback}">Info</span>
                     </p>
@@ -48,7 +48,7 @@
                         <a th:href="@{/dashboard/statistics/stores}" class="text-decoration-none text-primary" th:text="#{dashboard.statistics.cards.stores}">Butiker</a>
                     </h2>
                     <p class="display-6 fw-bold mb-0"
-                       th:text="${statistics.receiptDataAvailable} ? ${statistics.totalStores} : '--'">--</p>
+                       th:text="${statistics.receiptDataAvailable ? (admin ? statistics.personalStoreCount + ' (' + statistics.totalStores + ')' : statistics.personalStoreCount) : '--'}">--</p>
                     <p class="text-muted small mb-0" th:if="${!statistics.receiptDataAvailable}">
                         <span th:text="#{dashboard.statistics.cards.stores.fallback}">Info</span>
                     </p>
@@ -62,7 +62,7 @@
                         <a th:href="@{/dashboard/statistics/items}" class="text-decoration-none text-primary" th:text="#{dashboard.statistics.cards.items}">Artiklar</a>
                     </h2>
                     <p class="display-6 fw-bold mb-0"
-                       th:text="${statistics.receiptDataAvailable} ? ${statistics.totalItems} : '--'">--</p>
+                       th:text="${statistics.receiptDataAvailable ? (admin ? statistics.personalItemCount + ' (' + statistics.totalItems + ')' : statistics.personalItemCount) : '--'}">--</p>
                     <p class="text-muted small mb-0" th:if="${!statistics.receiptDataAvailable}">
                         <span th:text="#{dashboard.statistics.cards.items.fallback}">Info</span>
                     </p>
@@ -81,12 +81,13 @@
             </div>
         </div>
         <div class="col-lg-3 col-sm-6">
-            <div class="card h-100 shadow-sm" th:classappend="${statistics.failedReceipts > 0} ? 'border-danger' : ''">
+            <div class="card h-100 shadow-sm" th:classappend="${(admin ? statistics.failedReceipts : statistics.personalFailedReceiptCount) > 0} ? 'border-danger' : ''">
                 <div class="card-body">
-                    <h2 class="h6 fw-semibold text-uppercase" th:classappend="${statistics.failedReceipts > 0} ? 'text-danger' : 'text-primary'">
-                        <a th:href="@{/receipts/errors}" class="text-decoration-none" th:classappend="${statistics.failedReceipts > 0} ? 'text-danger' : 'text-primary'">Felaktiga</a>
+                    <h2 class="h6 fw-semibold text-uppercase" th:classappend="${(admin ? statistics.failedReceipts : statistics.personalFailedReceiptCount) > 0} ? 'text-danger' : 'text-primary'">
+                        <a th:href="@{/receipts/errors}" class="text-decoration-none" th:classappend="${(admin ? statistics.failedReceipts : statistics.personalFailedReceiptCount) > 0} ? 'text-danger' : 'text-primary'">Felaktiga</a>
                     </h2>
-                    <p class="display-6 fw-bold mb-0" th:classappend="${statistics.failedReceipts > 0} ? 'text-danger' : ''" th:text="${statistics.failedReceipts}">0</p>
+                    <p class="display-6 fw-bold mb-0" th:classappend="${(admin ? statistics.failedReceipts : statistics.personalFailedReceiptCount) > 0} ? 'text-danger' : ''"
+                       th:text="${admin ? statistics.personalFailedReceiptCount + ' (' + statistics.failedReceipts + ')' : statistics.personalFailedReceiptCount}">0</p>
                     <p class="text-muted small mb-0">Kvitton som misslyckades</p>
                 </div>
             </div>

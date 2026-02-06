@@ -2,6 +2,7 @@ package dev.pekelund.pklnd.web;
 
 import dev.pekelund.pklnd.PknldApplication;
 import dev.pekelund.pklnd.firestore.FirestoreReadTotals;
+import dev.pekelund.pklnd.firestore.FirestoreUserService;
 import dev.pekelund.pklnd.firestore.ItemCategorizationService;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.firestore.TagService;
@@ -10,6 +11,7 @@ import dev.pekelund.pklnd.web.TagStatisticsService;
 import dev.pekelund.pklnd.web.assets.ViteManifest;
 import dev.pekelund.pklnd.web.statistics.StatisticsController;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +57,9 @@ class StatisticsControllerTests {
     @MockitoBean
     private FirestoreReadTotals firestoreReadTotals;
 
+    @MockitoBean
+    private FirestoreUserService firestoreUserService;
+
     @Test
     @WithMockUser(username = "user", roles = "USER")
     void statisticsDashboard_ShouldRenderStatisticsView() throws Exception {
@@ -79,11 +84,42 @@ class StatisticsControllerTests {
                 Map.of(),
                 Map.of(),
                 false,
+                0L,
+                0L,
+                0L,
+                0L,
                 0L
             ));
 
-        mockMvc.perform(get("/dashboard/statistics"))
+        mockMvc.perform(get("/dashboard"))
             .andExpect(status().isOk())
             .andExpect(view().name("dashboard-statistics"));
     }
+
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void statisticsUsers_AsAdmin_ShouldRenderUsersView() throws Exception {
+        when(firestoreUserService.listUserAccounts())
+            .thenReturn(List.of(new FirestoreUserService.UserAccountSummary(
+                "1",
+                "anna@example.com",
+                "Anna Andersson",
+                List.of("ROLE_USER"),
+                "firestore"
+            )));
+
+        mockMvc.perform(get("/dashboard/statistics/users"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("statistics-users"));
+    }
+
+    @Test
+    @WithMockUser(username = "user", roles = "USER")
+    void statisticsUsers_AsNonAdmin_ShouldRedirectToDashboard() throws Exception {
+        mockMvc.perform(get("/dashboard/statistics/users"))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/dashboard"));
+    }
+
 }

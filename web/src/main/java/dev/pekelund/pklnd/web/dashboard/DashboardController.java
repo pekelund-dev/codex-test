@@ -38,7 +38,7 @@ public class DashboardController {
         this.firestoreBackupService = firestoreBackupService;
     }
 
-    @GetMapping("/dashboard")
+    @GetMapping("/dashboard/info")
     public String dashboard(Model model, Principal principal, Authentication authentication) {
         Locale locale = LocaleContextHolder.getLocale();
         model.addAttribute("pageTitleKey", "page.dashboard.title");
@@ -90,7 +90,7 @@ public class DashboardController {
                 "backupErrorMessage",
                 messageSource.getMessage("dashboard.backup.error.no-permission", null, LocaleContextHolder.getLocale())
             );
-            return "redirect:/dashboard";
+            return "redirect:/dashboard/info";
         }
 
         if (!firestoreBackupService.isEnabled()) {
@@ -98,7 +98,7 @@ public class DashboardController {
                 "backupErrorMessage",
                 messageSource.getMessage("dashboard.backup.error.disabled", null, LocaleContextHolder.getLocale())
             );
-            return "redirect:/dashboard#admin-management";
+            return "redirect:/dashboard/info#admin-management";
         }
 
         try {
@@ -118,7 +118,7 @@ public class DashboardController {
             );
         }
 
-        return "redirect:/dashboard#admin-management";
+        return "redirect:/dashboard/info#admin-management";
     }
 
     @PostMapping("/dashboard/admin/restore")
@@ -130,7 +130,7 @@ public class DashboardController {
                 "restoreErrorMessage",
                 messageSource.getMessage("dashboard.restore.error.no-permission", null, LocaleContextHolder.getLocale())
             );
-            return "redirect:/dashboard";
+            return "redirect:/dashboard/info";
         }
 
         if (!firestoreBackupService.isEnabled()) {
@@ -138,7 +138,7 @@ public class DashboardController {
                 "restoreErrorMessage",
                 messageSource.getMessage("dashboard.restore.error.disabled", null, LocaleContextHolder.getLocale())
             );
-            return "redirect:/dashboard#admin-management";
+            return "redirect:/dashboard/info#admin-management";
         }
 
         if (!StringUtils.hasText(restoreUri)) {
@@ -146,7 +146,7 @@ public class DashboardController {
                 "restoreErrorMessage",
                 messageSource.getMessage("dashboard.restore.error.missing", null, LocaleContextHolder.getLocale())
             );
-            return "redirect:/dashboard#admin-management";
+            return "redirect:/dashboard/info#admin-management";
         }
 
         try {
@@ -167,7 +167,7 @@ public class DashboardController {
             );
         }
 
-        return "redirect:/dashboard#admin-management";
+        return "redirect:/dashboard/info#admin-management";
     }
 
     @PostMapping("/dashboard/admins")
@@ -178,20 +178,20 @@ public class DashboardController {
         if (!isAdmin(authentication)) {
             redirectAttributes.addFlashAttribute("adminErrorMessage",
                 messageSource.getMessage("dashboard.admin.error.no-permission", null, LocaleContextHolder.getLocale()));
-            return "redirect:/dashboard";
+            return "redirect:/dashboard/info";
         }
 
         if (!firestoreUserService.isEnabled()) {
             redirectAttributes.addFlashAttribute("adminErrorMessage",
                 messageSource.getMessage("dashboard.admin.error.firestore", null, LocaleContextHolder.getLocale()));
-            return "redirect:/dashboard#admin-management";
+            return "redirect:/dashboard/info#admin-management";
         }
 
         if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute(
                 "org.springframework.validation.BindingResult.adminPromotionForm", bindingResult);
             redirectAttributes.addFlashAttribute("adminPromotionForm", form);
-            return "redirect:/dashboard#admin-management";
+            return "redirect:/dashboard/info#admin-management";
         }
 
         String submittedEmail = form.getEmail() != null ? form.getEmail().trim() : "";
@@ -227,7 +227,7 @@ public class DashboardController {
             redirectAttributes.addFlashAttribute("adminPromotionForm", form);
         }
 
-        return "redirect:/dashboard#admin-management";
+        return "redirect:/dashboard/info#admin-management";
     }
 
     @PostMapping("/dashboard/admins/remove")
@@ -239,7 +239,7 @@ public class DashboardController {
                 "adminErrorMessage",
                 messageSource.getMessage("dashboard.admin.error.no-permission", null, LocaleContextHolder.getLocale())
             );
-            return "redirect:/dashboard";
+            return "redirect:/dashboard/info";
         }
 
         if (!firestoreUserService.isEnabled()) {
@@ -247,7 +247,7 @@ public class DashboardController {
                 "adminErrorMessage",
                 messageSource.getMessage("dashboard.admin.error.firestore", null, LocaleContextHolder.getLocale())
             );
-            return "redirect:/dashboard#admin-management";
+            return "redirect:/dashboard/info#admin-management";
         }
 
         String submittedEmail = email != null ? email.trim() : "";
@@ -292,7 +292,7 @@ public class DashboardController {
             );
         }
 
-        return "redirect:/dashboard#admin-management";
+        return "redirect:/dashboard/info#admin-management";
     }
 
     private boolean isAdmin(Authentication authentication) {

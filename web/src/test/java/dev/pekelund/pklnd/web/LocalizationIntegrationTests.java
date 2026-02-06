@@ -25,7 +25,7 @@ class LocalizationIntegrationTests {
     void defaultsToSwedishContent() throws Exception {
         mockMvc.perform(get("/"))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("Ditt digitala kvittoarkiv")));
+            .andExpect(content().string(containsString("Samla alla dina ICA-kvitton på ett ställe")));
     }
 
     @Test
@@ -33,7 +33,7 @@ class LocalizationIntegrationTests {
         mockMvc.perform(get("/").param("lang", "en"))
             .andExpect(status().isOk())
             .andExpect(cookie().value("pklnd-lang", "en"))
-            .andExpect(content().string(containsString("Your digital receipt archive")));
+            .andExpect(content().string(containsString("Manage all your ICA receipts in one place")));
     }
 
     @Test
@@ -43,6 +43,6 @@ class LocalizationIntegrationTests {
 
         mockMvc.perform(get("/").cookie(englishCookie))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("Your digital receipt archive")));
+            .andExpect(content().string(containsString("Manage all your ICA receipts in one place")));
     }
 }
