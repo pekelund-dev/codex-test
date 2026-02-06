@@ -14,7 +14,6 @@ import dev.pekelund.pklnd.PknldApplication;
 import dev.pekelund.pklnd.firestore.FirestoreReadTotals;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
-import dev.pekelund.pklnd.storage.ReceiptFile;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.ReceiptStorageService;
 import dev.pekelund.pklnd.web.assets.ViteManifest;
@@ -73,8 +72,7 @@ class ReceiptControllerReparseTests {
         when(receiptExtractionService.isEnabled()).thenReturn(true);
         when(receiptExtractionService.findById("receipt-1")).thenReturn(Optional.of(receipt));
         when(receiptStorageService.isEnabled()).thenReturn(true);
-        when(receiptStorageService.listReceipts()).thenReturn(List.of(
-            new ReceiptFile("uploads/r1.pdf", 200, Instant.now(), "application/pdf", receipt.owner())));
+        when(receiptStorageService.fileExists("uploads/r1.pdf")).thenReturn(true);
         when(receiptOwnerResolver.resolve(any())).thenReturn(receipt.owner());
 
         mockMvc.perform(post("/receipts/receipt-1/reparse").param("scope", "all").with(csrf()))
@@ -93,7 +91,7 @@ class ReceiptControllerReparseTests {
         when(receiptExtractionService.isEnabled()).thenReturn(true);
         when(receiptExtractionService.findById("receipt-1")).thenReturn(Optional.of(receipt));
         when(receiptStorageService.isEnabled()).thenReturn(true);
-        when(receiptStorageService.listReceipts()).thenReturn(List.of());
+        when(receiptStorageService.fileExists("uploads/r1.pdf")).thenReturn(false);
 
         mockMvc.perform(post("/receipts/receipt-1/reparse").with(csrf()))
             .andExpect(status().is3xxRedirection())

@@ -98,6 +98,20 @@ public class GcsReceiptStorageService implements ReceiptStorageService {
         }
     }
 
+
+    @Override
+    public boolean fileExists(String objectName) {
+        if (!StringUtils.hasText(objectName)) {
+            return false;
+        }
+        try {
+            Blob blob = storage.get(BlobId.of(properties.getBucket(), objectName));
+            return blob != null && blob.exists();
+        } catch (StorageException ex) {
+            throw new ReceiptStorageException("Unable to verify receipt file existence", ex);
+        }
+    }
+
     @Override
     public UploadResult uploadFilesWithResults(List<MultipartFile> files, ReceiptOwner owner) {
         List<StoredReceiptReference> uploaded = new ArrayList<>();

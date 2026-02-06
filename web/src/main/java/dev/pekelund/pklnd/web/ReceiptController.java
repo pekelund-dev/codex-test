@@ -2090,8 +2090,7 @@ public class ReceiptController {
         }
 
         try {
-            return receiptStorageService.get().listReceipts().stream()
-                .anyMatch(file -> receipt.objectName().equals(file.name()));
+            return receiptStorageService.get().fileExists(receipt.objectName());
         } catch (ReceiptStorageException ex) {
             LOGGER.warn("Unable to verify receipt file existence for {}", receipt.objectName(), ex);
             return false;

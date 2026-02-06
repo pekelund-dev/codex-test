@@ -29,6 +29,7 @@ public class LegacyPdfReceiptExtractor implements ReceiptDataExtractor {
     private static final Logger LOGGER = LoggerFactory.getLogger(LegacyPdfReceiptExtractor.class);
     private static final String SOURCE = "legacy-pdf-parser";
     private static final Pattern QUANTITY_PATTERN = Pattern.compile("^(?<amount>-?\\d+(?:[.,]\\d+)?)\\s*(?<unit>\\p{L}+)$");
+    private static final BigDecimal QUANTITY_MISMATCH_TOLERANCE = new BigDecimal("0.001");
 
     private final PdfParser pdfParser;
     private final ObjectMapper objectMapper;
@@ -141,7 +142,7 @@ public class LegacyPdfReceiptExtractor implements ReceiptDataExtractor {
         String unit = matcher.group("unit");
         BigDecimal calculatedAmount = item.getTotalPrice().divide(item.getUnitPrice(), 4, RoundingMode.HALF_UP);
         BigDecimal diff = parsedAmount.subtract(calculatedAmount).abs();
-        if (diff.compareTo(new BigDecimal("0.001")) <= 0) {
+        if (diff.compareTo(QUANTITY_MISMATCH_TOLERANCE) <= 0) {
             return quantity;
         }
 
