@@ -129,19 +129,6 @@
                                      assignedTags=${itemTagsMap.get(itemIdentifier.toString())},
                                      hasCategories=${!#maps.isEmpty(categoriesHierarchy)}">
                             <div class="d-flex flex-column gap-2">
-                                <!-- Show warning if no categories are available -->
-                                <div th:if="${!hasCategories && iterStat.index == 0}" class="alert alert-warning alert-sm mb-2 p-2">
-                                    <small>
-                                        <i class="bi bi-exclamation-triangle"></i>
-                                        Inga kategorier tillgängliga. 
-                                        <a href="#" id="initializeCategoriesLink" 
-                                           onclick="event.preventDefault(); initializeCategories();">
-                                            Klicka här för att initiera
-                                        </a>
-                                        <span id="initializeStatus" class="ms-2"></span>
-                                    </small>
-                                </div>
-                                
                                 <!-- Tags display with badges -->
                                 <div class="tags-container" 
                                      th:data-receipt-id="${receipt.id()}"
