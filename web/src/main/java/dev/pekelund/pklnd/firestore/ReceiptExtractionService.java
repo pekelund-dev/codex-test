@@ -466,6 +466,46 @@ public class ReceiptExtractionService {
         return Collections.unmodifiableList(matchingItems);
     }
 
+
+    public void prepareReceiptForReparse(ParsedReceipt receipt) {
+        if (receipt == null || !StringUtils.hasText(receipt.id()) || firestore.isEmpty()) {
+            return;
+        }
+
+        try {
+            Firestore db = firestore.get();
+            Map<String, Long> globalDeltas = new HashMap<>();
+            deleteItemsForReceiptBatch(db, List.of(receipt.id()), receipt.owner(), globalDeltas);
+            if (!globalDeltas.isEmpty()) {
+                applyStatsUpdates(db, globalDeltas);
+            }
+
+            Timestamp updateTimestamp = Timestamp.now();
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("status", "REPARSE_REQUESTED");
+            payload.put("statusMessage", "Receipt queued for re-parsing.");
+            payload.put("updatedAt", updateTimestamp);
+            payload.put("reparseRequested", true);
+            payload.put("data", FieldValue.delete());
+            payload.put("rawResponse", FieldValue.delete());
+            payload.put("error", FieldValue.delete());
+            payload.put("stackTrace", FieldValue.delete());
+            payload.put("itemHistory", FieldValue.delete());
+
+            db.collection(properties.getReceiptsCollection())
+                .document(receipt.id())
+                .set(payload, SetOptions.merge())
+                .get();
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while preparing receipt {} for reparse", receipt.id(), ex);
+            throw new ReceiptExtractionAccessException("Interrupted while preparing receipt for reparse.", ex);
+        } catch (ExecutionException ex) {
+            log.error("Failed to prepare receipt {} for reparse", receipt.id(), ex);
+            throw new ReceiptExtractionAccessException("Failed to prepare receipt for reparse.", ex);
+        }
+    }
+
     public void deleteReceiptsForOwner(ReceiptOwner owner) {
         if (owner == null || firestore.isEmpty()) {
             return;

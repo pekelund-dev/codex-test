@@ -2,6 +2,7 @@ package dev.pekelund.pklnd.receiptparser;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -69,7 +70,7 @@ class ReceiptParsingHandlerTest {
         handler.handle(event);
 
         ArgumentCaptor<ReceiptOwner> ownerCaptor = ArgumentCaptor.forClass(ReceiptOwner.class);
-        verify(repository).saveExtraction(eq("bucket"), eq("receipts/sample.pdf"), ownerCaptor.capture(), any(), any());
+        verify(repository).saveExtraction(eq("bucket"), eq("receipts/sample.pdf"), ownerCaptor.capture(), any(), any(), anyBoolean());
         ReceiptOwner capturedOwner = ownerCaptor.getValue();
         assertThat(capturedOwner).isNotNull();
         assertThat(capturedOwner.id()).isEqualTo("user-123");
@@ -116,7 +117,7 @@ class ReceiptParsingHandlerTest {
         handler.handle(event);
 
         ArgumentCaptor<ReceiptOwner> ownerCaptor = ArgumentCaptor.forClass(ReceiptOwner.class);
-        verify(repository).saveExtraction(eq("bucket"), eq("receipts/missing.pdf"), ownerCaptor.capture(), any(), any());
+        verify(repository).saveExtraction(eq("bucket"), eq("receipts/missing.pdf"), ownerCaptor.capture(), any(), any(), anyBoolean());
         ReceiptOwner capturedOwner = ownerCaptor.getValue();
         assertThat(capturedOwner).isNotNull();
         assertThat(capturedOwner.id()).isEqualTo("user-456");

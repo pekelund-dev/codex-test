@@ -9,6 +9,8 @@ public interface ReceiptStorageService {
 
     List<ReceiptFile> listReceipts();
 
+    boolean fileExists(String objectName);
+
     /**
      * Upload multiple receipt files, processing all files even if some are duplicates.
      * @return result containing successfully uploaded receipts and any failures

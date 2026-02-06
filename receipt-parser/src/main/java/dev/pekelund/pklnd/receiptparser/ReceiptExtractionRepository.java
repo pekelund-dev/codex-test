@@ -59,15 +59,21 @@ public class ReceiptExtractionRepository {
         ReceiptProcessingStatus status, String message) {
 
         LOGGER.info("Firestore status update for gs://{}/{} -> {} ({})", bucket, objectName, status, message);
-        updateDocument(bucket, objectName, owner, status, message, null, null);
+        updateDocument(bucket, objectName, owner, status, message, null, null, null, false);
     }
 
     public void saveExtraction(String bucket, String objectName, ReceiptOwner owner,
         ReceiptExtractionResult extractionResult, String message) {
+        saveExtraction(bucket, objectName, owner, extractionResult, message, false);
+    }
+
+    public void saveExtraction(String bucket, String objectName, ReceiptOwner owner,
+        ReceiptExtractionResult extractionResult, String message, boolean reparseRequested) {
 
         int itemCount = extractItemCount(extractionResult);
         LOGGER.info("Persisting extraction for gs://{}/{} with {} items", bucket, objectName, itemCount);
-        updateDocument(bucket, objectName, owner, ReceiptProcessingStatus.COMPLETED, message, extractionResult, null);
+        updateDocument(bucket, objectName, owner, ReceiptProcessingStatus.COMPLETED, message, extractionResult, null, null,
+            reparseRequested);
     }
 
     public void markFailure(String bucket, String objectName, ReceiptOwner owner, String errorMessage, Throwable error) {
@@ -89,26 +95,29 @@ public class ReceiptExtractionRepository {
                 .collect(java.util.stream.Collectors.joining("\n"));
         }
 
-        updateDocument(bucket, objectName, owner, ReceiptProcessingStatus.FAILED, combined, null, combined, stackTrace);
+        updateDocument(bucket, objectName, owner, ReceiptProcessingStatus.FAILED, combined, null, combined, stackTrace, false);
     }
 
     private void updateDocument(String bucket, String objectName, ReceiptOwner owner,
         ReceiptProcessingStatus status, String message, ReceiptExtractionResult extractionResult, String errorMessage) {
-        updateDocument(bucket, objectName, owner, status, message, extractionResult, errorMessage, null);
+        updateDocument(bucket, objectName, owner, status, message, extractionResult, errorMessage, null, false);
     }
 
     private void updateDocument(String bucket, String objectName, ReceiptOwner owner,
-        ReceiptProcessingStatus status, String message, ReceiptExtractionResult extractionResult, String errorMessage, String stackTrace) {
+        ReceiptProcessingStatus status, String message, ReceiptExtractionResult extractionResult, String errorMessage, String stackTrace,
+        boolean reparseRequested) {
 
         String documentId = buildDocumentId(bucket, objectName);
         Timestamp updateTimestamp = Timestamp.now();
 
         try {
+            DocumentReference documentReference = firestore.collection(collectionName).document(documentId);
+
             Map<String, Object> payload = new HashMap<>();
             payload.put("bucket", bucket);
             payload.put("objectName", objectName);
             payload.put("objectPath", "gs://" + bucket + "/" + objectName);
-            payload.put("status", status.name());
+            payload.put("status", (status == ReceiptProcessingStatus.COMPLETED && reparseRequested) ? "REPARSED" : status.name());
             payload.put("statusMessage", message);
             payload.put("updatedAt", updateTimestamp);
 
@@ -141,8 +150,9 @@ public class ReceiptExtractionRepository {
                 payload.put("itemHistory", historyPayload);
             }
 
-            DocumentReference documentReference = firestore.collection(collectionName)
-                .document(documentId);
+            if (status == ReceiptProcessingStatus.COMPLETED) {
+                payload.put("reparseRequested", false);
+            }
 
             LOGGER.info("Writing payload with {} entries to Firestore document {}/{}", payload.size(), collectionName,
                 documentId);

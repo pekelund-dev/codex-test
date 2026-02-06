@@ -126,6 +126,26 @@ class LegacyPdfReceiptExtractorTest {
         assertThat(vats.get(0)).containsEntry("rate", new BigDecimal("12"));
     }
 
+
+    @Test
+    void recalculatesQuantityWhenParsedAmountDiffersFromPriceMath() throws IOException {
+        byte[] pdfBytes = createPdf("""
+            Kvitto
+            ICA Maxi Teststad
+            Kvitto nr 456789
+            2024-10-16
+            Beskrivning
+            Nötfärs 0123456789012 129,00 1,00 kg 64,50
+            Betalat 64,50
+            """);
+
+        ReceiptExtractionResult result = extractor.extract(pdfBytes, "wrong-quantity.pdf");
+
+        List<Map<String, Object>> items = getList(result.structuredData().get("items"));
+        assertThat(items).hasSize(1);
+        assertThat(items.get(0)).containsEntry("quantity", "0,5 kg");
+    }
+
     @Test
     void rejectsEmptyPdf() {
         assertThatThrownBy(() -> extractor.extract(new byte[0], "empty.pdf"))

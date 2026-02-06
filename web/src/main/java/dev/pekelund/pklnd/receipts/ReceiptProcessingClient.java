@@ -32,6 +32,7 @@ public class ReceiptProcessingClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReceiptProcessingClient.class);
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
     private static final String REQUEST_ID_MDC_KEY = "request.id";
+    private static final String METADATA_REPARSE_REQUESTED = "receipt.reparse.requested";
 
     private final RestTemplate restTemplate;
     private final ReceiptProcessingProperties properties;
@@ -52,7 +53,7 @@ public class ReceiptProcessingClient {
 
         for (StoredReceiptReference reference : references) {
             try {
-                sendNotification(reference);
+                sendNotification(reference, false);
                 successes++;
             } catch (ReceiptProcessingException | RestClientException ex) {
                 LOGGER.error("Failed to notify receipt processor for gs://{}/{}", reference.bucket(), reference.objectName(), ex);
@@ -72,10 +73,10 @@ public class ReceiptProcessingClient {
             objectName,
             owner
         );
-        sendNotification(reference);
+        sendNotification(reference, true);
     }
 
-    private void sendNotification(StoredReceiptReference reference) {
+    private void sendNotification(StoredReceiptReference reference, boolean reparseRequested) {
         URI uri = UriComponentsBuilder.fromUriString(properties.getBaseUrl())
             .path(properties.getEventPath())
             .build()
@@ -103,12 +104,19 @@ public class ReceiptProcessingClient {
         payload.put("name", reference.objectName());
 
         ReceiptOwner owner = reference.owner();
+        Map<String, String> metadata = new HashMap<>();
         if (owner != null && owner.hasValues()) {
-            payload.put("metadata", owner.toMetadata());
+            metadata.putAll(owner.toMetadata());
             Map<String, String> ownerAttributes = owner.toAttributes();
             if (!ownerAttributes.isEmpty()) {
                 payload.put("owner", ownerAttributes);
             }
+        }
+        if (reparseRequested) {
+            metadata.put(METADATA_REPARSE_REQUESTED, Boolean.TRUE.toString());
+        }
+        if (!metadata.isEmpty()) {
+            payload.put("metadata", metadata);
         }
 
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);

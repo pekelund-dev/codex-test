@@ -220,6 +220,7 @@ public class ReceiptController {
     @GetMapping("/receipts/errors")
     public String receiptErrors(Model model, Authentication authentication) {
         model.addAttribute("pageTitle", "Failed Parsing");
+        model.addAttribute("canReparse", isAdmin(authentication));
         List<ParsedReceipt> failedReceipts = dashboardStatisticsService.getFailedReceipts(authentication);
         model.addAttribute("failedReceipts", failedReceipts);
         return "receipt-errors";
@@ -227,11 +228,21 @@ public class ReceiptController {
 
     @PostMapping("/receipts/{documentId}/reparse")
     public String reparseReceipt(@PathVariable("documentId") String documentId,
+                                 @RequestParam(value = "scope", required = false) String scopeParam,
                                  RedirectAttributes redirectAttributes,
                                  Authentication authentication) {
+        String redirectTarget = StringUtils.hasText(scopeParam)
+            ? "/receipts/" + documentId + "?scope=" + scopeParam
+            : "/receipts/" + documentId;
+
+        if (!isAdmin(authentication)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Only admins can re-parse receipts.");
+            return "redirect:" + redirectTarget;
+        }
+
         if (receiptExtractionService.isEmpty() || !receiptExtractionService.get().isEnabled()) {
             redirectAttributes.addFlashAttribute("errorMessage", "Receipt service unavailable.");
-            return "redirect:/receipts/errors";
+            return "redirect:" + redirectTarget;
         }
 
         ParsedReceipt receipt = receiptExtractionService.get().findById(documentId).orElse(null);
@@ -240,17 +251,17 @@ public class ReceiptController {
             return "redirect:/receipts/errors";
         }
 
-        ReceiptOwner currentOwner = receiptOwnerResolver.resolve(authentication);
-        if (!ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), currentOwner) && !isAdmin(authentication)) {
-             redirectAttributes.addFlashAttribute("errorMessage", "Permission denied.");
-             return "redirect:/receipts/errors";
+        if (!receiptFileExists(receipt)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Receipt file could not be found.");
+            return "redirect:" + redirectTarget;
         }
 
         if (receiptProcessingClient.isPresent()) {
             try {
                 if (StringUtils.hasText(receipt.bucket()) && StringUtils.hasText(receipt.objectName())) {
+                    receiptExtractionService.get().prepareReceiptForReparse(receipt);
                     receiptProcessingClient.get().reparseReceipt(receipt.bucket(), receipt.objectName(), receipt.owner());
-                    redirectAttributes.addFlashAttribute("successMessage", "Receipt re-parsing triggered.");
+                    redirectAttributes.addFlashAttribute("successMessage", "Receipt re-parsing started.");
                 } else {
                     redirectAttributes.addFlashAttribute("errorMessage", "Receipt missing storage location info.");
                 }
@@ -262,7 +273,7 @@ public class ReceiptController {
             redirectAttributes.addFlashAttribute("errorMessage", "Processing client unavailable.");
         }
 
-        return "redirect:/receipts/errors";
+        return "redirect:" + redirectTarget;
     }
 
     @GetMapping("/receipts/overview")
@@ -1252,6 +1263,9 @@ public class ReceiptController {
         model.addAttribute("scopeParam", toScopeParameter(effectiveScope));
         model.addAttribute("viewingAll", viewingAll);
         model.addAttribute("ownsReceipt", ownsReceipt);
+        model.addAttribute("canReparse", canViewAll && receiptProcessingClient.isPresent()
+            && receiptExtractionService.isPresent() && receiptExtractionService.get().isEnabled());
+        model.addAttribute("reparseAction", "/receipts/" + receipt.id() + "/reparse");
         return "receipt-detail";
     }
 
@@ -2067,6 +2081,20 @@ public class ReceiptController {
 
     private boolean isViewingAll(ReceiptViewScope scope, Authentication authentication) {
         return scope == ReceiptViewScope.ALL && isAdmin(authentication);
+    }
+
+    private boolean receiptFileExists(ParsedReceipt receipt) {
+        if (receipt == null || !StringUtils.hasText(receipt.objectName())
+            || receiptStorageService.isEmpty() || !receiptStorageService.get().isEnabled()) {
+            return false;
+        }
+
+        try {
+            return receiptStorageService.get().fileExists(receipt.objectName());
+        } catch (ReceiptStorageException ex) {
+            LOGGER.warn("Unable to verify receipt file existence for {}", receipt.objectName(), ex);
+            return false;
+        }
     }
 
     private boolean isAdmin(Authentication authentication) {
