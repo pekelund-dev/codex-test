@@ -105,14 +105,18 @@ public class ReceiptExtractionRepository {
 
         try {
             DocumentReference documentReference = firestore.collection(collectionName).document(documentId);
-            DocumentSnapshot existingSnapshot = documentReference.get().get();
-            boolean reparseRequested = existingSnapshot.exists() && Boolean.TRUE.equals(existingSnapshot.getBoolean("reparseRequested"));
+            boolean reparseRequested = false;
+            if (status == ReceiptProcessingStatus.COMPLETED) {
+                DocumentSnapshot existingSnapshot = documentReference.get().get();
+                reparseRequested = existingSnapshot.exists()
+                    && Boolean.TRUE.equals(existingSnapshot.getBoolean("reparseRequested"));
+            }
 
             Map<String, Object> payload = new HashMap<>();
             payload.put("bucket", bucket);
             payload.put("objectName", objectName);
             payload.put("objectPath", "gs://" + bucket + "/" + objectName);
-            payload.put("status", (status == ReceiptProcessingStatus.COMPLETED && reparseRequested) ? "REPARSED" : status.name());
+            payload.put("status", reparseRequested ? "REPARSED" : status.name());
             payload.put("statusMessage", message);
             payload.put("updatedAt", updateTimestamp);
 
