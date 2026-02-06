@@ -70,7 +70,7 @@ This directory contains GitHub Actions workflows for CI/CD automation.
 
 **What it does**:
 1. Reads the current Maven project version from the root `pom.xml`
-2. Calculates the release version based on selected release type (`major`, `minor`, `patch`)
+2. Calculates the release version based on selected release type (`major`, `minor`, `patch`) and supports starting from either `*-SNAPSHOT` or an already released `X.Y.Z` version
 3. Updates all POM versions to the release version and commits the change
 4. Tags the release commit as `vX.Y.Z` and pushes both commit and tag
 5. Builds and deploys both Cloud Run services

@@ -49,9 +49,10 @@ RUN echo "Generating git.properties for Cloud Build..."; \
 # Build the application with Maven cache mount, skipping git-commit-id-plugin
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -Pinclude-web -pl web -am -DskipTests -Dgit-commit-id-plugin.skip=true clean package \
-    && JAR_PATH="$(find web/target -maxdepth 1 -type f -name 'pklnd-web-*.jar' ! -name '*original*' ! -name '*-sources.jar' ! -name '*-javadoc.jar' | head -n 1)" \
-    && test -n "${JAR_PATH}" \
-    && cp "${JAR_PATH}" /workspace/app.jar \
+    && JAR_PATHS="$(find web/target -maxdepth 1 -type f -name 'pklnd-web-*.jar' ! -name '*original*' ! -name '*-sources.jar' ! -name '*-javadoc.jar')" \
+    && JAR_COUNT="$(printf '%s\n' "${JAR_PATHS}" | sed '/^$/d' | wc -l)" \
+    && [ "${JAR_COUNT}" -eq 1 ] \
+    && cp "${JAR_PATHS}" /workspace/app.jar \
     && echo "Verifying git.properties in JAR:" \
     && (unzip -p /workspace/app.jar BOOT-INF/classes/git.properties || echo "WARNING: git.properties not found in JAR!")
 
