@@ -29,7 +29,7 @@
                         <th>Filnamn</th>
                         <th>Felmeddelande</th>
                         <th>Datum</th>
-                        <th class="text-end">Åtgärd</th>
+                        <th class="text-end" th:if="${canReparse}">Åtgärd</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -45,10 +45,11 @@
                             <small class="text-muted" th:if="${receipt.stackTrace() != null}" style="white-space: pre-wrap; font-family: monospace; font-size: 0.8em;" th:text="${receipt.stackTrace()}"></small>
                         </td>
                         <td th:text="${receipt.updatedAtZoned() != null ? #temporals.format(receipt.updatedAtZoned(), 'yyyy-MM-dd HH:mm') : ''}">Datum</td>
-                        <td class="text-end">
+                        <td class="text-end" th:if="${canReparse}">
                             <form th:action="@{/receipts/{id}/reparse(id=${receipt.id()})}" method="post" class="d-inline">
+                                <input type="hidden" name="scope" value="all">
                                 <button type="submit" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-arrow-clockwise me-1"></i> Försök igen
+                                    <i class="bi bi-arrow-clockwise me-1"></i> Tolka om
                                 </button>
                             </form>
                         </td>

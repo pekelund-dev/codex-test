@@ -224,9 +224,9 @@ public record ParsedReceipt(
         }
         String normalized = status.trim().toUpperCase();
         return switch (normalized) {
-            case "COMPLETED" -> "bg-success-subtle text-success";
+            case "COMPLETED", "REPARSED" -> "bg-success-subtle text-success";
             case "FAILED" -> "bg-danger-subtle text-danger";
-            case "PROCESSING", "RUNNING", "PENDING" -> "bg-info-subtle text-info";
+            case "REPARSE_REQUESTED", "PROCESSING", "RUNNING", "PENDING" -> "bg-info-subtle text-info";
             default -> "bg-secondary-subtle text-secondary";
         };
     }

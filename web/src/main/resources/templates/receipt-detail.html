@@ -12,6 +12,9 @@
         </a>
     </div>
 
+    <div th:if="${successMessage}" class="alert alert-success" role="alert" th:text="${successMessage}">Åtgärden lyckades.</div>
+    <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}">Något gick fel.</div>
+
     <div th:if="${canViewAll}" class="mb-3">
         <div class="btn-group btn-group-sm" role="group" aria-label="Receipt scope">
             <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
@@ -35,6 +38,12 @@
                     <span class="badge text-uppercase fw-semibold align-self-start align-self-md-end"
                           th:classappend="${receipt.statusBadgeClass()}"
                           th:text="${receipt.status() != null ? receipt.status() : 'UNKNOWN'}">COMPLETED</span>
+                    <form th:if="${canReparse}" th:action="${reparseAction}" method="post" class="d-inline">
+                        <input type="hidden" name="scope" th:value="${scopeParam}">
+                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Tolka om kvitto
+                        </button>
+                    </form>
                     <div class="fw-semibold text-secondary" th:if="${receipt.formattedTotalAmount()}">
                         Total:
                         <span th:text="${receipt.formattedTotalAmount()}">129.99</span>

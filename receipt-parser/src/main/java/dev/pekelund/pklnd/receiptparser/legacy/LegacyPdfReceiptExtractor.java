@@ -7,11 +7,15 @@ import dev.pekelund.pklnd.receiptparser.ReceiptExtractionResult;
 import dev.pekelund.pklnd.receiptparser.ReceiptParsingException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -24,6 +28,7 @@ public class LegacyPdfReceiptExtractor implements ReceiptDataExtractor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LegacyPdfReceiptExtractor.class);
     private static final String SOURCE = "legacy-pdf-parser";
+    private static final Pattern QUANTITY_PATTERN = Pattern.compile("^(?<amount>-?\\d+(?:[.,]\\d+)?)\\s*(?<unit>\\p{L}+)$");
 
     private final PdfParser pdfParser;
     private final ObjectMapper objectMapper;
@@ -107,13 +112,59 @@ public class LegacyPdfReceiptExtractor implements ReceiptDataExtractor {
         mapped.put("name", item.getName());
         mapped.put("eanCode", item.getEanCode());
         mapped.put("unitPrice", item.getUnitPrice());
-        mapped.put("quantity", item.getQuantity());
+        mapped.put("quantity", resolveQuantity(item));
         mapped.put("totalPrice", item.getTotalPrice());
         List<Map<String, Object>> discounts = item.getDiscounts().stream()
             .map(this::mapDiscount)
             .collect(Collectors.toCollection(ArrayList::new));
         mapped.put("discounts", discounts);
         return mapped;
+    }
+
+    private String resolveQuantity(LegacyReceiptItem item) {
+        String quantity = item.getQuantity();
+        if (quantity == null || item.getUnitPrice() == null || item.getTotalPrice() == null
+            || item.getUnitPrice().compareTo(BigDecimal.ZERO) == 0) {
+            return quantity;
+        }
+
+        Matcher matcher = QUANTITY_PATTERN.matcher(quantity.trim());
+        if (!matcher.matches()) {
+            return quantity;
+        }
+
+        BigDecimal parsedAmount = parseAmount(matcher.group("amount"));
+        if (parsedAmount == null) {
+            return quantity;
+        }
+
+        String unit = matcher.group("unit");
+        BigDecimal calculatedAmount = item.getTotalPrice().divide(item.getUnitPrice(), 4, RoundingMode.HALF_UP);
+        BigDecimal diff = parsedAmount.subtract(calculatedAmount).abs();
+        if (diff.compareTo(new BigDecimal("0.001")) <= 0) {
+            return quantity;
+        }
+
+        return formatAmount(calculatedAmount) + " " + unit;
+    }
+
+    private BigDecimal parseAmount(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(value.replace(',', '.'));
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private String formatAmount(BigDecimal amount) {
+        BigDecimal scaled = amount.setScale(3, RoundingMode.HALF_UP).stripTrailingZeros();
+        if (scaled.scale() < 0) {
+            scaled = scaled.setScale(0, RoundingMode.UNNECESSARY);
+        }
+        return scaled.toPlainString().replace('.', ',');
     }
 
     private Map<String, Object> mapVat(LegacyReceiptVat vat) {
