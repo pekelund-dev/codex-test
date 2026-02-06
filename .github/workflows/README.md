@@ -62,6 +62,29 @@ This directory contains GitHub Actions workflows for CI/CD automation.
 - Terraform infrastructure already provisioned
 - Service account with proper permissions
 
+### 3. Release and Deploy to Cloud Run (`release-and-deploy.yml`)
+
+**Trigger**: Manually triggered via GitHub UI
+
+**Purpose**: Creates a semantic release (major/minor/patch), tags the release, deploys to Cloud Run, and then advances all Maven modules to the next `-SNAPSHOT` version.
+
+**What it does**:
+1. Reads the current Maven project version from the root `pom.xml`
+2. Calculates the release version based on selected release type (`major`, `minor`, `patch`) and supports starting from either `*-SNAPSHOT` or an already released `X.Y.Z` version
+3. Updates all POM versions to the release version and commits the change
+4. Tags the release commit as `vX.Y.Z` and pushes both commit and tag
+5. Builds and deploys both Cloud Run services
+6. Updates all POM versions to the next patch snapshot (`X.Y.(Z+1)-SNAPSHOT`) and commits the change
+
+**How to use**:
+1. Navigate to: Actions → Release and Deploy to Cloud Run
+2. Click "Run workflow"
+3. Select:
+   - **Release type**: `major`, `minor`, or `patch`
+   - **Environment**: `production` or `staging`
+   - **Region**: GCP region (default: `us-east1`)
+4. Click "Run workflow" button
+
 ## Setup Instructions
 
 ### Prerequisites
@@ -107,15 +130,17 @@ Quick summary:
 
 ## Workflow Comparison
 
-| Feature | PR Validation | Deploy to Cloud Run |
-|---------|--------------|---------------------|
-| **Trigger** | Automatic (on PR) | Manual (workflow_dispatch) |
-| **Purpose** | Validate changes | Deploy to production |
-| **Builds Docker** | Yes (doesn't push) | Yes (pushes to registry) |
-| **Runs Tests** | Yes | No |
-| **Deploys** | No | Yes |
-| **Duration** | 8-12 minutes | 10-15 minutes |
-| **Cost** | Free | Free (if in tier) |
+| Feature | PR Validation | Deploy to Cloud Run | Release and Deploy |
+|---------|--------------|---------------------|--------------------|
+| **Trigger** | Automatic (on PR) | Manual (workflow_dispatch) | Manual (workflow_dispatch) |
+| **Purpose** | Validate changes | Deploy to environment | Create release, tag, deploy, and bump snapshot |
+| **Builds Docker** | Yes (doesn't push) | Yes (pushes to registry) | Yes (pushes to registry) |
+| **Runs Tests** | Yes | No | No |
+| **Deploys** | No | Yes | Yes |
+| **Updates Maven versions** | No | No | Yes |
+| **Creates Git tag** | No | No | Yes |
+| **Duration** | 8-12 minutes | 10-15 minutes | 12-18 minutes |
+| **Cost** | Free | Free (if in tier) | Free (if in tier) |
 
 ## Cost Analysis
 
