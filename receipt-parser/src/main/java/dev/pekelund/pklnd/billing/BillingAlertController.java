@@ -80,16 +80,16 @@ public class BillingAlertController {
                 thresholdPercent = alertData.get("alertThresholdExceeded").asDouble() * 100.0;
             }
             
-            logger.info("Budget threshold: {:.1f}%", thresholdPercent);
+            logger.info("Budget threshold: {}%", thresholdPercent);
             
             // Trigger shutdown if we've exceeded or are at 100% of budget
             if (thresholdPercent >= 100.0) {
                 String reason = String.format("Budget exceeded: %.1f%%", thresholdPercent);
                 shutdownService.triggerShutdown(reason);
-                logger.error("SHUTDOWN TRIGGERED: Budget at {:.1f}%", thresholdPercent);
+                logger.error("SHUTDOWN TRIGGERED: Budget at {}%", thresholdPercent);
                 return ResponseEntity.ok("Shutdown triggered due to budget exceeded");
             } else {
-                logger.warn("Budget alert received at {:.1f}% - monitoring", thresholdPercent);
+                logger.warn("Budget alert received at {}% - monitoring", thresholdPercent);
                 return ResponseEntity.ok("Budget alert received - monitoring");
             }
             

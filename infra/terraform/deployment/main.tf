@@ -206,6 +206,25 @@ resource "google_cloud_run_v2_service_iam_member" "receipt_self_invoker" {
   member   = "serviceAccount:${var.receipt_service_account_email}"
 }
 
+# Grant Pub/Sub invoker service account permission to invoke Cloud Run services for billing alerts
+resource "google_cloud_run_v2_service_iam_member" "web_pubsub_invoker" {
+  count    = length(var.pubsub_invoker_service_account_email) > 0 ? 1 : 0
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.web.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${var.pubsub_invoker_service_account_email}"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "receipt_pubsub_invoker" {
+  count    = length(var.pubsub_invoker_service_account_email) > 0 ? 1 : 0
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.receipts.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${var.pubsub_invoker_service_account_email}"
+}
+
 # NOTE: Cloud Run v2 domain mappings are not fully supported by Terraform, so
 # manage them manually after applying this stack.
 # To map a custom domain, use the Google Cloud Console or the gcloud CLI:

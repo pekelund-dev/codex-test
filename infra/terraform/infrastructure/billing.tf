@@ -6,14 +6,6 @@ resource "google_pubsub_topic" "billing_alerts" {
   depends_on = [google_project_service.services]
 }
 
-# Grant billing alert service permission to publish to the topic
-resource "google_pubsub_topic_iam_member" "billing_publisher" {
-  project = var.project_id
-  topic   = google_pubsub_topic.billing_alerts.name
-  role    = "roles/pubsub.publisher"
-  member  = "serviceAccount:cloud-run-pubsub-invoker@${var.project_id}.iam.gserviceaccount.com"
-}
-
 # Service account for Pub/Sub to invoke Cloud Run
 resource "google_service_account" "pubsub_invoker" {
   account_id   = "cloud-run-pubsub-invoker"
@@ -21,23 +13,13 @@ resource "google_service_account" "pubsub_invoker" {
   project      = var.project_id
 }
 
-# Grant the Pub/Sub invoker permission to invoke Cloud Run services
-resource "google_cloud_run_v2_service_iam_member" "web_pubsub_invoker" {
-  project  = var.project_id
-  location = var.region
-  name     = "pklnd-web"
-  role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.pubsub_invoker.email}"
-
-  depends_on = [google_service_account.pubsub_invoker]
-}
-
-resource "google_cloud_run_v2_service_iam_member" "receipt_pubsub_invoker" {
-  project  = var.project_id
-  location = var.region
-  name     = "pklnd-receipts"
-  role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.pubsub_invoker.email}"
+# Grant the service account permission to publish to the billing alerts topic
+# This is required for the billing alert service to publish to the topic
+resource "google_pubsub_topic_iam_member" "billing_publisher" {
+  project = var.project_id
+  topic   = google_pubsub_topic.billing_alerts.name
+  role    = "roles/pubsub.publisher"
+  member  = "serviceAccount:${google_service_account.pubsub_invoker.email}"
 
   depends_on = [google_service_account.pubsub_invoker]
 }

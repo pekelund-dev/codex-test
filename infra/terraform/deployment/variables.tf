@@ -143,3 +143,14 @@ variable "custom_domain" {
   type        = string
   default     = ""
 }
+
+variable "pubsub_invoker_service_account_email" {
+  description = "Service account email used by Pub/Sub to invoke Cloud Run services for billing alerts"
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.pubsub_invoker_service_account_email == "" || can(regex("^[a-z0-9-]+@[a-z0-9-]+\\.iam\\.gserviceaccount\\.com$", var.pubsub_invoker_service_account_email))
+    error_message = "The pubsub_invoker_service_account_email must be empty or a valid service account email in the format: name@project.iam.gserviceaccount.com"
+  }
+}
