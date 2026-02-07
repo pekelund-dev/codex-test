@@ -10,6 +10,7 @@ pklnd is a Spring Boot application for maintaining a personal receipt archive fo
 - Receipt workspace tailored for ICA and other Swedish stores, supporting PDF/image uploads that land in Google Cloud Storage.
 - Automatic categorisation, store detection, and chronological sorting so your personal receipts stay easy to find.
 - Modular architecture with Spring Modulith keeping the web and receipt processing services isolated and verified.
+- **VAT monitoring** - Track price changes after Sweden's VAT reduction from 12% to 6% on food items (April 2026), identifying stores that may raise prices unfairly.
 
 ## Getting started
 
@@ -365,6 +366,32 @@ If Firestore is disabled, fallback users continue to rely on the roles defined i
 ### OAuth 2.0 login
 
 To enable Google sign-in, create OAuth credentials in the Google Cloud Console and configure the `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` environment variables. The default callback URL is `http://localhost:8080/login/oauth2/code/google`.
+
+### VAT monitoring
+
+The application includes a VAT monitoring feature to track price changes when Sweden lowers the VAT rate on food items from 12% to 6% (effective April 1, 2026). This feature helps consumers verify that stores are passing along the tax savings rather than raising prices.
+
+**How it works:**
+1. The system tracks items by their EAN (barcode) across multiple receipts
+2. For items that appear both before and after the VAT change date, it calculates:
+   - The expected price after VAT reduction: `(price_before / 1.12) × 1.06`
+   - The actual price after the VAT change
+   - The deviation between expected and actual prices
+3. Items with price increases >2% above expected are flagged as suspicious
+
+**Access:**
+Navigate to **Dashboard → Momsövervakning** (VAT Monitoring) to view the price comparison table. The page displays:
+- Total items being tracked
+- Number of items with suspicious price increases
+- Detailed comparison table showing before/after prices, expected prices, and deviations
+- Store and date information for each comparison
+
+**Requirements:**
+- Receipts must be parsed and stored in Firestore
+- Items must have EAN codes for tracking
+- At least one receipt before and one after April 1, 2026 for each item to compare
+
+The feature automatically filters for receipts with 12% VAT (food items) and ignores receipts with only 25% VAT (non-food items).
 
 ## Project structure
 
