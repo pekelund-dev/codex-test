@@ -96,7 +96,7 @@ public class BillingAlertController {
         } catch (Exception e) {
             logger.error("Error processing billing alert", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error processing alert: " + e.getMessage());
+                .body("Error processing billing alert");
         }
     }
 }
