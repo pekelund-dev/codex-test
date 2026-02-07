@@ -172,10 +172,10 @@ public class VatMonitoringService {
             }
         }
 
-        // Sort by suspicious increases first, then by price increase percentage
+        // Sort by suspicious increases first, then by price deviation percentage
         comparisons.sort(Comparator
             .comparing(ItemPriceComparison::hasSuspiciousIncrease, Comparator.reverseOrder())
-            .thenComparing(ItemPriceComparison::priceIncreasePercent, Comparator.reverseOrder()));
+            .thenComparing(ItemPriceComparison::priceDeviationPercent, Comparator.reverseOrder()));
 
         return Collections.unmodifiableList(comparisons);
     }
