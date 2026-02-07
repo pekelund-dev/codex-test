@@ -30,7 +30,6 @@ public class VatMonitoringService {
 
     private static final BigDecimal OLD_VAT_RATE = new BigDecimal("12.0");
     private static final BigDecimal NEW_VAT_RATE = new BigDecimal("6.0");
-    private static final BigDecimal VAT_CHANGE_CUTOFF = new BigDecimal("25.0");
     
     // Threshold for price increase tolerance (2%)
     private static final BigDecimal PRICE_INCREASE_THRESHOLD = new BigDecimal("0.02");
