@@ -1,0 +1,238 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Deploy to test environment
+# This script deploys the application to a test environment with isolated resources.
+# The test environment can be in the same GCP project (with different service names)
+# or in a separate test project.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+INFRA_DIR="${REPO_ROOT}/infra/terraform/infrastructure"
+DEPLOY_DIR="${REPO_ROOT}/infra/terraform/deployment"
+ENV_DIR="${REPO_ROOT}/infra/terraform/environments"
+
+# Environment-specific defaults
+PROJECT_ID=${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || true)}
+REGION=${REGION:-us-east1}
+ENVIRONMENT=${ENVIRONMENT:-test}
+WEB_SERVICE_NAME=${WEB_SERVICE_NAME:-pklnd-web-test}
+RECEIPT_SERVICE_NAME=${RECEIPT_SERVICE_NAME:-pklnd-receipts-test}
+WEB_DOCKERFILE=${WEB_DOCKERFILE:-Dockerfile}
+WEB_BUILD_CONTEXT=${WEB_BUILD_CONTEXT:-${REPO_ROOT}}
+RECEIPT_DOCKERFILE=${RECEIPT_DOCKERFILE:-receipt-parser/Dockerfile}
+CLOUD_BUILD_CONFIG=${CLOUD_BUILD_CONFIG:-receipt-parser/cloudbuild.yaml}
+APP_SECRET_NAME=${APP_SECRET_NAME:-pklnd-app-config-test}
+APP_SECRET_VERSION=${APP_SECRET_VERSION:-latest}
+FIRESTORE_DATABASE_NAME=${FIRESTORE_DATABASE_NAME:-receipts-db-test}
+
+if [[ -z "${PROJECT_ID}" ]]; then
+  echo "PROJECT_ID must be set or configured in gcloud before deploying to test environment." >&2
+  exit 1
+fi
+
+if [[ ! -d "${WEB_BUILD_CONTEXT}" ]]; then
+  echo "WEB_BUILD_CONTEXT ${WEB_BUILD_CONTEXT} was not found." >&2
+  exit 1
+fi
+
+if [[ ! -f "${WEB_BUILD_CONTEXT%/}/${WEB_DOCKERFILE}" ]]; then
+  echo "Dockerfile ${WEB_DOCKERFILE} not found in ${WEB_BUILD_CONTEXT}." >&2
+  exit 1
+fi
+
+if [[ ! -f "${REPO_ROOT}/${CLOUD_BUILD_CONFIG}" ]]; then
+  echo "Cloud Build configuration ${CLOUD_BUILD_CONFIG} was not found under the repository root." >&2
+  exit 1
+fi
+
+bucket_name=${BUCKET_NAME:-"pklnd-receipts-test-${PROJECT_ID}"}
+web_repo=web
+receipt_repo=receipts
+web_sa="cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
+receipt_sa="receipt-processor@${PROJECT_ID}.iam.gserviceaccount.com"
+
+tf_output_raw() {
+  terraform -chdir="${INFRA_DIR}" output -raw "$1" 2>/dev/null || true
+}
+
+bucket_name_from_tf=$(tf_output_raw bucket_name)
+web_registry_from_tf=$(tf_output_raw web_artifact_registry)
+receipt_registry_from_tf=$(tf_output_raw receipt_artifact_registry)
+web_sa_from_tf=$(tf_output_raw web_service_account_email)
+receipt_sa_from_tf=$(tf_output_raw receipt_service_account_email)
+
+if [[ -n "${web_registry_from_tf}" ]]; then
+  web_repo_from_tf=${web_registry_from_tf##*/}
+fi
+
+if [[ -n "${receipt_registry_from_tf}" ]]; then
+  receipt_repo_from_tf=${receipt_registry_from_tf##*/}
+fi
+
+web_repo=${web_repo_from_tf:-${web_repo}}
+receipt_repo=${receipt_repo_from_tf:-${receipt_repo}}
+web_sa=${web_sa_from_tf:-${web_sa}}
+receipt_sa=${receipt_sa_from_tf:-${receipt_sa}}
+
+timestamp=$(date +%Y%m%d-%H%M%S)
+web_image_base="${REGION}-docker.pkg.dev/${PROJECT_ID}/${web_repo}/${WEB_SERVICE_NAME}"
+receipt_image_base="${REGION}-docker.pkg.dev/${PROJECT_ID}/${receipt_repo}/${RECEIPT_SERVICE_NAME}"
+web_image="${web_image_base}:${timestamp}"
+receipt_image="${receipt_image_base}:${timestamp}"
+
+echo "=== Test Environment Deployment ==="
+echo "Project: ${PROJECT_ID}"
+echo "Region: ${REGION}"
+echo "Environment: ${ENVIRONMENT}"
+echo "Web Service: ${WEB_SERVICE_NAME}"
+echo "Receipt Service: ${RECEIPT_SERVICE_NAME}"
+echo "Firestore DB: ${FIRESTORE_DATABASE_NAME}"
+echo "Secret Name: ${APP_SECRET_NAME}"
+echo "=================================="
+
+if ! gcloud secrets describe "${APP_SECRET_NAME}" --project "${PROJECT_ID}" >/dev/null 2>&1; then
+  echo "Secret ${APP_SECRET_NAME} not found in project ${PROJECT_ID}." >&2
+  echo "You need to create the test environment secret first." >&2
+  echo "Run: gcloud secrets create ${APP_SECRET_NAME} --project ${PROJECT_ID}" >&2
+  echo "Then add a version with your test credentials:" >&2
+  echo 'echo '"'"'{"google_client_id":"...","google_client_secret":"...","ai_studio_api_key":""}'"'"' | gcloud secrets versions add ${APP_SECRET_NAME} --data-file=-' >&2
+  exit 1
+fi
+
+secret_json=$(gcloud secrets versions access "${APP_SECRET_VERSION}" --secret "${APP_SECRET_NAME}" --project "${PROJECT_ID}")
+
+parse_json_field() {
+  local json_payload="$1"
+  local key="$2"
+
+  if command -v jq >/dev/null 2>&1; then
+    echo "${json_payload}" | jq -r --arg key "${key}" '.[$key] // empty'
+  else
+    echo "${json_payload}" | sed -n "s/.*\"${key}\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p"
+  fi
+}
+
+GOOGLE_CLIENT_ID=$(parse_json_field "${secret_json}" "google_client_id")
+GOOGLE_CLIENT_SECRET=$(parse_json_field "${secret_json}" "google_client_secret")
+AI_STUDIO_API_KEY=$(parse_json_field "${secret_json}" "ai_studio_api_key")
+
+if [[ -z "${GOOGLE_CLIENT_ID}" || -z "${GOOGLE_CLIENT_SECRET}" ]]; then
+  echo "Test secret must include google_client_id and google_client_secret" >&2
+  exit 1
+fi
+
+tfvars_file=$(mktemp)
+chmod 600 "${tfvars_file}"
+trap 'rm -f "${tfvars_file}"' EXIT
+
+ALLOW_UNAUTHENTICATED_WEB=${ALLOW_UNAUTHENTICATED_WEB:-true}
+CUSTOM_DOMAIN=${CUSTOM_DOMAIN:-}
+
+json_escape() {
+  local raw_value="$1"
+
+  if command -v jq >/dev/null 2>&1; then
+    jq -Rs '.' <<<"${raw_value}"
+  else
+    printf '"%s"' "$(printf '%s' "${raw_value}" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+  fi
+}
+
+allow_unauth_value=$(printf '%s' "${ALLOW_UNAUTHENTICATED_WEB}" | tr '[:upper:]' '[:lower:]')
+build_branch=${BRANCH_NAME:-$(git -C "${REPO_ROOT}" rev-parse --abbrev-ref HEAD 2>/dev/null || true)}
+build_commit=${COMMIT_SHA:-$(git -C "${REPO_ROOT}" rev-parse HEAD 2>/dev/null || true)}
+
+cat >"${tfvars_file}" <<EOF
+project_id = $(json_escape "${PROJECT_ID}")
+region = $(json_escape "${REGION}")
+bucket_name = $(json_escape "${bucket_name}")
+web_service_account_email = $(json_escape "${web_sa}")
+receipt_service_account_email = $(json_escape "${receipt_sa}")
+secret_name = $(json_escape "${APP_SECRET_NAME}")
+google_client_id = $(json_escape "${GOOGLE_CLIENT_ID}")
+google_client_secret = $(json_escape "${GOOGLE_CLIENT_SECRET}")
+ai_studio_api_key = $(json_escape "${AI_STUDIO_API_KEY}")
+web_image = $(json_escape "${web_image}")
+receipt_image = $(json_escape "${receipt_image}")
+web_service_name = $(json_escape "${WEB_SERVICE_NAME}")
+receipt_service_name = $(json_escape "${RECEIPT_SERVICE_NAME}")
+firestore_project_id = $(json_escape "${FIRESTORE_PROJECT_ID:-${PROJECT_ID}}")
+firestore_database_id = $(json_escape "${FIRESTORE_DATABASE_NAME}")
+gcs_project_id = $(json_escape "${GCS_PROJECT_ID:-${PROJECT_ID}}")
+vertex_ai_project_id = $(json_escape "${VERTEX_AI_PROJECT_ID:-${PROJECT_ID}}")
+vertex_ai_location = $(json_escape "${VERTEX_AI_LOCATION:-${REGION}}")
+logging_project_id = $(json_escape "${LOGGING_PROJECT_ID:-${PROJECT_ID}}")
+allow_unauthenticated_web = ${allow_unauth_value}
+custom_domain = $(json_escape "${CUSTOM_DOMAIN}")
+EOF
+
+echo "Building both images in parallel for faster deployment..."
+
+# Start web image build in background
+{
+  echo "Building web image ${web_image}"
+  gcloud builds submit "${WEB_BUILD_CONTEXT}" \
+    --config "${REPO_ROOT}/cloudbuild.yaml" \
+    --substitutions "_IMAGE_BASE=${web_image_base},_IMAGE_TAG=${timestamp},_DOCKERFILE=${WEB_DOCKERFILE},_GIT_BRANCH=${build_branch},_GIT_COMMIT=${build_commit}" \
+    --project "${PROJECT_ID}" \
+    --timeout=1200s
+} &
+WEB_BUILD_PID=$!
+
+# Start receipt processor build in background
+{
+  echo "Building receipt processor image ${receipt_image}"
+  gcloud builds submit "${REPO_ROOT}" \
+    --config "${CLOUD_BUILD_CONFIG}" \
+    --substitutions "_IMAGE_BASE=${receipt_image_base},_IMAGE_TAG=${timestamp},_DOCKERFILE=${RECEIPT_DOCKERFILE},_GIT_BRANCH=${build_branch},_GIT_COMMIT=${build_commit}" \
+    --project "${PROJECT_ID}" \
+    --timeout=1200s
+} &
+RECEIPT_BUILD_PID=$!
+
+# Wait for both builds to complete
+echo "Waiting for parallel builds to complete..."
+wait $WEB_BUILD_PID
+WEB_BUILD_EXIT=$?
+if [ $WEB_BUILD_EXIT -ne 0 ]; then
+  echo "Web image build failed with exit code $WEB_BUILD_EXIT" >&2
+  exit 1
+fi
+
+wait $RECEIPT_BUILD_PID
+RECEIPT_BUILD_EXIT=$?
+if [ $RECEIPT_BUILD_EXIT -ne 0 ]; then
+  echo "Receipt processor image build failed with exit code $RECEIPT_BUILD_EXIT" >&2
+  exit 1
+fi
+
+echo "Both images built successfully"
+
+# Configure Terraform state bucket with environment prefix
+STATE_BUCKET="pklnd-terraform-state-${PROJECT_ID}"
+
+# Create state bucket if it doesn't exist
+if ! gsutil ls "gs://${STATE_BUCKET}" >/dev/null 2>&1; then
+  echo "Creating Terraform state bucket: ${STATE_BUCKET}"
+  gsutil mb -p "${PROJECT_ID}" -l "${REGION}" "gs://${STATE_BUCKET}"
+  gsutil versioning set on "gs://${STATE_BUCKET}"
+  echo "✓ State bucket created with versioning enabled"
+else
+  echo "✓ State bucket already exists: ${STATE_BUCKET}"
+fi
+
+terraform -chdir="${DEPLOY_DIR}" init -input=false \
+  -backend-config="bucket=${STATE_BUCKET}" \
+  -backend-config="prefix=deployment-${ENVIRONMENT}"
+terraform -chdir="${DEPLOY_DIR}" apply -input=false -auto-approve -var-file="${tfvars_file}" "$@"
+
+# Clean up Cloud Build source cache
+echo "Cleaning up Cloud Build source cache..."
+gsutil -m rm -r "gs://${PROJECT_ID}_cloudbuild/source/**" 2>/dev/null || true
+
+echo ""
+echo "=== Test Environment Deployment Complete ==="
+echo "Web Service URL: $(terraform -chdir="${DEPLOY_DIR}" output -raw web_service_url 2>/dev/null || echo 'Run terraform output to see')"
+echo "Receipt Service URL: $(terraform -chdir="${DEPLOY_DIR}" output -raw receipt_service_url 2>/dev/null || echo 'Run terraform output to see')"
+echo "=========================================="

@@ -19,6 +19,7 @@ on:
         type: choice
         options:
           - production
+          - test
           - staging
       region:
         description: 'GCP region'
@@ -29,6 +30,9 @@ on:
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: ${{ inputs.region || 'us-east1' }}
+  # Environment-specific service names
+  WEB_SERVICE_NAME: ${{ inputs.environment == 'test' && 'pklnd-web-test' || 'pklnd-web' }}
+  RECEIPT_SERVICE_NAME: ${{ inputs.environment == 'test' && 'pklnd-receipts-test' || 'pklnd-receipts' }}
 
 jobs:
   release-deploy:
@@ -195,7 +199,7 @@ jobs:
       - name: Deploy web service to Cloud Run
         run: |
           set -e
-          gcloud run deploy pklnd-web \
+          gcloud run deploy ${{ env.WEB_SERVICE_NAME }} \
             --image=${{ steps.meta.outputs.web_image }} \
             --region=${{ env.REGION }} \
             --project=${{ env.PROJECT_ID }} \
@@ -204,7 +208,7 @@ jobs:
       - name: Deploy receipt-parser service to Cloud Run
         run: |
           set -e
-          gcloud run deploy pklnd-receipts \
+          gcloud run deploy ${{ env.RECEIPT_SERVICE_NAME }} \
             --image=${{ steps.meta.outputs.receipt_image }} \
             --region=${{ env.REGION }} \
             --project=${{ env.PROJECT_ID }} \

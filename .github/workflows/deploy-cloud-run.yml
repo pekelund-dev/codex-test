@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - production
+          - test
           - staging
       region:
         description: 'GCP region'
@@ -20,6 +21,9 @@ on:
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: ${{ inputs.region || 'us-east1' }}
+  # Environment-specific service names
+  WEB_SERVICE_NAME: ${{ inputs.environment == 'test' && 'pklnd-web-test' || 'pklnd-web' }}
+  RECEIPT_SERVICE_NAME: ${{ inputs.environment == 'test' && 'pklnd-receipts-test' || 'pklnd-receipts' }}
 
 jobs:
   deploy:
@@ -100,9 +104,10 @@ jobs:
         run: |
           set -e
           echo "Deploying web service with image: ${{ steps.meta.outputs.web_image }}"
+          echo "Service name: ${{ env.WEB_SERVICE_NAME }}"
           # Only update the image - all other settings (service account, memory, CPU, etc.)
           # are preserved from the existing service configuration
-          gcloud run deploy pklnd-web \
+          gcloud run deploy ${{ env.WEB_SERVICE_NAME }} \
             --image=${{ steps.meta.outputs.web_image }} \
             --region=${{ env.REGION }} \
             --project=${{ env.PROJECT_ID }} \
@@ -112,9 +117,10 @@ jobs:
         run: |
           set -e
           echo "Deploying receipt-parser service with image: ${{ steps.meta.outputs.receipt_image }}"
+          echo "Service name: ${{ env.RECEIPT_SERVICE_NAME }}"
           # Only update the image - all other settings (service account, memory, CPU, etc.)
           # are preserved from the existing service configuration
-          gcloud run deploy pklnd-receipts \
+          gcloud run deploy ${{ env.RECEIPT_SERVICE_NAME }} \
             --image=${{ steps.meta.outputs.receipt_image }} \
             --region=${{ env.REGION }} \
             --project=${{ env.PROJECT_ID }} \
@@ -123,8 +129,8 @@ jobs:
       - name: Get Cloud Run URLs
         id: urls
         run: |
-          WEB_URL=$(gcloud run services describe pklnd-web --region=${{ env.REGION }} --format='value(status.url)' 2>/dev/null || echo "Not deployed")
-          RECEIPT_URL=$(gcloud run services describe pklnd-receipts --region=${{ env.REGION }} --format='value(status.url)' 2>/dev/null || echo "Not deployed")
+          WEB_URL=$(gcloud run services describe ${{ env.WEB_SERVICE_NAME }} --region=${{ env.REGION }} --format='value(status.url)' 2>/dev/null || echo "Not deployed")
+          RECEIPT_URL=$(gcloud run services describe ${{ env.RECEIPT_SERVICE_NAME }} --region=${{ env.REGION }} --format='value(status.url)' 2>/dev/null || echo "Not deployed")
           echo "web_url=${WEB_URL}" >> $GITHUB_OUTPUT
           echo "receipt_url=${RECEIPT_URL}" >> $GITHUB_OUTPUT
 
