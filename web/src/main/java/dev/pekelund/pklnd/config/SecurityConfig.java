@@ -47,7 +47,9 @@ public class SecurityConfig {
                     "/webjars/**",
                     "/oauth2/**",
                     "/favicon.ico",
-                    "/error"
+                    "/error",
+                    "/actuator/health/**",
+                    "/api/billing/alerts"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
@@ -70,7 +72,9 @@ public class SecurityConfig {
                     .maxAgeInSeconds(31536000))
             )
             .addFilterBefore(new CspNonceFilter(), HeaderWriterFilter.class)
-            .csrf(Customizer.withDefaults());
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers("/api/billing/alerts")
+            );
 
         ClientRegistrationRepository clientRegistrationRepository =
             clientRegistrationRepositoryProvider.getIfAvailable();

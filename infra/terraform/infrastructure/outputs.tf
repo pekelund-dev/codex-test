@@ -27,3 +27,13 @@ output "app_secret_name" {
   description = "Unified Secret Manager secret id for application credentials"
   value       = google_secret_manager_secret.app_config.secret_id
 }
+
+output "billing_alerts_topic" {
+  description = "Pub/Sub topic for billing alerts"
+  value       = google_pubsub_topic.billing_alerts.name
+}
+
+output "pubsub_invoker_service_account" {
+  description = "Service account email for Pub/Sub to invoke Cloud Run"
+  value       = google_service_account.pubsub_invoker.email
+}
