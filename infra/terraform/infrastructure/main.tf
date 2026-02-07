@@ -14,6 +14,8 @@ locals {
     "secretmanager.googleapis.com",
     "logging.googleapis.com",
     "aiplatform.googleapis.com",
+    "pubsub.googleapis.com",
+    "billingbudgets.googleapis.com",
   ]
 }
 
