@@ -12,6 +12,8 @@ import dev.pekelund.pklnd.web.DashboardStatisticsService.DashboardStatistics;
 import dev.pekelund.pklnd.web.ReceiptOwnerResolver;
 import dev.pekelund.pklnd.web.TagStatisticsService;
 import dev.pekelund.pklnd.web.TagStatisticsService.TagSummary;
+import dev.pekelund.pklnd.web.VatMonitoringService;
+import dev.pekelund.pklnd.web.VatMonitoringService.VatMonitoringResult;
 import java.math.BigDecimal;
 import java.security.Principal;
 import java.time.Month;
@@ -38,6 +40,7 @@ public class StatisticsController {
     private final TagStatisticsService tagStatisticsService;
     private final ReceiptOwnerResolver receiptOwnerResolver;
     private final FirestoreUserService firestoreUserService;
+    private final VatMonitoringService vatMonitoringService;
 
     public StatisticsController(DashboardStatisticsService dashboardStatisticsService,
                                 TagService tagService,
@@ -45,7 +48,8 @@ public class StatisticsController {
                                 ReceiptExtractionService receiptExtractionService,
                                 TagStatisticsService tagStatisticsService,
                                 ReceiptOwnerResolver receiptOwnerResolver,
-                                FirestoreUserService firestoreUserService) {
+                                FirestoreUserService firestoreUserService,
+                                VatMonitoringService vatMonitoringService) {
         this.dashboardStatisticsService = dashboardStatisticsService;
         this.tagService = tagService;
         this.itemCategorizationService = itemCategorizationService;
@@ -53,6 +57,7 @@ public class StatisticsController {
         this.tagStatisticsService = tagStatisticsService;
         this.receiptOwnerResolver = receiptOwnerResolver;
         this.firestoreUserService = firestoreUserService;
+        this.vatMonitoringService = vatMonitoringService;
     }
 
     @GetMapping("/dashboard")
@@ -237,6 +242,17 @@ public class StatisticsController {
         model.addAttribute("totalItems", taggedItems.size());
 
         return "statistics-tag-items";
+    }
+
+    @GetMapping("/dashboard/statistics/vat-monitoring")
+    public String vatMonitoring(Model model, Authentication authentication) {
+        model.addAttribute("pageTitleKey", "page.vat.monitoring.title");
+
+        VatMonitoringResult result = vatMonitoringService.analyzeVatChanges(authentication);
+        model.addAttribute("vatMonitoring", result);
+        model.addAttribute("admin", isAdmin(authentication));
+
+        return "vat-monitoring";
     }
 
     public record ReceiptWithTaggedItems(

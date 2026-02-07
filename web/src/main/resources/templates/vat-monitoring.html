@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${pageTitle}, ~{::section})}">
+<head>
+    <title th:text="${pageTitle != null} ? ${pageTitle} : 'Momsövervakning'">Momsövervakning</title>
+</head>
+<body>
+<section>
+    <div class="row py-4">
+        <div class="col-12">
+            <h1 class="fw-bold mb-3">Momsövervakning</h1>
+            <p class="text-muted mb-3">
+                Sverige sänker momsen på livsmedel från 12% till 6% den 
+                <strong th:text="${vatMonitoring.vatChangeDate()}">2026-04-01</strong>.
+                Den här sidan visar hur priser på varor ändras och flaggar om butiker höjer priserna mer än förväntat.
+            </p>
+        </div>
+    </div>
+
+    <div th:if="${!vatMonitoring.available()}" class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-warning" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <span>Momsövervakning är inte tillgänglig. Se till att Firestore är konfigurerad och att det finns kvitton.</span>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${vatMonitoring.available()}" class="row mt-4">
+        <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <p class="text-muted mb-1 small">Varor spårade</p>
+                            <h3 class="mb-0 fw-bold" th:text="${vatMonitoring.totalItemsTracked()}">0</h3>
+                        </div>
+                        <div class="ms-3">
+                            <i class="bi bi-box-seam fs-1 text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <p class="text-muted mb-1 small">Misstänkta prisökningar</p>
+                            <h3 class="mb-0 fw-bold" 
+                                th:text="${vatMonitoring.itemsWithSuspiciousIncrease()}"
+                                th:classappend="${vatMonitoring.itemsWithSuspiciousIncrease() > 0} ? 'text-danger' : 'text-success'">0</h3>
+                        </div>
+                        <div class="ms-3">
+                            <i class="bi bi-exclamation-triangle fs-1" 
+                               th:classappend="${vatMonitoring.itemsWithSuspiciousIncrease() > 0} ? 'text-danger' : 'text-success'"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${vatMonitoring.available() && vatMonitoring.comparisons().isEmpty()}" class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                <span>Inga prisändringar att visa ännu. Vi behöver kvitton både före och efter momssänkningen 
+                    (<span th:text="${vatMonitoring.vatChangeDate()}">2026-04-01</span>) för att jämföra priser.</span>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${vatMonitoring.available() && !vatMonitoring.comparisons().isEmpty()}" class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Prisjämförelse</h5>
+                    <p class="text-muted small mb-0 mt-2">
+                        Nedan visas varor med kvitton både före och efter momssänkningen. 
+                        <strong class="text-danger">Röda rader</strong> visar varor där priset ökat mer än förväntat.
+                    </p>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Vara</th>
+                                    <th class="text-center">Butik</th>
+                                    <th class="text-end">Pris före</th>
+                                    <th class="text-end">Förväntat pris</th>
+                                    <th class="text-end">Pris efter</th>
+                                    <th class="text-end">Ändring</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="item : ${vatMonitoring.comparisons()}"
+                                    th:classappend="${item.hasSuspiciousIncrease()} ? 'table-danger' : ''">
+                                    <td>
+                                        <div class="fw-semibold" th:text="${item.itemName()}">Vara</div>
+                                        <div class="text-muted small">
+                                            <span>EAN: </span>
+                                            <span th:text="${item.ean()}">1234567890123</span>
+                                        </div>
+                                        <div th:if="${item.allStores().size() > 1}" class="text-muted small">
+                                            <span th:text="${item.totalOccurrences()} + ' köp i ' + ${item.allStores().size()} + ' butiker'">
+                                                5 köp i 2 butiker
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="small">
+                                            <span class="badge bg-light text-dark" th:text="${item.storeNameBefore()}">ICA</span>
+                                            <span th:if="${!item.storeNameBefore().equals(item.storeNameAfter())}">→</span>
+                                            <span th:if="${!item.storeNameBefore().equals(item.storeNameAfter())}" 
+                                                  class="badge bg-light text-dark" th:text="${item.storeNameAfter()}">ICA</span>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 0.7rem;">
+                                            <span th:text="${item.dateBefore()}">2026-03-15</span>
+                                            <span>→</span>
+                                            <span th:text="${item.dateAfter()}">2026-04-05</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-end">
+                                        <span th:text="${item.formattedPriceBefore()}">19.90 kr</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="text-success fw-semibold" th:text="${item.formattedExpectedPrice()}">18.85 kr</span>
+                                        <div class="text-muted small">
+                                            <span th:text="${#numbers.formatDecimal(item.expectedChangePercent(), 1, 1)} + '%'">-5.3%</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-end fw-semibold">
+                                        <span th:text="${item.formattedPriceAfter()}">21.90 kr</span>
+                                        <div class="small" th:classappend="${item.hasSuspiciousIncrease()} ? 'text-danger' : 'text-muted'">
+                                            <span th:text="${#numbers.formatDecimal(item.priceChangePercent(), 1, 1)} + '%'">+10.1%</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-end">
+                                        <span th:classappend="${item.hasSuspiciousIncrease()} ? 'text-danger fw-bold' : 'text-muted'"
+                                              th:text="${item.formattedPriceDeviation()}">+3.05 kr</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span th:if="${item.hasSuspiciousIncrease()}" 
+                                              class="badge bg-danger" title="Prisökning högre än förväntat">
+                                            <i class="bi bi-exclamation-triangle"></i> Misstänkt
+                                        </span>
+                                        <span th:unless="${item.hasSuspiciousIncrease()}" 
+                                              class="badge bg-success" title="Prisändring inom förväntat">
+                                            <i class="bi bi-check-circle"></i> OK
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-muted small">
+                    <div class="row">
+                        <div class="col-12">
+                            <p class="mb-2"><strong>Förklaring:</strong></p>
+                            <ul class="mb-0 ps-3">
+                                <li><strong>Pris före:</strong> Senaste inköpspriset före momssänkningen</li>
+                                <li><strong>Förväntat pris:</strong> Beräknat pris efter momssänkning: (pris före / 1.12) × 1.06</li>
+                                <li><strong>Pris efter:</strong> Första inköpspriset efter momssänkningen</li>
+                                <li><strong>Ändring:</strong> Skillnad mellan faktiskt pris och förväntat pris</li>
+                                <li><strong>Status:</strong> Flaggas som "Misstänkt" om priset ökat mer än 2% över förväntat</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>
+                <span>Tillbaka till instrumentpanel</span>
+            </a>
+        </div>
+    </div>
+</section>
+</body>
+</html>
