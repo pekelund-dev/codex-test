@@ -75,6 +75,12 @@ receipt_repo=${receipt_repo_from_tf:-${receipt_repo}}
 web_sa=${web_sa_from_tf:-${web_sa}}
 receipt_sa=${receipt_sa_from_tf:-${receipt_sa}}
 
+# Trim whitespace/newlines from variables
+web_repo=$(echo "${web_repo}" | tr -d '[:space:]')
+receipt_repo=$(echo "${receipt_repo}" | tr -d '[:space:]')
+web_sa=$(echo "${web_sa}" | tr -d '[:space:]')
+receipt_sa=$(echo "${receipt_sa}" | tr -d '[:space:]')
+
 timestamp=$(date +%Y%m%d-%H%M%S)
 web_image_base="${REGION}-docker.pkg.dev/${PROJECT_ID}/${web_repo}/${WEB_SERVICE_NAME}"
 receipt_image_base="${REGION}-docker.pkg.dev/${PROJECT_ID}/${receipt_repo}/${RECEIPT_SERVICE_NAME}"
@@ -133,7 +139,7 @@ json_escape() {
   local raw_value="$1"
 
   if command -v jq >/dev/null 2>&1; then
-    jq -Rs '.' <<<"${raw_value}"
+    printf '%s' "${raw_value}" | jq -Rs '.'
   else
     printf '"%s"' "$(printf '%s' "${raw_value}" | sed 's/\\/\\\\/g; s/"/\\"/g')"
   fi
