@@ -102,12 +102,18 @@ A separate test environment is available for testing changes without affecting p
 
 ### Quick Setup
 
+**Prerequisites** (first time only):
+1. Create OAuth 2.0 credentials in [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Have an existing GCP project with billing enabled (or create a new one)
+
+**Setup commands:**
+
 ```bash
 # Set project and region
 export PROJECT_ID=your-gcp-project-id
 export REGION=us-east1
 
-# Create test credentials file
+# Create test credentials file with your OAuth credentials
 cat > /tmp/pklnd-test-secret.json <<EOF
 {
   "google_client_id": "your-test-client-id.apps.googleusercontent.com",
@@ -116,21 +122,24 @@ cat > /tmp/pklnd-test-secret.json <<EOF
 }
 EOF
 
-# Provision test infrastructure
+# Provision test infrastructure (creates Firestore DB, Storage bucket, Secret Manager secret)
 APP_SECRET_FILE=/tmp/pklnd-test-secret.json \
 PROJECT_ID=$PROJECT_ID \
 REGION=$REGION \
 ./scripts/terraform/setup_test_infrastructure.sh
 
-# Deploy to test environment
+# Deploy services to test environment
 PROJECT_ID=$PROJECT_ID \
 REGION=$REGION \
 ENVIRONMENT=test \
 ./scripts/terraform/deploy_to_test.sh
 ```
 
+**Note**: Service accounts and Artifact Registry are reused from production setup. See [Prerequisites Guide](docs/test-environment-prerequisites.md) for details.
+
 ### Documentation
 
+- **[Prerequisites Guide](docs/test-environment-prerequisites.md)** - What's required before setup
 - **[Test Environment Setup Guide](docs/test-environment-setup.md)** - Complete step-by-step setup instructions
 - **[Quick Reference](docs/test-environment-quick-reference.md)** - Common commands and workflows
 
