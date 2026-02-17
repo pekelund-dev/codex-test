@@ -27,17 +27,9 @@ Note the `DISPLAY_NAME` column value - you'll need this in Step 2.
 
 ## Step 2: Configure Budget Alert Variables
 
-Add these variables to your infrastructure configuration:
+Add these variables to your infrastructure configuration.
 
-**Option A: Environment Variables**
-
-```bash
-export ENABLE_BUDGET_ALERT=true
-export BUDGET_AMOUNT=50  # Monthly budget in USD
-export BILLING_ACCOUNT_DISPLAY_NAME="My Billing Account"  # From Step 1
-```
-
-**Option B: Terraform Variables File**
+**Recommended: Terraform Variables File**
 
 Create or update `infra/terraform/infrastructure/terraform.tfvars`:
 
@@ -47,9 +39,29 @@ budget_amount = 50
 billing_account_display_name = "My Billing Account"
 ```
 
+**Alternative: Environment Variables**
+
+If you prefer to use environment variables:
+
+```bash
+export ENABLE_BUDGET_ALERT=true
+export BUDGET_AMOUNT=50  # Monthly budget in USD
+export BILLING_ACCOUNT_DISPLAY_NAME="My Billing Account"  # From Step 1
+```
+
+Note: The deployment script converts env vars to `TF_VAR_*` format automatically.
+
 ## Step 3: Apply Infrastructure Changes
 
-Run the infrastructure provisioning script to create the budget alert resources:
+Run the infrastructure provisioning script to create the budget alert resources.
+
+**If using terraform.tfvars (recommended):**
+
+```bash
+PROJECT_ID=your-project-id ./scripts/terraform/apply_infrastructure.sh
+```
+
+**If using environment variables:**
 
 ```bash
 PROJECT_ID=your-project-id \
@@ -165,11 +177,22 @@ When budget reaches 100%, both services automatically report as unhealthy and sc
 
 To change your monthly budget:
 
-```bash
-# Update the variable
-export BUDGET_AMOUNT=100
+**If using terraform.tfvars (recommended):**
 
-# Reapply infrastructure
+1. Update `infra/terraform/infrastructure/terraform.tfvars`:
+   ```hcl
+   budget_amount = 100  # New budget amount
+   ```
+
+2. Reapply infrastructure:
+   ```bash
+   PROJECT_ID=your-project-id ./scripts/terraform/apply_infrastructure.sh
+   ```
+
+**If using environment variables:**
+
+```bash
+# Update and reapply
 PROJECT_ID=your-project-id \
 BUDGET_AMOUNT=100 \
 ./scripts/terraform/apply_infrastructure.sh
@@ -178,6 +201,20 @@ BUDGET_AMOUNT=100 \
 ## Disabling Budget Alerts
 
 To disable the feature:
+
+**If using terraform.tfvars:**
+
+1. Update `infra/terraform/infrastructure/terraform.tfvars`:
+   ```hcl
+   enable_budget_alert = false
+   ```
+
+2. Reapply infrastructure:
+   ```bash
+   PROJECT_ID=your-project-id ./scripts/terraform/apply_infrastructure.sh
+   ```
+
+**If using environment variables:**
 
 ```bash
 # Set to false
