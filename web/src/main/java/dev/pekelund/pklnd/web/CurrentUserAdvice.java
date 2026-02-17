@@ -33,7 +33,7 @@ public class CurrentUserAdvice {
     private final FirestoreReadTotals firestoreReadTotals;
     private final ObjectProvider<GitProperties> gitPropertiesProvider;
     private final Environment environment;
-    private final BillingShutdownService billingShutdownService;
+    private final ObjectProvider<BillingShutdownService> billingShutdownServiceProvider;
 
     @Value("${app.environment.label:}")
     private String environmentLabel;
@@ -43,13 +43,13 @@ public class CurrentUserAdvice {
         FirestoreReadTotals firestoreReadTotals,
         ObjectProvider<GitProperties> gitPropertiesProvider,
         Environment environment,
-        BillingShutdownService billingShutdownService
+        ObjectProvider<BillingShutdownService> billingShutdownServiceProvider
     ) {
         this.firestoreReadTrackerProvider = firestoreReadTrackerProvider;
         this.firestoreReadTotals = firestoreReadTotals;
         this.gitPropertiesProvider = gitPropertiesProvider;
         this.environment = environment;
-        this.billingShutdownService = billingShutdownService;
+        this.billingShutdownServiceProvider = billingShutdownServiceProvider;
     }
 
     @ModelAttribute("userProfile")
@@ -142,7 +142,8 @@ public class CurrentUserAdvice {
 
     @ModelAttribute("budgetPercentage")
     public Double budgetPercentage() {
-        return billingShutdownService.getBudgetPercentage();
+        BillingShutdownService service = billingShutdownServiceProvider.getIfAvailable();
+        return service != null ? service.getBudgetPercentage() : 0.0;
     }
 
     private LanguageOption buildOption(
