@@ -33,10 +33,21 @@ GCP Budget Alert → Pub/Sub Topic → Cloud Run Services
 
 The budget alert is configured with multiple thresholds:
 
-- **50%** - Warning alert (monitoring only)
-- **75%** - Warning alert (monitoring only)
-- **90%** - Warning alert (monitoring only)
+- **50%** - Warning alert (displayed in status bar)
+- **75%** - Warning alert (displayed in status bar)
+- **90%** - Warning alert (displayed in status bar)
 - **100%** - **SHUTDOWN TRIGGERED** - Application scales to zero
+
+All budget alerts update the status display in the application header, showing the current budget percentage.
+
+## Visual Indicator
+
+When a budget alert is received, the current budget percentage is displayed in the red status bar at the top of the application:
+
+- **Location**: Top of every page, in the application header
+- **Display**: "Budget: X%" badge with wallet icon
+- **Updates**: Real-time as alerts are received from GCP
+- **Visibility**: Shows for all budget levels (25%, 50%, 75%, 90%, 100%)
 
 ## Infrastructure Setup
 

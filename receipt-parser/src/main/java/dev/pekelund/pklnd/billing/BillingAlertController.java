@@ -82,6 +82,9 @@ public class BillingAlertController {
             
             logger.info("Budget threshold: {}%", thresholdPercent);
             
+            // Update the budget percentage for tracking
+            shutdownService.updateBudgetPercentage(thresholdPercent);
+            
             // Trigger shutdown if we've exceeded or are at 100% of budget
             if (thresholdPercent >= 100.0) {
                 String reason = String.format("Budget exceeded: %.1f%%", thresholdPercent);
