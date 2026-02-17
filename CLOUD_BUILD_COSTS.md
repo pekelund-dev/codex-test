@@ -39,6 +39,18 @@ This removes Cloud Build runtime costs entirely for app deployments and still pu
 
 Use GitHub Actions deployment as the default path and reserve Cloud Build scripts only for fallback/manual operations.
 
+### File-by-file migration plan (remove Cloud Build from deploy paths)
+
+| File | Current Cloud Build usage | Proposed no-Cloud-Build solution |
+|------|---------------------------|-----------------------------------|
+| `scripts/terraform/deploy_services.sh` | Builds web and receipt images via two `gcloud builds submit` calls | Replace both build blocks with local/runner Docker Buildx (`docker buildx build --push`) and keep existing Terraform apply flow unchanged |
+| `scripts/terraform/deploy_to_test.sh` | Same Cloud Build flow as production deploy script | Apply the same Buildx-based replacement so test deploys also avoid Cloud Build |
+| `scripts/legacy/deploy_cloud_run.sh` | Uses `gcloud builds submit` for web image | Replace with `docker buildx build --push` and keep `gcloud run deploy` step |
+| `scripts/legacy/deploy_receipt_processor.sh` | Uses `gcloud builds submit` for receipt-parser image | Replace with `docker buildx build --push` and keep existing Cloud Run/IAM logic |
+| `cloudbuild.yaml` | Web build definition consumed by deploy scripts | Decommission after script migration, or keep temporarily as fallback until migration is validated |
+| `receipt-parser/cloudbuild.yaml` | Receipt-parser build definition consumed by deploy scripts | Decommission after script migration, or keep temporarily as fallback until migration is validated |
+| `infra/terraform/infrastructure/main.tf` | Enables `cloudbuild.googleapis.com` API | Remove Cloud Build API from enabled services once all deploy paths no longer depend on Cloud Build |
+
 ## How Much Does Cloud Build Cost?
 
 | Deployment Frequency | Monthly Cost | Notes |
