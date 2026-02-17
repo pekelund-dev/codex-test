@@ -58,8 +58,8 @@ Update your Terraform variables to enable budget alerts:
 ```bash
 # In your terraform.tfvars or environment
 enable_budget_alert = true
-budget_amount = 50  # Monthly budget in USD
-billing_account_display_name = "My Billing Account"
+budget_amount = 1  # Monthly budget in USD
+billing_account_display_name = "Your Billing Account Name"
 ```
 
 ### 2. Apply Terraform Infrastructure

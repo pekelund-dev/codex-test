@@ -73,7 +73,7 @@ variable "enable_budget_alert" {
 variable "budget_amount" {
   description = "Monthly budget amount in USD"
   type        = number
-  default     = 50
+  default     = 1
 }
 
 variable "billing_account_display_name" {

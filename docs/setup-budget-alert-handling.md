@@ -34,9 +34,16 @@ Add these variables to your infrastructure configuration.
 Create or update `infra/terraform/infrastructure/terraform.tfvars`:
 
 ```hcl
+# Required variables
+project_id = "your-project-id"
 enable_budget_alert = true
-budget_amount = 50
-billing_account_display_name = "My Billing Account"
+budget_amount = 1
+billing_account_display_name = "Your Billing Account Name"  # From Step 1
+
+# Optional variables (with defaults shown)
+# region = "us-east1"
+# firestore_database_name = "receipts-db"
+# bucket_name = ""  # Auto-generated if empty
 ```
 
 **Alternative: Environment Variables**
@@ -45,8 +52,8 @@ If you prefer to use environment variables:
 
 ```bash
 export ENABLE_BUDGET_ALERT=true
-export BUDGET_AMOUNT=50  # Monthly budget in USD
-export BILLING_ACCOUNT_DISPLAY_NAME="My Billing Account"  # From Step 1
+export BUDGET_AMOUNT=1  # Monthly budget in USD
+export BILLING_ACCOUNT_DISPLAY_NAME="Your Billing Account Name"  # From Step 1
 ```
 
 Note: The deployment script converts env vars to `TF_VAR_*` format automatically.
@@ -66,8 +73,8 @@ PROJECT_ID=your-project-id ./scripts/terraform/apply_infrastructure.sh
 ```bash
 PROJECT_ID=your-project-id \
 ENABLE_BUDGET_ALERT=true \
-BUDGET_AMOUNT=50 \
-BILLING_ACCOUNT_DISPLAY_NAME="My Billing Account" \
+BUDGET_AMOUNT=1 \
+BILLING_ACCOUNT_DISPLAY_NAME="Your Billing Account Name" \
 ./scripts/terraform/apply_infrastructure.sh
 ```
 
@@ -181,7 +188,7 @@ To change your monthly budget:
 
 1. Update `infra/terraform/infrastructure/terraform.tfvars`:
    ```hcl
-   budget_amount = 100  # New budget amount
+   budget_amount = 5  # New budget amount in USD
    ```
 
 2. Reapply infrastructure:
@@ -194,7 +201,7 @@ To change your monthly budget:
 ```bash
 # Update and reapply
 PROJECT_ID=your-project-id \
-BUDGET_AMOUNT=100 \
+BUDGET_AMOUNT=5 \
 ./scripts/terraform/apply_infrastructure.sh
 ```
 
