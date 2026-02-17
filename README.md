@@ -301,8 +301,14 @@ See the following documentation for more details:
 - [Cost Summary](docs/cloud-build-cost-summary.md) — Summary of cloud build costs.
 - [GitHub Actions CI/CD Guide](docs/github-actions-ci-cd-guide.md) — Using GitHub Actions as an alternative to Cloud Build.
 - [GitHub Actions Secrets Setup](docs/github-actions-secrets-setup.md) — Complete guide for configuring GitHub Secrets and GCP permissions for deployment workflows.
+- [Budget Alert Setup Guide](docs/setup-budget-alert-handling.md) — Step-by-step setup for budget alert handling.
+- [Billing Alert Automatic Shutdown](docs/billing-alert-shutdown.md) — Automatic cost control that shuts down services when budget is exceeded.
 
 The scripts keep infrastructure provisioning separate from application deployment while relying on one Secret Manager secret for OAuth and optional AI keys. Earlier gcloud-based helpers now live in `scripts/legacy/` for reference.
+
+#### Cost Control and Budget Alerts
+
+The application includes an automatic billing alert shutdown feature that prevents unexpected large GCP bills. When monthly budget thresholds are exceeded, both Cloud Run services automatically scale to zero to stop generating costs. See the [Budget Alert Setup Guide](docs/setup-budget-alert-handling.md) for quick setup or [Billing Alert Automatic Shutdown](docs/billing-alert-shutdown.md) for complete documentation.
 
 #### Teardown
 

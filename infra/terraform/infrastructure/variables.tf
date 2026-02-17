@@ -63,3 +63,21 @@ variable "app_secret_json" {
   default     = ""
   sensitive   = true
 }
+
+variable "enable_budget_alert" {
+  description = "Enable budget alerts and automatic shutdown on budget exceeded"
+  type        = bool
+  default     = false
+}
+
+variable "budget_amount" {
+  description = "Monthly budget amount in USD"
+  type        = number
+  default     = 1
+}
+
+variable "billing_account_display_name" {
+  description = "Display name of the billing account to use for budget alerts"
+  type        = string
+  default     = ""
+}

@@ -1,5 +1,6 @@
 package dev.pekelund.pklnd.web;
 
+import dev.pekelund.pklnd.billing.BillingShutdownService;
 import dev.pekelund.pklnd.config.HeaderAwareCookieLocaleResolver;
 import dev.pekelund.pklnd.firestore.FirestoreReadTracker;
 import dev.pekelund.pklnd.firestore.FirestoreReadTotals;
@@ -32,6 +33,7 @@ public class CurrentUserAdvice {
     private final FirestoreReadTotals firestoreReadTotals;
     private final ObjectProvider<GitProperties> gitPropertiesProvider;
     private final Environment environment;
+    private final ObjectProvider<BillingShutdownService> billingShutdownServiceProvider;
 
     @Value("${app.environment.label:}")
     private String environmentLabel;
@@ -40,12 +42,14 @@ public class CurrentUserAdvice {
         ObjectProvider<FirestoreReadTracker> firestoreReadTrackerProvider,
         FirestoreReadTotals firestoreReadTotals,
         ObjectProvider<GitProperties> gitPropertiesProvider,
-        Environment environment
+        Environment environment,
+        ObjectProvider<BillingShutdownService> billingShutdownServiceProvider
     ) {
         this.firestoreReadTrackerProvider = firestoreReadTrackerProvider;
         this.firestoreReadTotals = firestoreReadTotals;
         this.gitPropertiesProvider = gitPropertiesProvider;
         this.environment = environment;
+        this.billingShutdownServiceProvider = billingShutdownServiceProvider;
     }
 
     @ModelAttribute("userProfile")
@@ -134,6 +138,12 @@ public class CurrentUserAdvice {
             return "Lokal miljö";
         }
         return null;
+    }
+
+    @ModelAttribute("budgetPercentage")
+    public Double budgetPercentage() {
+        BillingShutdownService service = billingShutdownServiceProvider.getIfAvailable();
+        return service != null ? service.getBudgetPercentage() : 0.0;
     }
 
     private LanguageOption buildOption(
