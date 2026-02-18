@@ -77,7 +77,13 @@ variable "budget_amount" {
 }
 
 variable "billing_account_display_name" {
-  description = "Display name of the billing account to use for budget alerts"
+  description = "Display name of the billing account to use for budget alerts (used when billing_account_id is not set)"
+  type        = string
+  default     = ""
+}
+
+variable "billing_account_id" {
+  description = "ID of the billing account to use for budget alerts (preferred over billing_account_display_name)"
   type        = string
   default     = ""
 }

@@ -4,11 +4,10 @@
 # ── Required ─────────────────────────────────────────────────────────────────
 project_id = "codex-test-473008"
 
-# ── Budget alerts (optional) ──────────────────────────────────────────────────
-# Uncomment and fill in to enable GCP budget alerts with automatic shutdown.
-# enable_budget_alert          = true
-# budget_amount                = 1       # Monthly limit in billing account's currency
-# billing_account_display_name = "My Billing Account"  # gcloud billing accounts list
+# ── Budget alerts ─────────────────────────────────────────────────────────────
+enable_budget_alert = true
+budget_amount       = 1
+billing_account_id  = "01021B-547B18-55D892"
 
 # ── Overrides (all have sensible defaults) ────────────────────────────────────
 # region                  = "us-east1"

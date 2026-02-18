@@ -7,9 +7,11 @@ project_id = "your-gcp-project-id"   # gcloud config get-value project
 
 # ── Budget alerts (optional) ──────────────────────────────────────────────────
 # Uncomment and fill in to enable GCP budget alerts with automatic shutdown.
-# enable_budget_alert          = true
-# budget_amount                = 1       # Monthly limit in billing account's currency
-# billing_account_display_name = "My Billing Account"  # gcloud billing accounts list
+# enable_budget_alert = true
+# budget_amount       = 1       # Monthly limit in billing account's currency
+# Provide either billing_account_id (preferred) or billing_account_display_name:
+# billing_account_id  = ""   # from: gcloud billing accounts list --format="value(name)"
+# billing_account_display_name = ""  # from: gcloud billing accounts list --format="value(displayName)"
 
 # ── Overrides (all have sensible defaults) ────────────────────────────────────
 # region                  = "us-east1"
