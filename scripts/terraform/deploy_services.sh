@@ -117,7 +117,7 @@ json_escape() {
   local raw_value="$1"
 
   if command -v jq >/dev/null 2>&1; then
-    jq -Rs '.' <<<"${raw_value}"
+    jq -Rn --arg v "${raw_value}" '$v'
   else
     printf '"%s"' "$(printf '%s' "${raw_value}" | sed 's/\\/\\\\/g; s/"/\\"/g')"
   fi
