@@ -44,8 +44,7 @@ resource "google_billing_budget" "budget" {
 
   amount {
     specified_amount {
-      currency_code = "USD"
-      units         = tostring(var.budget_amount)
+      units = tostring(var.budget_amount)
     }
   }
 

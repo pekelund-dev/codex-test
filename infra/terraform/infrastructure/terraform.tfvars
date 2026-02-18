@@ -7,7 +7,7 @@ project_id = "codex-test-473008"
 # ── Budget alerts (optional) ──────────────────────────────────────────────────
 # Uncomment and fill in to enable GCP budget alerts with automatic shutdown.
 # enable_budget_alert          = true
-# budget_amount                = 1       # Monthly limit in USD
+# budget_amount                = 1       # Monthly limit in billing account's currency
 # billing_account_display_name = "My Billing Account"  # gcloud billing accounts list
 
 # ── Overrides (all have sensible defaults) ────────────────────────────────────
