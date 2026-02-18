@@ -52,6 +52,8 @@ web_registry_from_tf=$(tf_output_raw web_artifact_registry)
 receipt_registry_from_tf=$(tf_output_raw receipt_artifact_registry)
 web_sa_from_tf=$(tf_output_raw web_service_account_email)
 receipt_sa_from_tf=$(tf_output_raw receipt_service_account_email)
+billing_alerts_topic_from_tf=$(tf_output_raw billing_alerts_topic)
+pubsub_invoker_sa_from_tf=$(tf_output_raw pubsub_invoker_service_account)
 
 if [[ -n "${web_registry_from_tf}" ]]; then
   web_repo_from_tf=${web_registry_from_tf##*/}
@@ -66,6 +68,8 @@ web_repo=${web_repo_from_tf:-${web_repo}}
 receipt_repo=${receipt_repo_from_tf:-${receipt_repo}}
 web_sa=${web_sa_from_tf:-${web_sa}}
 receipt_sa=${receipt_sa_from_tf:-${receipt_sa}}
+pubsub_invoker_sa=${PUBSUB_INVOKER_SA:-${pubsub_invoker_sa_from_tf:-}}
+billing_alerts_topic=${BILLING_ALERTS_TOPIC:-${billing_alerts_topic_from_tf:-}}
 
 bucket_name=${bucket_name:-"pklnd-receipts-${PROJECT_ID}"}
 
@@ -144,6 +148,8 @@ vertex_ai_location = $(json_escape "${VERTEX_AI_LOCATION:-${REGION}}")
 logging_project_id = $(json_escape "${LOGGING_PROJECT_ID:-${PROJECT_ID}}")
 allow_unauthenticated_web = ${allow_unauth_value}
 custom_domain = $(json_escape "${CUSTOM_DOMAIN}")
+pubsub_invoker_service_account_email = $(json_escape "${pubsub_invoker_sa}")
+billing_alerts_topic = $(json_escape "${billing_alerts_topic}")
 EOF
 
 echo "Building both images in parallel for faster deployment..."

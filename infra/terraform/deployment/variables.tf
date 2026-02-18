@@ -154,3 +154,9 @@ variable "pubsub_invoker_service_account_email" {
     error_message = "The pubsub_invoker_service_account_email must be empty or a valid service account email in the format: name@project.iam.gserviceaccount.com"
   }
 }
+
+variable "billing_alerts_topic" {
+  description = "Pub/Sub topic name for billing alerts (used to create push subscription to web service)"
+  type        = string
+  default     = ""
+}

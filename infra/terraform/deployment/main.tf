@@ -225,6 +225,24 @@ resource "google_cloud_run_v2_service_iam_member" "receipt_pubsub_invoker" {
   member   = "serviceAccount:${var.pubsub_invoker_service_account_email}"
 }
 
+# Pub/Sub push subscription: delivers billing alerts to the web service /api/billing/alerts endpoint
+resource "google_pubsub_subscription" "billing_alerts_push" {
+  count   = var.billing_alerts_topic != "" && var.pubsub_invoker_service_account_email != "" ? 1 : 0
+  name    = "billing-alerts-web-push"
+  project = var.project_id
+  topic   = var.billing_alerts_topic
+
+  push_config {
+    push_endpoint = "${google_cloud_run_v2_service.web.uri}/api/billing/alerts"
+
+    oidc_token {
+      service_account_email = var.pubsub_invoker_service_account_email
+    }
+  }
+
+  ack_deadline_seconds = 60
+}
+
 # NOTE: Cloud Run v2 domain mappings are not fully supported by Terraform, so
 # manage them manually after applying this stack.
 # To map a custom domain, use the Google Cloud Console or the gcloud CLI:
