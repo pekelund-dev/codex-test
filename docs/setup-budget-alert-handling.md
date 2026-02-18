@@ -153,6 +153,33 @@ Once alerts are received, budget status appears in the red status bar:
 
 ## Troubleshooting
 
+### Error 403: billingbudgets.googleapis.com requires a quota project
+
+If you see an error like:
+
+```
+Error creating Budget: googleapi: Error 403: Your application is authenticating by using local
+Application Default Credentials. The billingbudgets.googleapis.com API requires a quota project,
+which is not set by default.
+```
+
+This is resolved by the `user_project_override = true` and `billing_project` settings in the
+Terraform Google provider (already configured in `infra/terraform/infrastructure/main.tf`). These
+settings tell the provider to send your GCP project as the quota project on every API request,
+which is required by the Billing Budgets API when using Application Default Credentials.
+
+If you have a local copy of the Terraform configuration that is missing these settings, add them to
+the `provider "google"` block:
+
+```hcl
+provider "google" {
+  project               = var.project_id
+  region                = var.region
+  user_project_override = true
+  billing_project       = var.project_id
+}
+```
+
 ### Budget Alert Not Appearing
 
 1. Check Pub/Sub topic exists:
