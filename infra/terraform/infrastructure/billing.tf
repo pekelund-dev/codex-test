@@ -26,7 +26,9 @@ resource "google_pubsub_topic_iam_member" "billing_publisher" {
 
 # Billing account data source to reference in budget
 # Note: This requires billing.accounts.get permission
+# Only evaluated when enable_budget_alert = true to avoid errors when display_name is not set
 data "google_billing_account" "account" {
+  count        = var.enable_budget_alert ? 1 : 0
   display_name = var.billing_account_display_name
   open         = true
 }
@@ -35,7 +37,7 @@ data "google_billing_account" "account" {
 resource "google_billing_budget" "budget" {
   count = var.enable_budget_alert ? 1 : 0
 
-  billing_account = data.google_billing_account.account.id
+  billing_account = data.google_billing_account.account[0].id
   display_name    = "Monthly Budget Alert"
 
   budget_filter {
