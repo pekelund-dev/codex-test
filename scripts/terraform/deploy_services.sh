@@ -44,7 +44,7 @@ web_sa="cloud-run-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
 receipt_sa="receipt-processor@${PROJECT_ID}.iam.gserviceaccount.com"
 
 tf_output_raw() {
-  terraform -chdir="${INFRA_DIR}" output -raw "$1" 2>/dev/null || true
+  terraform -chdir="${INFRA_DIR}" output -raw "$1" 2>/dev/null | tr -d '\n' || true
 }
 
 bucket_name_from_tf=$(tf_output_raw bucket_name)
