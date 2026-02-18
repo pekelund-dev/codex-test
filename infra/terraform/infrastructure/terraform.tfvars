@@ -6,7 +6,7 @@ project_id = "codex-test-473008"
 
 # ── Budget alerts ─────────────────────────────────────────────────────────────
 enable_budget_alert = true
-budget_amount       = 1
+budget_amount       = 25
 billing_account_id  = "01021B-547B18-55D892"
 
 # ── Overrides (all have sensible defaults) ────────────────────────────────────
