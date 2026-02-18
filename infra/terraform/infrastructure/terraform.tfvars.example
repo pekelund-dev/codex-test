@@ -1,0 +1,20 @@
+# Copy this file to terraform.tfvars and fill in the values for your environment.
+# Do NOT include app_secret_json here; supply it via the APP_SECRET_FILE env var
+# in apply_infrastructure.sh to avoid committing credentials.
+
+# ── Required ─────────────────────────────────────────────────────────────────
+project_id = "your-gcp-project-id"   # gcloud config get-value project
+
+# ── Budget alerts (optional) ──────────────────────────────────────────────────
+# Uncomment and fill in to enable GCP budget alerts with automatic shutdown.
+# enable_budget_alert = true
+# budget_amount       = 1       # Monthly limit in billing account's currency
+# Provide either billing_account_id (preferred) or billing_account_display_name:
+# billing_account_id  = ""   # from: gcloud billing accounts list --format="value(name)"
+# billing_account_display_name = ""  # from: gcloud billing accounts list --format="value(displayName)"
+
+# ── Overrides (all have sensible defaults) ────────────────────────────────────
+# region                  = "us-east1"
+# firestore_location      = "us-east1"
+# firestore_database_name = "receipts-db"
+# bucket_name             = ""   # defaults to pklnd-receipts-<project_id>

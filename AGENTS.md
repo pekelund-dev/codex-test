@@ -2,6 +2,18 @@
 
 These instructions apply to the entire repository. Create additional `AGENTS.md` files in subdirectories if you need module-specific guidance that overrides the advice here.
 
+## GCP project configuration
+
+The GCP `project_id` and other deployment variables for this repository are stored in
+`infra/terraform/infrastructure/terraform.tfvars` (copied from
+`infra/terraform/infrastructure/terraform.tfvars.example`).
+
+When you need the project ID in a command, read it from `terraform.tfvars` first:
+```bash
+PROJECT_ID=$(grep '^project_id' infra/terraform/infrastructure/terraform.tfvars | awk -F'"' '{print $2}')
+```
+If `terraform.tfvars` does not exist, fall back to: `gcloud config get-value project`.
+
 ## Development practices
 - Prefer incremental Maven builds. When changing backend code, run the narrowest test scope that covers your changes, e.g. `./mvnw -pl web -am test` for web updates or `./mvnw -pl receipt-parser -am test` for receipt processor work. Use `./mvnw verify` only when you need a full reactor build.
 - Keep configuration in sync with the documentation. If you change environment variables, startup scripts, or expected commands, update the relevant files in `docs/` or the `README` in the same change.
