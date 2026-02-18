@@ -85,7 +85,7 @@ jobs:
               RELEASE_VERSION="${MAJOR}.$((MINOR + 1)).0"
               ;;
             patch)
-              RELEASE_VERSION="${BASE_VERSION}"
+              RELEASE_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
               ;;
             *)
               echo "Unsupported release type: ${{ inputs.release_type }}"
