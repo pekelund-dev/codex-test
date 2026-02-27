@@ -21,31 +21,6 @@
 
 
 
-### Issue: Add Thymeleaf template rendering tests
-
-~~~markdown
-**Title:** Add Thymeleaf template rendering tests for all pages
-
-**Labels:** testing, code-quality
-
-**Description**
-23 Thymeleaf templates have zero rendering tests. Add tests that verify templates
-render correctly with representative model data.
-
-**Tasks**
-- [ ] Add `@WebMvcTest` tests that verify template rendering for each page
-- [ ] Verify model attributes are used correctly (no missing variables)
-- [ ] Cover both authenticated and unauthenticated states
-
-**Acceptance criteria**
-- At least one rendering test per template
-- Tests catch missing model attributes or broken Thymeleaf expressions
-
-**References**
-- docs/architecture-review.md § 7.3 — Undertested areas
-~~~
-
----
 
 ### Issue: Add Vitest for JavaScript module tests
 
