@@ -140,7 +140,7 @@ The planned feature-package migration in the README is partially complete. The `
 
 ### 3.2 Critical Code Issues
 
-#### Issue 1: `ReceiptController` is a God Class (1,875 lines)
+#### Issue 1: `ReceiptController` is a God Class (2,120 lines)
 
 **Severity:** 🔴 Critical
 
@@ -171,7 +171,7 @@ This service combines receipt CRUD operations, search/filtering, item extraction
 - `ReceiptSearchService` – Search and filtering logic
 - `ReceiptItemService` – Item-level operations and EAN management
 
-#### Issue 3: `FirestoreUserService` is Overloaded (647 lines)
+#### Issue 3: `FirestoreUserService` is Overloaded (646 lines)
 
 **Severity:** 🟡 High
 
