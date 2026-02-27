@@ -13,25 +13,9 @@
                   data-default-compare-week=${defaultCompareWeek},
                   data-default-compare-month=${defaultCompareMonth},
                   data-scope=${scopeParam != null ? scopeParam : ''}">
-    <div class="d-flex align-items-center gap-2 mb-3">
-        <a class="btn btn-link p-0 text-decoration-none" th:href="@{/receipts(scope=${scopeParam})}">
-            <i class="bi bi-arrow-left"></i>
-            Tillbaka till kvitton
-        </a>
-    </div>
+    <div th:replace="~{fragments/breadcrumb :: backButton(@{/receipts(scope=${scopeParam})}, 'Tillbaka till kvitton')}"></div>
 
-    <div th:if="${canViewAll}" class="mb-3">
-        <div class="btn-group btn-group-sm" role="group" aria-label="Kvittoomfång">
-            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
-               th:href="@{/receipts/overview(scope='my')}">Mina kvitton</a>
-            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
-               th:href="@{/receipts/overview(scope='all')}">Alla kvitton</a>
-        </div>
-        <p class="text-muted small mb-0 mt-2"
-           th:text="${viewingAll} ? 'Visar alla tolkade kvitton.' : 'Visar endast dina tolkade kvitton.'">
-            Visar endast dina tolkade kvitton.
-        </p>
-    </div>
+    <div th:replace="~{fragments/scope-toggle :: scopeToggle(${canViewAll}, ${scopeParam}, ${viewingAll}, @{/receipts/overview(scope='my')}, @{/receipts/overview(scope='all')}, 'Visar alla tolkade kvitton.', 'Visar endast dina tolkade kvitton.')}"></div>
 
     <div class="card shadow-sm border-0">
         <div class="card-body p-4">

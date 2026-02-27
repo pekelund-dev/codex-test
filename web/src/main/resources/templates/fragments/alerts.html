@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org">
+<head><title>Fragment</title></head>
+<body>
+<div th:fragment="flashAlerts">
+    <div th:if="${successMessage}" class="alert alert-success" role="alert">
+        <span th:text="${successMessage}">Åtgärden lyckades.</span>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+        <span th:text="${errorMessage}">Något gick fel.</span>
+    </div>
+</div>
+</body>
+</html>

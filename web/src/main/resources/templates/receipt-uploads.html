@@ -15,16 +15,7 @@
                         Up to <span th:text="${maxUploadFiles}">50</span> files can be uploaded at a time.
                     </p>
 
-                    <div th:if="${canViewAll}" class="mb-3">
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Receipt scope">
-                            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
-                               th:href="@{/receipts/uploads(scope='my')}">My receipts</a>
-                            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
-                               th:href="@{/receipts/uploads(scope='all')}">All receipts</a>
-                        </div>
-                        <p class="text-muted small mb-0 mt-2"
-                           th:text="${viewingAll} ? 'Managing all uploaded receipt files.' : 'Managing only the receipt files you have uploaded.'">Managing only the receipt files you have uploaded.</p>
-                    </div>
+                    <div th:replace="~{fragments/scope-toggle :: scopeToggle(${canViewAll}, ${scopeParam}, ${viewingAll}, @{/receipts/uploads(scope='my')}, @{/receipts/uploads(scope='all')}, 'Managing all uploaded receipt files.', 'Managing only the receipt files you have uploaded.')}"></div>
 
                     <div class="d-flex align-items-center gap-2 mb-4" aria-live="polite">
                         <span class="text-muted small">Storage status:</span>
@@ -32,12 +23,7 @@
                         <span th:if="${!storageEnabled}" class="badge bg-danger">Disabled</span>
                     </div>
 
-                    <div th:if="${successMessage}" class="alert alert-success" role="alert">
-                        <span th:text="${successMessage}">Files uploaded successfully.</span>
-                    </div>
-                    <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
-                        <span th:text="${errorMessage}">Upload failed.</span>
-                    </div>
+                    <div th:replace="~{fragments/alerts :: flashAlerts}"></div>
 
                     <div th:if="${!storageEnabled}" class="alert alert-warning" role="alert">
                         Receipt uploads are currently disabled. Follow the Google Cloud Storage setup instructions in the

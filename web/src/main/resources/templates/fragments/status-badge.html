@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org">
+<head><title>Fragment</title></head>
+<body>
+<span th:fragment="reconciliationBadge(status)">
+    <span th:if="${status == 'COMPLETE'}" class="badge bg-success-subtle text-success">Avstämd</span>
+    <span th:if="${status == 'PARTIAL'}" class="badge bg-warning-subtle text-warning-emphasis">Delavstämd</span>
+    <span th:if="${status == 'FAIL'}" class="badge bg-danger-subtle text-danger">Fel</span>
+    <span th:if="${status == 'NONE' or status == null}" class="text-muted small">—</span>
+</span>
+</body>
+</html>
