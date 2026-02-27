@@ -23,32 +23,6 @@
 
 
 
-### Issue: Standardise exception handling
-
-~~~markdown
-**Title:** Standardise exception handling — replace catch-and-swallow patterns
-
-**Labels:** code-quality, refactoring
-
-**Description**
-Multiple `try/catch` blocks return empty or default values without logging
-the cause. Replace with proper error propagation or explicit logging.
-
-**Tasks**
-- [ ] Audit all `catch` blocks across web and receipt-parser modules
-- [ ] Replace silent swallowing with proper logging at WARN/ERROR level
-- [ ] Introduce a consistent error response pattern for API endpoints
-- [ ] Add tests for error handling paths
-
-**Acceptance criteria**
-- No catch block silently swallows exceptions
-- Errors are logged with sufficient context for debugging
-
-**References**
-- docs/architecture-review.md § 3.4 — Areas for improvement
-~~~
-
----
 
 ## Phase 3 — CI/CD Maturity
 
