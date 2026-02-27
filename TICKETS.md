@@ -27,31 +27,6 @@
 ## Phase 3 — CI/CD Maturity
 
 
-### Issue: Auto-deploy to test environment on merge to main
-
-~~~markdown
-**Title:** Auto-deploy to test environment on merge to main
-
-**Labels:** ci/cd
-
-**Description**
-Both deployment workflows require manual dispatch. Add an automatic deployment
-to a test/staging environment on merge to `main`.
-
-**Tasks**
-- [ ] Create a test/staging Cloud Run service (or use revision tags)
-- [ ] Add a workflow triggered on push to `main` that deploys to test
-- [ ] Include smoke tests in the auto-deploy workflow
-
-**Acceptance criteria**
-- Merging to `main` triggers a deployment to the test environment
-- Deployment includes health verification
-
-**References**
-- docs/architecture-review.md § 6.2 — CI/CD issues, item 4
-~~~
-
----
 
 ### Issue: Add Dependabot or Renovate for dependency updates
 
