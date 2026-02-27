@@ -29,30 +29,6 @@
 
 
 
-### Issue: Add Artifact Registry vulnerability scanning
-
-~~~markdown
-**Title:** Enable Artifact Registry vulnerability scanning for container images
-
-**Labels:** security, ci/cd
-
-**Description**
-Container images are pushed to Artifact Registry without vulnerability scanning.
-Enable the built-in scanning feature.
-
-**Tasks**
-- [ ] Enable vulnerability scanning on the Artifact Registry repository
-- [ ] Optionally add a CI step to check scan results before deployment
-
-**Acceptance criteria**
-- Pushed images are automatically scanned
-- Critical/high vulnerabilities are visible in the GCP console
-
-**References**
-- docs/architecture-review.md § 8.1 — Security concerns, item 4
-~~~
-
----
 
 ### Issue: Add contract tests between web and receipt-parser
 

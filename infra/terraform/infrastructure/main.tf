@@ -11,6 +11,7 @@ locals {
     "run.googleapis.com",
     "cloudbuild.googleapis.com",
     "artifactregistry.googleapis.com",
+    "containerscanning.googleapis.com",
     "firestore.googleapis.com",
     "storage.googleapis.com",
     "secretmanager.googleapis.com",
@@ -52,6 +53,10 @@ resource "google_artifact_registry_repository" "web" {
   format        = "DOCKER"
   description   = "Container images for the web service"
 
+  vulnerability_scanning_config {
+    enablement_config = "INHERITED"
+  }
+
   depends_on = [google_project_service.services]
 }
 
@@ -61,6 +66,10 @@ resource "google_artifact_registry_repository" "receipts" {
   project       = var.project_id
   format        = "DOCKER"
   description   = "Container images for the receipt processor"
+
+  vulnerability_scanning_config {
+    enablement_config = "INHERITED"
+  }
 
   depends_on = [google_project_service.services]
 }
