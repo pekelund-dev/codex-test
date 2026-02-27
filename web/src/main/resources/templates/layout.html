@@ -17,14 +17,6 @@
     <link th:href="@{${@viteManifest.css('main.js')}}" rel="stylesheet">
 </head>
 <body class="d-flex flex-column min-vh-100">
-<div id="splash-screen" class="splash-screen">
-    <div class="text-center">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden" th:text="#{layout.splash.loading}">Loading...</span>
-        </div>
-        <p class="mt-3 fw-semibold text-primary" th:text="#{layout.splash.tagline}">Starting responsive experience...</p>
-    </div>
-</div>
 <nav class="navbar navbar-expand-lg navbar-dark shadow-sm app-navbar">
     <div class="container">
         <button class="navbar-toggler order-0 me-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"

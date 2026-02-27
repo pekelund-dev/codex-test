@@ -3,16 +3,6 @@ const supportsBootstrapCollapse = () =>
     && window.bootstrap !== null
     && typeof window.bootstrap.Collapse === 'function';
 
-const setupSplashScreen = () => {
-    const splash = document.getElementById('splash-screen');
-    if (!splash) {
-        return;
-    }
-
-    splash.classList.add('hidden');
-    setTimeout(() => splash.remove(), 600);
-};
-
 const DARK_MODE_KEY = 'pklnd-theme';
 const DARK_THEME = 'dark';
 const LIGHT_THEME = 'light';
@@ -88,7 +78,6 @@ const setupNavbarFallbackToggle = () => {
 };
 
 const setupPageLayout = () => {
-    setupSplashScreen();
     setupNavbarFallbackToggle();
     setupDarkModeToggle();
 };

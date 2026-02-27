@@ -36,31 +36,6 @@
 
 
 
-### Issue: Replace splash screen with skeleton loading
-
-~~~markdown
-**Title:** Replace splash screen with skeleton loading patterns
-
-**Labels:** ui, frontend
-
-**Description**
-The current splash screen delays content display. Replace with skeleton loading
-placeholders that give faster perceived performance.
-
-**Tasks**
-- [ ] Create skeleton loading CSS for tables, cards, and statistics
-- [ ] Replace the splash screen overlay with skeleton placeholders
-- [ ] Show real content as soon as data is available
-
-**Acceptance criteria**
-- No full-screen splash screen on page load
-- Content areas show skeleton placeholders while loading
-
-**References**
-- docs/architecture-review.md § 4.6 — UI Improvement Suggestions, item 2
-~~~
-
----
 
 ### Issue: Accessibility audit and improvements
 
