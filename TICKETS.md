@@ -34,31 +34,6 @@
 ## Phase 4 — UI Enhancement
 
 
-### Issue: Add mobile card view for receipts
-
-~~~markdown
-**Title:** Add mobile card view for receipt lists
-
-**Labels:** ui, mobile
-
-**Description**
-Receipt tables with many columns require horizontal scrolling on mobile.
-Add a card-based layout for screens below 768px.
-
-**Tasks**
-- [ ] Create a responsive card component for receipts
-- [ ] Show cards on mobile, table on desktop (Bootstrap breakpoints)
-- [ ] Ensure all key receipt data visible in card view
-
-**Acceptance criteria**
-- Receipts are readable on a 375px-wide screen without horizontal scrolling
-- Desktop view unchanged
-
-**References**
-- docs/architecture-review.md § 4.3 — Responsive Design Assessment
-~~~
-
----
 
 ### Issue: Add dark mode support
 
