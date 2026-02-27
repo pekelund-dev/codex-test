@@ -1,0 +1,11 @@
+{
+  "name": "pklnd-e2e",
+  "description": "Playwright E2E tests for pklnd",
+  "scripts": {
+    "test": "playwright test",
+    "test:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.1"
+  }
+}

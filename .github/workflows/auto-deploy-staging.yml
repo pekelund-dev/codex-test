@@ -159,6 +159,15 @@ jobs:
             fi
           fi
 
+      - name: Playwright E2E tests
+        if: steps.urls.outputs.web_url != 'Not deployed'
+        continue-on-error: true
+        run: |
+          cd e2e
+          npm ci
+          npx playwright install chromium --with-deps
+          E2E_BASE_URL="${{ steps.urls.outputs.web_url }}" npx playwright test --reporter=github || true
+
       - name: Deployment Summary
         run: |
           echo "## Staging Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY

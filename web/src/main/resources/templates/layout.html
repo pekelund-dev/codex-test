@@ -17,7 +17,8 @@
     <link th:href="@{${@viteManifest.css('main.js')}}" rel="stylesheet">
 </head>
 <body class="d-flex flex-column min-vh-100">
-<nav class="navbar navbar-expand-lg navbar-dark shadow-sm app-navbar">
+<a href="#main-content" class="visually-hidden-focusable position-absolute top-0 start-0 p-2 bg-primary text-white z-3" th:text="#{nav.skipToContent}">Skip to main content</a>
+<nav class="navbar navbar-expand-lg navbar-dark shadow-sm app-navbar" aria-label="Main navigation">
     <div class="container">
         <button class="navbar-toggler order-0 me-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
                 aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -200,7 +201,7 @@
         </div>
     </div>
 </div>
-<main class="flex-fill">
+<main class="flex-fill" id="main-content">
     <div class="container py-4" th:replace="${content}"></div>
 </main>
 <footer class="bg-light text-center py-3 mt-auto border-top" th:with="currentYear=${#dates.format(#dates.createNow(), 'yyyy')}">
