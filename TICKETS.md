@@ -33,34 +33,6 @@
 
 ## Phase 4 — UI Enhancement
 
-### Issue: Add HTMX for progressive enhancement
-
-~~~markdown
-**Title:** Add HTMX for progressive enhancement
-
-**Labels:** ui, frontend
-
-**Description**
-Replace full page reloads and custom polling JavaScript with HTMX partial updates.
-This is the recommended incremental UI upgrade over switching to React.
-
-**Tasks**
-- [ ] Add HTMX dependency (CDN or npm)
-- [ ] Replace polling in `receipts.js` with `hx-trigger="every 2s"`
-- [ ] Replace scope toggle reloads with `hx-swap`
-- [ ] Replace filter form submissions with HTMX partial updates
-- [ ] Add HTMX-compatible controller endpoints returning HTML fragments
-
-**Acceptance criteria**
-- Scope toggles and filters update without full page reload
-- Receipt polling works via HTMX
-- Fallback behaviour preserved for non-JS clients
-
-**References**
-- docs/architecture-review.md § 4.5 — Option B: Add HTMX
-~~~
-
----
 
 ### Issue: Add mobile card view for receipts
 

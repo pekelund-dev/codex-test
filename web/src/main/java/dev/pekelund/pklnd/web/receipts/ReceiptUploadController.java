@@ -89,6 +89,23 @@ public class ReceiptUploadController {
         return "receipt-uploads";
     }
 
+    @GetMapping("/receipts/uploads/files-fragment")
+    public String receiptUploadsFilesFragment(
+        @RequestParam(value = "scope", required = false) String scopeParam,
+        Model model,
+        Authentication authentication
+    ) {
+        ReceiptViewScope scope = scopeHelper.resolveScope(scopeParam, authentication);
+        ReceiptPageData pageData = loadReceiptPageData(authentication, scope);
+
+        model.addAttribute("storageEnabled", pageData.storageEnabled());
+        model.addAttribute("files", pageData.files());
+        model.addAttribute("listingError", pageData.listingError());
+        model.addAttribute("fileStatuses", pageData.fileStatuses());
+        model.addAttribute("viewingAll", pageData.viewingAll());
+        return "fragments/receipt-files-table :: filesTable";
+    }
+
     @PostMapping("/receipts/upload")
     public String uploadReceipts(
         @RequestParam(value = "files", required = false) List<MultipartFile> files,
