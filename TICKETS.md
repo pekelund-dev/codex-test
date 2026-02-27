@@ -26,31 +26,6 @@
 
 ## Phase 3 — CI/CD Maturity
 
-### Issue: Add post-deployment smoke tests
-
-~~~markdown
-**Title:** Add post-deployment smoke tests
-
-**Labels:** ci/cd, testing
-
-**Description**
-The deploy workflow pushes to Cloud Run but never verifies the services are healthy.
-Add a post-deployment health check and basic functionality verification.
-
-**Tasks**
-- [ ] Add a post-deploy step to `deploy-cloud-run.yml` that curls the health endpoint
-- [ ] Optionally verify the login page renders (HTTP 200 on `/login`)
-- [ ] Fail the workflow if smoke tests fail
-
-**Acceptance criteria**
-- Deployment workflow fails if service is unhealthy after deploy
-- Smoke test results visible in workflow logs
-
-**References**
-- docs/architecture-review.md § 6.2 — CI/CD issues, item 3
-~~~
-
----
 
 ### Issue: Auto-deploy to test environment on merge to main
 
