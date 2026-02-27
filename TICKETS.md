@@ -30,33 +30,6 @@
 
 
 
-### Issue: Add contract tests between web and receipt-parser
-
-~~~markdown
-**Title:** Add contract tests for web ↔ receipt-parser API
-
-**Labels:** testing, ci/cd
-
-**Description**
-The web service calls receipt-parser via REST with no contract tests.
-API drift could cause silent failures.
-
-**Tasks**
-- [ ] Choose a contract testing approach (Spring Cloud Contract or Pact)
-- [ ] Add producer-side contract verification in receipt-parser
-- [ ] Add consumer-side stub tests in web
-- [ ] Wire into CI
-
-**Acceptance criteria**
-- Tests validate request/response shape for key endpoints
-- CI fails on contract violations
-
-**References**
-- docs/architecture-review.md § 7.4 — Key Testing Gaps, item 3
-- OLD_TICKETS.md — Ticket O2
-~~~
-
----
 
 ## Phase 4 — UI Enhancement
 
