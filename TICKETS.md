@@ -22,34 +22,6 @@
 
 
 
-### Issue: Add Vitest for JavaScript module tests
-
-~~~markdown
-**Title:** Add Vitest for JavaScript module tests
-
-**Labels:** testing, frontend, code-quality
-
-**Description**
-Zero JavaScript tests exist for the 5 Vite entry points (table sorting, upload,
-polling, chart rendering). Add Vitest as the test runner.
-
-**Tasks**
-- [ ] Add Vitest to `web/package.json` dev dependencies
-- [ ] Configure Vitest with `web/vitest.config.js`
-- [ ] Add tests for table sorting logic
-- [ ] Add tests for upload validation logic
-- [ ] Add tests for polling behaviour
-- [ ] Wire `npm test` into `pr-validation.yml`
-
-**Acceptance criteria**
-- `cd web && npm test` runs and passes
-- At least one test per JavaScript module
-
-**References**
-- docs/architecture-review.md § 7.4 — Key Testing Gaps, item 2
-~~~
-
----
 
 ### Issue: Standardise exception handling
 
