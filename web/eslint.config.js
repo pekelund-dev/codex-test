@@ -7,7 +7,10 @@ export default [
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
-      globals: globals.browser
+      globals: {
+        ...globals.browser,
+        Chart: 'readonly'
+      }
     },
     rules: {
       ...js.configs.recommended.rules

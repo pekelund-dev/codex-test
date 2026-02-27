@@ -62,7 +62,7 @@
         }
         try {
             return decodeURIComponent(value);
-        } catch (error) {
+        } catch {
             return value;
         }
     }
@@ -71,7 +71,7 @@
         if (typeof DataTransfer !== 'undefined') {
             try {
                 return new DataTransfer();
-            } catch (error) {
+            } catch {
                 return null;
             }
         }
@@ -429,7 +429,6 @@
                 updateListingError(filesError, listingError);
                 renderStoredFiles(data.files, { filesCountBadge, filesEmpty, filesTable, filesBody });
             } catch (error) {
-                // eslint-disable-next-line no-console
                 console.error('Failed to refresh stored receipts', error);
             } finally {
                 isFetching = false;

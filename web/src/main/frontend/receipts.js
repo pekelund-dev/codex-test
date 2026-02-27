@@ -244,7 +244,6 @@ function setupDashboardPolling(sortState, groupStates) {
             const data = await response.json();
             renderParsedSection(data, { parsedCountBadge, parsedEmpty, parsedTable, parsedBody, parsedError }, sortState, groupStates);
         } catch (error) {
-            // eslint-disable-next-line no-console
             console.error('Failed to refresh receipt data', error);
         } finally {
             isFetching = false;
@@ -373,7 +372,7 @@ function setupClearReceiptsControl(poller) {
             let payload = null;
             try {
                 payload = await response.json();
-            } catch (error) {
+            } catch {
                 // Ignore parsing errors and fall back to a generic message.
             }
 
