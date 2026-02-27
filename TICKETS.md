@@ -1,457 +1,831 @@
-# AI Ticket Board
+# GitHub Issue Templates — Architecture Review
 
-This file is the shared backlog for AI coding tools (Codex, Copilot, etc.).
-
-## How to use this file
-
-- **Pick one ticket** per agent and implement only what that ticket requests.
-- **Minimal prompt:** “You are implementing Ticket X.Y from TICKETS.md.” The ticket text must be sufficient; avoid adding extra instructions outside this file.
-- After finishing, **update the ticket status** and add a short completion note.
-- If implementation reveals new tasks, **add follow‑up tickets** at the end of the relevant section.
-- Keep each ticket **small and verifiable** (single‑responsibility, clear acceptance criteria).
-- **Do not edit unrelated tickets** unless they need cross‑linking or dependency updates.
-- Follow repository standards (Swedish UI text, English code/doc text, Modulith boundaries).
-- Record any tests run in the ticket’s completion note.
-- Completion notes should include:
-  - Summary of changes (1–3 bullets)
-  - Tests run (exact commands, or “Not run”)
-  - Follow‑up tasks (if any), added as new tickets
-
-## Status legend
-
-- `todo` — not started
-- `in-progress` — being implemented
-- `blocked` — needs info or dependency
-- `done` — completed and merged
+> Generated from [`docs/architecture-review.md`](docs/architecture-review.md) (2026-02-27).
+> Previous AI ticket board moved to [`OLD_TICKETS.md`](OLD_TICKETS.md).
+>
+> **How to use:** Copy–paste each template into a new GitHub issue.
+> Adjust labels, assignees, and milestones to fit your workflow.
 
 ---
 
-## 1) Architecture & Packaging (Package‑by‑feature)
+## Phase 1 — Quick Wins
 
-### Ticket 1.1 — Define feature package map
-**Status:** `done`
+### Issue: Add JaCoCo test coverage reporting
 
-**Goal**
-Create a short design note that maps current controllers/services into feature packages.
+~~~markdown
+**Title:** Add JaCoCo test coverage reporting
 
-**Scope**
-- Add a “Feature packaging plan” section to `README.md`.
-- Include a table mapping routes/controllers to proposed packages (e.g., `web.dashboard`, `web.receipts`, `web.auth`).
+**Labels:** testing, ci/cd, quick-win
+
+**Description**
+Configure the Maven JaCoCo plugin across all three modules (core, web, receipt-parser) so that
+test coverage is measured on every build and reported in CI.
+
+**Tasks**
+- [ ] Add `jacoco-maven-plugin` to the parent POM
+- [ ] Configure report goals (`prepare-agent`, `report`)
+- [ ] Add a CI step to publish coverage summaries as PR comments or artifacts
+- [ ] Set a baseline coverage threshold (e.g. fail build below 40 %)
 
 **Acceptance criteria**
-- README includes a clear package‑by‑feature mapping table.
-- Mentions which routes currently in `HomeController` will move and where.
+- `./mvnw verify` generates `target/site/jacoco/index.html` for each module
+- PR validation workflow uploads or comments a coverage summary
 
-**Notes**
-- Keep this as a planning change only (no refactor in this ticket).
-
-**Completion note**
-- Summary:
-  - Added a feature packaging plan section in the README with a route-to-package mapping table.
-  - Documented the intended HomeController route splits by feature package.
-- Tests run: Not run (documentation-only change).
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 7 — Testing Review
+~~~
 
 ---
 
-### Ticket 1.2 — Split `HomeController` by feature
-**Status:** `done`
+### Issue: Add frontend linting to PR validation
 
-**Goal**
-Split `HomeController` into smaller feature‑focused controllers.
+~~~markdown
+**Title:** Add frontend linting to PR validation
 
-**Scope**
-- Create controllers such as:
-  - `HomeController` (home/about)
-  - `DashboardController`
-  - `StatisticsController`
-- Keep route paths identical.
-- Update any wiring/imports accordingly.
+**Labels:** ci/cd, frontend, quick-win
+
+**Description**
+ESLint and Stylelint are configured in `web/` but are not run during PR validation.
+Add a `lint-frontend` job to `pr-validation.yml`.
+
+**Tasks**
+- [ ] Add a `lint-frontend` job to `.github/workflows/pr-validation.yml`
+- [ ] Run `cd web && npm ci && npm run lint` in CI
+- [ ] Ensure the job blocks merging on lint failures
 
 **Acceptance criteria**
-- All current routes still resolve.
-- No functional changes in views or security.
-- Tests updated or added as needed.
+- PR validation fails if ESLint or Stylelint reports errors
+- No new lint errors on the current codebase
 
-**Completion note**
-- Summary:
-  - Split the former `HomeController` routes into `home`, `dashboard`, `statistics`, and `auth` controllers under feature packages.
-  - Added WebMvcTest coverage for the new controllers (including login) to confirm routing and views.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test` (failed: ReceiptProcessingClientTest.recordsFailuresWhenProcessorReturnsError hit HttpServerErrorException 500 on POST http://localhost/events/storage; overall summary: Tests run 54, Failures 2, Errors 3)
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 6.2 — CI/CD issues, item 1
+~~~
 
 ---
 
-### Ticket 1.3 — Modulith annotations for new packages
-**Status:** `done`
+### Issue: Add Vite build step to PR validation
 
-**Goal**
-Add or update `@ApplicationModule` annotations for new feature packages.
+~~~markdown
+**Title:** Add Vite build step to PR validation
 
-**Scope**
-- Add `package-info.java` for new feature packages.
-- Align Modulith metadata with new package layout.
+**Labels:** ci/cd, frontend, quick-win
+
+**Description**
+The Vite asset pipeline is not executed during PR validation, so broken production
+assets can be merged without detection.
+
+**Tasks**
+- [ ] Add a CI step to run `cd web && npm ci && npm run build`
+- [ ] Verify that the Vite manifest is generated successfully
 
 **Acceptance criteria**
-- Modulith verification tests pass after refactor.
+- PR validation fails if `npm run build` fails
+- Production assets verified in every PR
 
-**Completion note**
-- Summary:
-  - Added ApplicationModule package-info descriptors for the new home, dashboard, statistics, and auth feature packages.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test -Dtest=ModularityVerificationTests`
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 6.2 — CI/CD issues, item 6
+~~~
 
 ---
 
-## 2) Observability & Health
+### Issue: Extract reusable Thymeleaf fragments
 
-### Ticket 2.1 — Add Actuator to `web`
-**Status:** `done`
+~~~markdown
+**Title:** Extract reusable Thymeleaf fragments (scope toggle, alerts, breadcrumbs, badges)
 
-**Goal**
-Enable health and metrics endpoints for the web service.
+**Labels:** ui, code-quality, quick-win
 
-**Scope**
-- Add `spring-boot-starter-actuator` to `web/pom.xml`.
-- Configure health probes in `web/src/main/resources/application.yml`.
+**Description**
+Several UI patterns are duplicated across 5+ templates. Extract them into shared
+Thymeleaf fragments to reduce duplication and improve consistency.
+
+**Tasks**
+- [ ] Create `fragments/scope-toggle.html` — admin/user scope selection
+- [ ] Create `fragments/alerts.html` — standardised success/error/warning blocks
+- [ ] Create `fragments/breadcrumb.html` — breadcrumb navigation
+- [ ] Create `fragments/status-badge.html` — reconciliation/upload status badges
+- [ ] Update all templates to use the new fragments
 
 **Acceptance criteria**
-- `/actuator/health` returns `UP` locally.
-- Readiness/liveness probes enabled in config.
+- No duplicate scope toggle, alert, breadcrumb, or badge HTML remains in templates
+- UI behaviour unchanged
+- Existing tests still pass
 
-**Completion note**
-- Summary:
-  - Added Spring Boot Actuator to the web module and exposed health/info endpoints.
-  - Enabled readiness and liveness probes for the web service.
-- Tests run: Not run (health endpoints not verified locally).
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 4.4 — Component Reuse
+~~~
 
 ---
 
-### Ticket 2.2 — Add Actuator to `receipt-parser`
-**Status:** `done`
+### Issue: Add Maven dependency caching to GitHub Actions
 
-**Goal**
-Enable health endpoints for the receipt parser service.
+~~~markdown
+**Title:** Add Maven dependency caching to GitHub Actions
 
-**Scope**
-- Add `spring-boot-starter-actuator` to `receipt-parser/pom.xml`.
-- Configure health probes in `receipt-parser/src/main/resources/application.yml`.
+**Labels:** ci/cd, quick-win
+
+**Description**
+Maven dependencies are downloaded fresh on every CI run. Add caching using
+`actions/cache` or the built-in `setup-java` cache option.
+
+**Tasks**
+- [ ] Add Maven `.m2/repository` caching to `pr-validation.yml`
+- [ ] Add caching to `deploy-cloud-run.yml` and `release-and-deploy.yml`
 
 **Acceptance criteria**
-- `/actuator/health` returns `UP` locally.
+- Second CI run is measurably faster (cache hit in logs)
 
-**Completion note**
-- Summary:
-  - Added Spring Boot Actuator to the receipt parser module and exposed health/info endpoints.
-  - Enabled readiness and liveness probes for the receipt parser service.
-- Tests run: Not run (health endpoints not verified locally).
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 6.2 — CI/CD issues, item 5
+~~~
 
 ---
 
-### Ticket 2.3 — Add request correlation IDs
-**Status:** `done`
+### Issue: Validate Pub/Sub token on `/api/billing/alerts`
 
-**Goal**
-Propagate a request ID across web → receipt‑parser calls and logs.
+~~~markdown
+**Title:** Validate Pub/Sub push subscription token on /api/billing/alerts
 
-**Scope**
-- Add a filter/interceptor in the web app that ensures a request ID is present.
-- Add the request ID to outbound receipt‑parser HTTP calls.
-- Include the request ID in logs.
+**Labels:** security, quick-win
+
+**Description**
+The `/api/billing/alerts` endpoint is publicly accessible and accepts Pub/Sub messages
+without token verification. A malicious actor could send fake billing alerts to
+trigger a service shutdown.
+
+**Tasks**
+- [ ] Add bearer token or audience validation for Pub/Sub push subscriptions
+- [ ] Update Terraform Pub/Sub subscription config to include the verification token
+- [ ] Add a test that rejects requests without a valid token
+- [ ] Update `docs/setup-budget-alert-handling.md` with the new token configuration
 
 **Acceptance criteria**
-- Logs show request IDs on both services.
-- Downstream requests receive the ID header.
+- Requests without a valid token receive 403
+- Legitimate Pub/Sub messages still processed successfully
 
-**Completion note**
-- Summary:
-  - Added request ID filters for web and receipt parser that inject `X-Request-Id` and populate MDC for logging.
-  - Propagated request IDs to receipt-parser calls and updated logging patterns to include the request ID.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test -Dtest=RequestIdFilterTests -Dsurefire.failIfNoSpecifiedTests=false`
-  - `./mvnw -pl receipt-parser -am test -Dtest=RequestIdFilterTests -Dsurefire.failIfNoSpecifiedTests=false`
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 8.1 — Security concerns, item 1
+- web/src/main/java/dev/pekelund/pklnd/config/SecurityConfig.java
+~~~
 
 ---
 
-## 3) Testing Strategy
+## Phase 2 — Code Quality
 
-### Ticket 3.1 — Web MVC tests for core routes
-**Status:** `done`
+### Issue: Split `ReceiptController` (2,120 lines)
 
-**Goal**
-Introduce `@WebMvcTest` coverage for primary routes.
+~~~markdown
+**Title:** Split ReceiptController into focused controllers and services
 
-**Scope**
-- Add tests for `/`, `/dashboard`, `/receipts`, `/login`.
-- Verify status codes and template names.
+**Labels:** code-quality, refactoring
+
+**Description**
+`ReceiptController` is 2,120 lines and handles uploads, search, statistics,
+price calculations, and more. Split it into focused controllers with dedicated services.
+
+**Tasks**
+- [ ] Create `ReceiptUploadController` — upload handling, file validation
+- [ ] Create `ReceiptSearchController` — search and filtering
+- [ ] Create `ReceiptOverviewController` — overview and statistics display
+- [ ] Extract `ReceiptStatisticsService` — computation logic
+- [ ] Extract `ReceiptPriceService` — price calculations and formatting
+- [ ] Move inline enum types to dedicated files
+- [ ] Update tests for the new controllers/services
 
 **Acceptance criteria**
-- `./mvnw -Pinclude-web -pl web -am test` passes.
-- Tests cover at least 4 routes.
+- All existing routes still resolve with identical behaviour
+- No single controller exceeds ~300 lines
+- All existing tests pass; new tests cover the new classes
 
-**Completion note**
-- Summary:
-  - Added WebMvc tests for the dashboard and receipts routes to confirm status and view rendering.
-  - Reused existing home and login WebMvc tests to cover the core route set.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test`
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 3.2 — Issue 1
+- web/src/main/java/dev/pekelund/pklnd/web/ReceiptController.java
+~~~
 
 ---
 
-### Ticket 3.2 — Security tests for protected pages
-**Status:** `done`
+### Issue: Split `ReceiptExtractionService` (851 lines)
 
-**Goal**
-Ensure unauthenticated access to protected pages redirects to login.
+~~~markdown
+**Title:** Split ReceiptExtractionService into repository and service layers
 
-**Scope**
-- Add tests asserting `/dashboard` and `/receipts` redirect when unauthenticated.
+**Labels:** code-quality, refactoring
+
+**Description**
+`ReceiptExtractionService` combines CRUD, search, item extraction, and
+EAN deduplication in a single 851-line class.
+
+**Tasks**
+- [ ] Extract `ReceiptRepository` — pure CRUD against Firestore
+- [ ] Extract `ReceiptSearchService` — search and filtering logic
+- [ ] Extract `ReceiptItemService` — item-level operations and EAN management
+- [ ] Update all callers and tests
 
 **Acceptance criteria**
-- Tests pass and demonstrate redirect behavior.
+- No single class exceeds ~300 lines
+- Existing functionality and tests preserved
 
-**Completion note**
-- Summary:
-  - Added integration tests to verify unauthenticated requests to /dashboard and /receipts redirect to the login flow.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test`
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 3.2 — Issue 2
+~~~
 
 ---
 
-## 4) Security Hardening
+### Issue: Split `FirestoreUserService` (646 lines)
 
-### Ticket 4.1 — Remove inline JS from `layout.html`
-**Status:** `done`
+~~~markdown
+**Title:** Split FirestoreUserService into repository and service layers
 
-**Goal**
-Move inline JS into static assets to allow strict CSP.
+**Labels:** code-quality, refactoring
 
-**Scope**
-- Create a dedicated JS file under `web/src/main/resources/static/js/`.
-- Move inline JS from `layout.html` into that file.
-- Ensure behavior unchanged (navbar toggling, splash screen).
+**Description**
+`FirestoreUserService` combines user registration, authentication, admin role
+management, and an in-memory fallback store in 646 lines.
+
+**Tasks**
+- [ ] Extract `FirestoreUserRepository` — CRUD operations
+- [ ] Extract `UserAuthenticationService` — authentication and role resolution
+- [ ] Extract `AdminManagementService` — admin promotion/demotion
+- [ ] Update callers and tests
 
 **Acceptance criteria**
-- `layout.html` has no inline `<script>` blocks.
-- UI behavior remains intact.
+- Clean separation of persistence, auth, and admin concerns
+- All existing tests pass
 
-**Completion note**
-- Summary:
-  - Moved splash screen and navbar toggle logic into a dedicated layout.js asset.
-  - Updated the shared layout template to load the new script instead of inline JavaScript.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test`
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 3.2 — Issue 3
+~~~
 
 ---
 
-### Ticket 4.2 — Add CSP and security headers
-**Status:** `done`
+### Issue: Add Thymeleaf template rendering tests
 
-**Goal**
-Harden HTTP security headers.
+~~~markdown
+**Title:** Add Thymeleaf template rendering tests for all pages
 
-**Scope**
-- Add CSP header (with nonces or hashes if needed).
-- Add HSTS, X‑Frame‑Options, X‑Content‑Type‑Options, Referrer‑Policy.
+**Labels:** testing, code-quality
+
+**Description**
+23 Thymeleaf templates have zero rendering tests. Add tests that verify templates
+render correctly with representative model data.
+
+**Tasks**
+- [ ] Add `@WebMvcTest` tests that verify template rendering for each page
+- [ ] Verify model attributes are used correctly (no missing variables)
+- [ ] Cover both authenticated and unauthenticated states
 
 **Acceptance criteria**
-- Headers present on responses.
-- No inline JS is required for core pages.
+- At least one rendering test per template
+- Tests catch missing model attributes or broken Thymeleaf expressions
 
-**Completion note**
-- Summary:
-  - Added CSP, HSTS, referrer policy, and frame options headers in the web security configuration.
-  - Kept script/style sources aligned with the shared layout assets and CDN dependencies.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test`
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 7.3 — Undertested areas
+~~~
 
 ---
 
-## 5) Frontend Production Readiness
+### Issue: Add Vitest for JavaScript module tests
 
-### Ticket 5.1 — Introduce asset pipeline
-**Status:** `done`
+~~~markdown
+**Title:** Add Vitest for JavaScript module tests
 
-**Goal**
-Create a minimal frontend build pipeline for JS/CSS.
+**Labels:** testing, frontend, code-quality
 
-**Scope**
-- Add a small build tool (e.g., Vite).
-- Bundle and minify JS/CSS.
-- Reference built assets from Thymeleaf templates.
+**Description**
+Zero JavaScript tests exist for the 5 Vite entry points (table sorting, upload,
+polling, chart rendering). Add Vitest as the test runner.
+
+**Tasks**
+- [ ] Add Vitest to `web/package.json` dev dependencies
+- [ ] Configure Vitest with `web/vitest.config.js`
+- [ ] Add tests for table sorting logic
+- [ ] Add tests for upload validation logic
+- [ ] Add tests for polling behaviour
+- [ ] Wire `npm test` into `pr-validation.yml`
 
 **Acceptance criteria**
-- Build outputs are versioned and referenced by templates.
-- Existing functionality unaffected.
+- `cd web && npm test` runs and passes
+- At least one test per JavaScript module
 
-**Completion note**
-- Summary:
-  - Added a Vite build pipeline with versioned asset output under the web static resources.
-  - Updated Thymeleaf templates to resolve bundled CSS/JS via the Vite manifest with static fallbacks.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test`
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 7.4 — Key Testing Gaps, item 2
+~~~
 
 ---
 
-### Ticket 5.2 — Add linting for JS/CSS
-**Status:** `done`
+### Issue: Standardise exception handling
 
-**Goal**
-Introduce linting for frontend assets.
+~~~markdown
+**Title:** Standardise exception handling — replace catch-and-swallow patterns
 
-**Scope**
-- Add ESLint and Stylelint configuration.
-- Add a CI step or script to run the linters.
+**Labels:** code-quality, refactoring
+
+**Description**
+Multiple `try/catch` blocks return empty or default values without logging
+the cause. Replace with proper error propagation or explicit logging.
+
+**Tasks**
+- [ ] Audit all `catch` blocks across web and receipt-parser modules
+- [ ] Replace silent swallowing with proper logging at WARN/ERROR level
+- [ ] Introduce a consistent error response pattern for API endpoints
+- [ ] Add tests for error handling paths
 
 **Acceptance criteria**
-- Lint command runs cleanly.
+- No catch block silently swallows exceptions
+- Errors are logged with sufficient context for debugging
 
-**Completion note**
-- Summary:
-  - Added ESLint and Stylelint configurations plus npm scripts to lint frontend JS and CSS sources.
-  - Documented the new lint workflow alongside the asset pipeline instructions.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test`
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 3.4 — Areas for improvement
+~~~
 
 ---
 
-## 6) Deployment & Release Hardening
+## Phase 3 — CI/CD Maturity
 
-### Ticket 6.1 — Add tests before Cloud Build
-**Status:** `done`
+### Issue: Add post-deployment smoke tests
 
-**Goal**
-Ensure tests run in CI before Docker build.
+~~~markdown
+**Title:** Add post-deployment smoke tests
 
-**Scope**
-- Update `cloudbuild.yaml` to run tests prior to Docker build steps.
+**Labels:** ci/cd, testing
+
+**Description**
+The deploy workflow pushes to Cloud Run but never verifies the services are healthy.
+Add a post-deployment health check and basic functionality verification.
+
+**Tasks**
+- [ ] Add a post-deploy step to `deploy-cloud-run.yml` that curls the health endpoint
+- [ ] Optionally verify the login page renders (HTTP 200 on `/login`)
+- [ ] Fail the workflow if smoke tests fail
 
 **Acceptance criteria**
-- Build fails on test failure.
+- Deployment workflow fails if service is unhealthy after deploy
+- Smoke test results visible in workflow logs
 
-**Completion note**
-- Summary:
-  - Added a Maven test step to Cloud Build before the Docker build step.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test`
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 6.2 — CI/CD issues, item 3
+~~~
 
 ---
 
-### Ticket 6.2 — Release versioning automation
-**Status:** `done`
+### Issue: Auto-deploy to test environment on merge to main
 
-**Goal**
-Automate release versioning and changelog updates.
+~~~markdown
+**Title:** Auto-deploy to test environment on merge to main
 
-**Scope**
-- Add documented release flow in README.
-- Optionally add a CI workflow for tagging releases.
+**Labels:** ci/cd
+
+**Description**
+Both deployment workflows require manual dispatch. Add an automatic deployment
+to a test/staging environment on merge to `main`.
+
+**Tasks**
+- [ ] Create a test/staging Cloud Run service (or use revision tags)
+- [ ] Add a workflow triggered on push to `main` that deploys to test
+- [ ] Include smoke tests in the auto-deploy workflow
 
 **Acceptance criteria**
-- README includes release steps and versioning rules.
+- Merging to `main` triggers a deployment to the test environment
+- Deployment includes health verification
 
-**Completion note**
-- Summary:
-  - Documented the release flow and semantic versioning rules in the README.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test`
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 6.2 — CI/CD issues, item 4
+~~~
 
 ---
 
-## 7) Data & Reliability
+### Issue: Add Dependabot or Renovate for dependency updates
 
-### Ticket 7.1 — Document Firestore indexes
-**Status:** `done`
+~~~markdown
+**Title:** Add Dependabot or Renovate for automated dependency updates
 
-**Goal**
-Make required Firestore indexes explicit.
+**Labels:** ci/cd, security
 
-**Scope**
-- Add a doc under `docs/` describing required indexes and how to apply them.
-- Link the doc from README.
+**Description**
+No automated dependency update mechanism exists. Add Dependabot or Renovate
+to keep Maven, npm, and GitHub Actions dependencies current.
+
+**Tasks**
+- [ ] Add `.github/dependabot.yml` (or Renovate config)
+- [ ] Configure for Maven (`pom.xml`), npm (`web/package.json`), and GitHub Actions
+- [ ] Set a reasonable update schedule (e.g. weekly)
 
 **Acceptance criteria**
-- Index requirements are clearly described.
-- README points to the new doc.
+- Dependency update PRs are created automatically
+- At least Maven and npm ecosystems covered
 
-**Completion note**
-- Summary:
-  - Added Firestore index documentation with the key composite index requirements.
-  - Linked the Firestore index guide from the README.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test`
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 6.3 — Recommended CI/CD Improvements
+~~~
 
 ---
 
-### Ticket 7.2 — Document backup & retention strategy
-**Status:** `done`
+### Issue: Add Artifact Registry vulnerability scanning
 
-**Goal**
-Define data backup and retention guidance.
+~~~markdown
+**Title:** Enable Artifact Registry vulnerability scanning for container images
 
-**Scope**
-- Add a doc under `docs/` covering Firestore exports and GCS lifecycle policies.
-- Link the doc from README.
+**Labels:** security, ci/cd
+
+**Description**
+Container images are pushed to Artifact Registry without vulnerability scanning.
+Enable the built-in scanning feature.
+
+**Tasks**
+- [ ] Enable vulnerability scanning on the Artifact Registry repository
+- [ ] Optionally add a CI step to check scan results before deployment
 
 **Acceptance criteria**
-- Backup/retention steps are documented.
-- README links to the new doc.
+- Pushed images are automatically scanned
+- Critical/high vulnerabilities are visible in the GCP console
 
-**Completion note**
-- Summary:
-  - Added backup and retention guidance for Firestore exports and receipt storage.
-  - Linked the backup strategy doc from the README.
-- Tests run:
-  - `./mvnw -Pinclude-web -pl web -am test`
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 8.1 — Security concerns, item 4
+~~~
 
 ---
 
-## Optional Enhancements (Add after core milestones)
+### Issue: Add contract tests between web and receipt-parser
 
-### Ticket O1 — Add request tracing dashboards
-**Status:** `done`
+~~~markdown
+**Title:** Add contract tests for web ↔ receipt-parser API
 
-**Goal**
-Provide a basic Cloud Monitoring dashboard plan for latency, error rate, and throughput.
+**Labels:** testing, ci/cd
 
-**Scope**
-- Add a doc section with suggested metrics and alert thresholds.
+**Description**
+The web service calls receipt-parser via REST with no contract tests.
+API drift could cause silent failures.
+
+**Tasks**
+- [ ] Choose a contract testing approach (Spring Cloud Contract or Pact)
+- [ ] Add producer-side contract verification in receipt-parser
+- [ ] Add consumer-side stub tests in web
+- [ ] Wire into CI
 
 **Acceptance criteria**
-- Clear dashboard guidance exists in docs.
+- Tests validate request/response shape for key endpoints
+- CI fails on contract violations
 
-**Completion note**
-- Summary:
-  - Added a request tracing dashboard guide covering latency, error rate, throughput, and saturation panels with starter alert thresholds.
-  - Linked the dashboard guide from the README documentation list.
-- Tests run: Not run (documentation-only change).
-- Follow-up tasks: None.
+**References**
+- docs/architecture-review.md § 7.4 — Key Testing Gaps, item 3
+- OLD_TICKETS.md — Ticket O2
+~~~
 
 ---
 
-### Ticket O2 — Add contract tests for web → receipt‑parser
-**Status:** `todo`
+## Phase 4 — UI Enhancement
 
-**Goal**
-Prevent API drift between services.
+### Issue: Add HTMX for progressive enhancement
 
-**Scope**
-- Add consumer contract tests (e.g., Spring Cloud Contract or Pact).
+~~~markdown
+**Title:** Add HTMX for progressive enhancement
+
+**Labels:** ui, frontend
+
+**Description**
+Replace full page reloads and custom polling JavaScript with HTMX partial updates.
+This is the recommended incremental UI upgrade over switching to React.
+
+**Tasks**
+- [ ] Add HTMX dependency (CDN or npm)
+- [ ] Replace polling in `receipts.js` with `hx-trigger="every 2s"`
+- [ ] Replace scope toggle reloads with `hx-swap`
+- [ ] Replace filter form submissions with HTMX partial updates
+- [ ] Add HTMX-compatible controller endpoints returning HTML fragments
 
 **Acceptance criteria**
-- Tests validate request/response shape for key endpoints.
+- Scope toggles and filters update without full page reload
+- Receipt polling works via HTMX
+- Fallback behaviour preserved for non-JS clients
+
+**References**
+- docs/architecture-review.md § 4.5 — Option B: Add HTMX
+~~~
+
+---
+
+### Issue: Add mobile card view for receipts
+
+~~~markdown
+**Title:** Add mobile card view for receipt lists
+
+**Labels:** ui, mobile
+
+**Description**
+Receipt tables with many columns require horizontal scrolling on mobile.
+Add a card-based layout for screens below 768px.
+
+**Tasks**
+- [ ] Create a responsive card component for receipts
+- [ ] Show cards on mobile, table on desktop (Bootstrap breakpoints)
+- [ ] Ensure all key receipt data visible in card view
+
+**Acceptance criteria**
+- Receipts are readable on a 375px-wide screen without horizontal scrolling
+- Desktop view unchanged
+
+**References**
+- docs/architecture-review.md § 4.3 — Responsive Design Assessment
+~~~
+
+---
+
+### Issue: Add dark mode support
+
+~~~markdown
+**Title:** Add dark mode using Bootstrap 5.3 data-bs-theme
+
+**Labels:** ui, frontend
+
+**Description**
+Bootstrap 5.3+ natively supports dark mode via `data-bs-theme="dark"`.
+Add a toggle and persist the user's preference.
+
+**Tasks**
+- [ ] Add a dark mode toggle to the navbar
+- [ ] Use `data-bs-theme` attribute on `<html>`
+- [ ] Persist preference in `localStorage`
+- [ ] Ensure all custom CSS respects the theme
+
+**Acceptance criteria**
+- Users can toggle between light and dark mode
+- Preference persists across page reloads
+
+**References**
+- docs/architecture-review.md § 4.6 — UI Improvement Suggestions, item 4
+~~~
+
+---
+
+### Issue: Replace splash screen with skeleton loading
+
+~~~markdown
+**Title:** Replace splash screen with skeleton loading patterns
+
+**Labels:** ui, frontend
+
+**Description**
+The current splash screen delays content display. Replace with skeleton loading
+placeholders that give faster perceived performance.
+
+**Tasks**
+- [ ] Create skeleton loading CSS for tables, cards, and statistics
+- [ ] Replace the splash screen overlay with skeleton placeholders
+- [ ] Show real content as soon as data is available
+
+**Acceptance criteria**
+- No full-screen splash screen on page load
+- Content areas show skeleton placeholders while loading
+
+**References**
+- docs/architecture-review.md § 4.6 — UI Improvement Suggestions, item 2
+~~~
+
+---
+
+### Issue: Accessibility audit and improvements
+
+~~~markdown
+**Title:** Accessibility audit — ARIA labels, keyboard navigation, screen reader support
+
+**Labels:** ui, accessibility
+
+**Description**
+No accessibility audit has been performed. Ensure the app meets WCAG 2.1 AA basics.
+
+**Tasks**
+- [ ] Run axe-core or Lighthouse accessibility audit on all pages
+- [ ] Add ARIA labels to interactive elements (buttons, forms, toggles)
+- [ ] Ensure keyboard navigation works throughout
+- [ ] Fix colour contrast issues
+- [ ] Test with a screen reader
+
+**Acceptance criteria**
+- No critical or serious axe/Lighthouse accessibility violations
+- All interactive elements reachable by keyboard
+
+**References**
+- docs/architecture-review.md § 4.6 — UI Improvement Suggestions, item 6
+~~~
+
+---
+
+## Phase 5 — Operational Maturity
+
+### Issue: Automate Firestore backups via Cloud Scheduler
+
+~~~markdown
+**Title:** Automate Firestore backups via Cloud Scheduler
+
+**Labels:** operations, data
+
+**Description**
+Firestore backups currently require manual admin action. Automate daily
+exports using Cloud Scheduler + Cloud Functions or a Cloud Run job.
+
+**Tasks**
+- [ ] Create a Cloud Function or Cloud Run job that exports Firestore to GCS
+- [ ] Configure Cloud Scheduler to trigger daily exports
+- [ ] Add Terraform config for the scheduler and function
+- [ ] Add lifecycle rules to clean up old exports
+
+**Acceptance criteria**
+- Firestore is automatically exported daily
+- Old exports cleaned up per retention policy
+
+**References**
+- docs/architecture-review.md § 9.2 — Operational Concerns, item 2
+~~~
+
+---
+
+### Issue: Add Cloud Monitoring alerts
+
+~~~markdown
+**Title:** Add Cloud Monitoring alerts for errors, latency, and failed deployments
+
+**Labels:** operations, observability
+
+**Description**
+No alerting exists for application errors, latency spikes, or failed deployments.
+
+**Tasks**
+- [ ] Create Cloud Monitoring alert policies for:
+  - Error rate exceeding threshold
+  - P95 latency exceeding threshold
+  - Service unavailability
+- [ ] Configure notification channels (email or Slack)
+- [ ] Add Terraform config for alert policies
+
+**Acceptance criteria**
+- Alerts fire on elevated error rates or latency
+- Notifications delivered to configured channels
+
+**References**
+- docs/architecture-review.md § 9.2 — Operational Concerns, item 3
+~~~
+
+---
+
+### Issue: Add structured logging with metric extraction
+
+~~~markdown
+**Title:** Add structured logging with custom metric extraction
+
+**Labels:** operations, observability
+
+**Description**
+Application logs go to Cloud Logging but no custom metrics are extracted.
+Add structured logging for key operations.
+
+**Tasks**
+- [ ] Switch to structured JSON logging format
+- [ ] Add log-based metrics for receipt uploads, parsing, and login events
+- [ ] Create a Cloud Monitoring dashboard for the custom metrics
+
+**Acceptance criteria**
+- Logs are in structured JSON format
+- Key operations have corresponding log-based metrics
+
+**References**
+- docs/architecture-review.md § 9.2 — Operational Concerns, item 4
+~~~
+
+---
+
+### Issue: Add Playwright E2E tests for critical user journeys
+
+~~~markdown
+**Title:** Add Playwright E2E tests for critical user journeys
+
+**Labels:** testing, e2e
+
+**Description**
+Zero end-to-end tests exist. Add Playwright tests for the most critical flows.
+
+**Tasks**
+- [ ] Set up Playwright in the project
+- [ ] Add E2E test: login → dashboard
+- [ ] Add E2E test: upload receipt → verify processing
+- [ ] Add E2E test: search receipts → view detail
+- [ ] Wire into CI (optionally on a schedule or deploy trigger)
+
+**Acceptance criteria**
+- `npx playwright test` runs and passes
+- At least 3 critical user journeys covered
+
+**References**
+- docs/architecture-review.md § 7.4 — Key Testing Gaps, item 2
+~~~
+
+---
+
+### Issue: Add rate limiting on authentication and search endpoints
+
+~~~markdown
+**Title:** Add rate limiting on authentication and search endpoints
+
+**Labels:** security
+
+**Description**
+Login, registration, and search endpoints have no rate limiting, leaving
+them vulnerable to brute-force and denial-of-service attacks.
+
+**Tasks**
+- [ ] Add rate limiting (Spring Security, Bucket4j, or Cloud Armor)
+- [ ] Configure limits for `/login`, `/register`, and `/receipts/search`
+- [ ] Return 429 Too Many Requests when limit exceeded
+- [ ] Add tests for rate limiting behaviour
+
+**Acceptance criteria**
+- Excessive requests to auth/search endpoints are rejected with 429
+- Normal usage unaffected
+
+**References**
+- docs/architecture-review.md § 8.1 — Security concerns, item 2
+~~~
+
+---
+
+## Phase 6 — Architecture Evolution (Optional)
+
+### Issue: Evaluate Cloud SQL for receipt data
+
+~~~markdown
+**Title:** Evaluate Cloud SQL (PostgreSQL) for structured receipt data
+
+**Labels:** architecture, data, evaluation
+
+**Description**
+Relational queries on Firestore (date+owner+store filtering) require growing
+composite indexes. Evaluate whether Cloud SQL would simplify data access.
+
+**Tasks**
+- [ ] Prototype receipt schema in PostgreSQL
+- [ ] Compare query complexity and performance for common filter patterns
+- [ ] Estimate cost difference (Firestore reads vs Cloud SQL instance)
+- [ ] Document findings and recommendation
+
+**Acceptance criteria**
+- Written comparison document with cost and complexity analysis
+- Clear recommendation (migrate or stay)
+
+**References**
+- docs/architecture-review.md § 5.2 — Data Storage Assessment
+~~~
+
+---
+
+### Issue: Migrate to Firestore subcollections for receipt items
+
+~~~markdown
+**Title:** Migrate receipt items to Firestore subcollections
+
+**Labels:** architecture, data
+
+**Description**
+All data is in top-level collections. Receipt items could be subcollections
+under receipts, reducing query scope and improving performance.
+
+**Tasks**
+- [ ] Design subcollection structure (receipts/{id}/items)
+- [ ] Write migration script for existing data
+- [ ] Update all queries to use subcollection paths
+- [ ] Update tests
+
+**Acceptance criteria**
+- Receipt items stored as subcollections
+- Existing queries work correctly with new structure
+- Data migration completed for existing receipts
+
+**References**
+- docs/architecture-review.md § 5.2 — Assessment, item 2
+~~~
+
+---
+
+### Issue: Evaluate React for dashboard (learning goal)
+
+~~~markdown
+**Title:** Evaluate React frontend for the dashboard module (if learning React is a goal)
+
+**Labels:** architecture, frontend, evaluation
+
+**Description**
+If learning React is a goal, consider a hybrid approach: keep Thymeleaf for
+landing pages and build a React SPA for the dashboard/workspace.
+
+**Tasks**
+- [ ] Create a `frontend/` module with React + Vite
+- [ ] Prototype the dashboard view in React
+- [ ] Add a REST/GraphQL API layer for dashboard data
+- [ ] Document the hybrid architecture approach
+
+**Acceptance criteria**
+- React dashboard renders receipt data from the API
+- Thymeleaf pages still work for non-dashboard routes
+- Both build pipelines integrated in CI
+
+**References**
+- docs/architecture-review.md § 4.5 — Option C: Switch to React
+~~~
