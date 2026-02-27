@@ -8,6 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.pekelund.pklnd.web.receipts.ReceiptItemController;
+import dev.pekelund.pklnd.web.receipts.ReceiptScopeHelper;
 import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService.ReceiptItemReference;
@@ -35,13 +37,13 @@ class ReceiptControllerItemViewTests {
     @Mock
     private ReceiptOwnerResolver receiptOwnerResolver;
 
-    private ReceiptController controller;
+    private ReceiptItemController controller;
     private Authentication authentication;
     private ReceiptOwner owner;
 
     @BeforeEach
     void setUp() {
-        controller = new ReceiptController(null, receiptExtractionService, receiptOwnerResolver, null, null, null, null, null);
+        controller = new ReceiptItemController(receiptExtractionService, receiptOwnerResolver, new ReceiptScopeHelper());
         authentication = new TestingAuthenticationToken("user", "password", "ROLE_USER");
         owner = new ReceiptOwner("owner-1", "Test User", "user@example.com");
 

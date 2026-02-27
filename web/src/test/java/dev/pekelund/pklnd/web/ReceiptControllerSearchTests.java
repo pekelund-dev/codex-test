@@ -29,9 +29,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-@WebMvcTest(ReceiptController.class)
+@WebMvcTest(dev.pekelund.pklnd.web.receipts.ReceiptSearchController.class)
 @ContextConfiguration(classes = PknldApplication.class)
-@Import(ViteManifest.class)
+@Import({dev.pekelund.pklnd.web.receipts.ReceiptScopeHelper.class, ViteManifest.class})
 class ReceiptControllerSearchTests {
 
     @Autowired
