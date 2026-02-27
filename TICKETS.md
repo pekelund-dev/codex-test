@@ -28,31 +28,6 @@
 
 
 
-### Issue: Add Dependabot or Renovate for dependency updates
-
-~~~markdown
-**Title:** Add Dependabot or Renovate for automated dependency updates
-
-**Labels:** ci/cd, security
-
-**Description**
-No automated dependency update mechanism exists. Add Dependabot or Renovate
-to keep Maven, npm, and GitHub Actions dependencies current.
-
-**Tasks**
-- [ ] Add `.github/dependabot.yml` (or Renovate config)
-- [ ] Configure for Maven (`pom.xml`), npm (`web/package.json`), and GitHub Actions
-- [ ] Set a reasonable update schedule (e.g. weekly)
-
-**Acceptance criteria**
-- Dependency update PRs are created automatically
-- At least Maven and npm ecosystems covered
-
-**References**
-- docs/architecture-review.md § 6.3 — Recommended CI/CD Improvements
-~~~
-
----
 
 ### Issue: Add Artifact Registry vulnerability scanning
 
