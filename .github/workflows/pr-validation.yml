@@ -180,6 +180,9 @@ jobs:
     name: Frontend Lint
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -200,6 +203,9 @@ jobs:
   build-frontend:
     name: Frontend Build
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code

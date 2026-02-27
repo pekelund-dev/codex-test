@@ -165,6 +165,14 @@ resource "google_cloud_run_v2_service" "web" {
         name  = "APP_CONFIG_SECRET_NAME"
         value = var.secret_name
       }
+
+      dynamic "env" {
+        for_each = var.billing_alert_token != "" ? [var.billing_alert_token] : []
+        content {
+          name  = "BILLING_ALERT_TOKEN"
+          value = env.value
+        }
+      }
     }
 
     scaling {
@@ -233,7 +241,7 @@ resource "google_pubsub_subscription" "billing_alerts_push" {
   topic   = var.billing_alerts_topic
 
   push_config {
-    push_endpoint = "${google_cloud_run_v2_service.web.uri}/api/billing/alerts"
+    push_endpoint = var.billing_alert_token != "" ? "${google_cloud_run_v2_service.web.uri}/api/billing/alerts?token=${var.billing_alert_token}" : "${google_cloud_run_v2_service.web.uri}/api/billing/alerts"
 
     oidc_token {
       service_account_email = var.pubsub_invoker_service_account_email
