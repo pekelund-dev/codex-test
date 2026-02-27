@@ -6,14 +6,18 @@
     "build": "vite build",
     "lint:js": "eslint \"src/main/frontend/**/*.js\" \"src/main/resources/static/js/main.js\"",
     "lint:css": "stylelint \"src/main/frontend/**/*.css\"",
-    "lint": "npm run lint:js && npm run lint:css"
+    "lint": "npm run lint:js && npm run lint:css",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@vitest/coverage-v8": "^3.0.9",
     "eslint": "^9.32.0",
     "globals": "^15.15.0",
+    "jsdom": "^28.1.0",
     "stylelint": "^16.23.0",
     "stylelint-config-standard": "^36.0.1",
-    "vite": "^5.4.19"
+    "vite": "^5.4.19",
+    "vitest": "^3.0.9"
   }
 }
