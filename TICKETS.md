@@ -35,32 +35,6 @@
 
 
 
-### Issue: Add dark mode support
-
-~~~markdown
-**Title:** Add dark mode using Bootstrap 5.3 data-bs-theme
-
-**Labels:** ui, frontend
-
-**Description**
-Bootstrap 5.3+ natively supports dark mode via `data-bs-theme="dark"`.
-Add a toggle and persist the user's preference.
-
-**Tasks**
-- [ ] Add a dark mode toggle to the navbar
-- [ ] Use `data-bs-theme` attribute on `<html>`
-- [ ] Persist preference in `localStorage`
-- [ ] Ensure all custom CSS respects the theme
-
-**Acceptance criteria**
-- Users can toggle between light and dark mode
-- Preference persists across page reloads
-
-**References**
-- docs/architecture-review.md § 4.6 — UI Improvement Suggestions, item 4
-~~~
-
----
 
 ### Issue: Replace splash screen with skeleton loading
 

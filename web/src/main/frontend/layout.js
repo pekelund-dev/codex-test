@@ -13,6 +13,35 @@ const setupSplashScreen = () => {
     setTimeout(() => splash.remove(), 600);
 };
 
+const DARK_MODE_KEY = 'pklnd-theme';
+const DARK_THEME = 'dark';
+const LIGHT_THEME = 'light';
+
+const applyTheme = (theme) => {
+    document.documentElement.setAttribute('data-bs-theme', theme);
+    const icon = document.getElementById('dark-mode-icon');
+    if (icon) {
+        icon.className = theme === DARK_THEME ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+    }
+};
+
+const setupDarkModeToggle = () => {
+    const savedTheme = localStorage.getItem(DARK_MODE_KEY) || LIGHT_THEME;
+    applyTheme(savedTheme);
+
+    const toggle = document.getElementById('dark-mode-toggle');
+    if (!toggle) {
+        return;
+    }
+
+    toggle.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-bs-theme') || LIGHT_THEME;
+        const next = current === DARK_THEME ? LIGHT_THEME : DARK_THEME;
+        localStorage.setItem(DARK_MODE_KEY, next);
+        applyTheme(next);
+    });
+};
+
 const setupNavbarFallbackToggle = () => {
     const toggler = document.querySelector('.navbar-toggler');
     if (!toggler) {
@@ -61,6 +90,7 @@ const setupNavbarFallbackToggle = () => {
 const setupPageLayout = () => {
     setupSplashScreen();
     setupNavbarFallbackToggle();
+    setupDarkModeToggle();
 };
 
 const initializePageLayout = () => {
