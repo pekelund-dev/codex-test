@@ -1,0 +1,35 @@
+{
+  "src/main/frontend/main.js": {
+    "file": "main-dcAHP4t2.js",
+    "name": "main",
+    "src": "src/main/frontend/main.js",
+    "isEntry": true,
+    "css": [
+      "main-D78kQnJp.css"
+    ]
+  },
+  "src/main/frontend/price-history.js": {
+    "file": "priceHistory-BEAbvg8V.js",
+    "name": "priceHistory",
+    "src": "src/main/frontend/price-history.js",
+    "isEntry": true
+  },
+  "src/main/frontend/receipt-overview.js": {
+    "file": "receiptOverview-DjM1YQx0.js",
+    "name": "receiptOverview",
+    "src": "src/main/frontend/receipt-overview.js",
+    "isEntry": true
+  },
+  "src/main/frontend/receipt-uploads.js": {
+    "file": "receiptUploads-E6XFVrNJ.js",
+    "name": "receiptUploads",
+    "src": "src/main/frontend/receipt-uploads.js",
+    "isEntry": true
+  },
+  "src/main/frontend/receipts.js": {
+    "file": "receipts-elh9O720.js",
+    "name": "receipts",
+    "src": "src/main/frontend/receipts.js",
+    "isEntry": true
+  }
+}

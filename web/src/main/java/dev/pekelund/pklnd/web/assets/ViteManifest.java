@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 public class ViteManifest {
 
     private static final Logger log = LoggerFactory.getLogger(ViteManifest.class);
-    private static final String MANIFEST_LOCATION = "classpath:/static/assets/manifest.json";
+    private static final String MANIFEST_LOCATION = "classpath:/static/assets/.vite/manifest.json";
     private static final String FRONTEND_PREFIX = "src/main/frontend/";
 
     private final Map<String, ManifestEntry> manifest;
