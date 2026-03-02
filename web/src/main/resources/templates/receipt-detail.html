@@ -251,11 +251,11 @@
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-body p-4">
             <h2 class="h5 fw-semibold mb-3">Raw receipt text</h2>
-            <pre class="bg-light p-3 rounded small" th:text="${receipt.rawText() != null ? receipt.rawText() : 'No raw text available.'}">No raw text available.</pre>
+            <pre class="bg-body-tertiary p-3 rounded small" th:text="${receipt.rawText() != null ? receipt.rawText() : 'No raw text available.'}">No raw text available.</pre>
 
             <details class="mt-3">
                 <summary class="fw-semibold text-primary">View raw response</summary>
-                <pre class="bg-light p-3 rounded small mt-2"
+                <pre class="bg-body-tertiary p-3 rounded small mt-2"
                      th:text="${receipt.rawResponse() != null ? receipt.rawResponse() : 'No raw response available.'}">Raw response</pre>
             </details>
         </div>
@@ -287,7 +287,7 @@
                     <!-- Selected tags preview -->
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">Valda taggar:</label>
-                        <div id="selectedTagsPreview" class="d-flex flex-wrap gap-1 p-2 border rounded bg-light" style="min-height: 2.5rem;">
+                        <div id="selectedTagsPreview" class="d-flex flex-wrap gap-1 p-2 border rounded bg-body-tertiary" style="min-height: 2.5rem;">
                             <span class="text-muted small" id="noTagsSelected">Inga taggar valda</span>
                         </div>
                     </div>

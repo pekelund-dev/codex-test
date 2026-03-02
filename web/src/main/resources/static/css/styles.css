@@ -533,7 +533,6 @@ th.sortable:hover {
 }
 
 [data-bs-theme="dark"] footer {
-    background-color: var(--bs-tertiary-bg);
     border-top: 1px solid var(--bs-border-color);
 }
 

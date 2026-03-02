@@ -35,11 +35,11 @@
                          th:if="${error} or ${status} or ${timestamp}">
                         <dl class="row mb-0 small">
                             <dt class="col-sm-4 text-muted">Status code</dt>
-                            <dd class="col-sm-8 fw-semibold text-dark" th:text="${status} ?: '—'">500</dd>
+                            <dd class="col-sm-8 fw-semibold text-body" th:text="${status} ?: '—'">500</dd>
                             <dt class="col-sm-4 text-muted">Error</dt>
-                            <dd class="col-sm-8 text-dark" th:text="${error} ?: 'Unexpected error'">Internal Server Error</dd>
+                            <dd class="col-sm-8 text-body" th:text="${error} ?: 'Unexpected error'">Internal Server Error</dd>
                             <dt class="col-sm-4 text-muted" th:if="${timestampZoned}">Timestamp</dt>
-                            <dd class="col-sm-8 text-dark" th:if="${timestampZoned}"
+                            <dd class="col-sm-8 text-body" th:if="${timestampZoned}"
                                 th:text="${#temporals.format(timestampZoned, 'yyyy-MM-dd HH:mm:ss z')}">2025-01-01 12:00:00 UTC</dd>
                         </dl>
                     </div>
