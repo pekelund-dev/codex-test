@@ -16,7 +16,15 @@ import org.springframework.stereotype.Component;
 public class ViteManifest {
 
     private static final Logger log = LoggerFactory.getLogger(ViteManifest.class);
-    private static final String MANIFEST_LOCATION = "classpath:/static/assets/.vite/manifest.json";
+    // The manifest is not currently committed to the repository; the class intentionally
+    // falls back to the pre-built static assets under /static/assets/ and /static/js/.
+    // Vite 5 writes its manifest to .vite/manifest.json inside the output directory,
+    // but because the frontend source CSS (styles.css) diverged from the deployed
+    // static/css/styles.css, using the Vite bundle directly would lose styles such as
+    // navbar-action-btn.  Until the two CSS files are brought back in sync and the
+    // bundle is re-committed, the fallback path below must remain non-existent so that
+    // asset() and css() always return the stable static-file URLs.
+    private static final String MANIFEST_LOCATION = "classpath:/static/assets/manifest.json";
     private static final String FRONTEND_PREFIX = "src/main/frontend/";
 
     private final Map<String, ManifestEntry> manifest;
