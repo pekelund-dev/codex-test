@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -81,6 +82,7 @@ public class FirestoreConfig {
 
     @Bean(destroyMethod = "close")
     @ConditionalOnProperty(value = "firestore.enabled", havingValue = "true")
+    @ConditionalOnExpression("'${firestore.emulator-host:}'.trim().isEmpty()")
     @ConditionalOnMissingBean
     public FirestoreAdminClient firestoreAdminClient() throws IOException {
         return FirestoreAdminClient.create();
