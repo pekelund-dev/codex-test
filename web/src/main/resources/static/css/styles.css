@@ -581,3 +581,9 @@ th.sortable:hover {
         box-shadow: 0 0.65rem 1.5rem rgba(0, 0, 0, 0.3);
     }
 }
+
+
+/* Dark mode toggle icon — controlled by CSS so the correct icon shows immediately */
+.theme-icon-dark { display: none; }
+[data-bs-theme="dark"] .theme-icon-dark { display: inline; }
+[data-bs-theme="dark"] .theme-icon-light { display: none; }

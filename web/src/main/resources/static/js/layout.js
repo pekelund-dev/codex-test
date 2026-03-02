@@ -9,10 +9,6 @@ const LIGHT_THEME = 'light';
 
 const applyTheme = (theme) => {
     document.documentElement.setAttribute('data-bs-theme', theme);
-    const icon = document.getElementById('dark-mode-icon');
-    if (icon) {
-        icon.className = theme === DARK_THEME ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
-    }
 };
 
 const setupDarkModeToggle = () => {
