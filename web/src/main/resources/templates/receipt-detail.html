@@ -73,7 +73,7 @@
             <div th:if="${#lists.isEmpty(receiptItems)}" class="text-muted">No items were detected.</div>
             <div th:if="${!#lists.isEmpty(receiptItems)}" class="table-responsive">
                 <table class="table align-middle">
-                    <thead class="table-light">
+                    <thead>
                     <tr>
                         <th scope="col">Name</th>
                         <th scope="col">Quantity</th>
@@ -149,7 +149,7 @@
             <div th:if="${#lists.isEmpty(receipt.vats())}" class="text-muted">No VAT information available.</div>
             <div th:if="${!#lists.isEmpty(receipt.vats())}" class="table-responsive">
                 <table class="table align-middle">
-                    <thead class="table-light">
+                    <thead>
                     <tr>
                         <th scope="col">Rate</th>
                         <th scope="col">Net amount</th>
@@ -229,7 +229,7 @@
             <div th:if="${#lists.isEmpty(receipt.errors())}" class="text-muted">No parsing errors were reported.</div>
             <div th:if="${!#lists.isEmpty(receipt.errors())}" class="table-responsive">
                 <table class="table align-middle">
-                    <thead class="table-light">
+                    <thead>
                     <tr>
                         <th scope="col">Line</th>
                         <th scope="col">Content</th>

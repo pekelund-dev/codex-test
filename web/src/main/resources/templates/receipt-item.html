@@ -35,7 +35,7 @@
             <div th:if="${#lists.isEmpty(purchases)}" class="text-muted">No purchases were found for this item.</div>
             <div th:if="${!#lists.isEmpty(purchases)}" class="table-responsive">
                 <table class="table align-middle">
-                    <thead class="table-light">
+                    <thead>
                     <tr>
                         <th scope="col">Date</th>
                         <th scope="col">Store</th>

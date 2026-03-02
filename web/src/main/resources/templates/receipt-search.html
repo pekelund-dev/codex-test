@@ -98,7 +98,7 @@
                 </p>
                 <div class="table-responsive">
                     <table class="table align-middle" id="itemsTable">
-                        <thead class="table-light">
+                        <thead>
                         <tr>
                             <th scope="col" class="sortable" data-column="itemName">
                                 Artikelnamn<span class="sort-indicator"></span>
@@ -151,7 +151,7 @@
                             <td class="text-end" th:text="${item.itemTotal() != null ? item.itemTotal() : '—'}">—</td>
                         </tr>
                         </tbody>
-                        <tfoot class="table-light">
+                        <tfoot>
                         <tr>
                             <td colspan="5" class="text-end fw-semibold">Summering:</td>
                             <td class="text-end fw-semibold" id="totalDiscount">—</td>
@@ -174,7 +174,7 @@
                 </p>
                 <div class="table-responsive">
                     <table class="table align-middle">
-                        <thead class="table-light">
+                        <thead>
                         <tr>
                             <th scope="col">Kvitto</th>
                             <th scope="col">Datum</th>
