@@ -57,6 +57,11 @@ public class SecurityConfig {
                 .loginPage("/login")
                 .usernameParameter("email")
                 .defaultSuccessUrl("/dashboard", true)
+                .failureHandler((request, response, exception) -> {
+                    log.warn("Form login failed: {} - {}",
+                        exception.getClass().getSimpleName(), exception.getMessage());
+                    response.sendRedirect("/login?error");
+                })
                 .permitAll()
             )
             .logout(logout -> logout
