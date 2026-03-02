@@ -19,9 +19,12 @@ import org.springframework.util.StringUtils;
 /**
  * Handles user authentication: resolves {@link UserDetails} from Firestore or a
  * configured in-memory fallback when Firestore is unavailable.
+ * <p>
+ * This is an internal service used by {@link FirestoreUserService}, which is the
+ * registered {@link UserDetailsService} bean consumed by Spring Security.
  */
 @Service
-public class UserAuthenticationService implements UserDetailsService {
+public class UserAuthenticationService {
 
     private static final Logger log = LoggerFactory.getLogger(UserAuthenticationService.class);
 
@@ -39,7 +42,6 @@ public class UserAuthenticationService implements UserDetailsService {
             : createFallbackUserDetailsService(properties, passwordEncoder);
     }
 
-    @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         String normalizedEmail = FirestoreUserRepository.normalizeEmail(username);
 
