@@ -15,7 +15,11 @@
           integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous">
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}" href="/favicon.svg">
     <link th:href="@{${@viteManifest.css('main.js')}}" rel="stylesheet">
-    <style>.theme-icon-dark{display:none}[data-bs-theme=dark] .theme-icon-dark{display:inline}[data-bs-theme=dark] .theme-icon-light{display:none}</style>
+    <style>
+        .theme-icon-dark { display: none; }
+        [data-bs-theme="dark"] .theme-icon-dark { display: inline; }
+        [data-bs-theme="dark"] .theme-icon-light { display: none; }
+    </style>
     <script>(function(){var t=localStorage.getItem('pklnd-theme');if(t)document.documentElement.setAttribute('data-bs-theme',t);})();</script>
 </head>
 <body class="d-flex flex-column min-vh-100">
