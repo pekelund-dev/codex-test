@@ -162,6 +162,40 @@ If uploads are slow:
 2. **Check .gcloudignore**: Update patterns as needed
 3. **Clean local directory**: Remove local build artifacts before submitting
 
+## Runtime Image Optimizations
+
+### Distroless Base Image
+
+Both services use `gcr.io/distroless/java21-debian12:nonroot` as the runtime base image:
+
+| Image | Size |
+|-------|------|
+| `eclipse-temurin:21-jre` (previous) | ~287 MB |
+| `gcr.io/distroless/java21-debian12:nonroot` (current) | ~192 MB |
+
+**Benefits:**
+- **33% smaller** — faster image pulls and less storage cost
+- **No shell or package manager** — reduced attack surface and fewer CVEs
+- **Non-root by default** — the image runs as UID 65532 (`nonroot`), improving container security posture
+- **Exec-form ENTRYPOINT** — the JVM receives OS signals (e.g. `SIGTERM`) directly, enabling clean graceful shutdown
+
+### Configuring JVM options at runtime
+
+Because the distroless image contains no shell, `JAVA_OPTS` cannot be expanded at startup. Use the JVM-native `JAVA_TOOL_OPTIONS` environment variable instead. The JVM reads this variable automatically — no shell required.
+
+**Cloud Run example:**
+```bash
+gcloud run services update pklnd-web \
+  --set-env-vars JAVA_TOOL_OPTIONS="-Xmx512m -XX:+UseG1GC"
+```
+
+**Local Docker example:**
+```bash
+docker run -e JAVA_TOOL_OPTIONS="-Xmx512m" <image>
+```
+
+> **Note:** When `JAVA_TOOL_OPTIONS` is set the JVM prints `Picked up JAVA_TOOL_OPTIONS: …` to stderr at startup. This is expected and harmless.
+
 ## Future Optimization Opportunities
 
 1. **Multi-platform builds**: If deploying to ARM, optimize for multi-arch

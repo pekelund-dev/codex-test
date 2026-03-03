@@ -12,6 +12,11 @@ on:
           - production
           - test
           - staging
+      branch:
+        description: 'Branch or tag to deploy (defaults to the branch the workflow runs from)'
+        required: false
+        default: ''
+        type: string
       region:
         description: 'GCP region'
         required: false
@@ -38,6 +43,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
