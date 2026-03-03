@@ -6,13 +6,25 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 class FirestoreReadRecorderTests {
 
+    @AfterEach
+    void clearRequestContext() {
+        RequestContextHolder.resetRequestAttributes();
+    }
+
     @Test
-    void delegatesToTrackerWhenAvailable() {
+    void delegatesToTrackerWhenRequestScopeIsActive() {
+        RequestContextHolder.setRequestAttributes(
+            new ServletRequestAttributes(new MockHttpServletRequest()));
+
         FirestoreReadTotals totals = new FirestoreReadTotals();
         FirestoreReadTracker tracker = new FirestoreReadTracker(totals);
         @SuppressWarnings("unchecked")
@@ -28,32 +40,31 @@ class FirestoreReadRecorderTests {
     }
 
     @Test
-    void createsTrackerWhenAvailableFromScope() {
+    void incrementsTotalsWhenTrackerUnavailableInRequestScope() {
+        RequestContextHolder.setRequestAttributes(
+            new ServletRequestAttributes(new MockHttpServletRequest()));
+
         FirestoreReadTotals totals = new FirestoreReadTotals();
-        FirestoreReadTracker tracker = new FirestoreReadTracker(totals);
         @SuppressWarnings("unchecked")
         ObjectProvider<FirestoreReadTracker> provider = mock(ObjectProvider.class);
         when(provider.getIfAvailable()).thenReturn(null);
-        when(provider.getObject()).thenReturn(tracker);
 
         FirestoreReadRecorder recorder = new FirestoreReadRecorder(provider, totals);
-        recorder.record("Background task", 3L);
+        recorder.record("Request task", 3L);
 
-        assertThat(tracker.getReadCount()).isEqualTo(3L);
         assertThat(totals.getTotalReads()).isEqualTo(3L);
     }
 
     @Test
-    void incrementsTotalsWhenTrackerMissing() {
+    void incrementsTotalsWhenNoRequestScopeActive() {
         FirestoreReadTotals totals = new FirestoreReadTotals();
         @SuppressWarnings("unchecked")
         ObjectProvider<FirestoreReadTracker> provider = mock(ObjectProvider.class);
-        when(provider.getIfAvailable()).thenReturn(null);
-        when(provider.getObject()).thenThrow(new org.springframework.beans.BeansException("Scope inactive") { });
 
         FirestoreReadRecorder recorder = new FirestoreReadRecorder(provider, totals);
         recorder.record("Background task", 3L);
 
         assertThat(totals.getTotalReads()).isEqualTo(3L);
+        verify(provider, never()).getIfAvailable();
     }
 }

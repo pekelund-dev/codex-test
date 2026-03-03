@@ -160,3 +160,10 @@ variable "billing_alerts_topic" {
   type        = string
   default     = ""
 }
+
+variable "billing_alert_token" {
+  description = "Secret token included as a query parameter in the Pub/Sub push endpoint URL for request validation. When set, the web service rejects billing alert requests that do not include a matching token."
+  type        = string
+  default     = ""
+  sensitive   = true
+}

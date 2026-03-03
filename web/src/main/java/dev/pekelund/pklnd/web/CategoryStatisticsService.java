@@ -87,7 +87,8 @@ public class CategoryStatisticsService {
                 try {
                     LocalDate date = LocalDate.parse(dateStr);
                     return YearMonth.from(date).equals(yearMonth);
-                } catch (Exception e) {
+                } catch (java.time.format.DateTimeParseException e) {
+                    log.warn("Skipping receipt with unparseable date '{}': {}", dateStr, e.getMessage());
                     return false;
                 }
             })
@@ -115,7 +116,8 @@ public class CategoryStatisticsService {
                 try {
                     LocalDate date = LocalDate.parse(dateStr);
                     return date.getYear() == year;
-                } catch (Exception e) {
+                } catch (java.time.format.DateTimeParseException e) {
+                    log.warn("Skipping receipt with unparseable date '{}': {}", dateStr, e.getMessage());
                     return false;
                 }
             })
@@ -235,6 +237,7 @@ public class CategoryStatisticsService {
         try {
             return new BigDecimal(totalPrice.toString());
         } catch (NumberFormatException e) {
+            log.warn("Could not parse total price '{}' as BigDecimal", totalPrice);
             return null;
         }
     }

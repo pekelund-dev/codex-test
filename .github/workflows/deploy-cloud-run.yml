@@ -134,6 +134,60 @@ jobs:
           echo "web_url=${WEB_URL}" >> $GITHUB_OUTPUT
           echo "receipt_url=${RECEIPT_URL}" >> $GITHUB_OUTPUT
 
+      - name: Smoke tests
+        run: |
+          WEB_URL="${{ steps.urls.outputs.web_url }}"
+          RECEIPT_URL="${{ steps.urls.outputs.receipt_url }}"
+
+          echo "## Smoke Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Web service health check
+          if [ "$WEB_URL" != "Not deployed" ]; then
+            echo "Checking web service health: ${WEB_URL}/actuator/health"
+            HTTP_STATUS=$(curl --silent --max-time 30 --retry 3 --retry-delay 5 \
+              --output /dev/null --write-out "%{http_code}" "${WEB_URL}/actuator/health" || echo "000")
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "| Web health (/actuator/health) | ✅ $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| Web health (/actuator/health) | ❌ $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
+              echo "::error::Web service health check failed with HTTP $HTTP_STATUS"
+              exit 1
+            fi
+
+            # Verify login page renders
+            echo "Checking web login page: ${WEB_URL}/login"
+            HTTP_STATUS=$(curl --silent --max-time 30 --retry 3 --retry-delay 5 \
+              --output /dev/null --write-out "%{http_code}" "${WEB_URL}/login" || echo "000")
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "| Web login page (/login) | ✅ $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| Web login page (/login) | ❌ $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
+              echo "::error::Web login page check failed with HTTP $HTTP_STATUS"
+              exit 1
+            fi
+          else
+            echo "| Web service | ⚠️ Not deployed |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Receipt parser - internal service with Cloud Run IAM auth.
+          # Verify deployment via Cloud Run service status (avoids HTTP auth requirement).
+          if [ "$RECEIPT_URL" != "Not deployed" ]; then
+            echo "Checking receipt-parser Cloud Run service status"
+            READY=$(gcloud run services describe ${{ env.RECEIPT_SERVICE_NAME }} \
+              --region=${{ env.REGION }} \
+              --format='value(status.conditions[0].status)' 2>/dev/null || echo "Unknown")
+            if [ "$READY" = "True" ]; then
+              echo "| Receipt-parser service (Cloud Run ready) | ✅ Ready |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| Receipt-parser service (Cloud Run ready) | ❌ $READY |" >> $GITHUB_STEP_SUMMARY
+              echo "::error::Receipt-parser service is not ready: status=$READY"
+              exit 1
+            fi
+          else
+            echo "| Receipt-parser service | ⚠️ Not deployed |" >> $GITHUB_STEP_SUMMARY
+          fi
+
       - name: Deployment Summary
         run: |
           echo "## Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY

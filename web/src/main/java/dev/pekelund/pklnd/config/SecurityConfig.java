@@ -8,9 +8,11 @@ import org.springframework.context.annotation.Configuration;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -31,8 +33,15 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
         HttpSecurity http,
         ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider,
-        GrantedAuthoritiesMapper oauthAuthoritiesMapper
+        GrantedAuthoritiesMapper oauthAuthoritiesMapper,
+        ObjectProvider<UserDetailsService> userDetailsServiceProvider
     ) throws Exception {
+        UserDetailsService userDetailsService = userDetailsServiceProvider.getIfAvailable();
+        if (userDetailsService != null) {
+            DaoAuthenticationProvider daoProvider = new DaoAuthenticationProvider(passwordEncoder());
+            daoProvider.setUserDetailsService(userDetailsService);
+            http.authenticationProvider(daoProvider);
+        }
         http
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(
@@ -57,6 +66,11 @@ public class SecurityConfig {
                 .loginPage("/login")
                 .usernameParameter("email")
                 .defaultSuccessUrl("/dashboard", true)
+                .failureHandler((request, response, exception) -> {
+                    log.warn("Form login failed: {} - {}",
+                        exception.getClass().getSimpleName(), exception.getMessage());
+                    response.sendRedirect("/login?error");
+                })
                 .permitAll()
             )
             .logout(logout -> logout

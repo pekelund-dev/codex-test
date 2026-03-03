@@ -22,9 +22,9 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(ReceiptController.class)
+@WebMvcTest(dev.pekelund.pklnd.web.receipts.ReceiptOverviewController.class)
 @ContextConfiguration(classes = PknldApplication.class)
-@Import({FirestoreReadTotals.class, ViteManifest.class})
+@Import({FirestoreReadTotals.class, ViteManifest.class, dev.pekelund.pklnd.web.receipts.ReceiptScopeHelper.class})
 class ReceiptOverviewPageTests {
 
     @Autowired

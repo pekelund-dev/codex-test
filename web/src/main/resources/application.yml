@@ -54,3 +54,7 @@ receipt:
     audience: ${RECEIPT_PROCESSOR_AUDIENCE:}
     connect-timeout: ${RECEIPT_PROCESSOR_CONNECT_TIMEOUT:5s}
     read-timeout: ${RECEIPT_PROCESSOR_READ_TIMEOUT:30s}
+
+billing:
+  alert:
+    token: ${BILLING_ALERT_TOKEN:}

@@ -92,6 +92,34 @@ Deploy both Cloud Run services with the budget alert handling code:
 PROJECT_ID=your-project-id ./scripts/terraform/deploy_services.sh
 ```
 
+### Optional: Enable Token Verification
+
+To protect the `/api/billing/alerts` endpoint from unauthorized requests, configure a
+verification token. When set, the Terraform push subscription URL includes the token as
+a query parameter and the application rejects any requests without a matching token.
+
+Generate a random token:
+
+```bash
+openssl rand -hex 32
+```
+
+Pass the token when deploying services:
+
+```bash
+BILLING_ALERT_TOKEN=your-secret-token PROJECT_ID=your-project-id \
+  ./scripts/terraform/deploy_services.sh
+```
+
+Or add it to `infra/terraform/deployment/terraform.tfvars`:
+
+```hcl
+billing_alert_token = "your-secret-token"
+```
+
+Without this variable (the default), the endpoint accepts all requests without token
+validation — suitable for initial testing but **not recommended for production**.
+
 The services now include:
 - Budget alert endpoint at `/api/billing/alerts`
 - Budget percentage tracking

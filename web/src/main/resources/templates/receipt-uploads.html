@@ -15,16 +15,7 @@
                         Up to <span th:text="${maxUploadFiles}">50</span> files can be uploaded at a time.
                     </p>
 
-                    <div th:if="${canViewAll}" class="mb-3">
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Receipt scope">
-                            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'my'} ? ' active'"
-                               th:href="@{/receipts/uploads(scope='my')}">My receipts</a>
-                            <a class="btn btn-outline-primary" th:classappend="${scopeParam == 'all'} ? ' active'"
-                               th:href="@{/receipts/uploads(scope='all')}">All receipts</a>
-                        </div>
-                        <p class="text-muted small mb-0 mt-2"
-                           th:text="${viewingAll} ? 'Managing all uploaded receipt files.' : 'Managing only the receipt files you have uploaded.'">Managing only the receipt files you have uploaded.</p>
-                    </div>
+                    <div th:replace="~{fragments/scope-toggle :: scopeToggle(${canViewAll}, ${scopeParam}, ${viewingAll}, @{/receipts/uploads(scope='my')}, @{/receipts/uploads(scope='all')}, 'Managing all uploaded receipt files.', 'Managing only the receipt files you have uploaded.')}"></div>
 
                     <div class="d-flex align-items-center gap-2 mb-4" aria-live="polite">
                         <span class="text-muted small">Storage status:</span>
@@ -32,12 +23,7 @@
                         <span th:if="${!storageEnabled}" class="badge bg-danger">Disabled</span>
                     </div>
 
-                    <div th:if="${successMessage}" class="alert alert-success" role="alert">
-                        <span th:text="${successMessage}">Files uploaded successfully.</span>
-                    </div>
-                    <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
-                        <span th:text="${errorMessage}">Upload failed.</span>
-                    </div>
+                    <div th:replace="~{fragments/alerts :: flashAlerts}"></div>
 
                     <div th:if="${!storageEnabled}" class="alert alert-warning" role="alert">
                         Receipt uploads are currently disabled. Follow the Google Cloud Storage setup instructions in the
@@ -114,56 +100,11 @@
                           th:text="${files != null ? files.size() + ' files' : '0 files'}">0 files</span>
                 </summary>
 
-                <div class="alert alert-warning" role="alert" th:if="${!storageEnabled}">
-                    Receipt uploads are currently disabled. Enable Google Cloud Storage to manage stored files.
-                </div>
-
-                <div class="alert alert-danger" role="alert" data-files-error
-                     th:classappend="${listingError == null} ? ' d-none'"
-                     th:text="${listingError != null ? listingError : ''}">
-                    Unable to list files.
-                </div>
-
-                <div class="text-center text-muted py-5" data-files-empty
-                     th:classappend="${files != null and !#lists.isEmpty(files)} ? ' d-none'">
-                    <p class="mb-0">No receipt files have been uploaded yet.</p>
-                </div>
-
-                <div class="table-responsive" data-files-table
-                     th:classappend="${files == null or #lists.isEmpty(files)} ? ' d-none'">
-                    <table class="table align-middle mb-0">
-                        <thead class="table-light">
-                        <tr>
-                            <th scope="col">File name</th>
-                            <th scope="col" class="text-end">Size</th>
-                            <th scope="col">Uploaded by</th>
-                            <th scope="col">Last updated</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Content type</th>
-                        </tr>
-                        </thead>
-                        <tbody data-files-body>
-                        <tr th:each="file : ${files}" th:attr="data-object-name=${file.name()}">
-                            <td>
-                                <span class="fw-semibold" th:attr="title=${file.name()}" th:text="${file.displayName()}">receipt.pdf</span>
-                            </td>
-                            <td class="text-end" th:text="${file.formattedSize()}">24.5 KB</td>
-                            <td th:text="${file.ownerDisplayName()}">—</td>
-                            <td th:text="${file.updatedZoned() != null ? #temporals.format(file.updatedZoned(), 'yyyy-MM-dd HH:mm:ss') : '—'}">2024-01-01 10:30:00</td>
-                            <td th:with="status=${fileStatuses != null ? fileStatuses[file.name()] : null}">
-                                <div class="d-flex flex-column gap-1">
-                                    <span class="badge text-uppercase fw-semibold file-status-badge"
-                                          th:classappend="${status != null ? ' ' + status.statusBadgeClass() : ' bg-secondary-subtle text-secondary'}"
-                                          th:text="${status != null && status.status() != null ? status.status() : 'PENDING'}">PENDING</span>
-                                    <span class="text-muted small file-status-message"
-                                          th:classappend="${status == null || status.statusMessage() == null} ? ' d-none'"
-                                          th:text="${status != null ? status.statusMessage() : ''}">Status message</span>
-                                </div>
-                            </td>
-                            <td th:text="${file.contentType() != null ? file.contentType() : '—'}">application/pdf</td>
-                        </tr>
-                        </tbody>
-                    </table>
+                <div id="receipt-files-dashboard"
+                     th:attr="hx-get=@{/receipts/uploads/files-fragment(scope=${scopeParam})}"
+                     hx-trigger="every 5s"
+                     hx-swap="innerHTML">
+                    <div th:replace="~{fragments/receipt-files-table :: filesTable}"></div>
                 </div>
             </details>
         </div>

@@ -1,0 +1,182 @@
+name: Auto-deploy to Staging on merge to main
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-east1
+  WEB_SERVICE_NAME: pklnd-web-test
+  RECEIPT_SERVICE_NAME: pklnd-receipts-test
+
+jobs:
+  deploy-staging:
+    name: Build and Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: test
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate build metadata
+        id: meta
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "web_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:staging-${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "receipt_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:staging-${TIMESTAMP}" >> $GITHUB_OUTPUT
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.web_image }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:staging-latest
+          cache-from: |
+            type=registry,ref=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:latest
+            type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            GIT_BRANCH=${{ github.ref_name }}
+            GIT_COMMIT=${{ github.sha }}
+
+      - name: Build and push receipt-parser image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./receipt-parser/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.receipt_image }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:staging-latest
+          cache-from: |
+            type=registry,ref=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:latest
+            type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            GIT_BRANCH=${{ github.ref_name }}
+            GIT_COMMIT=${{ github.sha }}
+
+      - name: Deploy web service to Cloud Run (staging)
+        run: |
+          set -e
+          echo "Deploying web staging service with image: ${{ steps.meta.outputs.web_image }}"
+          gcloud run deploy ${{ env.WEB_SERVICE_NAME }} \
+            --image=${{ steps.meta.outputs.web_image }} \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} \
+            --platform=managed
+
+      - name: Deploy receipt-parser service to Cloud Run (staging)
+        run: |
+          set -e
+          echo "Deploying receipt-parser staging service with image: ${{ steps.meta.outputs.receipt_image }}"
+          gcloud run deploy ${{ env.RECEIPT_SERVICE_NAME }} \
+            --image=${{ steps.meta.outputs.receipt_image }} \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} \
+            --platform=managed
+
+      - name: Get staging URLs
+        id: urls
+        run: |
+          WEB_URL=$(gcloud run services describe ${{ env.WEB_SERVICE_NAME }} --region=${{ env.REGION }} --format='value(status.url)' 2>/dev/null || echo "Not deployed")
+          RECEIPT_URL=$(gcloud run services describe ${{ env.RECEIPT_SERVICE_NAME }} --region=${{ env.REGION }} --format='value(status.url)' 2>/dev/null || echo "Not deployed")
+          echo "web_url=${WEB_URL}" >> $GITHUB_OUTPUT
+          echo "receipt_url=${RECEIPT_URL}" >> $GITHUB_OUTPUT
+
+      - name: Smoke tests
+        run: |
+          WEB_URL="${{ steps.urls.outputs.web_url }}"
+          RECEIPT_URL="${{ steps.urls.outputs.receipt_url }}"
+
+          echo "## Smoke Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          # Web service health check
+          if [ "$WEB_URL" != "Not deployed" ]; then
+            echo "Checking web service health: ${WEB_URL}/actuator/health"
+            HTTP_STATUS=$(curl --silent --max-time 30 --retry 3 --retry-delay 5 \
+              --output /dev/null --write-out "%{http_code}" "${WEB_URL}/actuator/health" || echo "000")
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "| Web health (/actuator/health) | ✅ $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| Web health (/actuator/health) | ❌ $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
+              echo "::error::Web staging health check failed with HTTP $HTTP_STATUS"
+              exit 1
+            fi
+
+            HTTP_STATUS=$(curl --silent --max-time 30 --retry 3 --retry-delay 5 \
+              --output /dev/null --write-out "%{http_code}" "${WEB_URL}/login" || echo "000")
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "| Web login page (/login) | ✅ $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| Web login page (/login) | ❌ $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
+              echo "::error::Web staging login page check failed with HTTP $HTTP_STATUS"
+              exit 1
+            fi
+          fi
+
+          # Receipt parser health check
+          if [ "$RECEIPT_URL" != "Not deployed" ]; then
+            HTTP_STATUS=$(curl --silent --max-time 30 --retry 3 --retry-delay 5 \
+              --output /dev/null --write-out "%{http_code}" "${RECEIPT_URL}/actuator/health" || echo "000")
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "| Receipt-parser health (/actuator/health) | ✅ $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| Receipt-parser health (/actuator/health) | ❌ $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
+              echo "::error::Receipt-parser staging health check failed with HTTP $HTTP_STATUS"
+              exit 1
+            fi
+          fi
+
+      - name: Playwright E2E tests
+        if: steps.urls.outputs.web_url != 'Not deployed'
+        continue-on-error: true
+        run: |
+          cd e2e
+          npm ci
+          npx playwright install chromium --with-deps
+          E2E_BASE_URL="${{ steps.urls.outputs.web_url }}" npx playwright test --reporter=github || true
+
+      - name: Deployment Summary
+        run: |
+          echo "## Staging Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by push to main**" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** ${{ steps.meta.outputs.timestamp }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| Web (staging) | ${{ steps.urls.outputs.web_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Receipt Parser (staging) | ${{ steps.urls.outputs.receipt_url }} |" >> $GITHUB_STEP_SUMMARY

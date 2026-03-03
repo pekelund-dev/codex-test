@@ -30,10 +30,7 @@
                             th:attr="data-sort-value=${receipt.storeName() != null ? receipt.storeName() : ''}"
                             th:text="${receipt.storeName() != null ? receipt.storeName() : '-'}">ICA Supermarket</td>
                         <td>
-                            <span th:if="${receipt.reconciliationStatus() == 'COMPLETE'}" class="badge bg-success-subtle text-success">Avstämd</span>
-                            <span th:if="${receipt.reconciliationStatus() == 'PARTIAL'}" class="badge bg-warning-subtle text-warning-emphasis">Delavstämd</span>
-                            <span th:if="${receipt.reconciliationStatus() == 'FAIL'}" class="badge bg-danger-subtle text-danger">Fel</span>
-                            <span th:if="${receipt.reconciliationStatus() == 'NONE' or receipt.reconciliationStatus() == null}" class="text-muted small">—</span>
+                            <span th:replace="~{fragments/status-badge :: reconciliationBadge(${receipt.reconciliationStatus()})}"></span>
                         </td>
                         <td class="text-end fw-semibold" 
                             th:attr="data-sort-value=${receipt.totalAmountValue() != null ? receipt.totalAmountValue() : 0}"
@@ -115,10 +112,7 @@
                             th:attr="data-sort-value=${receipt.storeName() != null ? receipt.storeName() : ''}"
                             th:text="${receipt.storeName() != null ? receipt.storeName() : '-'}">ICA Supermarket</td>
                         <td>
-                            <span th:if="${receipt.reconciliationStatus() == 'COMPLETE'}" class="badge bg-success-subtle text-success">Avstämd</span>
-                            <span th:if="${receipt.reconciliationStatus() == 'PARTIAL'}" class="badge bg-warning-subtle text-warning-emphasis">Delavstämd</span>
-                            <span th:if="${receipt.reconciliationStatus() == 'FAIL'}" class="badge bg-danger-subtle text-danger">Fel</span>
-                            <span th:if="${receipt.reconciliationStatus() == 'NONE' or receipt.reconciliationStatus() == null}" class="text-muted small">—</span>
+                            <span th:replace="~{fragments/status-badge :: reconciliationBadge(${receipt.reconciliationStatus()})}"></span>
                         </td>
                         <td class="text-end fw-semibold" 
                             th:attr="data-sort-value=${receipt.totalAmountValue() != null ? receipt.totalAmountValue() : 0}"

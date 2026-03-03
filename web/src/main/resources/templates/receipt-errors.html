@@ -11,8 +11,7 @@
             <h1 class="fw-bold mb-3">Misslyckade tolkningar</h1>
             <p class="text-muted">Lista över kvitton som inte kunde tolkas korrekt.</p>
 
-            <div th:if="${successMessage}" class="alert alert-success" role="alert" th:text="${successMessage}"></div>
-            <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
+            <div th:replace="~{fragments/alerts :: flashAlerts}"></div>
         </div>
     </div>
 

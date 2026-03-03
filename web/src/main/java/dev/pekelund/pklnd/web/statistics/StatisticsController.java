@@ -14,11 +14,14 @@ import dev.pekelund.pklnd.web.TagStatisticsService;
 import dev.pekelund.pklnd.web.TagStatisticsService.TagSummary;
 import java.math.BigDecimal;
 import java.security.Principal;
+import java.time.DateTimeException;
 import java.time.Month;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -30,6 +33,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class StatisticsController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(StatisticsController.class);
 
     private final DashboardStatisticsService dashboardStatisticsService;
     private final TagService tagService;
@@ -247,7 +252,8 @@ public class StatisticsController {
     private String resolveMonthName(int month) {
         try {
             return Month.of(month).toString().toLowerCase();
-        } catch (Exception e) {
+        } catch (DateTimeException e) {
+            LOGGER.warn("Invalid month value {}: {}", month, e.getMessage());
             return "unknown";
         }
     }

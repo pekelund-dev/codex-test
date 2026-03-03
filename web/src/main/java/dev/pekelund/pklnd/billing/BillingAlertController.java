@@ -4,10 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Base64;
@@ -23,6 +25,9 @@ public class BillingAlertController {
     
     private final BillingShutdownService shutdownService;
     private final ObjectMapper objectMapper;
+
+    @Value("${billing.alert.token:}")
+    private String expectedToken;
     
     public BillingAlertController(BillingShutdownService shutdownService, ObjectMapper objectMapper) {
         this.shutdownService = shutdownService;
@@ -42,9 +47,18 @@ public class BillingAlertController {
      * }
      * 
      * The decoded data contains budget alert information including thresholdPercent.
+     * 
+     * When BILLING_ALERT_TOKEN is configured, requests must include a matching
+     * {@code token} query parameter, otherwise a 403 Forbidden response is returned.
      */
     @PostMapping("/api/billing/alerts")
-    public ResponseEntity<String> handleBillingAlert(@RequestBody String rawBody) {
+    public ResponseEntity<String> handleBillingAlert(
+            @RequestBody String rawBody,
+            @RequestParam(name = "token", required = false) String token) {
+        if (!expectedToken.isEmpty() && !expectedToken.equals(token)) {
+            logger.warn("Rejected billing alert request with invalid or missing token");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid token");
+        }
         try {
             logger.info("Received billing alert notification");
             

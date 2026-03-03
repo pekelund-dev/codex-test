@@ -260,7 +260,7 @@ class ReceiptOverviewController {
                 let payload = null;
                 try {
                     payload = await response.json();
-                } catch (error) {
+                } catch {
                     // Ignore JSON parsing errors and fall back to generic handling.
                 }
                 if (!response.ok) {

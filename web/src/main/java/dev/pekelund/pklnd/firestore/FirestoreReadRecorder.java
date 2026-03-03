@@ -3,6 +3,7 @@ package dev.pekelund.pklnd.firestore;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
 
 /**
  * Bridges the request-scoped {@link FirestoreReadTracker} with the singleton
@@ -43,13 +44,11 @@ public class FirestoreReadRecorder {
     }
 
     private FirestoreReadTracker resolveTracker() {
-        FirestoreReadTracker tracker = trackerProvider.getIfAvailable();
-        if (tracker != null) {
-            return tracker;
+        if (RequestContextHolder.getRequestAttributes() == null) {
+            return null;
         }
-
         try {
-            return trackerProvider.getObject();
+            return trackerProvider.getIfAvailable();
         } catch (BeansException ex) {
             return null;
         }

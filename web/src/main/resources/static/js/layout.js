@@ -3,6 +3,31 @@ const supportsBootstrapCollapse = () =>
     && window.bootstrap !== null
     && typeof window.bootstrap.Collapse === 'function';
 
+const DARK_MODE_KEY = 'pklnd-theme';
+const DARK_THEME = 'dark';
+const LIGHT_THEME = 'light';
+
+const applyTheme = (theme) => {
+    document.documentElement.setAttribute('data-bs-theme', theme);
+};
+
+const setupDarkModeToggle = () => {
+    const savedTheme = localStorage.getItem(DARK_MODE_KEY) || LIGHT_THEME;
+    applyTheme(savedTheme);
+
+    const toggle = document.getElementById('dark-mode-toggle');
+    if (!toggle) {
+        return;
+    }
+
+    toggle.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-bs-theme') || LIGHT_THEME;
+        const next = current === DARK_THEME ? LIGHT_THEME : DARK_THEME;
+        localStorage.setItem(DARK_MODE_KEY, next);
+        applyTheme(next);
+    });
+};
+
 const setupSplashScreen = () => {
     const splash = document.getElementById('splash-screen');
     if (!splash) {
@@ -61,6 +86,7 @@ const setupNavbarFallbackToggle = () => {
 const setupPageLayout = () => {
     setupSplashScreen();
     setupNavbarFallbackToggle();
+    setupDarkModeToggle();
 };
 
 const initializePageLayout = () => {

@@ -132,7 +132,7 @@
     <div class="row g-4 mt-1" th:if="${statistics.yearlyStatisticsAvailable}">
         <div class="col-12" th:each="yearEntry : ${statistics.monthlyTotals}">
             <div class="card shadow-sm">
-                <div class="card-header bg-light">
+                <div class="card-header bg-body-tertiary">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h3 class="h5 mb-0 fw-bold d-inline">
@@ -171,7 +171,7 @@
                     <div th:if="${statistics.yearlyDiscounts.containsKey(yearEntry.key) and statistics.yearlyDiscounts.get(yearEntry.key).compareTo(T(java.math.BigDecimal).ZERO) > 0}"
                          class="collapse mt-2" 
                          th:id="${'discountDetails' + yearEntry.key}">
-                        <div class="card card-body bg-white small">
+                        <div class="card card-body bg-body small">
                             <div class="row">
                                 <div class="col-md-6">
                                     <strong>Allmänna rabatter:</strong>
@@ -195,7 +195,7 @@
                                     <div class="card-body text-center p-3">
                                         <h4 class="h6 fw-semibold mb-2 text-primary" 
                                             th:text="#{|dashboard.statistics.month.${monthEntry.key.toString().toLowerCase()}|}">Januari</h4>
-                                        <p class="mb-0 fw-bold text-dark" th:text="${statistics.formatAmount(monthEntry.value)} + ' kr'">0.00 kr</p>
+                                        <p class="mb-0 fw-bold text-body" th:text="${statistics.formatAmount(monthEntry.value)} + ' kr'">0.00 kr</p>
                                         <!-- Monthly reconciled count -->
                                         <p th:if="${statistics.monthlyReconciled.containsKey(yearEntry.key) and statistics.monthlyReconciled.get(yearEntry.key).containsKey(monthEntry.key)}"
                                            class="mb-0 mt-1">

@@ -87,3 +87,9 @@ variable "billing_account_id" {
   type        = string
   default     = ""
 }
+
+variable "web_service_name" {
+  description = "Cloud Run service name for the web application"
+  type        = string
+  default     = "pklnd-web"
+}

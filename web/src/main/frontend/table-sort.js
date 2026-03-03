@@ -6,11 +6,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     sortableTables.forEach(table => {
         const headers = table.querySelectorAll('th.sortable');
-        const tbody = table.querySelector('tbody');
         
         // Apply initial sort if specified
         const initialColumn = parseInt(table.dataset.sortColumn || '0');
-        const initialDirection = table.dataset.sortDirection || 'asc';
         
         headers.forEach((header, index) => {
             header.style.cursor = 'pointer';
@@ -29,7 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Apply initial sort
         if (headers[initialColumn]) {
-            const direction = initialDirection === 'desc' ? 'asc' : 'desc'; // Will be toggled
             sortTable(table, initialColumn, headers[initialColumn]);
         }
     });
@@ -63,7 +60,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Find the correct cell index accounting for conditional columns
             let cellIndex = 0;
-            let headerIndex = 0;
             const headerCells = table.querySelectorAll('thead th');
             
             for (let i = 0; i < headerCells.length; i++) {
