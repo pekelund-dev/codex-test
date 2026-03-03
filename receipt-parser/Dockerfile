@@ -55,13 +55,12 @@ RUN --mount=type=cache,target=/root/.m2 \
     && echo "Verifying git.properties in JAR:" \
     && unzip -p /workspace/app.jar BOOT-INF/classes/git.properties || echo "WARNING: git.properties not found in JAR!"
 
-FROM eclipse-temurin:21-jre
+FROM gcr.io/distroless/java21-debian12:nonroot
 
-ENV JAVA_OPTS=""
 WORKDIR /app
 
-COPY --from=build /workspace/app.jar app.jar
+COPY --from=build --chown=nonroot:nonroot /workspace/app.jar app.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
