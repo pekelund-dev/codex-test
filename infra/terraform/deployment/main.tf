@@ -53,6 +53,11 @@ resource "google_cloud_run_v2_service" "receipts" {
       }
 
       env {
+        name  = "FIRESTORE_DATABASE_ID"
+        value = var.firestore_database_id
+      }
+
+      env {
         name  = "RECEIPT_FIRESTORE_COLLECTION"
         value = "receiptExtractions"
       }
