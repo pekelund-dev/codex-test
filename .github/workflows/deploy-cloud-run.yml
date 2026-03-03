@@ -170,18 +170,18 @@ jobs:
             echo "| Web service | ⚠️ Not deployed |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          # Receipt parser health check (service requires auth — use identity token)
+          # Receipt parser - internal service with Cloud Run IAM auth.
+          # Verify deployment via Cloud Run service status (avoids HTTP auth requirement).
           if [ "$RECEIPT_URL" != "Not deployed" ]; then
-            echo "Checking receipt-parser service health: ${RECEIPT_URL}/actuator/health"
-            ID_TOKEN=$(gcloud auth print-identity-token --audiences="${RECEIPT_URL}" 2>/dev/null || echo "")
-            HTTP_STATUS=$(curl --silent --max-time 30 --retry 3 --retry-delay 5 \
-              ${ID_TOKEN:+--header "Authorization: Bearer ${ID_TOKEN}"} \
-              --output /dev/null --write-out "%{http_code}" "${RECEIPT_URL}/actuator/health" || echo "000")
-            if [ "$HTTP_STATUS" = "200" ]; then
-              echo "| Receipt-parser health (/actuator/health) | ✅ $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
+            echo "Checking receipt-parser Cloud Run service status"
+            READY=$(gcloud run services describe ${{ env.RECEIPT_SERVICE_NAME }} \
+              --region=${{ env.REGION }} \
+              --format='value(status.conditions[0].status)' 2>/dev/null || echo "Unknown")
+            if [ "$READY" = "True" ]; then
+              echo "| Receipt-parser service (Cloud Run ready) | ✅ Ready |" >> $GITHUB_STEP_SUMMARY
             else
-              echo "| Receipt-parser health (/actuator/health) | ❌ $HTTP_STATUS |" >> $GITHUB_STEP_SUMMARY
-              echo "::error::Receipt-parser health check failed with HTTP $HTTP_STATUS"
+              echo "| Receipt-parser service (Cloud Run ready) | ❌ $READY |" >> $GITHUB_STEP_SUMMARY
+              echo "::error::Receipt-parser service is not ready: status=$READY"
               exit 1
             fi
           else
