@@ -46,13 +46,6 @@ jobs:
         with:
           ref: ${{ inputs.branch || github.ref }}
 
-      - name: Capture git info
-        id: git_info
-        run: |
-          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
-
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -72,7 +65,7 @@ jobs:
         id: meta
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          SHORT_SHA=${{ steps.git_info.outputs.short_sha }}
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
           echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "web_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:${TIMESTAMP}" >> $GITHUB_OUTPUT
@@ -93,8 +86,8 @@ jobs:
             type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            GIT_BRANCH=${{ steps.git_info.outputs.branch }}
-            GIT_COMMIT=${{ steps.git_info.outputs.sha }}
+            GIT_BRANCH=${{ github.ref_name }}
+            GIT_COMMIT=${{ github.sha }}
 
       - name: Build and push receipt-parser image
         uses: docker/build-push-action@v5
@@ -111,8 +104,8 @@ jobs:
             type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            GIT_BRANCH=${{ steps.git_info.outputs.branch }}
-            GIT_COMMIT=${{ steps.git_info.outputs.sha }}
+            GIT_BRANCH=${{ github.ref_name }}
+            GIT_COMMIT=${{ github.sha }}
 
       - name: Deploy web service to Cloud Run
         run: |
@@ -219,8 +212,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build Info" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit:** ${{ steps.git_info.outputs.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch:** ${{ steps.git_info.outputs.branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Timestamp:** ${{ steps.meta.outputs.timestamp }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Triggered by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
 
