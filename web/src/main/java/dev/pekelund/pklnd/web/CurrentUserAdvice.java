@@ -1,6 +1,7 @@
 package dev.pekelund.pklnd.web;
 
 import dev.pekelund.pklnd.billing.BillingShutdownService;
+import dev.pekelund.pklnd.config.DemoAuthentication;
 import dev.pekelund.pklnd.config.HeaderAwareCookieLocaleResolver;
 import dev.pekelund.pklnd.firestore.FirestoreReadTracker;
 import dev.pekelund.pklnd.firestore.FirestoreReadTotals;
@@ -58,6 +59,11 @@ public class CurrentUserAdvice {
             return UserProfile.anonymous();
         }
 
+        if (authentication instanceof DemoAuthentication demoAuthentication) {
+            String displayName = "Demo";
+            return UserProfile.demo(displayName, deriveInitials(displayName));
+        }
+
         String displayName = authentication.getName();
         String imageUrl = null;
         Object principal = authentication.getPrincipal();
@@ -75,7 +81,7 @@ public class CurrentUserAdvice {
         }
 
         String initials = deriveInitials(displayName);
-        return new UserProfile(true, displayName, initials, imageUrl);
+        return new UserProfile(true, displayName, initials, imageUrl, false);
     }
 
     @ModelAttribute("currentRequestUri")

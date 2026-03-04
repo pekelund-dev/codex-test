@@ -12,8 +12,9 @@
             <p class="lead mb-3" th:text="#{home.hero.lead}">Lead text</p>
             <p class="text-muted" th:text="#{home.hero.sublead}">Sublead text</p>
             <div class="d-flex flex-wrap gap-3 mt-4">
-                <a class="btn btn-primary btn-lg" th:href="@{/dashboard}" th:if="${userProfile.authenticated}" th:text="#{home.hero.authenticated}">Gå till statistiken</a>
+                <a class="btn btn-primary btn-lg" th:href="@{/dashboard}" th:if="${userProfile.authenticated and !userProfile.demoMode}" th:text="#{home.hero.authenticated}">Gå till statistiken</a>
                 <a class="btn btn-outline-primary btn-lg" th:if="${!userProfile.authenticated}" th:href="@{/login}" th:text="#{home.hero.start}">Kom igång</a>
+                <a class="btn btn-outline-secondary btn-lg" th:if="${!userProfile.authenticated}" th:href="@{/demo}" th:text="#{demo.mode.start}">Prova demoläge</a>
                 <a class="btn btn-outline-secondary btn-lg" th:href="@{/about}" th:text="#{home.hero.learn}">Läs mer</a>
             </div>
         </div>

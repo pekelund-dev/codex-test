@@ -1,5 +1,6 @@
 package dev.pekelund.pklnd.web;
 
+import dev.pekelund.pklnd.config.DemoAuthentication;
 import dev.pekelund.pklnd.firestore.FirestoreUserDetails;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -17,6 +18,10 @@ public class ReceiptOwnerResolver {
             || !authentication.isAuthenticated()
             || authentication instanceof AnonymousAuthenticationToken) {
             return null;
+        }
+
+        if (authentication instanceof DemoAuthentication demoAuthentication) {
+            return demoAuthentication.getDemoOwner();
         }
 
         String identifier = authentication.getName();
