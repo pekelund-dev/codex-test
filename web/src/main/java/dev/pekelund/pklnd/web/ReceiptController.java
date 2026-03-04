@@ -418,7 +418,8 @@ public class ReceiptController {
         ReceiptOwner currentOwner = receiptOwnerResolver.resolve(authentication);
         boolean ownsReceipt =
             currentOwner != null && ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), currentOwner);
-        if (!ownsReceipt && !canViewAll) {
+        boolean isDemoUser = authentication instanceof DemoAuthentication;
+        if (!ownsReceipt && !canViewAll && !isDemoUser) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found.");
         }
 
