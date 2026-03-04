@@ -34,14 +34,14 @@ jobs:
       
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: core-test-results
           path: core/target/surefire-reports/
       
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: core-coverage-report
           path: core/target/site/jacoco/
@@ -66,14 +66,14 @@ jobs:
       
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-test-results
           path: web/target/surefire-reports/
       
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-coverage-report
           path: web/target/site/jacoco/
@@ -98,14 +98,14 @@ jobs:
       
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: receipt-parser-test-results
           path: receipt-parser/target/surefire-reports/
       
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: receipt-parser-coverage-report
           path: receipt-parser/target/site/jacoco/
