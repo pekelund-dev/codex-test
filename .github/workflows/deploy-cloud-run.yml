@@ -90,8 +90,8 @@ jobs:
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:${{ steps.meta.outputs.short_sha }}
           cache-from: |
             type=registry,ref=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/web/pklnd-web:latest
-            type=gha
-          cache-to: type=gha,mode=max
+            type=gha,scope=build-web-${{ inputs.branch || github.ref_name }}
+          cache-to: type=gha,mode=max,scope=build-web-${{ inputs.branch || github.ref_name }}
           build-args: |
             GIT_BRANCH=${{ steps.git_info.outputs.branch }}
             GIT_COMMIT=${{ steps.git_info.outputs.sha }}
@@ -108,8 +108,8 @@ jobs:
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:${{ steps.meta.outputs.short_sha }}
           cache-from: |
             type=registry,ref=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:latest
-            type=gha
-          cache-to: type=gha,mode=max
+            type=gha,scope=build-receipts-${{ inputs.branch || github.ref_name }}
+          cache-to: type=gha,mode=max,scope=build-receipts-${{ inputs.branch || github.ref_name }}
           build-args: |
             GIT_BRANCH=${{ steps.git_info.outputs.branch }}
             GIT_COMMIT=${{ steps.git_info.outputs.sha }}
