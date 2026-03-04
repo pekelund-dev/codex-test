@@ -16,6 +16,7 @@ public class DemoSessionService {
 
     public static final String DEMO_USER_ID_ATTRIBUTE = "demoUserId";
     public static final int MAX_DEMO_UPLOADS = 5;
+    public static final int DEMO_PREVIEW_LIMIT = 10;
 
     /**
      * Returns the demo {@link ReceiptOwner} for the given session, creating one if absent.
