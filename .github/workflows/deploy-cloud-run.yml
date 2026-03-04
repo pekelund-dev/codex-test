@@ -79,7 +79,7 @@ jobs:
           echo "receipt_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/receipts/pklnd-receipts:${TIMESTAMP}" >> $GITHUB_OUTPUT
 
       - name: Build and push web image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
@@ -97,7 +97,7 @@ jobs:
             GIT_COMMIT=${{ steps.git_info.outputs.sha }}
 
       - name: Build and push receipt-parser image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./receipt-parser/Dockerfile
