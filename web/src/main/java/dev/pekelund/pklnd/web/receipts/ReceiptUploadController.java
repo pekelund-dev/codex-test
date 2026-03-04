@@ -12,7 +12,10 @@ import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
 import dev.pekelund.pklnd.storage.ReceiptStorageException;
 import dev.pekelund.pklnd.storage.ReceiptStorageService;
 import dev.pekelund.pklnd.storage.StoredReceiptReference;
+import dev.pekelund.pklnd.storage.UploadFailure;
+import dev.pekelund.pklnd.web.DemoSessionService;
 import dev.pekelund.pklnd.web.ReceiptOwnerResolver;
+import dev.pekelund.pklnd.config.DemoAuthentication;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -76,10 +79,21 @@ public class ReceiptUploadController {
         ReceiptViewScope scope = scopeHelper.resolveScope(scopeParam, authentication);
         ReceiptPageData pageData = loadReceiptPageData(authentication, scope);
         boolean canViewAll = scopeHelper.isAdmin(authentication);
+        boolean isDemoMode = authentication instanceof DemoAuthentication;
 
         model.addAttribute("pageTitle", "Upload receipts");
         model.addAttribute("storageEnabled", pageData.storageEnabled());
-        model.addAttribute("maxUploadFiles", MAX_UPLOAD_FILES);
+        model.addAttribute("isDemoMode", isDemoMode);
+        if (isDemoMode) {
+            int existingCount = pageData.files().size();
+            int remaining = Math.max(0, DemoSessionService.MAX_DEMO_UPLOADS - existingCount);
+            model.addAttribute("demoMaxUploads", DemoSessionService.MAX_DEMO_UPLOADS);
+            model.addAttribute("demoExistingUploads", existingCount);
+            model.addAttribute("demoRemainingUploads", remaining);
+            model.addAttribute("maxUploadFiles", remaining);
+        } else {
+            model.addAttribute("maxUploadFiles", MAX_UPLOAD_FILES);
+        }
         model.addAttribute("files", pageData.files());
         model.addAttribute("listingError", pageData.listingError());
         model.addAttribute("fileStatuses", pageData.fileStatuses());
@@ -154,6 +168,28 @@ public class ReceiptUploadController {
             return new UploadOutcome(null, "Välj minst en fil att ladda upp.");
         }
 
+        boolean isDemoUser = authentication instanceof DemoAuthentication;
+
+        if (isDemoUser) {
+            ReceiptOwner demoOwner = receiptOwnerResolver.resolve(authentication);
+            long existingCount = 0;
+            try {
+                existingCount = storage.listReceipts().stream()
+                    .filter(f -> ReceiptOwnerMatcher.belongsToCurrentOwner(f.owner(), demoOwner))
+                    .count();
+            } catch (ReceiptStorageException ex) {
+                LOGGER.warn("Failed to count demo receipts for limit check", ex);
+            }
+            int remaining = (int) Math.max(0, DemoSessionService.MAX_DEMO_UPLOADS - existingCount);
+            if (remaining == 0) {
+                return new UploadOutcome(null,
+                    "Demoläget tillåter maximalt %d uppladdade kvitton.".formatted(DemoSessionService.MAX_DEMO_UPLOADS));
+            }
+            if (sanitizedFiles.size() > remaining) {
+                sanitizedFiles = sanitizedFiles.subList(0, remaining);
+            }
+        }
+
         if (sanitizedFiles.size() > MAX_UPLOAD_FILES) {
             return new UploadOutcome(null,
                 "Du kan ladda upp högst %d filer åt gången.".formatted(MAX_UPLOAD_FILES));
@@ -165,6 +201,11 @@ public class ReceiptUploadController {
             dev.pekelund.pklnd.storage.UploadResult uploadResult = storage.uploadFilesWithResults(sanitizedFiles, owner);
             List<StoredReceiptReference> uploadedReferences = uploadResult.uploadedReceipts();
             int uploadedCount = uploadedReferences.size();
+
+            // In demo mode, duplicate failures are silently ignored (the receipt was already saved)
+            List<UploadFailure> relevantFailures = isDemoUser
+                ? uploadResult.failures().stream().filter(f -> !f.isDuplicate()).toList()
+                : uploadResult.failures();
 
             String successMessage = null;
             String errorMessage = null;
@@ -190,12 +231,17 @@ public class ReceiptUploadController {
                 }
             }
 
-            if (uploadResult.hasFailures()) {
-                String uploadErrors = formatUploadFailures(uploadResult.failures());
+            if (!relevantFailures.isEmpty()) {
+                String uploadErrors = formatUploadFailures(relevantFailures);
                 errorMessage = errorMessage != null ? errorMessage + " " + uploadErrors : uploadErrors;
             }
 
-            if (uploadedCount == 0 && uploadResult.hasFailures()) {
+            // For demo mode with only duplicate re-uploads, treat as quiet success
+            if (uploadedCount == 0 && isDemoUser && relevantFailures.isEmpty()) {
+                return new UploadOutcome("Kvittona är redan sparade.", null);
+            }
+
+            if (uploadedCount == 0 && !relevantFailures.isEmpty()) {
                 return new UploadOutcome(null, errorMessage);
             }
 

@@ -4,6 +4,8 @@ import dev.pekelund.pklnd.firestore.ParsedReceipt;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionAccessException;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.receipts.ReceiptProcessingClient;
+import dev.pekelund.pklnd.config.DemoAuthentication;
+import dev.pekelund.pklnd.web.DemoSessionService;
 import dev.pekelund.pklnd.storage.ReceiptFile;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import dev.pekelund.pklnd.storage.ReceiptOwnerMatcher;
@@ -240,9 +242,16 @@ public class ReceiptController {
 
             if (parsedReceiptsEnabled) {
                 try {
-                    parsedReceipts = viewingAll
-                        ? receiptExtractionService.get().listAllReceipts()
-                        : receiptExtractionService.get().listReceiptsForOwner(currentOwner);
+                    if (viewingAll) {
+                        parsedReceipts = receiptExtractionService.get().listAllReceipts();
+                    } else {
+                        parsedReceipts = receiptExtractionService.get().listReceiptsForOwner(currentOwner);
+                        if (parsedReceipts.isEmpty() && authentication instanceof DemoAuthentication) {
+                            parsedReceipts = receiptExtractionService.get().listAllReceipts().stream()
+                                .limit(DemoSessionService.DEMO_PREVIEW_LIMIT)
+                                .toList();
+                        }
+                    }
                 } catch (ReceiptExtractionAccessException ex) {
                     parsedListingError = ex.getMessage();
                     LOGGER.warn("Failed to list parsed receipts", ex);
@@ -409,7 +418,8 @@ public class ReceiptController {
         ReceiptOwner currentOwner = receiptOwnerResolver.resolve(authentication);
         boolean ownsReceipt =
             currentOwner != null && ReceiptOwnerMatcher.belongsToCurrentOwner(receipt.owner(), currentOwner);
-        if (!ownsReceipt && !canViewAll) {
+        boolean isDemoUser = authentication instanceof DemoAuthentication;
+        if (!ownsReceipt && !canViewAll && !isDemoUser) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found.");
         }
 

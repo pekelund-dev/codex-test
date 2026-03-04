@@ -32,7 +32,7 @@
         </button>
         <a class="navbar-brand fw-bold order-1" th:href="@{/}" th:text="#{app.name}">pklnd</a>
 
-        <div th:if="${userProfile.authenticated}" class="d-lg-none d-flex align-items-center gap-2 order-2 ms-auto">
+        <div th:if="${userProfile.authenticated and !userProfile.demoMode}" class="d-lg-none d-flex align-items-center gap-2 order-2 ms-auto">
             <span class="badge rounded-pill bg-light text-primary firestore-read-counter d-none d-sm-inline"
                   th:text="${#messages.msg('nav.firestoreReads', firestoreReadTotals != null ? firestoreReadTotals.totalReads : 0)}">
                 Firestore-läsningar: 0
@@ -67,7 +67,7 @@
             </ul>
 
             <div class="d-none d-lg-flex align-items-center gap-3 ms-lg-auto">
-                <div th:if="${userProfile.authenticated}" class="d-flex align-items-center gap-2 text-white">
+                <div th:if="${userProfile.authenticated and !userProfile.demoMode}" class="d-flex align-items-center gap-2 text-white">
                     <span class="badge rounded-pill bg-light text-primary firestore-read-counter"
                           th:text="${#messages.msg('nav.firestoreReads', firestoreReadTotals != null ? firestoreReadTotals.totalReads : 0)}">
                         Firestore-läsningar: 0
@@ -93,6 +93,10 @@
                             </li>
                         </ul>
                     </div>
+                </div>
+                <div th:if="${userProfile.demoMode}" class="d-flex gap-2 flex-wrap">
+                    <a class="btn btn-outline-light btn-sm" th:href="@{/login}" th:text="#{demo.mode.banner.signin}">Logga in</a>
+                    <a class="btn btn-light btn-sm" th:href="@{/register}" th:text="#{demo.mode.banner.register}">Skapa konto</a>
                 </div>
                 <div th:if="${!userProfile.authenticated}" class="d-flex gap-2 flex-wrap">
                     <a class="btn btn-outline-light btn-sm" th:href="@{/login}" th:text="#{nav.signin}">Sign in</a>
@@ -129,7 +133,7 @@
             </div>
 
             <div class="d-lg-none mobile-user-actions mt-3 pt-3 border-top border-white border-opacity-25">
-                <div th:if="${userProfile.authenticated}">
+                <div th:if="${userProfile.authenticated and !userProfile.demoMode}">
                     <div class="text-white mb-2">
                         <span class="fw-semibold d-block mb-2" th:text="${userProfile.displayName}">Jane Doe</span>
                     </div>
@@ -138,6 +142,10 @@
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
                         <button type="submit" class="btn btn-outline-light btn-sm w-100" th:text="#{nav.logout}">Logout</button>
                     </form>
+                </div>
+                <div th:if="${userProfile.demoMode}" class="d-flex flex-column gap-2">
+                    <a class="btn btn-outline-light btn-sm" th:href="@{/login}" th:text="#{demo.mode.banner.signin}">Logga in</a>
+                    <a class="btn btn-light btn-sm" th:href="@{/register}" th:text="#{demo.mode.banner.register}">Skapa konto</a>
                 </div>
                 <div th:if="${!userProfile.authenticated}" class="d-flex flex-column gap-2">
                     <a class="btn btn-outline-light btn-sm" th:href="@{/login}" th:text="#{nav.signin}">Sign in</a>
@@ -184,6 +192,27 @@
             <i class="bi bi-wallet2 me-1"></i>
             <span th:text="'Budget: ' + ${#numbers.formatDecimal(budgetPercentage, 1, 0)} + '%'">Budget: 0%</span>
         </span>
+    </div>
+</div>
+<div th:if="${userProfile.demoMode}" class="bg-warning text-dark">
+    <div class="container small py-2 d-flex flex-column flex-md-row align-items-center gap-2 justify-content-between">
+        <span>
+            <i class="bi bi-eye me-1" aria-hidden="true"></i>
+            <strong th:text="#{demo.mode.banner}">Du är i demoläge</strong>
+            &ndash;
+            <span th:if="${demoMaxUploads != null}"
+                  th:text="${#messages.msg('demo.mode.banner.uploads', demoExistingUploads, demoMaxUploads)}">
+                Uppladdningar: 0 av 5
+            </span>
+            <span th:unless="${demoMaxUploads != null}"
+                  th:text="${#messages.msg('demo.mode.banner.description', 5)}">
+                Begränsat till 5 uppladdningar.
+            </span>
+        </span>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-sm btn-outline-dark" th:href="@{/login}" th:text="#{demo.mode.banner.signin}">Logga in</a>
+            <a class="btn btn-sm btn-dark" th:href="@{/register}" th:text="#{demo.mode.banner.register}">Skapa konto</a>
+        </div>
     </div>
 </div>
 <div class="adsterra-banner-wrapper">

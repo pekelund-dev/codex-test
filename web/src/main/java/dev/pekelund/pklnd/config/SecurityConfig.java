@@ -1,5 +1,6 @@
 package dev.pekelund.pklnd.config;
 
+import dev.pekelund.pklnd.web.DemoSessionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -21,6 +22,7 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.security.web.header.HeaderWriterFilter;
 
@@ -34,7 +36,8 @@ public class SecurityConfig {
         HttpSecurity http,
         ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider,
         GrantedAuthoritiesMapper oauthAuthoritiesMapper,
-        ObjectProvider<UserDetailsService> userDetailsServiceProvider
+        ObjectProvider<UserDetailsService> userDetailsServiceProvider,
+        ObjectProvider<DemoSessionService> demoSessionServiceProvider
     ) throws Exception {
         UserDetailsService userDetailsService = userDetailsServiceProvider.getIfAvailable();
         if (userDetailsService != null) {
@@ -48,6 +51,7 @@ public class SecurityConfig {
                     "/",
                     "/home",
                     "/about",
+                    "/demo",
                     "/login",
                     "/register",
                     "/css/**",
@@ -86,6 +90,10 @@ public class SecurityConfig {
                     .maxAgeInSeconds(31536000))
             )
             .addFilterBefore(new CspNonceFilter(), HeaderWriterFilter.class)
+            .addFilterAfter(
+                new DemoSessionFilter(demoSessionServiceProvider.getIfAvailable()),
+                AnonymousAuthenticationFilter.class
+            )
             .csrf(csrf -> csrf
                 .ignoringRequestMatchers("/api/billing/alerts")
             );

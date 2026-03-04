@@ -5,6 +5,7 @@ import dev.pekelund.pklnd.firestore.ReceiptExtractionAccessException;
 import dev.pekelund.pklnd.firestore.ReceiptExtractionService;
 import dev.pekelund.pklnd.firestore.FirestoreUserService;
 import dev.pekelund.pklnd.firestore.TagService;
+import dev.pekelund.pklnd.config.DemoAuthentication;
 import dev.pekelund.pklnd.storage.ReceiptOwner;
 import org.springframework.security.core.GrantedAuthority;
 import java.math.BigDecimal;
@@ -127,7 +128,7 @@ public class DashboardStatisticsService {
         }
 
         try {
-            return receiptExtractionService.get().listReceiptsForOwner(owner);
+            return listReceiptsWithDemoFallback(owner, authentication);
         } catch (ReceiptExtractionAccessException ex) {
             log.warn("Unable to load personal receipts for dashboard statistics.", ex);
             return List.of();
@@ -178,6 +179,22 @@ public class DashboardStatisticsService {
         return false;
     }
 
+    /**
+     * Returns receipts for the given owner. For demo users with no personal receipts, falls back
+     * to a limited sample of all receipts so the demo experience is populated from day one.
+     *
+     * <p>Note: callers are responsible for catching {@link ReceiptExtractionAccessException}.</p>
+     */
+    private List<ParsedReceipt> listReceiptsWithDemoFallback(ReceiptOwner owner, Authentication authentication) {
+        List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+        if (receipts.isEmpty() && authentication instanceof DemoAuthentication) {
+            return receiptExtractionService.get().listAllReceipts().stream()
+                .limit(DemoSessionService.DEMO_PREVIEW_LIMIT)
+                .toList();
+        }
+        return receipts;
+    }
+
     private long countDistinctStores(List<ParsedReceipt> receipts) {
         if (receipts.isEmpty()) {
             return 0L;
@@ -209,7 +226,7 @@ public class DashboardStatisticsService {
         }
 
         try {
-            List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            List<ParsedReceipt> receipts = listReceiptsWithDemoFallback(owner, authentication);
             if (receipts.isEmpty()) {
                 return List.of();
             }
@@ -267,7 +284,7 @@ public class DashboardStatisticsService {
         }
 
         try {
-            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            List<ParsedReceipt> allReceipts = listReceiptsWithDemoFallback(owner, authentication);
             String normalizedSearchName = storeName.trim();
 
             return allReceipts.stream()
@@ -302,7 +319,7 @@ public class DashboardStatisticsService {
         }
 
         try {
-            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            List<ParsedReceipt> allReceipts = listReceiptsWithDemoFallback(owner, authentication);
             
             return allReceipts.stream()
                 .filter(receipt -> {
@@ -327,7 +344,7 @@ public class DashboardStatisticsService {
         }
 
         try {
-            List<ParsedReceipt> allReceipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            List<ParsedReceipt> allReceipts = listReceiptsWithDemoFallback(owner, authentication);
             
             return allReceipts.stream()
                 .filter(receipt -> {
@@ -446,7 +463,7 @@ public class DashboardStatisticsService {
         }
 
         try {
-            List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            List<ParsedReceipt> receipts = listReceiptsWithDemoFallback(owner, authentication);
             if (receipts.isEmpty()) {
                 return new PersonalTotals(true, BigDecimal.ZERO, BigDecimal.ZERO);
             }
@@ -513,7 +530,7 @@ public class DashboardStatisticsService {
         }
 
         try {
-            List<ParsedReceipt> receipts = receiptExtractionService.get().listReceiptsForOwner(owner);
+            List<ParsedReceipt> receipts = listReceiptsWithDemoFallback(owner, authentication);
             if (receipts.isEmpty()) {
                 return new YearlyStatistics(true, Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
             }
