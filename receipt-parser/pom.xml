@@ -60,7 +60,7 @@
         <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-logging-logback</artifactId>
-            <version>0.132.0-alpha</version>
+            <version>0.135.0-alpha</version>
         </dependency>
         <dependency>
             <groupId>org.codehaus.janino</groupId>
